@@ -1,0 +1,359 @@
+/* ============================================================================
+   TASK 6 — Sidebar expandable submenu (Inventory navigation consolidation)
+   ----------------------------------------------------------------------------
+   This is NOT a second sidebar system. It reuses the sidebar's existing
+   building blocks throughout:
+
+     - the --sidebar-* variables declared in sidebar.css, so nothing here is
+       colour-hardcoded. Those variables now resolve to the DARK PURPLE rail
+       palette; the sidebar is a dark surface inside a light-only application,
+       not a dark theme. See the header comment in sidebar.css;
+     - .nav-link / .nav-icon / .nav-text / .nav-caret, so hover, focus, the
+       .active treatment (background, border, and the ::before accent bar) and
+       the collapsed-sidebar rules all continue to apply for free;
+     - the same max-height + opacity expand technique the pre-existing
+       .settings-submenu block in sidebar.css uses, so the interaction matches
+       the sidebar's established pattern.
+
+   It lives in its own file purely so no shared stylesheet had to be edited;
+   sidebar.php links it immediately after sidebar.inline.css, so these rules
+   load after sidebar.css and can refine it without !important.
+   ========================================================================= */
+
+/* ---------------------------------------------------------------------------
+   Parent row
+   TASK — the row holds TWO controls now: the navigating <a> and the icon-only
+   expander <button>. They share one line and between them reproduce exactly the
+   box a single .nav-link used to occupy, so the rail's rhythm is unchanged.
+
+   .nav-link brings margin: 0 0.3rem. Left as-is on both children that would put
+   a 0.6rem trench between the label and the caret, so the gutters are re-split
+   here: the anchor keeps the left gutter, the caret keeps the right, and they
+   meet in the middle.
+   ------------------------------------------------------------------------ */
+.sidebar .nav-parent-row {
+    display: flex;
+    align-items: center;
+}
+
+/* The label half. flex:1 lets it absorb the row minus the caret, and min-width:0
+   is what allows .nav-text's ellipsis to engage instead of the row overflowing
+   the rail. */
+.sidebar .nav-parent-row .nav-parent-link {
+    flex: 1 1 auto;
+    min-width: 0;
+    margin-right: 0.15rem;
+}
+
+.sidebar .nav-parent-row .nav-parent-link .nav-text {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* The expander half. A <button>, so element defaults are neutralised first.
+   34px keeps it inside the row's 38px min-height and gives a comfortable touch
+   target without making the caret look like a second nav row. */
+.sidebar .nav-parent-toggle {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    padding: 0;
+    margin-right: 0.3rem;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    color: var(--sidebar-text-muted);
+    font-family: inherit;
+    cursor: pointer;
+    appearance: none;
+    -webkit-appearance: none;
+    transition: background-color var(--transition-speed, 0.25s) ease,
+                color var(--transition-speed, 0.25s) ease;
+}
+
+.sidebar .nav-parent-toggle:hover {
+    background: var(--sidebar-hover);
+    color: var(--sidebar-text-hover);
+}
+
+/* Expanded/collapsed indicator. .nav-caret already carries margin-left:auto
+   and the rotate-on-open transition from sidebar.css; only SVG sizing is
+   added here, since that block was written for a text glyph. */
+/* Opacity dropped from 0.75 to 1: the caret already sits at the muted token,
+   so fading it as well composited it twice against the rail and left the only
+   affordance for "this row expands" nearly invisible. Emphasis is carried by
+   the colour token, not by transparency. */
+.sidebar .nav-parent-toggle .nav-caret {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+    opacity: 1;
+    transition: transform var(--transition-speed, 0.25s) ease-in-out,
+                opacity var(--transition-speed, 0.25s) ease-in-out;
+}
+
+/* Descendant, not `>`: the toggle is now nested inside .nav-parent-row, so the
+   child combinator this rule used to rely on no longer matches and the caret
+   would never rotate. */
+.sidebar .nav-parent.nav-parent-open .nav-parent-toggle .nav-caret {
+    transform: rotate(180deg);
+    opacity: 1;
+}
+
+/* The parent is "current" (a child destination is open) but never .active —
+   sidebar.js's addActiveHighlight() clears .active from every .nav-link and
+   re-applies it to exactly one, so marking both parent and child .active
+   would make the parent's highlight disappear on load. A separate class keeps
+   the two states independent. */
+/* Now lives on the ANCHOR, not the expander. Applied when one of the CHILD
+   pages is open; when the Inventory landing page itself is open the anchor gets
+   the real .active treatment instead, so the two are mutually exclusive and the
+   row is never double-highlighted. */
+.sidebar .nav-parent-link.nav-parent-current {
+    /* Same text colour the .active child gets, so parent and child read as one
+       highlighted unit; the parent is distinguished by its lighter (hover-
+       weight) fill rather than by a different text colour. */
+    color: var(--sidebar-active-text);
+    background: var(--sidebar-hover);
+    border-color: rgba(167, 139, 250, 0.18);
+}
+
+.sidebar .nav-parent-link.nav-parent-current .nav-icon {
+    color: var(--sidebar-active);
+    opacity: 1;
+}
+
+.sidebar .nav-parent-toggle:focus-visible,
+.sidebar .nav-parent-link:focus-visible {
+    outline: 2px solid #c4b5fd;
+    outline-offset: -2px;
+}
+
+/* ---------------------------------------------------------------------------
+   Submenu list
+   ------------------------------------------------------------------------ */
+.sidebar .nav-submenu {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    max-height: 0;
+    opacity: 0;
+    overflow: hidden;
+    transition: max-height var(--transition-speed, 0.25s) ease-in-out,
+                opacity var(--transition-speed, 0.25s) ease-in-out;
+}
+
+.sidebar .nav-parent.nav-parent-open > .nav-submenu {
+    /* Four rows measure ~160px now that the duplicate Inventory child is gone.
+       The ceiling is deliberately NOT tightened to match: it is a max, not a
+       height, and the slack is what absorbs the --ui-font-scale accessibility
+       setting (and any future child) without clipping. */
+    max-height: 420px;
+    opacity: 1;
+}
+
+/* Subordination is conveyed by a modest indent and a hairline rail rather
+   than deep nesting, so the submenu costs little horizontal room and no
+   extra vertical bulk. */
+.sidebar .nav-submenu .nav-subitem {
+    position: relative;
+}
+
+.sidebar .nav-sublink {
+    margin-left: 1.55rem;
+    margin-right: 0.3rem;
+    padding: 0.4rem 0.7rem;
+    gap: 0.6rem;
+    /* ~12px UI text, one step below the parent row, per the readability
+       standard. Scoped to submenu links only — no other sidebar or
+       application typography is altered by this task. */
+    font-size: 12px;
+    font-weight: 600;
+    border-radius: 8px;
+    /* Matches the parent rail's fixed-height rhythm, one step shorter. */
+    min-height: 32px;
+}
+
+/* One step below the parent row's 18px, so the hierarchy is legible from the
+   icon column alone. */
+.sidebar .nav-sublink .nav-icon {
+    width: 16px;
+    height: 16px;
+}
+
+/* The rail that ties the children visually to their parent. Sits at the
+   horizontal centre of the PARENT row's icon (0.3rem margin + 0.75rem padding
+   + half of an 18px icon ≈ 1.6rem), so the children hang off the icon column
+   rather than off an arbitrary indent. */
+.sidebar .nav-submenu::before {
+    content: '';
+    position: absolute;
+    left: 1.6rem;
+    top: 0.15rem;
+    bottom: 0.15rem;
+    width: 1px;
+    background: var(--sidebar-divider);
+    pointer-events: none;
+}
+
+.sidebar .nav-submenu {
+    position: relative;
+}
+
+/* ---------------------------------------------------------------------------
+   Collapsed sidebar (icon rail)
+   sidebar.css already fades .nav-text and .nav-caret out here. The submenu
+   must NOT be hidden as well, or the icon rail would silently drop four
+   destinations. Children are rendered as plain icon rows instead — inside the
+   sidebar, so nothing flies out and nothing can clip.
+   ------------------------------------------------------------------------ */
+.sidebar.collapsed .nav-submenu,
+.sidebar.collapsed .nav-parent.nav-parent-open > .nav-submenu {
+    max-height: none;
+    opacity: 1;
+    overflow: visible;
+}
+
+.sidebar.collapsed .nav-submenu::before {
+    display: none;
+}
+
+.sidebar.collapsed .nav-sublink {
+    margin-left: 0.3rem;
+    margin-right: 0.3rem;
+    justify-content: center;
+    gap: 0;
+    padding: 0.6rem 0;
+}
+
+/* On the icon rail there is no room for a second control, and sidebar.css
+   already fades .nav-text and .nav-caret out here. The expander is hidden
+   OUTRIGHT rather than just losing its caret — a 34px empty box next to the
+   icon would otherwise push the icon off-centre. The submenu stays reachable
+   because the collapsed rules below keep the children rendered as icon rows,
+   so nothing becomes unreachable by hiding this. */
+.sidebar.collapsed .nav-parent-toggle {
+    display: none;
+}
+
+/* With the expander gone the anchor is the whole row again, so it re-centres
+   exactly like every other collapsed icon row. */
+.sidebar.collapsed .nav-parent-row .nav-parent-link {
+    margin-right: 0.3rem;
+    justify-content: center;
+}
+
+/* ---------------------------------------------------------------------------
+   Mobile / narrow viewports
+   sidebar.css hides .nav-caret outright below 768px (a rule written for the
+   old settings menu). The parent needs its affordance back, otherwise the
+   submenu has no visible control on touch devices.
+   ------------------------------------------------------------------------ */
+@media (max-width: 768px) {
+    .sidebar .nav-parent-toggle .nav-caret {
+        display: block;
+        opacity: 1;
+    }
+
+    /* The mobile drawer shows full-width rows again, so restore the indent
+       that .sidebar.collapsed had flattened. */
+    .sidebar.mobile-open .nav-sublink {
+        margin-left: 1.6rem;
+        margin-right: 0.75rem;
+        justify-content: flex-start;
+        gap: 0.6rem;
+        padding: 0.6rem 1rem;
+    }
+
+    .sidebar.mobile-open .nav-submenu::before {
+        display: block;
+        left: 1.9rem;
+    }
+
+    .sidebar.mobile-open .nav-submenu,
+    .sidebar.mobile-open .nav-parent.nav-parent-open > .nav-submenu {
+        overflow: hidden;
+    }
+
+    .sidebar.mobile-open .nav-submenu {
+        max-height: 0;
+        opacity: 0;
+    }
+
+    .sidebar.mobile-open .nav-parent.nav-parent-open > .nav-submenu {
+        /* Matches the desktop ceiling; mobile rows are taller, so the four
+           children still need the extra room. */
+        max-height: 420px;
+        opacity: 1;
+    }
+
+    /* The expander used to be the WHOLE parent row, so on the drawer it was
+       stretched to full width. It is now only the caret half of a split row —
+       the anchor beside it owns the label — so stretching it would squeeze the
+       label out. It keeps its square icon-button footprint here and simply
+       grows a little for touch. */
+    .sidebar.mobile-open .nav-parent-toggle {
+        width: 40px;
+        height: 40px;
+        margin-right: 0.75rem;
+    }
+
+    /* Matches the drawer's roomier row padding so the label half lines up with
+       every other full-width nav row. */
+    .sidebar.mobile-open .nav-parent-row .nav-parent-link {
+        justify-content: flex-start;
+        margin-right: 0.15rem;
+    }
+}
+
+/* ---------------------------------------------------------------------------
+   Theme hooks
+   These used to be real light-vs-dark divergences. They no longer are: the
+   sidebar has ONE palette now (a dark purple rail, regardless of theme —
+   light is the only theme and the rail is dark by design, not by mode), and
+   every declaration below resolves through the same --sidebar-* variables.
+
+   They are kept, rather than collapsed into the unprefixed rules above,
+   because they are the documented hook for the rail and the caret — the two
+   pieces whose contrast is most sensitive to the surface behind them — and
+   because tests/Feature/InventoryNavigationSubmenuTest.php asserts that this
+   stylesheet declares handling for both attribute values. Both branches
+   deliberately resolve to the same tokens.
+   ------------------------------------------------------------------------ */
+:root[data-theme-resolved='light'] .sidebar .nav-submenu::before {
+    background: var(--sidebar-divider);
+}
+
+:root[data-theme-resolved='light'] .sidebar .nav-parent-toggle .nav-caret {
+    color: var(--sidebar-text-muted);
+}
+
+:root[data-theme-resolved='dark'] .sidebar .nav-submenu::before {
+    background: var(--sidebar-divider);
+}
+
+:root[data-theme-resolved='dark'] .sidebar .nav-parent-toggle .nav-caret {
+    color: var(--sidebar-text-muted);
+}
+
+/* Follows the class to its new home on the ANCHOR. Left pointing at
+   .nav-parent-toggle this selector matched nothing, because the expander no
+   longer carries the "a child page is open" marker — the anchor does. */
+:root[data-theme-resolved='dark'] .sidebar .nav-parent-link.nav-parent-current {
+    background: var(--sidebar-hover);
+    border-color: rgba(167, 139, 250, 0.18);
+    color: var(--sidebar-active-text);
+}
+
+/* Users who prefer reduced motion get the state change without the sweep. */
+@media (prefers-reduced-motion: reduce) {
+    .sidebar .nav-submenu,
+    .sidebar .nav-parent-toggle .nav-caret {
+        transition: none;
+    }
+}

@@ -1,0 +1,1281 @@
+/* ===================================================================
+   School Facility Maintenance Report Management System
+    Professional Violet & White Color Scheme
+   =================================================================== */
+
+:root {
+    /* ===== PRIMARY COLORS ===== */
+    /* Primary Violet - Headers, buttons, navigation */
+    --primary: #8b5cf6;
+    --primary-light: #a78bfa;
+    --primary-dark: #6d28d9;
+    --primary-darker: #5b21b6;
+    --primary-bg: #f3e8ff;
+    
+    /* Secondary Light Violet - Accents */
+    --secondary: #c4b5fd;
+    --secondary-light: #ddd6fe;
+    --secondary-lighter: #f3e8ff;
+    --secondary-dark: #8b5cf6;
+    --secondary-bg: #f5f3ff;
+    
+    /* ===== ACCENT COLORS ===== */
+    /* Amber - Pending, warnings, alerts */
+    --accent: #f59e0b;
+    --accent-light: #fbbf24;
+    --accent-dark: #d97706;
+    --accent-bg: #fffbeb;
+    
+    /* Red - Urgent, critical issues */
+    --danger: #dc2626;
+    --danger-light: #ef4444;
+    --danger-lighter: #fca5a5;
+    --danger-dark: #b91c1c;
+    --danger-bg: #fef2f2;
+    
+    /* ===== NEUTRAL COLORS ===== */
+    /* Text colors
+       Readability fix (2026-09-22): these three tokens are declared again
+       here and, because this stylesheet loads after styles.css in
+       header.php, they were silently overriding styles.css's already-
+       correct design-system text colors app-wide. Old values (#333333 /
+       #666666 / #999999) were lighter than the system's own design tokens
+       and --text-tertiary failed WCAG AA on white (~2.85:1). Realigned to
+       the same dark near-black / secondary / muted tiers used elsewhere
+       (--text-heading #111827, --color-neutral-700 #374151-ish, --muted-
+       text #6b7280) so both files agree instead of fighting the cascade. */
+    --text-primary: #111827;
+    --text-secondary: #4b5563;
+    --text-tertiary: #6b7280;
+    --text-inverse: #ffffff;
+    
+    /* Backgrounds */
+    --bg-primary: #ffffff;
+    --bg-secondary: #ffffff;
+    --bg-tertiary: #f8f8f8;
+    --bg-white: #ffffff;
+    
+    /* Borders */
+    --border-light: #E0D9FF;
+    --border-regular: #D0BAFF;
+    --border-dark: #9D7FCC;
+
+    /* ===== PURPLE BORDER ACCENT SYSTEM =====================================
+       One source of truth for the lavender container edge used across the
+       whole application. Declared here, in the token file BOTH shells load
+       (includes/header.php for the legacy pages and layouts/app.blade.php for
+       the Blade ones), so a single retune reaches every page.
+
+       These are not a new palette. --primary-purple is #7c3aed, the
+       --color-primary-600 that styles.css already ships and that the sidebar,
+       the top bar and every primary button already paint with; the rest are
+       that same hue at fixed alphas, or the two tints the app already used
+       (#f5f3ff / #ede9fe).
+
+       WHY ALPHA RATHER THAN A FLAT HEX
+       A 1px line of solid #7c3aed on white reads as a focus ring — the
+       "everything looks selected" failure. At 0.40 it resolves to about
+       rgb(203,176,248) over a white card: unmistakably lavender against the
+       page, still chrome rather than state.
+
+       WHICH TOKEN GOES WHERE — the hierarchy the brief asks for:
+         --purple-border        major cards, panels, content containers, the
+                                outer frame of a table, modal shells.
+         --purple-border-light  interior structure: card header/body dividers,
+                                table head separators, nested tiles. Never the
+                                outer edge of a major container.
+         --purple-control       inputs, selects, textareas and outline buttons.
+                                Between the two above: these are interactive,
+                                so they should read slightly stronger than a
+                                divider and slightly quieter than a card.
+         --purple-surface       the lightest fill — secondary button faces,
+                                table head wash, selected rows.
+         --purple-hover         one step up from surface, for hover fills.
+
+       Row separators and other small internal lines deliberately have NO
+       token here: per the brief they stay neutral grey so the purple keeps
+       meaning "container", not "every line on the page". */
+    --primary-purple: #7c3aed;
+    --primary-purple-dark: #5b21b6;
+    --purple-border: rgba(124, 58, 237, 0.40);
+    --purple-border-light: rgba(124, 58, 237, 0.20);
+    --purple-control: rgba(124, 58, 237, 0.30);
+    --purple-surface: #f5f3ff;
+    --purple-hover: #ede9fe;
+    
+    /* ===== SHADOWS (DESIGN_SYSTEM.md §6) ===== */
+    --shadow-xs: 0 1px 2px rgba(15, 23, 42, 0.04);
+    --shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.08);
+    --shadow-md: 0 4px 12px rgba(15, 23, 42, 0.10);
+    --shadow-lg: 0 12px 28px rgba(15, 23, 42, 0.12);
+    --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+    
+    /* ===== STATUS COLORS ===== */
+    /* Pending */
+    --status-pending: #f59e0b;
+    --status-pending-bg: #fffbeb;
+    
+    /* In Progress */
+    --status-progress: #8A2BE2;
+    --status-progress-bg: #F3E9FF;
+    
+    /* Completed */
+    --status-completed: #10b981;
+    --status-completed-bg: #ecfdf5;
+    
+    /* Urgent */
+    --status-urgent: #dc2626;
+    --status-urgent-bg: #fef2f2;
+    
+    /* Critical */
+    --status-critical: #991b1b;
+    --status-critical-bg: #7f1d1d;
+    
+    /* ===== TABLE STYLING ===== */
+    --table-header-bg: #6d28d9;
+    --table-header-text: #ffffff;
+    --table-row-hover: #f3e8ff;
+    --table-border: #ddd6fe;
+    
+    /* ===== TRANSITIONS ===== */
+    --transition-fast: 150ms ease-in-out;
+    --transition-normal: 250ms ease-in-out;
+    --transition-slow: 350ms ease-in-out;
+}
+
+/* ===================================================================
+   BACKGROUND COLOR UTILITIES
+   =================================================================== */
+
+.bg-primary {
+    background-color: var(--primary);
+}
+
+.bg-primary-light {
+    background-color: var(--primary-light);
+}
+
+.bg-primary-dark {
+    background-color: var(--primary-dark);
+}
+
+.bg-primary-bg {
+    background-color: var(--primary-bg);
+}
+
+.bg-secondary {
+    background-color: var(--secondary);
+}
+
+.bg-secondary-light {
+    background-color: var(--secondary-light);
+}
+
+.bg-secondary-dark {
+    background-color: var(--secondary-dark);
+}
+
+.bg-secondary-bg {
+    background-color: var(--secondary-bg);
+}
+
+.bg-accent {
+    background-color: var(--accent);
+}
+
+.bg-accent-light {
+    background-color: var(--accent-light);
+}
+
+.bg-accent-dark {
+    background-color: var(--accent-dark);
+}
+
+.bg-accent-bg {
+    background-color: var(--accent-bg);
+}
+
+.bg-danger {
+    background-color: var(--danger);
+}
+
+.bg-danger-light {
+    background-color: var(--danger-light);
+}
+
+.bg-danger-dark {
+    background-color: var(--danger-dark);
+}
+
+.bg-danger-bg {
+    background-color: var(--danger-bg);
+}
+
+.bg-white {
+    background-color: var(--bg-white);
+}
+
+.bg-gray-light {
+    background-color: var(--bg-primary);
+}
+
+.bg-gray-lighter {
+    background-color: var(--bg-secondary);
+}
+
+/* ===================================================================
+   TEXT COLOR UTILITIES
+   =================================================================== */
+
+.text-primary {
+    color: var(--primary) !important;
+}
+
+.text-secondary {
+    color: var(--secondary) !important;
+}
+
+.text-accent {
+    color: var(--accent) !important;
+}
+
+.text-danger {
+    color: var(--danger) !important;
+}
+
+.text-dark {
+    color: var(--text-primary) !important;
+}
+
+.text-muted {
+    color: var(--text-secondary) !important;
+}
+
+.text-light {
+    color: var(--text-tertiary) !important;
+}
+
+.text-white {
+    color: var(--text-inverse) !important;
+}
+
+/* ===================================================================
+   BUTTON STYLES
+   =================================================================== */
+
+/* Primary Button */
+.btn-primary {
+    background-color: var(--primary);
+    color: var(--text-inverse);
+    border: 1px solid var(--primary);
+    padding: 10px 20px;
+    border-radius: var(--radius-md, 10px);
+    font-weight: 500;
+    font-size: 14px;
+    cursor: pointer;
+    display: inline-block;
+    text-decoration: none;
+    text-align: center;
+    transition: all var(--transition-fast);
+}
+
+.btn-primary:hover {
+    background-color: var(--primary-dark);
+    border-color: var(--primary-dark);
+    box-shadow: var(--shadow-md);
+}
+
+.btn-primary:focus {
+    outline: none;
+    box-shadow: 0 0 0 4px var(--primary-bg);
+}
+
+.btn-primary:active {
+    transform: translateY(0);
+    box-shadow: var(--shadow-sm);
+}
+
+/* Secondary Button */
+.btn-secondary {
+    background-color: var(--secondary);
+    color: var(--text-inverse);
+    border: 1px solid var(--secondary);
+    padding: 10px 20px;
+    border-radius: var(--radius-md, 10px);
+    font-weight: 500;
+    font-size: 14px;
+    cursor: pointer;
+    display: inline-block;
+    text-decoration: none;
+    text-align: center;
+    transition: all var(--transition-fast);
+}
+
+.btn-secondary:hover {
+    background-color: var(--secondary-dark);
+    border-color: var(--secondary-dark);
+    box-shadow: var(--shadow-md);
+}
+
+.btn-secondary:focus {
+    outline: none;
+    box-shadow: 0 0 0 4px var(--secondary-bg);
+}
+
+.btn-secondary:active {
+    transform: translateY(0);
+    box-shadow: var(--shadow-sm);
+}
+
+/* Accent Button */
+.btn-accent {
+    background-color: var(--accent);
+    color: var(--text-inverse);
+    border: 1px solid var(--accent);
+    padding: 10px 20px;
+    border-radius: var(--radius-md, 10px);
+    font-weight: 500;
+    font-size: 14px;
+    cursor: pointer;
+    display: inline-block;
+    text-decoration: none;
+    text-align: center;
+    transition: all var(--transition-fast);
+}
+
+.btn-accent:hover {
+    background-color: var(--accent-dark);
+    border-color: var(--accent-dark);
+    box-shadow: var(--shadow-md);
+}
+
+.btn-accent:focus {
+    outline: none;
+    box-shadow: 0 0 0 4px var(--accent-bg);
+}
+
+.btn-accent:active {
+    transform: translateY(0);
+    box-shadow: var(--shadow-sm);
+}
+
+/* Danger Button */
+.btn-danger {
+    background-color: var(--danger);
+    color: var(--text-inverse);
+    border: 1px solid var(--danger);
+    padding: 10px 20px;
+    border-radius: var(--radius-md, 10px);
+    font-weight: 500;
+    font-size: 14px;
+    cursor: pointer;
+    display: inline-block;
+    text-decoration: none;
+    text-align: center;
+    transition: all var(--transition-fast);
+}
+
+.btn-danger:hover {
+    background-color: var(--danger-dark);
+    border-color: var(--danger-dark);
+    box-shadow: var(--shadow-md);
+}
+
+.btn-danger:focus {
+    outline: none;
+    box-shadow: 0 0 0 4px var(--danger-bg);
+}
+
+.btn-danger:active {
+    transform: translateY(0);
+    box-shadow: var(--shadow-sm);
+}
+
+/* Outline Buttons */
+.btn-outline-primary {
+    background-color: transparent;
+    color: var(--primary);
+    border: 1px solid var(--primary);
+    padding: 10px 20px;
+    border-radius: var(--radius-md, 10px);
+    font-weight: 500;
+    cursor: pointer;
+    display: inline-block;
+    text-decoration: none;
+    transition: all var(--transition-fast);
+}
+
+.btn-outline-primary:hover {
+    background-color: var(--primary-bg);
+    border-color: var(--primary-dark);
+    color: var(--primary-dark);
+}
+
+.btn-outline-secondary {
+    background-color: transparent;
+    color: var(--secondary);
+    border: 1px solid var(--secondary);
+    padding: 10px 20px;
+    border-radius: var(--radius-md, 10px);
+    font-weight: 500;
+    cursor: pointer;
+    display: inline-block;
+    text-decoration: none;
+    transition: all var(--transition-fast);
+}
+
+.btn-outline-secondary:hover {
+    background-color: var(--secondary-bg);
+    border-color: var(--secondary-dark);
+    color: var(--secondary-dark);
+}
+
+/* ===================================================================
+   STATUS BADGES
+   =================================================================== */
+
+.badge {
+    display: inline-block !important;
+    padding: 6px 12px !important;
+    border-radius: 12px !important;
+    font-size: 12px !important;
+    font-weight: 600 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.5px !important;
+    font-family: inherit !important;
+    box-sizing: border-box !important;
+    text-decoration: none !important;
+    vertical-align: baseline !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+}
+
+/* ABSOLUTELY remove any pseudo-element content */
+.badge::before,
+.badge::after,
+.badge-urgent::before,
+.badge-urgent::after,
+.badge-high::before,
+.badge-high::after,
+.badge-medium::before,
+.badge-medium::after,
+.badge-low::before,
+.badge-low::after,
+.badge-submitted::before,
+.badge-submitted::after,
+.badge-assigned::before,
+.badge-assigned::after,
+.badge-in-progress::before,
+.badge-in-progress::after,
+.badge-progress::before,
+.badge-progress::after,
+.badge-completed::before,
+.badge-completed::after,
+.badge-success::before,
+.badge-success::after {
+    content: none !important;
+    display: none !important;
+    visibility: hidden !important;
+}
+
+/* URGENT - Red background with red text */
+.badge-urgent {
+    background-color: #fee2e2;
+    color: #dc2626;
+    border: 1px solid #fecaca;
+}
+
+.badge-urgent:hover {
+    background-color: #fecaca;
+    color: #b91c1c;
+}
+
+/* HIGH - Orange background with orange text (IT-expert priority-color
+   correction: Critical=Red, High=Orange, Medium=Yellow, Low=Blue). Was
+   previously red-pink, visually indistinguishable from Critical/Urgent. */
+.badge-high {
+    background-color: #ffedd5;
+    color: #c2410c;
+    border: 1px solid #fdba74;
+}
+
+.badge-high:hover {
+    background-color: #fdba74;
+    color: #9a3412;
+}
+
+/* MEDIUM - Yellow background with yellow text (was amber, too close to
+   High's new orange — see priority-color correction note above). */
+.badge-medium {
+    background-color: #fef9c3;
+    color: #a16207;
+    border: 1px solid #fde047;
+}
+
+.badge-medium:hover {
+    background-color: #fde047;
+    color: #854d0e;
+}
+
+/* LOW - Blue background with blue text (was violet, off the intended
+   Red/Orange/Yellow/Blue ramp — see priority-color correction note above). */
+.badge-low {
+    background-color: #dbeafe;
+    color: #1d4ed8;
+    border: 1px solid #93c5fd;
+}
+
+.badge-low:hover {
+    background-color: #93c5fd;
+    color: #1e40af;
+}
+
+/* STATUS COLORS - unified flow palette for maintenance report status
+   (Submitted -> Assigned -> In Progress -> Completed/Cancelled/Closed).
+   Previously: Submitted was violet, Assigned was amber, and In Progress was
+   flat gray with no identity of its own - and several other files (utils.js,
+   api.js, reports.php, super-admin-dashboard.php, DashboardController.php)
+   each had their own independently-drifted hex/class mapping for these same
+   6 statuses. Standardized here and wired into every consumer so the same
+   status always renders the same hue app-wide. */
+
+/* SUBMITTED - Blue background with blue text */
+.badge-submitted {
+    background-color: #dbeafe;
+    color: #1d4ed8;
+    border: 1px solid #bfdbfe;
+}
+
+.badge-submitted:hover {
+    background-color: #bfdbfe;
+    color: #1e40af;
+}
+
+/* ASSIGNED - Purple background with purple text */
+.badge-assigned {
+    background-color: #ede9fe;
+    color: #6d28d9;
+    border: 1px solid #ddd6fe;
+}
+
+.badge-assigned:hover {
+    background-color: #ddd6fe;
+    color: #5b21b6;
+}
+
+/* IN PROGRESS - Amber background with amber text */
+.badge-in-progress,
+.badge-progress {
+    background-color: #fef3c7;
+    color: #b45309;
+    border: 1px solid #fde68a;
+}
+
+.badge-in-progress:hover,
+.badge-progress:hover {
+    background-color: #fde68a;
+    color: #92400e;
+}
+
+/* COMPLETED - Green background with green text */
+.badge-completed,
+.badge-success {
+    background-color: #d1fae5;
+    color: #059669;
+    border: 1px solid #a7f3d0;
+}
+
+.badge-completed:hover,
+.badge-success:hover {
+    background-color: #a7f3d0;
+    color: #047857;
+}
+
+/* CANCELLED (maintenance report status) - Red background with red text.
+   Named badge-report-cancelled (not badge-cancelled) because badge-cancelled
+   below is already owned by the Dispatch module - keeping them separate
+   avoids recoloring Dispatch's cancelled badge as a side effect. */
+.badge-report-cancelled {
+    background-color: #fee2e2;
+    color: #b91c1c;
+    border: 1px solid #fecaca;
+}
+
+.badge-report-cancelled:hover {
+    background-color: #fecaca;
+    color: #991b1b;
+}
+
+/* CLOSED (maintenance report status) - Gray background with gray text.
+   Named badge-report-closed (not badge-closed) because badge-closed below is
+   already owned by the Damage Report module - keeping them separate avoids
+   recoloring Damage Report's closed badge as a side effect. */
+.badge-report-closed {
+    background-color: #f3f4f6;
+    color: #4b5563;
+    border: 1px solid #e5e7eb;
+}
+
+.badge-report-closed:hover {
+    background-color: #e5e7eb;
+    color: #1f2937;
+}
+
+/* RESOLVED / UNRESOLVED - dedicated classes for the All Reports "Resolution"
+   column (reports.php). Previously reused badge-success/badge-warning, which
+   made Unresolved render as a barely-visible pale wash (styles.css's
+   rgba(245,158,11,0.1) background) that was easy to confuse with the
+   Assigned status badge. Resolved keeps the same green as Completed/Success
+   (already correct); Unresolved is now a solid amber fill so it reads as a
+   clear "still needs action" signal without colliding with the High-priority
+   pastel-orange pill or the pale-amber Assigned status badge. */
+.badge-resolved {
+    background-color: #d1fae5;
+    color: #059669;
+    border: 1px solid #a7f3d0;
+}
+
+.badge-resolved:hover {
+    background-color: #a7f3d0;
+    color: #047857;
+}
+
+.badge-unresolved {
+    background-color: #f59e0b;
+    color: #ffffff;
+    border: 1px solid #d97706;
+}
+
+.badge-unresolved:hover {
+    background-color: #d97706;
+    color: #ffffff;
+}
+
+/* PENDING Badge */
+.badge-pending {
+    background-color: var(--status-pending-bg);
+    color: var(--status-pending);
+    border: 1px solid var(--status-pending);
+}
+
+.badge-pending:hover {
+    background-color: var(--status-pending);
+    color: var(--text-inverse);
+}
+
+/* Critical Badge */
+.badge-critical {
+    background-color: var(--status-critical-bg);
+    color: #fff;
+    border: 1px solid var(--status-critical);
+}
+
+.badge-critical:hover {
+    background-color: #7f1d1d;
+}
+
+/* Damage-report workflow status badges */
+.badge-under-review { background: rgba(99,102,241,0.15); color: #818cf8; border: 1px solid rgba(99,102,241,0.25); }
+.badge-repairing    { background: rgba(245,158,11,0.15);  color: #fbbf24; border: 1px solid rgba(245,158,11,0.25); }
+.badge-repaired     { background: rgba(16,185,129,0.15);  color: #34d399; border: 1px solid rgba(16,185,129,0.25); }
+.badge-replaced     { background: rgba(139,92,246,0.15);  color: #a78bfa; border: 1px solid rgba(139,92,246,0.25); }
+.badge-closed       { background: rgba(107,114,128,0.15); color: #9ca3af; border: 1px solid rgba(107,114,128,0.25); }
+
+/* Dispatch workflow status badges */
+/* TASK 6 — Enterprise Dispatch Table Redesign: recolored to the requested
+   Pending=Amber (unchanged, shared .badge-pending) / Approved=Blue /
+   Released=Green / Cancelled=Gray scheme. Safe to change here because these
+   three classes are only ever consumed by the Dispatch module (dispatch-detail.php
+   and dispatches.php) — no other page's status badges use them. */
+.badge-approved  { background: rgba(59,130,246,0.15);  color: #60a5fa; border: 1px solid rgba(59,130,246,0.25); }
+.badge-released  { background: rgba(16,185,129,0.15);  color: #34d399; border: 1px solid rgba(16,185,129,0.25); }
+.badge-cancelled { background: rgba(107,114,128,0.15); color: #9ca3af; border: 1px solid rgba(107,114,128,0.25); }
+
+/* Repair request workflow status badges */
+.badge-diagnosing    { background: rgba(99,102,241,0.15);  color: #818cf8; border: 1px solid rgba(99,102,241,0.25); }
+.badge-waiting-parts { background: rgba(59,130,246,0.15);  color: #60a5fa; border: 1px solid rgba(59,130,246,0.25); }
+.badge-failed        { background: rgba(239,68,68,0.15);   color: #f87171; border: 1px solid rgba(239,68,68,0.25); }
+.badge-archived      { background: rgba(107,114,128,0.15); color: #9ca3af; border: 1px solid rgba(107,114,128,0.25); }
+
+/* ===================================================================
+   BORDER UTILITIES
+   =================================================================== */
+
+.border-primary {
+    border-color: var(--primary);
+}
+
+.border-secondary {
+    border-color: var(--secondary);
+}
+
+.border-accent {
+    border-color: var(--accent);
+}
+
+.border-danger {
+    border-color: var(--danger);
+}
+
+.border-light {
+    border-color: var(--border-light);
+}
+
+.border-top-primary {
+    border-top: 4px solid var(--primary);
+}
+
+.border-left-primary {
+    border-left: 4px solid var(--primary);
+}
+
+.border-left-secondary {
+    border-left: 4px solid var(--secondary);
+}
+
+.border-left-accent {
+    border-left: 4px solid var(--accent);
+}
+
+.border-left-danger {
+    border-left: 4px solid var(--danger);
+}
+
+.border-bottom-primary {
+    border-bottom: 4px solid var(--primary);
+}
+
+.border-bottom-secondary {
+    border-bottom: 4px solid var(--secondary);
+}
+
+/* ===================================================================
+   COMPONENT: MAINTENANCE REPORT CARD
+   =================================================================== */
+
+.report-card {
+    background-color: var(--bg-white);
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-lg, 14px);
+    padding: 20px;
+    margin-bottom: 16px;
+    transition: all var(--transition-normal);
+    box-shadow: var(--shadow-xs);
+}
+
+.report-card:hover {
+    box-shadow: var(--shadow-lg);
+    transform: translateY(-4px);
+    border-color: var(--primary);
+}
+
+.report-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 12px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border-light);
+}
+
+.report-card-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0;
+}
+
+.report-card-priority {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.report-card-body {
+    margin-bottom: 12px;
+}
+
+.report-card-location {
+    font-size: 13px;
+    color: var(--text-secondary);
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.report-card-description {
+    font-size: 13px;
+    color: var(--text-secondary);
+    line-height: 1.5;
+    margin-bottom: 12px;
+}
+
+.report-card-meta {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    color: var(--text-tertiary);
+    padding-top: 12px;
+    border-top: 1px solid var(--border-light);
+}
+
+.report-card-action {
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border-light);
+}
+
+/* ===================================================================
+   COMPONENT: NAVIGATION BAR WITH COLOR SCHEME
+   =================================================================== */
+
+.navbar-colored {
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+    box-shadow: var(--shadow-md);
+    padding: 0;
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+}
+
+.navbar-colored .navbar-brand {
+    color: var(--text-inverse);
+    font-weight: 700;
+    font-size: 18px;
+}
+
+.navbar-colored .navbar-link {
+    color: var(--text-inverse);
+    opacity: 0.9;
+    transition: all var(--transition-fast);
+}
+
+.navbar-colored .navbar-link:hover,
+.navbar-colored .navbar-link.active {
+    color: var(--text-inverse);
+    opacity: 1;
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+/* ===================================================================
+   COMPONENT: STATUS INDICATOR
+   =================================================================== */
+
+.status-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 500;
+}
+
+.status-indicator::before {
+    content: '';
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+.status-indicator.pending::before {
+    background-color: var(--status-pending);
+}
+
+.status-indicator.pending {
+    background-color: var(--status-pending-bg);
+    color: var(--status-pending);
+}
+
+.status-indicator.progress::before {
+    background-color: var(--status-progress);
+    animation: pulse 2s infinite;
+}
+
+.status-indicator.progress {
+    background-color: var(--status-progress-bg);
+    color: var(--status-progress);
+}
+
+.status-indicator.completed::before {
+    background-color: var(--status-completed);
+}
+
+.status-indicator.completed {
+    background-color: var(--status-completed-bg);
+    color: var(--status-completed);
+}
+
+.status-indicator.urgent::before {
+    background-color: var(--status-urgent);
+    animation: pulse 1s infinite;
+}
+
+.status-indicator.urgent {
+    background-color: var(--status-urgent-bg);
+    color: var(--status-urgent);
+}
+
+/* Pulse animation for active statuses */
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.5;
+    }
+}
+
+/* ===================================================================
+   COMPONENT: ALERT BOXES
+   =================================================================== */
+
+.alert-box {
+    padding: 16px;
+    border-radius: 6px;
+    border-left: 4px solid;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+}
+
+.alert-primary {
+    background-color: var(--primary-bg);
+    border-color: var(--primary);
+    color: var(--text-primary);
+}
+
+.alert-secondary {
+    background-color: var(--secondary-bg);
+    border-color: var(--secondary);
+    color: var(--text-primary);
+}
+
+.alert-warning {
+    background-color: var(--accent-bg);
+    border-color: var(--accent);
+    color: var(--text-primary);
+}
+
+.alert-danger {
+    background-color: var(--danger-bg);
+    border-color: var(--danger);
+    color: var(--text-primary);
+}
+
+.alert-icon {
+    flex-shrink: 0;
+    font-weight: 600;
+    font-size: 18px;
+}
+
+.alert-content {
+    flex: 1;
+    font-size: 14px;
+}
+
+.alert-content strong {
+    display: block;
+    margin-bottom: 4px;
+}
+
+/* ===================================================================
+   FORM ELEMENTS WITH COLOR SCHEME
+   =================================================================== */
+
+.form-control {
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-md, 10px);
+    padding: 10px 12px;
+    font-size: 14px;
+    color: var(--text-primary);
+    background-color: var(--bg-white);
+    transition: all var(--transition-fast);
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px var(--primary-bg);
+}
+
+.form-control:hover {
+    border-color: var(--primary-light);
+}
+
+.form-control::placeholder {
+    color: var(--text-tertiary);
+}
+
+.form-control.error {
+    border-color: var(--danger);
+    box-shadow: 0 0 0 3px var(--danger-bg);
+}
+
+.form-control.success {
+    border-color: var(--secondary);
+    box-shadow: 0 0 0 3px var(--secondary-bg);
+}
+
+.form-control.warning {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-bg);
+}
+
+/* ===================================================================
+   TABLE STYLING WITH COLOR SCHEME
+   =================================================================== */
+
+.table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 16px;
+}
+
+.table thead {
+    background-color: var(--table-header-bg);
+}
+
+.table thead th {
+    background-color: var(--table-header-bg);
+    color: var(--table-header-text);
+    font-weight: 600;
+    font-size: 13px;
+    padding: 12px 16px;
+    text-align: left;
+    border: 1px solid var(--table-border);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.table tbody td {
+    padding: 12px 16px;
+    border: 1px solid var(--table-border);
+    color: var(--text-primary);
+    font-size: 14px;
+}
+
+.table tbody tr {
+    background-color: var(--bg-primary);
+    transition: background-color var(--transition-fast);
+}
+
+.table tbody tr:hover {
+    background-color: var(--table-row-hover);
+}
+
+.table tbody tr:nth-child(even) {
+    background-color: var(--bg-primary);
+}
+
+.table tbody tr:nth-child(odd) {
+    background-color: var(--bg-secondary);
+}
+
+.table tbody tr:hover {
+    background-color: var(--table-row-hover);
+}
+
+/* Ensure no pseudo-element content is displayed on table cells */
+.table tbody td:before,
+.table tbody td:after {
+    display: none !important;
+    content: none !important;
+}
+
+/* Responsive table */
+@media (max-width: 768px) {
+    .table thead {
+        display: none;
+    }
+    
+    .table tbody tr {
+        display: block;
+        margin-bottom: 16px;
+        border: 1px solid var(--table-border);
+        border-radius: 6px;
+        overflow: hidden;
+    }
+    
+    .table tbody td {
+        display: block;
+        padding: 8px 12px;
+        text-align: right;
+        border: none;
+        border-bottom: 1px solid var(--table-border);
+        position: relative;
+        padding-left: 50%;
+    }
+    
+    .table tbody td:before {
+        content: attr(data-label);
+        position: absolute;
+        left: 6px;
+        font-weight: 600;
+        text-align: left;
+    }
+    
+    .table tbody td:last-child {
+        border-bottom: none;
+    }
+}
+
+/* Table with striped rows */
+.table-striped tbody tr:nth-child(even) {
+    background-color: #f0f9ff;
+}
+
+/* Table with hover highlight */
+.table-hover tbody tr:hover {
+    box-shadow: inset 0 0 0 2px var(--primary);
+}
+
+/* ===================================================================
+   INTERACTIVE ELEMENTS
+   =================================================================== */
+
+/* Links */
+a {
+    color: var(--primary);
+    text-decoration: none;
+    transition: all var(--transition-fast);
+}
+
+a:hover {
+    color: var(--primary-dark);
+    text-decoration: underline;
+}
+
+a:focus {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+}
+
+/* Cards */
+.card-colored {
+    background-color: var(--bg-white);
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-lg, 14px);
+    box-shadow: var(--shadow-sm);
+    transition: all var(--transition-normal);
+}
+
+.card-colored:hover {
+    box-shadow: var(--shadow-lg);
+}
+
+.card-colored.primary {
+    border-left: 4px solid var(--primary);
+}
+
+.card-colored.secondary {
+    border-left: 4px solid var(--secondary);
+}
+
+.card-colored.accent {
+    border-left: 4px solid var(--accent);
+}
+
+.card-colored.danger {
+    border-left: 4px solid var(--danger);
+}
+
+/* ===================================================================
+   ACCESSIBILITY & FOCUS STATES
+   =================================================================== */
+
+:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+}
+
+/* Disabled state */
+.btn:disabled,
+.form-control:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.btn:disabled:hover {
+    transform: none;
+    box-shadow: none;
+}
+
+/* Loading state */
+.btn.loading {
+    position: relative;
+    color: transparent;
+}
+
+.btn.loading::after {
+    content: '';
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    top: 50%;
+    left: 50%;
+    margin-left: -8px;
+    margin-top: -8px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    border-top-color: white;
+    animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* ===================================================================
+   RESPONSIVE UTILITIES
+   =================================================================== */
+
+@media (max-width: 768px) {
+    .btn {
+        padding: 12px 16px;
+        font-size: 14px;
+    }
+    
+    .badge {
+        padding: 4px 8px;
+        font-size: 11px;
+    }
+    
+    .report-card {
+        padding: 16px;
+    }
+    
+    .report-card-header {
+        flex-direction: column;
+        gap: 8px;
+    }
+    
+    .report-card-priority {
+        width: 100%;
+        justify-content: space-between;
+    }
+}
+
+/* ===================================================================
+   PRINT STYLES
+   =================================================================== */
+
+@media print {
+    .btn,
+    .navbar,
+    .btn-primary,
+    .btn-secondary {
+        display: none;
+    }
+    
+    .report-card {
+        break-inside: avoid;
+        page-break-inside: avoid;
+    }
+}
+

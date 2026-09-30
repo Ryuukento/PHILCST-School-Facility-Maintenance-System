@@ -1,0 +1,447 @@
+/* ===================================================================
+   SYSTEM UI REDESIGN — shared component layer.
+
+   WHAT THIS FILE IS FOR
+   Task brief section 15: "Prefer fixing the shared design system
+   instead of individually styling every page... Avoid duplicated CSS."
+   This is that shared layer. Anything that should look the same on
+   more than one page belongs here, once, rather than being pasted into
+   the 40+ per-page stylesheets this project has accumulated.
+
+   WHAT IT DELIBERATELY DOES NOT DO
+   The standing design brief puts the shared stylesheets off-limits.
+   That was reconciled with section 15 as: the COLOUR TOKENS in
+   styles.css's :root block may be edited, its COMPONENT RULES may not.
+   In the event no token needed changing at all — the palette was
+   already the purple scale this redesign calls for
+   (--color-primary-600:#7c3aed, purple --shell-header-bg gradient,
+   #10b981 / #f59e0b / #ef4444 / #3b82f6 semantics) — so styles.css is
+   untouched entirely and this file overrides by layering instead.
+
+   LOAD POSITION AND WHY THE SELECTORS LOOK LIKE THEY DO
+   This file is linked ONCE, at the end of includes/header.php's <head>,
+   so a single link covers every page that uses the shared shell.
+
+   But several pages link their own stylesheet from the <body>
+   (dashboard.php -> dashboard-card-accent.css, maintenance-dashboard.php
+   -> hd-dashboard.css, staff-dashboard.php -> staff-dashboard.inline.css).
+   Those load AFTER anything in <head>, so source order cannot win here
+   and specificity has to. That is the only reason the dashboard rules
+   below carry a leading `:root` — it buys exactly one class-worth of
+   specificity (0,1,0) so, e.g., `:root main.x .hd-kpi-card` (0,3,1)
+   beats hd-dashboard.css's `main.x .hd-kpi-card` (0,2,1). It is not
+   decoration and it is not !important, which would be unoverridable by
+   the page sheets that legitimately need to specialise.
+
+   No !important is used anywhere in this file.
+   =================================================================== */
+
+
+/* ===================================================================
+   1. DASHBOARD CARD GEOMETRY  (brief section 4)
+
+   The three dashboards never shared a card component; they grew three
+   separate families, which is why the same "stat card" idea renders
+   three different ways today:
+
+     Administrator    .dashboard-hero-kpi-item   radius ?   pad 20/22/26
+     Head Maintenance .hd-kpi-card               radius 12  pad 26/24
+     Maintenance Staff .stat-card                radius 14  pad 18
+
+   dashboard-card-accent.css already unified the BORDER COLOUR across
+   these same three families using two custom properties, and explicitly
+   left geometry alone. This section finishes that job the same way:
+   the geometry is declared once as custom properties and all three
+   families point at them, so there is one place to retune and no
+   duplicated literals.
+
+   Values chosen to match the Administrator dashboard, because that is
+   the family the reference screenshot's KPI row already resembles
+   (icon tile, value, trend pill, sparkline).
+   -------------------------------------------------------------------- */
+:root {
+    --dash-card-radius: 14px;
+    --dash-card-pad: 20px 22px;
+    --dash-card-shadow: 0 1px 3px rgba(15, 23, 42, 0.05);
+    --dash-card-shadow-hover: 0 6px 18px rgba(15, 23, 42, 0.10);
+}
+
+:root main.maintenance-admin-dashboard-page .hd-kpi-card,
+:root main.staff-dashboard-page .stat-card,
+:root .dashboard-hero-kpi-item {
+    border-radius: var(--dash-card-radius);
+    padding: var(--dash-card-pad);
+    box-shadow: var(--dash-card-shadow);
+}
+
+/* One hover response for all three, replacing hd-dashboard.css's
+   translateY(-1px) + heavier shadow and staff-dashboard.inline.css's
+   shadow-only response. Transform is deliberately NOT used: these cards
+   sit in a grid and a transform on hover makes the row appear to twitch
+   when the pointer crosses card boundaries. */
+:root main.maintenance-admin-dashboard-page .hd-kpi-card:hover,
+:root main.staff-dashboard-page .stat-card-clickable:hover {
+    box-shadow: var(--dash-card-shadow-hover);
+    transform: none;
+}
+
+/* The Head Maintenance cards were the only family with a 3px coloured
+   top bar. The reference's KPI cards have no such bar — the colour cue
+   there is the icon tile — and keeping it on one dashboard out of three
+   is the inconsistency this section exists to remove.
+
+   border-top-WIDTH is what is neutralised, and it is replaced by the
+   same 1px the other three edges already have, so the border box keeps
+   its total height and nothing in the grid reflows. The accent colour
+   itself is left to dashboard-card-accent.css, which owns it. */
+:root main.maintenance-admin-dashboard-page .hd-kpi-card {
+    border-top-width: 1px;
+}
+
+
+/* ===================================================================
+   2. CARD HEADER LAYOUT  (brief sections 4 and 12)
+
+   MEASURED DEFECT, not a style preference. On the Administrator
+   dashboard at 1440px the Reports by Status card header computed to
+   scrollWidth 338 inside clientWidth 264 and was clipped by the card's
+   overflow:hidden, so its subtitle rendered as "Repo / for th / mont"
+   and the month pill was invisible.
+
+   Cause: styles.css:1076 defines .card-header as
+   `display:flex; justify-content:space-between`. That is the right
+   recipe for the "title left, button right" headers used elsewhere in
+   the app, but these chart cards use the header for a title with a
+   subtitle BENEATH it. Flex makes the subtitle a sibling flex item, so
+   in a 264px card it is squeezed into roughly 34px and overflows.
+
+   The fix is to let the header wrap and give the subtitle a full-width
+   flex line, rather than flipping .card-header to column — which would
+   be a shared-component change and would break every legitimate
+   title/button header in the system.
+   -------------------------------------------------------------------- */
+/* Applies to EVERY .card-header, not just the chart cards, because the
+   same squeeze shows up wherever a header holds a title plus action
+   buttons. Measured at 390px on reports.php:
+   .card-header.d-flex computed to scrollWidth 385 in clientWidth 351,
+   which pushed .card 34px past its container and made
+   main.reports-page-container clip 23px (overflow-x:hidden) — so the
+   header's right-hand action buttons were cut off and unreachable.
+
+   flex-wrap only engages when the content genuinely does not fit, so
+   every header that fits on one line today is byte-for-byte unchanged. */
+:root .card-header {
+    flex-wrap: wrap;
+}
+
+:root .chart-card > .card-header {
+    flex-wrap: wrap;
+}
+
+:root .chart-card > .card-header > .status-chart-head-row {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+/* flex-basis:100% forces the subtitle onto its own line under the
+   title, which is where it was always meant to read. */
+:root .chart-card > .card-header > p {
+    flex: 1 1 100%;
+    min-width: 0;
+    margin-bottom: 0;
+}
+
+
+/* ===================================================================
+   3. CARD TITLES MUST NOT TRUNCATE  (brief section 13, accessibility)
+
+   MEASURED DEFECT: the "Today's Reports" card title computed to
+   scrollWidth 135 in clientWidth 87 and rendered as "Today's ..." —
+   the card's own name was unreadable.
+
+   dashboard.inline.css:1615 sets `white-space:nowrap; overflow:hidden;
+   text-overflow:ellipsis` on these titles. Ellipsis is the wrong
+   failure mode for a heading: it silently destroys information with no
+   way to recover it (no tooltip, no expansion). Wrapping to a second
+   line costs vertical space instead, which the header already has — the
+   surrounding .dashboard-charts-row .card-header rule floors every
+   header in the row to min-height:80px, so a two-line title usually
+   consumes slack that was already reserved and the row stays aligned.
+   -------------------------------------------------------------------- */
+:root .dashboard-card-head-title h2 {
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+    /* Wrapping alone is not enough at 390px: the same title measured
+       scrollWidth 87 in clientWidth 73 there, because the flex parent
+       (.dashboard-card-head-title, dashboard.inline.css:1608) can squeeze
+       the heading narrower than its longest WORD, and a word has no wrap
+       opportunity inside it. `anywhere` gives the browser permission to
+       break mid-word as a last resort, which is what keeps the text inside
+       the box. It only ever engages when no normal break point fits, so
+       titles that already wrap cleanly are unaffected. */
+    overflow-wrap: anywhere;
+}
+
+
+/* ===================================================================
+   4. NOT A DEFECT — .activity-timeline-step (recorded so it is not
+      "fixed" again by the next person reading a probe dump)
+
+   The three .activity-timeline-step elements report scrollWidth 367
+   inside clientWidth 268 with overflow-x:visible, which looks exactly
+   like a 99px overflow bug in an automated sweep. It is not one.
+
+   .activity-timeline-connector (dashboard.inline.css:1453) is the line
+   drawn BETWEEN two timeline nodes. It is absolutely positioned with
+   `left: calc(50% + 34px); right: calc(-50% + 34px)` — a negative right
+   offset, so it is *supposed* to extend past its own step's right edge
+   and reach the next step's node. The arithmetic confirms it: a 268px
+   step plus (50% - 34px) = 100px of intentional reach = 367px. The
+   number is the feature working, not text spilling.
+
+   There is deliberately no rule here. Constraining the step would break
+   the connecting line the timeline is made of.
+
+   THREE MORE READINGS IN THE SAME CATEGORY, all confirmed by measurement
+   rather than by reading source:
+
+   a) .summary-card.summary-card-alert (Low Stock, Administrator
+      dashboard) reports scrollWidth 383 in clientWidth 353 with
+      overflow:hidden — an apparently clipped 30px. A rect sweep of every
+      descendant found NOT ONE crossing the card's right edge, because the
+      30px belongs to a PSEUDO-element: `.dashboard-feature-cards-grid
+      .summary-card::after` (dashboard.inline.css:960) is a 130px radial
+      glow deliberately hung off the corner at top:-30px; right:-30px.
+      The card's overflow:hidden is what turns that oversized circle into
+      the soft corner wash the reference shows. The clip IS the effect.
+
+   b) .notification-wrapper / .notification-bell report 45/40 and 44/38 on
+      every page. overflow-x is VISIBLE on both, so nothing is hidden, and
+      no page reports horizontalOverflow — the few pixels are the unread
+      badge sitting proud of the button, which is what a badge is.
+
+   c) reports.php's TBODY/TR/TD report 808/800 and various 128/66 cells.
+      The table's wrapper .reports-table-wrap (styles.css:1336) is
+      `overflow-x: auto`, i.e. the standard scrollable-table pattern, so
+      the table is reachable and the page itself stays at 375/375. The
+      per-cell numbers are Chrome's reporting from inside that scroll
+      container, not clipped content.
+   -------------------------------------------------------------------- */
+
+
+/* ===================================================================
+   5. RESPONSIVE CONTAINMENT  (brief section 12: "no horizontal overflow")
+
+   Two more measured defects from the 390px sweep. Both are cases where a
+   container is genuinely narrower than its contents and the contents have
+   no permission to reflow — so the overflow is clipped away rather than
+   scrolled to, and the clipped part is unreachable.
+   -------------------------------------------------------------------- */
+
+/* ---- Analytics tab strip -------------------------------------------
+   MEASURED DEFECT: .an-tabs computed to scrollWidth 388 inside
+   clientWidth 303 at 390px. The strip sits in a .card, which is
+   overflow:hidden, so the 85px past the edge is not scrollable — the
+   right-hand tabs are simply not reachable on a phone.
+
+   Wrapping is the fix rather than overflow-x:auto because these are
+   navigation controls: a horizontally scrollable strip with no visible
+   affordance hides the same tabs behind a gesture most users will not
+   discover, whereas a second row is self-evident.
+
+   `display:flex` is set INLINE on this element
+   (analytics-dashboard.php:41), so display itself is not overridable from
+   a stylesheet without !important — but flex-wrap is not in that inline
+   declaration, so it is reachable normally. This is why the rule changes
+   only wrapping and leaves the flex context alone. */
+:root .an-tabs {
+    flex-wrap: wrap;
+}
+
+/* ---- Inventory filter grids ----------------------------------------
+   MEASURED DEFECT: .inventory-entry-filters-grid computed to scrollWidth
+   400 inside clientWidth 317 at 390px, which in turn pushed
+   .inventory-entry-history-card to 418 inside 353.
+
+   NOT a missing media query — inventory.inline.css:958 already collapses
+   both grids to a single column below 768px. The cause is the track
+   sizing: a `1fr` track's automatic minimum is the min-content width of
+   its item, and a grid item's own min-width defaults to `auto`, which
+   means the track cannot shrink below the widest control in it. The date
+   inputs and the long-placeholder search field each have an intrinsic
+   min-content width larger than a 390px column, so the single column is
+   forced wider than the card.
+
+   Setting min-width:0 on the ITEMS (not the tracks) removes that
+   automatic minimum, which is the documented way to let a grid item
+   shrink. It has no effect at any width where the controls already fit,
+   so the desktop 6-column and 3-column layouts are untouched. */
+:root .inventory-entry-filters-grid > *,
+:root .inventory-items-filter-grid > * {
+    min-width: 0;
+}
+
+
+/* ===================================================================
+   6. THE SHARED RESPONSIVE TABLE IS BROKEN  (brief sections 9, 12, 13)
+
+   This is the single highest-impact defect found in the sweep: .table is
+   used 70 times across 14 pages, and BELOW 768px every one of them
+   renders as an unlabelled column of right-aligned values.
+
+   Seen first as a screenshot of Inventory at 390px — rows reading
+   "#28" / "Aircon" / "Equipment" / "0", each on its own line, flush
+   right, with no indication of which column any value came from — and
+   again on the Analytics "Items Needing Attention" table.
+
+   CAUSE, and it is a genuine bug in colour-scheme.css, not a taste call.
+   That file contains two rules that contradict each other:
+
+     line 957   .table tbody td:before,
+                .table tbody td:after { display:none !important;
+                                        content:none !important; }
+     line 988   @media (max-width:768px) {
+                  .table tbody td:before { content: attr(data-label); } }
+
+   The mobile layout at line 965 hides <thead> and turns every <td> into
+   a block with `padding-left:50%; text-align:right`, reserving the left
+   half of every row for a label that the :before rule is supposed to
+   print. But the blanket !important at line 957 wins over it no matter
+   what, so the label never renders — leaving the 50% gutter empty and
+   the data unidentifiable. (Even without the !important it would still
+   come out blank: attr(data-label) needs a data-label attribute, and the
+   table markup in this app does not emit one anywhere.)
+
+   WHY THIS IS FIXED BY RESTORING A REAL TABLE RATHER THAN BY REPAIRING
+   THE STACK. Making the stacked layout work means adding a data-label
+   attribute to every <td> at every render site — around twenty places,
+   most of them inside JS template strings in page logic. Section 14 puts
+   that code off-limits and this is a visual-design task. Restoring the
+   table instead keeps the <thead> on screen, and the header row IS the
+   label: no attribute, no ambiguity, and it fixes all 70 tables at once.
+
+   The horizontal scroll is the pattern this app already uses
+   successfully elsewhere — .reports-table-wrap (styles.css:1336) and
+   .inventory-entry-table-wrap are both overflow-x:auto. Setting it on
+   .table itself covers the tables that have no such wrapper, which is
+   what keeps section 12 satisfied: the table scrolls inside its card
+   instead of pushing the page sideways.
+
+   Every declaration below restores a value the media block overwrote,
+   and each is taken from that same file's own desktop rules
+   (colour-scheme.css:907-934) so the two agree.
+   -------------------------------------------------------------------- */
+@media (max-width: 768px) {
+    /* The table becomes its own scroll container. width:100% keeps the
+       container filling the card; the table content inside it is free to
+       be wider, which is the part that used to be impossible. */
+    :root .table {
+        display: block;
+        width: 100%;
+        overflow-x: auto;
+    }
+
+    /* The column headings come back. This is the whole point — it is what
+       makes the values identifiable again. */
+    :root .table thead {
+        display: table-header-group;
+    }
+
+    /* Undo the "each row is a bordered card" treatment. */
+    :root .table tbody tr {
+        display: table-row;
+        margin-bottom: 0;
+        border: 0;
+        border-radius: 0;
+        overflow: visible;
+    }
+
+    /* padding is restated as the shorthand deliberately: it resets the
+       padding-left:50% gutter in the same declaration, so there is no
+       lingering half-width indent to remember. */
+    :root .table tbody td {
+        display: table-cell;
+        position: static;
+        padding: 12px 16px;
+        text-align: left;
+        border: 1px solid var(--table-border);
+        white-space: nowrap;
+    }
+
+    /* The stacked layout stripped the bottom border from the last cell of
+       each card; a real table wants its grid back. */
+    :root .table tbody td:last-child {
+        border-bottom: 1px solid var(--table-border);
+    }
+}
+
+
+/* ===================================================================
+   7. USER MANAGEMENT CARD GRID  (brief sections 5 and 12)
+
+   OBSERVED AT 768px: one user card per row, filling the full content
+   width, with the avatar scaled up to match — a single account occupied
+   roughly 540px of height and the page read as a list of posters rather
+   than a directory. At 1280px the same grid is a tidy 4-up of ~230px
+   cards, so the card design is fine; only the track count is wrong.
+
+   CAUSE: users.inline.css asserts a fixed column count per breakpoint —
+   4 (line 518), 2 below 1180 (line 923), then 1 below 900 (line 939).
+   That last step is the problem: it drops straight from two columns to
+   one at 900px, and everything from 899px down to a phone gets the
+   full-width treatment even though 899px has room for three.
+
+   FIX, and it is the same technique problem-type-selector.css already
+   uses in this codebase: derive the track count from the available width
+   with auto-fit + minmax instead of asserting it per breakpoint. One
+   declaration replaces the whole ladder, and there is no longer any
+   viewport in between two breakpoints where the asserted count is wrong.
+   The 240px floor is taken from the cards' own proven size — it is
+   roughly what they already measure in the 4-up desktop layout, so
+   desktop is unchanged and only the 641-900px band actually moves.
+
+   users.inline.css is linked from the BODY (users.php:75), so it loads
+   after this file and source order cannot win. The leading :root is what
+   carries it: (0,2,0) against that file's (0,1,0). */
+:root .users-grid {
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+}
+
+
+/* ===================================================================
+   8. USER MANAGEMENT TOOLBAR — A FLEX-AXIS BUG  (brief section 12)
+
+   MEASURED AT 768px: .users-search-wrap boxes out at 201x360 while the
+   controls inside it (a 46px search field and a 34px row of role filter
+   pills) only reach 106px. The result is 254px of dead whitespace
+   sitting between the filters and the "Add New User" button, with the
+   toolbar's purple left rule drawn down the full length of it, and a
+   search field squeezed to 201px in a 730px toolbar.
+
+   CAUSE — one property read against the wrong axis. The base rule
+   (users.inline.css:452) is
+
+       .users-search-wrap { flex: 1 1 360px; }
+
+   which was written for a ROW container: 360px of flex-basis means
+   360px of WIDTH, and `1 1` lets it share the row. But at 900px
+   (users.inline.css:926) the container flips to
+   `flex-direction: column` — and flex-basis follows the main axis, so
+   the very same declaration now means 360px of HEIGHT. Nothing in that
+   media block revisits it, so the box is padded out to 360px tall and,
+   because the container also sets `align-items: flex-start`, shrunk to
+   its content width instead of filling the toolbar.
+
+   FIX: in a column toolbar the wrap should take its height from its
+   contents and its width from the toolbar — which is exactly what
+   `flex: 0 0 auto` plus `width: 100%` says. Scoped to the same
+   max-width:900px condition, so the row layout above it is untouched.
+   The leading :root carries the specificity over the body-linked
+   users.inline.css, as in section 7. */
+@media (max-width: 900px) {
+    :root .users-search-wrap {
+        flex: 0 0 auto;
+        width: 100%;
+    }
+}

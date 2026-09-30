@@ -1,0 +1,191 @@
+/**
+ * Enterprise Dashboard visual language.
+ * Shared, additive polish layer for dashboard.php, maintenance-dashboard.php,
+ * staff-dashboard.php, super-admin-dashboard.php. Loads after each page's own
+ * stylesheets (see $pageStylesheets order in header.php) so these rules win
+ * without needing !important. Targets each page's existing selectors/markup —
+ * no HTML structure, PHP, JS, or class names are assumed to change.
+ */
+
+/* ---- Unified page welcome/header bar (title + subtitle + optional actions slot),
+   shared markup added to all 4 dashboards: dashboard.php, maintenance-dashboard.php,
+   staff-dashboard.php, super-admin-dashboard.php. ---- */
+.dashboard-page-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-4, 16px);
+    margin-bottom: var(--space-6, 24px);
+}
+
+.dashboard-page-header-title {
+    color: var(--text-primary, #0f172a);
+    font-size: 24px;
+    font-weight: 700;
+    margin: 0 0 4px;
+}
+
+.dashboard-page-header-subtitle {
+    color: var(--text-secondary, #64748b);
+    font-size: 14px;
+    margin: 0;
+}
+
+.dashboard-page-header-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2, 8px);
+    flex-wrap: wrap;
+}
+
+@media (max-width: 640px) {
+    .dashboard-page-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: var(--space-3, 12px);
+    }
+
+    .dashboard-page-header-actions {
+        width: 100%;
+    }
+}
+
+/* ---- Unified card-grid gap/spacing across all 4 stat/summary grids. Each page keeps
+   its own grid-template-columns strategy (tuned per card count) — only gap and
+   bottom margin are normalized. ---- */
+main.maintenance-admin-dashboard-page .summary-cards-grid,
+.staff-dashboard-page .stats-grid,
+.system-dashboard .dashboard-grid {
+    gap: var(--space-4, 16px);
+    margin-bottom: var(--space-8, 32px);
+}
+
+@media (max-width: 640px) {
+    main.maintenance-admin-dashboard-page .summary-cards-grid,
+    .staff-dashboard-page .stats-grid,
+    .system-dashboard .dashboard-grid {
+        gap: var(--space-3, 12px);
+        margin-bottom: var(--space-6, 24px);
+    }
+}
+
+/* ---- Shared stat-card chrome: .summary-card (dashboard/maintenance) + .stat-card (staff/super-admin) ---- */
+main.maintenance-admin-dashboard-page .summary-card,
+.staff-dashboard-page .stat-card,
+.system-dashboard .stat-card {
+    border-radius: var(--radius-lg, 16px);
+    border: 1px solid var(--border, rgba(148, 163, 184, 0.24));
+    background: var(--surface, #ffffff);
+    box-shadow: var(--shadow-md, 0 4px 12px rgba(15, 23, 42, 0.10));
+    transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+}
+
+/* Shadow-only hover per DESIGN_SYSTEM.md §19/§22.4 — no translateY lift. */
+main.maintenance-admin-dashboard-page .summary-card:hover,
+.staff-dashboard-page .stat-card:hover,
+.system-dashboard .stat-card:hover {
+    box-shadow: var(--shadow-lg, 0 12px 28px rgba(15, 23, 42, 0.12));
+}
+
+main.maintenance-admin-dashboard-page .summary-card-title,
+.staff-dashboard-page .stat-label,
+.system-dashboard .stat-card .stat-label {
+    color: var(--text-secondary, #64748b);
+    font-weight: 700;
+}
+
+main.maintenance-admin-dashboard-page .summary-card-value,
+.staff-dashboard-page .stat-value,
+.system-dashboard .stat-card .stat-value {
+    color: var(--text-primary, #0f172a);
+}
+
+/* ---- Unified icon-chip treatment: SVG chips (dashboard/maintenance) + emoji chips (staff/super-admin) ---- */
+main.maintenance-admin-dashboard-page .summary-card-icon,
+.staff-dashboard-page .stat-icon-chip,
+.system-dashboard .stat-card .stat-icon-chip {
+    width: 50px;
+    height: 50px;
+    border-radius: var(--radius-md, 12px);
+    display: grid;
+    place-items: center;
+    font-size: 22px;
+    line-height: 1;
+    flex-shrink: 0;
+    background: var(--primary-bg, #f3e8ff);
+    color: var(--primary, #8b5cf6);
+    box-shadow: var(--shadow-sm, 0 1px 3px rgba(15, 23, 42, 0.08));
+}
+
+/* Semantic accent per metric type, reusing each page's existing type classes/order */
+.staff-dashboard-page .stat-card-pending .stat-icon-chip,
+.system-dashboard .stat-card.pending .stat-icon-chip,
+main.maintenance-admin-dashboard-page .summary-card-pending .summary-card-icon {
+    background: var(--accent-bg, #fffbeb);
+    color: var(--accent-dark, #d97706);
+}
+
+.staff-dashboard-page .stat-card-completed .stat-icon-chip,
+.system-dashboard .stat-card.completed .stat-icon-chip,
+main.maintenance-admin-dashboard-page .summary-card-completed .summary-card-icon {
+    background: var(--success-bg, #ecfdf5);
+    color: var(--success, #059669);
+}
+
+main.maintenance-admin-dashboard-page .summary-card-low-stock .summary-card-icon,
+.system-dashboard .stat-card.overdue .stat-icon-chip {
+    background: var(--danger-bg, #fef2f2);
+    color: var(--danger, #dc2626);
+}
+
+/* ---- Unified chart chrome. General containers (status/department/trend) get the same
+   theme-aware token background as .card/.chart-card on the other 3 dashboards.
+   .priority-chart-card keeps the distinct dark-panel accent already shared by
+   dashboard.php/maintenance-dashboard.php/staff-dashboard.php (same gradient recipe
+   as maintenance-dashboard.css's .priority-chart-card) — applied here for super-admin
+   too, instead of darkening every chart container. ---- */
+main.maintenance-admin-dashboard-page .chart-container,
+.staff-dashboard-page .chart-card,
+.system-dashboard .chart-container {
+    border-radius: var(--radius-lg, 16px);
+    box-shadow: var(--shadow-md, 0 8px 16px rgba(15, 23, 42, 0.2));
+}
+
+.system-dashboard .chart-container {
+    background: var(--card-color, #ffffff);
+    border: 1px solid var(--border, #e5e7eb);
+}
+
+/* .priority-chart-card manages its own zero-padding + internal chart-title/chart-canvas
+   padding (super-admin-dashboard.inline.css) — only normalize padding on the general
+   (non-priority) chart containers. */
+.system-dashboard .chart-container:not(.priority-chart-card) {
+    padding: 20px;
+}
+
+.system-dashboard .chart-title {
+    color: var(--text-primary, #111827);
+}
+
+.system-dashboard .chart-container.priority-chart-card {
+    background: linear-gradient(180deg, #1a2a45 0%, #15233b 100%);
+    border: 1px solid rgba(96, 165, 250, 0.18);
+}
+
+.system-dashboard .priority-chart-card .chart-title {
+    color: #f8fafc;
+}
+
+/* ---- Brand color reconciliation: replace super-admin's one-off purple (#8F00CC) with the
+   app's shared --primary token, used everywhere else in the app. The page's <h1> now
+   carries .dashboard-page-header-title (shared, neutral text color — same as the other
+   3 dashboards' welcome headers), so it's intentionally excluded here. ---- */
+.system-dashboard .btn-primary {
+    background: var(--primary, #8b5cf6);
+    color: #ffffff;
+}
+
+.system-dashboard .stat-card:hover {
+    border-color: var(--primary-light, rgba(139, 92, 246, 0.35));
+}

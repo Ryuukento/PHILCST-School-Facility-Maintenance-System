@@ -1,0 +1,1441 @@
+main.inventory-page {
+    --inventory-surface: #ffffff;
+    --inventory-surface-alt: #f8fafc;
+    --inventory-surface-hover: #f5f3ff;
+    --inventory-border: #e2e8f0;
+    --inventory-text: #111827;
+    --inventory-text-muted: #64748b;
+    --inventory-accent: #6d28d9;
+    --inventory-accent-strong: #5b21b6;
+    --inventory-accent-soft: #f5f3ff;
+    --inventory-accent-border: rgba(109, 40, 217, 0.24);
+    /* The page's purple accent family. Every one of these is the same #6d28d9
+       the sidebar, the top bar and the primary buttons already use — only the
+       alpha changes, which is what keeps the page reading as "white with
+       lavender accents" rather than "a purple page".
+
+         --inventory-card-border   outer edge of every top-level card, and the
+                                   table's outer frame. 0.38 over white lands
+                                   on ~rgb(200,173,241): clearly visible at 1px
+                                   against #ffffff, still well short of a
+                                   saturated outline.
+         --inventory-control-border  inputs, selects and outline buttons. A
+                                   notch lighter than the cards so the controls
+                                   sit inside the container hierarchy instead
+                                   of competing with it.
+         --inventory-card-divider  header/body dividers and the category tiles
+                                   — the quietest tint, used where a full-
+                                   strength edge would read as a doubled line.
+         --inventory-table-rule    row separators. Deliberately the faintest of
+                                   all: the brief asks for subtle separators and
+                                   explicitly warns against outlining cells.
+         --inventory-table-head-bg the thead wash, ~rgb(248,244,253).
+
+       --inventory-border (#e2e8f0) is still NOT retired: it remains the
+       neutral fallback for anything not in the purple system (skeletons,
+       modals, the entry-history table), so it stays put. */
+    /* UPDATE — app-wide purple border sprint. These three were literals tuned
+       for this page alone. They now forward to the system tokens declared in
+       color-scheme.css, so an Inventory card and a Dashboard card draw the
+       same edge. The old literals stay as var() fallbacks, so this sheet
+       still renders correctly if it is ever loaded without the token file.
+       The two table values below stay local — they are interior rules, not
+       container edges, and the system deliberately has no token for those. */
+    --inventory-card-border: var(--purple-border, rgba(109, 40, 217, 0.38));
+    --inventory-control-border: var(--purple-control, rgba(109, 40, 217, 0.30));
+    --inventory-card-divider: var(--purple-border-light, rgba(109, 40, 217, 0.20));
+    --inventory-table-rule: rgba(109, 40, 217, 0.12);
+    --inventory-table-head-bg: rgba(109, 40, 217, 0.05);
+    --inventory-card-shadow: 0 12px 30px rgba(76, 29, 149, 0.09);
+    --inventory-success-bg: rgba(34, 197, 94, 0.12);
+    --inventory-success-text: #166534;
+    --inventory-warning-bg: rgba(245, 158, 11, 0.14);
+    --inventory-warning-text: #92400e;
+    --inventory-danger-bg: rgba(239, 68, 68, 0.12);
+    --inventory-danger-text: #b91c1c;
+    color: var(--inventory-text);
+}
+
+main.inventory-page > .card {
+    margin-bottom: 24px;
+    border: 1px solid var(--inventory-card-border) !important;
+    border-radius: 18px;
+    background: var(--inventory-surface);
+    box-shadow: var(--inventory-card-shadow);
+    overflow: hidden;
+}
+
+/* The header/body divider inside those containers, tinted to match. Without
+   this it stays styles.css's #f3f4f6 grey, which now reads as a dirty line
+   between two lavender-bordered halves of the same card. */
+main.inventory-page > .card > .card-header {
+    border-bottom-color: var(--inventory-card-divider);
+}
+
+main.inventory-page > .card > .card-body,
+main.inventory-page > .card > .card-header {
+    padding-left: 24px;
+    padding-right: 24px;
+}
+
+main.inventory-page .inventory-page-header-card .card-body,
+main.inventory-page .inventory-toolbar-card .card-body,
+main.inventory-page .inventory-category-browser-card .card-body,
+main.inventory-page .inventory-items-card .card-body,
+main.inventory-page .inventory-entry-history-card .card-body {
+    padding-top: 24px;
+    padding-bottom: 24px;
+}
+
+main.inventory-page .inventory-page-header-row {
+    margin: 0;
+    align-items: center;
+    gap: 18px;
+}
+
+main.inventory-page .inventory-title {
+    margin: 0;
+    font-size: clamp(28px, 2.3vw, 32px);
+    font-weight: 700;
+    line-height: 1.08;
+    letter-spacing: -0.03em;
+    color: var(--inventory-text);
+}
+
+main.inventory-page .inventory-subtitle {
+    margin-top: 6px;
+    margin-bottom: 0;
+    font-size: 14px;
+    line-height: 1.45;
+    color: var(--inventory-text-muted) !important;
+}
+
+main.inventory-page .inventory-header-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+main.inventory-page .inventory-header-actions .btn,
+main.inventory-page .inventory-room-add-btn,
+main.inventory-page .inventory-items-clear-btn,
+main.inventory-page .inventory-room-back-btn {
+    min-height: 46px;
+    padding: 0 16px;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 700;
+    box-shadow: none;
+    transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease, color 0.18s ease;
+}
+
+main.inventory-page .inventory-header-actions .btn:hover,
+main.inventory-page .inventory-room-add-btn:hover,
+main.inventory-page .inventory-items-clear-btn:hover,
+main.inventory-page .inventory-room-back-btn:hover {
+    transform: translateY(-1px);
+}
+
+main.inventory-page .inventory-header-actions .btn-primary {
+    background: linear-gradient(135deg, var(--inventory-accent) 0%, #8b5cf6 100%);
+    border: 1px solid rgba(109, 40, 217, 0.28);
+    color: #ffffff;
+}
+
+main.inventory-page .inventory-header-actions .btn-primary:hover {
+    background: linear-gradient(135deg, var(--inventory-accent-strong) 0%, #7c3aed 100%);
+    border-color: rgba(109, 40, 217, 0.36);
+    color: #ffffff;
+}
+
+main.inventory-page .inventory-header-actions .btn-secondary,
+main.inventory-page .inventory-room-add-btn,
+main.inventory-page .inventory-items-clear-btn,
+main.inventory-page .inventory-room-back-btn {
+    background: var(--inventory-surface);
+    border: 1px solid var(--inventory-border);
+    color: var(--inventory-text);
+}
+
+main.inventory-page .inventory-header-actions .btn-secondary:hover,
+main.inventory-page .inventory-room-add-btn:hover,
+main.inventory-page .inventory-items-clear-btn:hover,
+main.inventory-page .inventory-room-back-btn:hover {
+    background: var(--inventory-surface-hover);
+    border-color: rgba(109, 40, 217, 0.24);
+    color: var(--inventory-text);
+}
+
+main.inventory-page .inventory-toolbar-body {
+    padding-top: 20px;
+    padding-bottom: 20px;
+}
+
+main.inventory-page .inventory-toolbar-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 12px;
+    align-items: center;
+}
+
+main.inventory-page .inventory-toolbar-search {
+    position: relative;
+}
+
+main.inventory-page .inventory-toolbar-search-icon {
+    position: absolute;
+    left: 14px;
+    top: 50%;
+    width: 18px;
+    height: 18px;
+    transform: translateY(-50%);
+    /* Tinted with the page accent rather than the neutral muted grey, per the
+       "purple icons where appropriate" direction. `pointer-events: none` is
+       untouched: the icon must stay click-through so the whole field is a
+       single hit target for the search input beneath it. */
+    color: rgba(109, 40, 217, 0.7);
+    pointer-events: none;
+}
+
+main.inventory-page .inventory-category-search {
+    min-height: 48px;
+    border-radius: 12px;
+    border: 1px solid var(--inventory-control-border);
+    background: var(--inventory-surface);
+    color: var(--inventory-text);
+    padding: 12px 16px 12px 44px;
+    box-shadow: none;
+}
+
+main.inventory-page .inventory-category-search::placeholder {
+    color: color-mix(in srgb, var(--inventory-text-muted) 75%, transparent);
+}
+
+main.inventory-page .inventory-category-search:focus {
+    border-color: var(--inventory-accent);
+    box-shadow: 0 0 0 3px rgba(109, 40, 217, 0.14);
+}
+
+main.inventory-page .inventory-toolbar-action {
+    min-width: 168px;
+    justify-self: end;
+}
+
+main.inventory-page .inventory-category-browser-card .card-body,
+main.inventory-page .inventory-items-card .card-body,
+main.inventory-page .inventory-entry-history-card .card-body {
+    padding-bottom: 24px;
+}
+
+main.inventory-page .inventory-category-browser-body {
+    padding-top: 24px;
+}
+
+main.inventory-page .inventory-category-panel-header,
+main.inventory-page .inventory-items-header,
+main.inventory-page .inventory-entry-history-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+}
+
+main.inventory-page .inventory-category-panel-header {
+    margin-bottom: 16px;
+}
+
+main.inventory-page .inventory-category-heading,
+main.inventory-page .inventory-items-title,
+main.inventory-page .inventory-entry-history-header .inventory-section-title {
+    margin: 0;
+    font-size: 18px;
+    line-height: 1.15;
+    font-weight: 700;
+    color: var(--inventory-text);
+    letter-spacing: -0.01em;
+    text-transform: none;
+}
+
+main.inventory-page .inventory-panel-subtitle,
+main.inventory-page .inventory-items-subtitle,
+main.inventory-page .inventory-entry-subtitle {
+    margin: 6px 0 0;
+    font-size: 13px;
+    line-height: 1.45;
+    color: var(--inventory-text-muted) !important;
+}
+
+main.inventory-page .inventory-category-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+    gap: 12px;
+}
+
+main.inventory-page .inventory-category-card {
+    display: grid;
+    grid-template-columns: 36px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 12px;
+    min-height: 66px;
+    padding: 14px 16px;
+    border-radius: 12px;
+    border: 1px solid var(--inventory-border);
+    background: var(--inventory-surface);
+    color: var(--inventory-text);
+    text-align: left;
+    box-shadow: none;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease, box-shadow 0.18s ease;
+}
+
+main.inventory-page .inventory-category-card::before {
+    content: '';
+    position: absolute;
+    inset: 0 auto auto 0;
+    width: 100%;
+    height: 3px;
+    background: linear-gradient(90deg, var(--inventory-accent), #a78bfa);
+    opacity: 0.55;
+}
+
+main.inventory-page .inventory-category-card:hover {
+    transform: translateY(-1px);
+    border-color: rgba(109, 40, 217, 0.26);
+    background: var(--inventory-surface-hover);
+}
+
+main.inventory-page .inventory-category-card.is-active {
+    background: var(--inventory-accent-soft);
+    border-color: rgba(109, 40, 217, 0.34);
+    box-shadow: inset 3px 0 0 var(--inventory-accent);
+}
+
+main.inventory-page .inventory-category-card.is-empty {
+    opacity: 0.76;
+}
+
+main.inventory-page .inventory-category-card-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--inventory-accent-soft);
+    color: var(--inventory-accent);
+    border: 1px solid rgba(109, 40, 217, 0.16);
+    flex: 0 0 36px;
+}
+
+main.inventory-page .inventory-category-card-icon svg {
+    width: 16px;
+    height: 16px;
+    fill: currentColor;
+    stroke: none;
+}
+
+main.inventory-page .inventory-category-card-content {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+}
+
+main.inventory-page .inventory-category-card-name {
+    font-size: 15px;
+    line-height: 1.2;
+    font-weight: 600;
+    color: var(--inventory-text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+main.inventory-page .inventory-category-card.is-empty .inventory-category-card-name {
+    color: var(--inventory-text-muted);
+}
+
+main.inventory-page .inventory-category-card-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+main.inventory-page .inventory-category-card-count-badge {
+    min-width: 34px;
+    height: 28px;
+    padding: 0 10px;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--inventory-accent);
+    background: #f5f3ff;
+    border: 1px solid rgba(109, 40, 217, 0.16);
+    justify-self: end;
+}
+
+main.inventory-page .inventory-category-card.is-empty .inventory-category-card-count-badge {
+    color: var(--inventory-text-muted);
+    background: var(--inventory-surface-alt);
+    border-color: var(--inventory-border);
+}
+
+main.inventory-page .inventory-category-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    min-height: 20px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1;
+    background: var(--inventory-surface-alt);
+    color: var(--inventory-text-muted);
+    border: 1px solid var(--inventory-border);
+}
+
+main.inventory-page .inventory-category-chip.is-low {
+    background: var(--inventory-warning-bg);
+    color: var(--inventory-warning-text);
+    border-color: rgba(245, 158, 11, 0.18);
+}
+
+main.inventory-page .inventory-category-chip.is-out {
+    background: var(--inventory-danger-bg);
+    color: var(--inventory-danger-text);
+    border-color: rgba(239, 68, 68, 0.18);
+}
+
+main.inventory-page .inventory-category-chip.is-ok {
+    background: var(--inventory-success-bg);
+    color: var(--inventory-success-text);
+    border-color: rgba(34, 197, 94, 0.18);
+}
+
+main.inventory-page .inventory-items-header {
+    align-items: flex-start;
+    margin-bottom: 0;
+}
+
+main.inventory-page .inventory-count-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 28px;
+    padding: 0 12px;
+    border-radius: 999px;
+    background: var(--inventory-accent-soft);
+    color: var(--inventory-accent);
+    border: 1px solid rgba(109, 40, 217, 0.16);
+    font-size: 13px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+main.inventory-page .inventory-items-body {
+    padding-top: 20px;
+}
+
+main.inventory-page .inventory-items-filter-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+main.inventory-page .inventory-items-filter-grid .form-control {
+    min-height: 46px;
+    border-radius: 12px;
+    border: 1px solid var(--inventory-control-border);
+    background: var(--inventory-surface);
+    color: var(--inventory-text);
+    box-shadow: none;
+}
+
+main.inventory-page .inventory-items-filter-grid .form-control:focus {
+    border-color: var(--inventory-accent);
+    box-shadow: 0 0 0 3px rgba(109, 40, 217, 0.14);
+}
+
+/* The two outline buttons that live outside .inventory-header-actions —
+   "Manage Categories" (in the Items card header) and "Clear Filters" (in the
+   filter row). They were plain .btn-secondary greys, which left them outside
+   the purple system the three header actions belong to. One rule covers both
+   rather than two near-identical blocks.
+
+   `.inventory-items-actions .btn` is used instead of #manageCategoriesButton
+   so no markup change is required and the RBAC wrapper around that button is
+   left completely alone; that container holds only this button and the item
+   count <span>, so the selector cannot catch anything else.
+
+   Geometry (46px / 12px radius / 700 weight) is copied from .inv-action on
+   purpose — that is what makes all five buttons one group.
+
+   Both selectors deliberately carry three classes. The shared styles.css has
+   `:root[data-theme-resolved='light'] .btn-secondary { background:#e2e8f0 }`
+   at (0,3,0); the first version of this rule used
+   `main.inventory-page .inventory-items-clear-btn` — (0,2,1) — and lost, so
+   Clear Filters rendered as a slate-grey button while Manage Categories next
+   to it went purple. Adding the .inventory-items-filter-grid ancestor takes it
+   to (0,3,1) and wins on specificity, with no !important and no edit to the
+   shared sheet (which is off-limits). */
+main.inventory-page .inventory-items-actions .btn,
+main.inventory-page .inventory-items-filter-grid .inventory-items-clear-btn {
+    min-height: 46px;
+    border: 1px solid var(--inventory-control-border);
+    border-radius: 12px;
+    background: var(--inventory-surface);
+    color: var(--inventory-accent-strong);
+    font-weight: 700;
+    font-size: 14px;
+    transition: background-color 0.18s ease, border-color 0.18s ease, color 0.18s ease;
+}
+
+main.inventory-page .inventory-items-actions .btn:hover,
+main.inventory-page .inventory-items-filter-grid .inventory-items-clear-btn:hover {
+    background: var(--inventory-accent-soft);
+    border-color: var(--inventory-accent);
+    color: var(--inventory-accent-strong);
+}
+
+main.inventory-page .inventory-items-actions .btn:focus-visible,
+main.inventory-page .inventory-items-filter-grid .inventory-items-clear-btn:focus-visible {
+    outline: 2px solid var(--inventory-accent);
+    outline-offset: 2px;
+}
+
+main.inventory-page .inventory-items-clear-btn {
+    min-width: 144px;
+}
+
+main.inventory-page .inventory-items-table-shell {
+    /* The table's outer frame carries the full card border: the brief lists it
+       as one of the containers that must be easy to pick out against the white
+       page. It clears the Items card's own edge by the card's 24px body
+       padding, so at that distance the two do not read as a doubled border.
+       `overflow: auto` is untouched — it is what scrolls the table
+       horizontally on narrow viewports. */
+    border: 1px solid var(--inventory-card-border);
+    border-radius: 14px;
+    background: var(--inventory-surface);
+    overflow: auto;
+}
+
+/* TASK 31 — Inventory Items pagination. Same structure as All Reports'
+   .reports-pagination (summary + prev/next/page-number controls), but
+   styled with this file's own --inventory-* theme tokens instead of
+   reports.inline1.css's hardcoded dark-purple palette, since those tokens
+   already resolve correctly for both themes (see :root[data-theme-resolved
+   ='dark'] main.inventory-page above) without needing !important overrides.
+   The button look itself comes from the canonical .pagination-link class
+   in design-system-components.css — this block only adds spacing/layout. */
+main.inventory-page .inventory-pagination {
+    margin-top: 16px;
+    padding: 14px 18px;
+    border: 1px solid var(--inventory-border);
+    border-radius: 12px;
+    background: var(--inventory-surface);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+main.inventory-page .inventory-pagination-summary {
+    color: var(--inventory-text-muted);
+    font-size: 14px;
+}
+
+main.inventory-page .inventory-pagination-summary strong {
+    color: var(--inventory-text);
+}
+
+/* list-style/margin/padding reset: the canonical .pagination-list rule that
+   normally removes the <ul>'s bullets lives in design-system-components.css,
+   which this page does not load — without it every page button showed a
+   stray bullet dot beside it. */
+main.inventory-page .inventory-pagination-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+main.inventory-page .inventory-pagination-controls > li {
+    list-style: none;
+}
+
+/* Self-contained button styling: inventory.php does not load
+   design-system-components.css, so the canonical .pagination-link rules
+   (kept on the markup for semantic/future compatibility) never apply here.
+   These rules give the buttons a real hit target using the page's own
+   --inventory-* tokens instead of pulling in the shared stylesheet. */
+main.inventory-page .inventory-pagination-btn {
+    appearance: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 36px;
+    height: 36px;
+    padding: 0 8px;
+    background: var(--inventory-surface);
+    color: var(--inventory-text);
+    border: 1px solid var(--inventory-border);
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1;
+    cursor: pointer;
+    transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+main.inventory-page .inventory-pagination-btn:hover:not(:disabled):not(.is-active) {
+    background: var(--inventory-surface-hover);
+    border-color: var(--inventory-accent-border);
+    color: var(--inventory-accent);
+}
+
+main.inventory-page .inventory-pagination-btn.is-active {
+    background: var(--inventory-accent);
+    border-color: var(--inventory-accent);
+    color: #ffffff;
+    cursor: default;
+}
+
+main.inventory-page .inventory-pagination-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+main.inventory-page .inventory-pagination-btn:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px var(--inventory-accent-border);
+}
+
+/* TASK 33 — Rows-per-page selector, mirrors reports.inline1.css's
+   .reports-pagination-size / select but using this file's own
+   --inventory-* theme tokens (same rationale as the button rules above). */
+main.inventory-page .inventory-pagination-size {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--inventory-text-muted);
+    font-size: 14px;
+    white-space: nowrap;
+}
+
+main.inventory-page .inventory-pagination-size select {
+    min-width: 96px;
+    height: 36px;
+    border-radius: 8px;
+    border: 1px solid var(--inventory-border);
+    background: var(--inventory-surface);
+    color: var(--inventory-text);
+    padding: 0 10px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+main.inventory-page .inventory-pagination-size select:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px var(--inventory-accent-border);
+}
+
+main.inventory-page .inventory-items-table {
+    width: 100%;
+    margin-bottom: 0;
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+main.inventory-page .inventory-items-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    /* A lavender wash instead of the slate-grey #f8fafc. It is only 0.05 alpha
+       (~rgb(248,244,253)) because this band sits behind sticky header text and
+       has to stay a background, not a coloured bar. */
+    background: var(--inventory-table-head-bg);
+    color: var(--inventory-text);
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    vertical-align: middle;
+    border-bottom: 1px solid var(--inventory-card-divider);
+    padding: 14px 16px;
+    white-space: nowrap;
+}
+
+main.inventory-page .inventory-items-table tbody td {
+    padding: 14px 16px;
+    /* Row separators only — no vertical rules, no per-cell outline. The tint
+       is the faintest in the token set so the rows stay quiet under the
+       status badges, whose red/amber/green are left untouched. */
+    border-bottom: 1px solid var(--inventory-table-rule);
+    vertical-align: top;
+    color: var(--inventory-text);
+    background: var(--inventory-surface);
+}
+
+main.inventory-page .inventory-items-table tbody tr:last-child td {
+    border-bottom: 0;
+}
+
+main.inventory-page .inventory-items-table tbody tr:hover td {
+    background: var(--inventory-surface-hover);
+}
+
+/* TASK 18 — highlight for ?highlight=<item_id> deep links (Low Stock /
+   Out of Stock notifications). Mirrors .users-card-highlight's color. */
+main.inventory-page .inventory-items-table tbody tr.inventory-row-highlight td {
+    background: rgba(168, 139, 250, 0.16);
+    box-shadow: inset 0 0 0 2px rgba(168, 139, 250, 0.85);
+}
+
+main.inventory-page .inventory-item-id {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 12px;
+    color: var(--inventory-text-muted);
+    white-space: nowrap;
+}
+
+main.inventory-page .inventory-item-name {
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 1.35;
+    color: var(--inventory-text);
+}
+
+main.inventory-page .inventory-item-meta {
+    margin-top: 2px;
+    font-size: 13px;
+    line-height: 1.4;
+    color: var(--inventory-text-muted);
+}
+
+main.inventory-page .inventory-table-cell-muted {
+    color: var(--inventory-text-muted);
+    line-height: 1.4;
+}
+
+main.inventory-page .inventory-table-cell-numeric {
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    color: var(--inventory-text);
+}
+
+main.inventory-page .inventory-status-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 92px;
+    min-height: 28px;
+    padding: 0 12px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    border: 1px solid transparent;
+    white-space: nowrap;
+}
+
+main.inventory-page .inventory-status-badge.badge-success {
+    background: var(--inventory-success-bg);
+    color: var(--inventory-success-text);
+    border-color: rgba(34, 197, 94, 0.16);
+}
+
+main.inventory-page .inventory-status-badge.badge-warning {
+    background: var(--inventory-warning-bg);
+    color: var(--inventory-warning-text);
+    border-color: rgba(245, 158, 11, 0.16);
+}
+
+main.inventory-page .inventory-status-badge.badge-priority-critical {
+    background: var(--inventory-danger-bg);
+    color: var(--inventory-danger-text);
+    border-color: rgba(239, 68, 68, 0.16);
+}
+
+main.inventory-page .inventory-inline-chip {
+    display: inline-flex;
+    align-items: center;
+    min-height: 22px;
+    padding: 0 8px;
+    margin-top: 8px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1;
+}
+
+main.inventory-page .inventory-inline-chip.is-low {
+    background: var(--inventory-warning-bg);
+    color: var(--inventory-warning-text);
+}
+
+main.inventory-page .inventory-table-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+main.inventory-page .inventory-action-btn {
+    min-height: 36px;
+    padding: 0 12px;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 700;
+    box-shadow: none;
+}
+
+main.inventory-page .inventory-action-btn.is-history {
+    background: var(--inventory-surface);
+    border: 1px solid var(--inventory-border);
+    color: var(--inventory-text);
+}
+
+main.inventory-page .inventory-action-btn.is-history:hover {
+    background: var(--inventory-surface-hover);
+    border-color: rgba(109, 40, 217, 0.24);
+}
+
+main.inventory-page .inventory-action-btn.is-edit {
+    background: var(--inventory-accent-soft);
+    border: 1px solid rgba(109, 40, 217, 0.22);
+    color: var(--inventory-accent);
+}
+
+main.inventory-page .inventory-action-btn.is-edit:hover {
+    background: #ede9fe;
+    border-color: rgba(109, 40, 217, 0.32);
+}
+
+main.inventory-page .inventory-action-btn.is-delete {
+    background: rgba(239, 68, 68, 0.08);
+    border: 1px solid rgba(239, 68, 68, 0.18);
+    color: var(--inventory-danger-text);
+}
+
+main.inventory-page .inventory-action-btn.is-delete:hover {
+    background: rgba(239, 68, 68, 0.14);
+    border-color: rgba(239, 68, 68, 0.28);
+}
+
+/* TASK 4 — Inventory row actions collapsed into a single ⋮ (kebab) trigger.
+   The trigger lives in the Actions cell, so it is scoped to
+   main.inventory-page and picks up the --inventory-* tokens normally. */
+main.inventory-page .inventory-action-kebab {
+    display: grid;
+    place-items: center;
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    border-radius: 10px;
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--inventory-text-muted);
+    font-size: 18px;
+    line-height: 1;
+    cursor: pointer;
+    transition: background .15s ease, border-color .15s ease, color .15s ease;
+}
+
+main.inventory-page .inventory-action-kebab:hover,
+main.inventory-page .inventory-action-kebab:focus-visible,
+main.inventory-page .inventory-action-kebab[aria-expanded="true"] {
+    background: var(--inventory-accent-soft);
+    border-color: var(--inventory-accent-border);
+    color: var(--inventory-accent);
+    outline: none;
+}
+
+/* The dropdown is appended to <body> and positioned `fixed` by JS rather
+   than `absolute` inside the cell, because #inventory-container
+   (.inventory-items-table-shell) sets `overflow: auto` — an absolutely
+   positioned menu would be clipped on the last rows and inside the
+   horizontal scroll region. Living outside main.inventory-page also means
+   it cannot inherit the --inventory-* tokens (those are scoped to
+   main.inventory-page), so the menu declares its own values here and in
+   the dark block below. */
+.inventory-action-menu {
+    position: fixed;
+    z-index: 1200;
+    display: none;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 170px;
+    padding: 6px;
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+    background: #ffffff;
+    box-shadow: 0 16px 32px rgba(15, 23, 42, 0.16);
+}
+
+.inventory-action-menu.is-open {
+    display: flex;
+}
+
+.inventory-action-menu-item {
+    display: block;
+    width: 100%;
+    padding: 8px 10px;
+    border: none;
+    border-radius: 8px;
+    background: transparent;
+    color: #111827;
+    font-size: 13px;
+    font-weight: 600;
+    text-align: left;
+    cursor: pointer;
+    transition: background .15s ease, color .15s ease;
+}
+
+.inventory-action-menu-item:hover,
+.inventory-action-menu-item:focus-visible {
+    background: #f5f3ff;
+    color: #6d28d9;
+    outline: none;
+}
+
+.inventory-action-menu-item.is-danger {
+    color: #b91c1c;
+}
+
+.inventory-action-menu-item.is-danger:hover,
+.inventory-action-menu-item.is-danger:focus-visible {
+    background: rgba(239, 68, 68, 0.12);
+    color: #b91c1c;
+}
+
+:root[data-theme-resolved='dark'] .inventory-action-menu {
+    border-color: #243047;
+    background: #111827;
+    box-shadow: 0 16px 32px rgba(0, 0, 0, 0.45);
+}
+
+:root[data-theme-resolved='dark'] .inventory-action-menu-item {
+    color: #f8fafc;
+}
+
+:root[data-theme-resolved='dark'] .inventory-action-menu-item:hover,
+:root[data-theme-resolved='dark'] .inventory-action-menu-item:focus-visible {
+    background: rgba(109, 40, 217, 0.24);
+    color: #ddd6fe;
+}
+
+:root[data-theme-resolved='dark'] .inventory-action-menu-item.is-danger {
+    color: #fca5a5;
+}
+
+:root[data-theme-resolved='dark'] .inventory-action-menu-item.is-danger:hover,
+:root[data-theme-resolved='dark'] .inventory-action-menu-item.is-danger:focus-visible {
+    background: rgba(239, 68, 68, 0.18);
+    color: #fca5a5;
+}
+
+main.inventory-page .inventory-entry-history-card .inventory-entry-history-header {
+    align-items: flex-start;
+}
+
+main.inventory-page .inventory-loading-skeleton {
+    margin-top: 12px;
+}
+
+main.inventory-page .inventory-room-back-wrap {
+    grid-column: 1 / -1;
+    margin-bottom: 4px;
+}
+
+main.inventory-page .inventory-room-back-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+main.inventory-page .inventory-room-back-btn svg {
+    width: 16px;
+    height: 16px;
+}
+
+main.inventory-page .inventory-room-empty-state {
+    grid-column: 1 / -1;
+}
+
+:root[data-theme-resolved='dark'] main.inventory-page {
+    --inventory-surface: #111827;
+    --inventory-surface-alt: #172033;
+    --inventory-surface-hover: #1a2233;
+    --inventory-border: #243047;
+    --inventory-text: #f8fafc;
+    --inventory-text-muted: #94a3b8;
+    --inventory-accent-soft: rgba(109, 40, 217, 0.16);
+    --inventory-success-bg: rgba(34, 197, 94, 0.14);
+    --inventory-success-text: #86efac;
+    --inventory-warning-bg: rgba(245, 158, 11, 0.16);
+    --inventory-warning-text: #fbbf24;
+    --inventory-danger-bg: rgba(239, 68, 68, 0.14);
+    --inventory-danger-text: #fca5a5;
+}
+
+:root[data-theme-resolved='dark'] main.inventory-page > .card {
+    box-shadow: 0 16px 38px rgba(2, 8, 23, 0.28);
+}
+
+:root[data-theme-resolved='dark'] main.inventory-page .inventory-header-actions .btn-secondary,
+:root[data-theme-resolved='dark'] main.inventory-page .inventory-room-add-btn,
+:root[data-theme-resolved='dark'] main.inventory-page .inventory-items-clear-btn,
+:root[data-theme-resolved='dark'] main.inventory-page .inventory-room-back-btn {
+    background: #0f172a;
+    color: #e5eefc;
+    border-color: rgba(148, 163, 184, 0.2);
+}
+
+:root[data-theme-resolved='dark'] main.inventory-page .inventory-category-search,
+:root[data-theme-resolved='dark'] main.inventory-page .inventory-items-filter-grid .form-control {
+    background: #0f172a;
+    color: #f8fafc;
+    border-color: #243047;
+}
+
+:root[data-theme-resolved='dark'] main.inventory-page .inventory-items-table-shell {
+    background: #0f172a;
+}
+
+:root[data-theme-resolved='dark'] main.inventory-page .inventory-items-table thead th {
+    background: #172033;
+}
+
+:root[data-theme-resolved='dark'] main.inventory-page .inventory-items-table tbody td {
+    background: #111827;
+}
+
+:root[data-theme-resolved='dark'] main.inventory-page .inventory-items-table tbody tr:hover td {
+    background: #1a2233;
+}
+
+:root[data-theme-resolved='dark'] main.inventory-page .inventory-category-card-count-badge {
+    background: rgba(109, 40, 217, 0.16);
+    color: #ddd6fe;
+    border-color: rgba(167, 139, 250, 0.24);
+}
+
+:root[data-theme-resolved='dark'] main.inventory-page .inventory-category-card-icon {
+    background: rgba(109, 40, 217, 0.16);
+    color: #ddd6fe;
+    border-color: rgba(167, 139, 250, 0.22);
+}
+
+:root[data-theme-resolved='dark'] main.inventory-page .inventory-category-card.is-active {
+    background: rgba(109, 40, 217, 0.14);
+}
+
+:root[data-theme-resolved='dark'] main.inventory-page .inventory-category-chip.is-low {
+    background: rgba(245, 158, 11, 0.16);
+    color: #fbbf24;
+}
+
+:root[data-theme-resolved='dark'] main.inventory-page .inventory-category-chip.is-out {
+    background: rgba(239, 68, 68, 0.16);
+    color: #fca5a5;
+}
+
+:root[data-theme-resolved='dark'] main.inventory-page .inventory-category-chip.is-ok {
+    background: rgba(34, 197, 94, 0.14);
+    color: #86efac;
+}
+
+/* THIS is the rule that decides the container borders, not the
+   `main.inventory-page > .card` block near the top of the file: at (0,4,1)
+   plus !important it outranks it, so changing only that block would have
+   edited dead code and left the page visibly unchanged. The two are now kept
+   on the same token so they cannot disagree. */
+:root[data-theme-resolved='light'] main.inventory-page .inventory-page-header-card,
+:root[data-theme-resolved='light'] main.inventory-page .inventory-toolbar-card,
+:root[data-theme-resolved='light'] main.inventory-page .inventory-category-browser-card,
+:root[data-theme-resolved='light'] main.inventory-page .inventory-items-card,
+:root[data-theme-resolved='light'] main.inventory-page .inventory-entry-history-card {
+    background: #ffffff !important;
+    border-color: var(--inventory-card-border) !important;
+    box-shadow: var(--inventory-card-shadow) !important;
+}
+
+:root[data-theme-resolved='light'] main.inventory-page .inventory-title,
+:root[data-theme-resolved='light'] main.inventory-page .inventory-category-heading,
+:root[data-theme-resolved='light'] main.inventory-page .inventory-items-title,
+:root[data-theme-resolved='light'] main.inventory-page .inventory-section-title,
+:root[data-theme-resolved='light'] main.inventory-page .inventory-item-name,
+:root[data-theme-resolved='light'] main.inventory-page .inventory-category-card-name,
+:root[data-theme-resolved='light'] main.inventory-page .inventory-header-actions .btn,
+:root[data-theme-resolved='light'] main.inventory-page .inventory-count-badge,
+:root[data-theme-resolved='light'] main.inventory-page .inventory-status-badge,
+:root[data-theme-resolved='light'] main.inventory-page .inventory-action-btn {
+    color: var(--inventory-text) !important;
+}
+
+/* Search field + the two filter selects. Same cascade trap as the cards: this
+   (0,4,1) + !important rule is what paints, so the control-border token has to
+   be repeated here or the base declarations above are dead code. The old value
+   was the slate #dbe3ef. */
+:root[data-theme-resolved='light'] main.inventory-page .inventory-category-search,
+:root[data-theme-resolved='light'] main.inventory-page .inventory-items-filter-grid .form-control,
+:root[data-theme-resolved='light'] main.inventory-page .inventory-toolbar-card .form-control {
+    background: #ffffff !important;
+    color: var(--inventory-text) !important;
+    border-color: var(--inventory-control-border) !important;
+}
+
+/* Inner surfaces that sit *inside* a card (the category tiles and the table
+   frame), so they get the lighter --inventory-card-divider tint rather than
+   the full --inventory-card-border used on the cards themselves — matching
+   the card edge exactly would read as a doubled border a few pixels in.
+   As with the container block above, THIS rule is the one that paints: at
+   (0,4,1) plus !important it outranks the base
+   `main.inventory-page .inventory-items-table-shell` declaration, so the
+   token has to be applied in both places or the base edit is dead code. */
+:root[data-theme-resolved='light'] main.inventory-page .inventory-category-card {
+    background: #ffffff !important;
+    border-color: var(--inventory-card-divider) !important;
+}
+
+/* The table frame is a container in its own right per the brief, so unlike the
+   category tiles it takes the full card-strength edge. */
+:root[data-theme-resolved='light'] main.inventory-page .inventory-items-table-shell {
+    background: #ffffff !important;
+    border-color: var(--inventory-card-border) !important;
+}
+
+/* Hover moved off the slate #f8fafc onto the lavender surface token, so the
+   row/tile you are pointing at reads as part of the purple system. Row
+   *content* colours are untouched — the status badges below still win. */
+:root[data-theme-resolved='light'] main.inventory-page .inventory-category-card:hover,
+:root[data-theme-resolved='light'] main.inventory-page .inventory-items-table tbody tr:hover td {
+    background: var(--inventory-surface-hover) !important;
+}
+
+:root[data-theme-resolved='light'] main.inventory-page .inventory-items-table thead th {
+    background: var(--inventory-table-head-bg) !important;
+    color: #4c1d95 !important;
+}
+
+:root[data-theme-resolved='light'] main.inventory-page .inventory-items-table tbody td {
+    background: #ffffff !important;
+    color: #111827 !important;
+}
+
+:root[data-theme-resolved='light'] main.inventory-page .inventory-category-card.is-active {
+    background: #f5f3ff !important;
+    border-color: rgba(109, 40, 217, 0.28) !important;
+}
+
+:root[data-theme-resolved='light'] main.inventory-page .inventory-category-card.is-empty {
+    opacity: 0.7;
+}
+
+:root[data-theme-resolved='light'] main.inventory-page .inventory-category-card-count-badge {
+    background: #f5f3ff !important;
+    color: #6d28d9 !important;
+    border-color: rgba(109, 40, 217, 0.18) !important;
+}
+
+:root[data-theme-resolved='light'] main.inventory-page .inventory-category-card-icon {
+    background: #f5f3ff !important;
+    color: #6d28d9 !important;
+    border-color: rgba(109, 40, 217, 0.16) !important;
+}
+
+:root[data-theme-resolved='light'] main.inventory-page .inventory-category-chip.is-low {
+    background: rgba(245, 158, 11, 0.12) !important;
+    color: #b45309 !important;
+}
+
+:root[data-theme-resolved='light'] main.inventory-page .inventory-category-chip.is-out {
+    background: rgba(239, 68, 68, 0.12) !important;
+    color: #b91c1c !important;
+}
+
+:root[data-theme-resolved='light'] main.inventory-page .inventory-category-chip.is-ok {
+    background: rgba(34, 197, 94, 0.12) !important;
+    color: #166534 !important;
+}
+
+:root[data-theme-resolved='light'] main.inventory-page .inventory-status-badge.badge-success {
+    background: rgba(34, 197, 94, 0.12) !important;
+    color: #166534 !important;
+}
+
+:root[data-theme-resolved='light'] main.inventory-page .inventory-status-badge.badge-warning {
+    background: rgba(245, 158, 11, 0.14) !important;
+    color: #92400e !important;
+}
+
+:root[data-theme-resolved='light'] main.inventory-page .inventory-status-badge.badge-priority-critical {
+    background: rgba(239, 68, 68, 0.12) !important;
+    color: #b91c1c !important;
+}
+
+:root[data-theme-resolved='light'] main.inventory-page .inventory-action-btn.is-history {
+    background: #ffffff !important;
+    color: #334155 !important;
+}
+
+:root[data-theme-resolved='light'] main.inventory-page .inventory-action-btn.is-edit {
+    background: #f5f3ff !important;
+    color: #6d28d9 !important;
+}
+
+:root[data-theme-resolved='light'] main.inventory-page .inventory-action-btn.is-delete {
+    background: rgba(239, 68, 68, 0.08) !important;
+    color: #b91c1c !important;
+}
+
+/* ===================================================================
+   Inventory header action group — Replacement Tracking / Inventory Entry /
+   Adjust Stock.
+
+   Height (46px), padding, radius (12px), font-size and weight are NOT set
+   here: `main.inventory-page .inventory-header-actions .btn` near the top of
+   this file already gives all three identical metrics, and they were already
+   consistent. What was inconsistent was COLOUR — Replacement Tracking and
+   Adjust Stock were the same white outline, so the most important action of
+   the three read as a spare standalone button, while Inventory Entry sat on a
+   purple gradient wearing #111827 text.
+
+   That near-black text is not a slip: the light-theme block above sets
+   `.inventory-header-actions .btn { color: var(--inventory-text) !important }`
+   at (0,4,1). Each rule below therefore carries one extra class to reach
+   (0,5,1) and repeats !important on `color` ONLY — the background and border
+   declarations need neither, because nothing !important claims them. This is
+   the "absolutely necessary" case: an existing !important cannot be
+   out-specified without one.
+
+   The three tiers are the requested hierarchy, all from the palette already
+   in this file: strong = --inventory-accent gradient (as the old primary),
+   soft = --inventory-accent-soft lavender fill, neutral = white outline. */
+main.inventory-page .inventory-header-actions .inv-action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    text-decoration: none;
+}
+
+/* Optical: the 16px stroke icons sit fractionally low against 14px/700 text. */
+main.inventory-page .inventory-header-actions .inv-action-icon {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+    margin-top: -1px;
+}
+
+main.inventory-page .inventory-header-actions .inv-action-label {
+    line-height: 1;
+}
+
+/* --- Strong: Replacement Tracking ---------------------------------- */
+main.inventory-page .inventory-header-actions .inv-action-strong {
+    background: linear-gradient(135deg, var(--inventory-accent) 0%, #8b5cf6 100%);
+    border: 1px solid rgba(109, 40, 217, 0.28);
+    box-shadow: 0 1px 2px rgba(76, 29, 149, 0.18);
+}
+
+main.inventory-page .inventory-header-actions .inv-action-strong:hover {
+    background: linear-gradient(135deg, var(--inventory-accent-strong) 0%, #7c3aed 100%);
+    border-color: rgba(109, 40, 217, 0.38);
+}
+
+:root[data-theme-resolved='light'] main.inventory-page .inventory-header-actions .inv-action-strong,
+:root[data-theme-resolved='light'] main.inventory-page .inventory-header-actions .inv-action-strong:hover {
+    color: #ffffff !important;
+}
+
+/* --- Soft: Inventory Entry ----------------------------------------- */
+main.inventory-page .inventory-header-actions .inv-action-soft {
+    background: var(--inventory-accent-soft);
+    border: 1px solid var(--inventory-accent-border);
+    box-shadow: none;
+}
+
+main.inventory-page .inventory-header-actions .inv-action-soft:hover {
+    background: #ede9fe;
+    border-color: rgba(109, 40, 217, 0.38);
+}
+
+:root[data-theme-resolved='light'] main.inventory-page .inventory-header-actions .inv-action-soft,
+:root[data-theme-resolved='light'] main.inventory-page .inventory-header-actions .inv-action-soft:hover {
+    color: var(--inventory-accent-strong) !important;
+}
+
+/* --- Outline: Adjust Stock ----------------------------------------- */
+/* Was a genuinely neutral button (white fill, near-black label). It now shares
+   the purple outline treatment given to Manage Categories and Clear Filters —
+   white fill, purple border, purple label — so all five Inventory buttons read
+   as one system, with the fill strength (gradient > lavender > white) still
+   carrying the hierarchy. The `color` !important is the same (0,5,1) trick the
+   two tiers above use, and for the same unavoidable reason. */
+main.inventory-page .inventory-header-actions .inv-action-neutral {
+    background: var(--inventory-surface);
+    border: 1px solid var(--inventory-control-border);
+}
+
+main.inventory-page .inventory-header-actions .inv-action-neutral:hover {
+    background: var(--inventory-accent-soft);
+    border-color: var(--inventory-accent);
+}
+
+:root[data-theme-resolved='light'] main.inventory-page .inventory-header-actions .inv-action-neutral,
+:root[data-theme-resolved='light'] main.inventory-page .inventory-header-actions .inv-action-neutral:hover {
+    color: var(--inventory-accent-strong) !important;
+}
+
+/* Keyboard focus must stay obvious on all three tiers. */
+main.inventory-page .inventory-header-actions .inv-action:focus-visible {
+    outline: 2px solid var(--inventory-accent);
+    outline-offset: 2px;
+}
+
+@media (max-width: 992px) {
+    main.inventory-page .inventory-page-header-row,
+    main.inventory-page .inventory-toolbar-grid,
+    main.inventory-page .inventory-items-header,
+    main.inventory-page .inventory-entry-history-header,
+    main.inventory-page .inventory-category-panel-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    main.inventory-page .inventory-category-panel-header #manageCategoriesButton {
+        width: 100%;
+        justify-content: center;
+    }
+
+    main.inventory-page .inventory-header-actions {
+        width: 100%;
+    }
+
+    main.inventory-page .inventory-header-actions .btn,
+    main.inventory-page .inventory-toolbar-action {
+        width: 100%;
+        justify-content: center;
+    }
+
+    main.inventory-page .inventory-toolbar-grid {
+        grid-template-columns: 1fr;
+    }
+
+    main.inventory-page .inventory-toolbar-action {
+        min-width: 0;
+        justify-self: stretch;
+    }
+
+    main.inventory-page .inventory-category-cards {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    main.inventory-page .inventory-items-filter-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    main.inventory-page .inventory-items-clear-btn {
+        grid-column: 1 / -1;
+    }
+}
+
+@media (max-width: 768px) {
+    main.inventory-page > .card > .card-body,
+    main.inventory-page > .card > .card-header {
+        padding-left: 18px;
+        padding-right: 18px;
+    }
+
+    main.inventory-page .inventory-category-cards {
+        grid-template-columns: 1fr;
+    }
+
+    main.inventory-page .inventory-items-filter-grid {
+        grid-template-columns: 1fr;
+    }
+
+    main.inventory-page .inventory-table-actions {
+        gap: 6px;
+    }
+
+    main.inventory-page .inventory-action-btn {
+        width: 100%;
+    }
+
+    main.inventory-page .inventory-table-actions {
+        width: 100%;
+    }
+
+    main.inventory-page .inventory-room-back-wrap,
+    main.inventory-page .inventory-room-empty-state {
+        grid-column: 1 / -1;
+    }
+
+    /* TASK 31 — keep pagination from overflowing horizontally on small
+       screens, mirroring reports.inline1.css's .reports-pagination rules. */
+    main.inventory-page .inventory-pagination {
+        padding: 12px;
+    }
+
+    main.inventory-page .inventory-pagination-summary {
+        width: 100%;
+    }
+
+    main.inventory-page .inventory-pagination-controls {
+        justify-content: flex-start;
+    }
+
+    /* TASK 33 — rows-per-page selector drops to its own full-width row on
+       small screens, same as the pagination summary above it. */
+    main.inventory-page .inventory-pagination-size {
+        width: 100%;
+        justify-content: space-between;
+    }
+}
+
+@media (max-width: 576px) {
+    main.inventory-page .inventory-title {
+        font-size: 26px;
+    }
+
+    main.inventory-page .inventory-category-card {
+        grid-template-columns: 36px minmax(0, 1fr);
+    }
+
+    main.inventory-page .inventory-category-card-count-badge {
+        grid-column: 2;
+        justify-self: start;
+    }
+
+    main.inventory-page .inventory-category-card-meta {
+        grid-column: 2;
+    }
+
+    main.inventory-page .inventory-category-card-content {
+        grid-column: 2;
+    }
+
+    main.inventory-page .inventory-action-btn {
+        width: 100%;
+    }
+}

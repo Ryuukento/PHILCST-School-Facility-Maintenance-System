@@ -1,0 +1,187 @@
+/* Laravel shell styles for authenticated pages */
+
+:root {
+    --shell-app-bg: #0c0a14;
+    --shell-header-bg: linear-gradient(180deg, rgba(20, 14, 33, 0.98), rgba(20, 14, 33, 0.94));
+    --shell-panel-bg: rgba(139, 92, 246, 0.12);
+    --shell-border: rgba(168, 139, 250, 0.24);
+    --shell-header-border: rgba(168, 139, 250, 0.18);
+    --shell-text-strong: #f5efff;
+    --shell-text-muted: #bdaed9;
+    --shell-avatar-bg: #a78bfa;
+    --shell-avatar-text: #ffffff;
+    --shell-footer-text: #bbaed6;
+}
+
+:root[data-theme-resolved='light'] {
+    --shell-app-bg: #f3f6fb;
+    --shell-header-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(246, 247, 251, 0.95));
+    --shell-panel-bg: rgba(124, 58, 237, 0.08);
+    --shell-border: rgba(124, 58, 237, 0.2);
+    --shell-header-border: rgba(124, 58, 237, 0.16);
+    --shell-text-strong: #000000;
+    --shell-text-muted: #000000;
+    --shell-avatar-bg: #7c3aed;
+    --shell-avatar-text: #ffffff;
+    --shell-footer-text: #000000;
+
+    /* The --sidebar-* overrides that used to sit here (a pale lavender
+       gradient with near-black nav text) were removed.
+
+       This file is linked AFTER sidebar.css in layouts/app.blade.php, so those
+       six declarations won out over sidebar.css's own palette and would have
+       repainted the Blade shell's rail light while the legacy PHP pages' rail
+       rendered dark — the same sidebar, two different colours, depending on
+       which shell rendered the page.
+
+       sidebar.css is the single source of truth for sidebar colour. Only the
+       --shell-* tokens above, which style the top header and the main content
+       area, belong to this file. The main content stays LIGHT. */
+}
+
+body[data-user-role] {
+    background: var(--shell-app-bg);
+}
+
+/* The .top-header block that used to open this section is gone along with the
+   bar itself. It was `position: fixed`, so unlike the legacy shell's static
+   .navbar it did NOT free its own space on removal — every offset derived from
+   var(--header-height) further down had to be reset by hand. Those resets are
+   marked "header removed" where they appear.
+
+   Also deleted with it: .header-left/.header-right (flex wrappers that no
+   longer wrap anything), .header-title, .header-notifications, .notify-btn,
+   .notify-badge, .header-user, .header-avatar, .user-info, .user-name,
+   .user-role, and the leftover .theme-toggle-* rules. All of them were styling
+   nodes that only ever existed inside header.blade.php. Nothing in the sidebar
+   or main content used them — the Blade sidebar names its own classes and
+   reaches Account/Logout through nav items, not a user chip.
+
+   --header-height itself is deliberately KEPT: sidebar.css still uses it to
+   size the sidebar's own brand block. Only the offsets go. */
+
+/* header removed: the button now floats over the light workspace instead of
+   sitting inside the bar (positioning is in sidebar.css, shared by both
+   shells). Colours pinned to match the legacy shell's copy in styles.css so the
+   same control looks the same whichever shell rendered the page — the --shell-*
+   tokens it used to read were chosen against the header's own surface. */
+body[data-user-role] .sidebar-toggle-mobile {
+    display: none;
+    width: 42px;
+    height: 42px;
+    border: 1px solid rgba(124, 58, 237, 0.24);
+    border-radius: 12px;
+    background: #ffffff;
+    color: #5b21b6;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+
+body[data-user-role] .sidebar-toggle-mobile svg {
+    width: 22px;
+    height: 22px;
+}
+
+body[data-user-role] .sidebar-toggle-mobile:hover {
+    transform: translateY(-1px);
+    opacity: 0.95;
+}
+
+body[data-user-role] .main-content {
+    margin-left: var(--sidebar-width);
+    /* header removed: the top padding was calc(var(--header-height) + 24px),
+       clearing the fixed bar. With no bar there is nothing to clear, so this is
+       now just the content's own 24px breathing room — content starts at the
+       top of the viewport instead of 76px down. */
+    padding: 24px 24px 32px;
+    min-height: 100vh;
+}
+
+body[data-user-role] .main-content > .container {
+    margin-left: 0;
+    max-width: 1200px;
+}
+
+body[data-user-role] .app-footer {
+    margin-left: var(--sidebar-width);
+    padding: 18px 24px 28px;
+    color: var(--shell-footer-text);
+}
+
+/* Sidebar chrome inside the Blade shell. These three used to assign light-
+   surface colours (indigo brand text, black section labels); against the dark
+   purple rail they were illegible, so they now defer to the sidebar's own
+   tokens. Main content is unaffected — every selector here is sidebar-only. */
+:root[data-theme-resolved='light'] .sidebar-header {
+    border-bottom-color: var(--sidebar-divider);
+}
+
+:root[data-theme-resolved='light'] .system-name {
+    color: var(--sidebar-profile-name);
+}
+
+:root[data-theme-resolved='light'] .nav-section-label {
+    color: var(--sidebar-text-muted);
+}
+
+/* header removed: these two were pushed down by the fixed bar and shortened to
+   match. The rail and its overlay now start at y=0 and run the full viewport
+   height, so the sidebar occupies the space the header used to take. */
+body[data-user-role] .sidebar {
+    top: 0;
+    height: 100vh;
+}
+
+body[data-user-role] .sidebar-overlay {
+    top: 0;
+}
+
+@media (max-width: 768px) {
+    body[data-user-role] .sidebar-toggle-mobile {
+        display: inline-flex;
+    }
+
+    body[data-user-role] .main-content,
+    body[data-user-role] .app-footer {
+        margin-left: 0;
+    }
+
+    body[data-user-role] .main-content {
+        /* header removed: was calc(var(--header-height) + 16px). The extra top
+           room now goes to the floating menu button instead — see the
+           .sidebar-toggle-mobile block in sidebar.css. */
+        padding: 74px 14px 24px;
+    }
+
+    body[data-user-role] .main-content > .container,
+    body[data-user-role] .main-content > main.container,
+    body[data-user-role] .main-content > .maintenance-admin-dashboard-page,
+    body[data-user-role] .main-content > .system-dashboard {
+        margin-left: 0;
+        margin-right: 0;
+        max-width: 100%;
+        width: 100%;
+        padding-left: 0;
+        padding-right: 0;
+    }
+
+    /* header removed: same reset as the desktop rules above. */
+    body[data-user-role] .sidebar {
+        top: 0;
+        height: 100vh;
+    }
+
+    body[data-user-role] .sidebar-overlay {
+        top: 0;
+    }
+}
+
+@media (max-width: 480px) {
+    /* header removed: the .top-header / .header-title / .header-user overrides
+       that were here styled nodes that no longer exist. */
+    body[data-user-role] .main-content {
+        padding-left: 10px;
+        padding-right: 10px;
+    }
+}

@@ -1,0 +1,266 @@
+/* ===================================================================
+   TASK — Subtle purple accent on dashboard card borders.
+
+   PURELY VISUAL. Not one rule in this file changes layout, size,
+   spacing, radius, shadow, content or behaviour — see "Why nothing
+   can move" below.
+
+   ONE stylesheet, loaded last on all three dashboards:
+     dashboard.php             = Administrator
+     maintenance-dashboard.php = Head Maintenance
+     staff-dashboard.php       = Maintenance Staff
+
+   The three dashboards do NOT share a single card component — they
+   grew separate families (.card / .summary-card / .dashboard-hero-kpi-item
+   on Administrator, .hd-card / .hd-kpi-card on Head Maintenance,
+   .card / .stat-card on Maintenance Staff). Rather than write the
+   accent three times, the colour is defined ONCE as two custom
+   properties below and every family just points at them. One place to
+   retune, no duplicated colour literals.
+
+   The shared stylesheets (styles.css / layout.css / color-scheme.css /
+   dashboard.inline.css / hd-dashboard.css / staff-dashboard.inline.css)
+   are untouched, per the standing design brief.
+   =================================================================== */
+
+/* ---- The accent ----------------------------------------------------
+   --primary (#8b5cf6) is the existing PHILCST accent, already used for
+   the Head Maintenance KPI cards' top bar, so the cards now agree with
+   a purple the dashboards were ALREADY using rather than introducing a
+   new one.
+
+   It is used at reduced alpha, not at full strength. A 1px line of
+   solid #8b5cf6 on white reads as a selection/focus ring — which is
+   exactly the "looks selected or active" failure the brief warns
+   against. At ~35% it resolves to roughly #cdbbf9 over a white card:
+   unmistakably purple against the #f8fafc page background, but still
+   chrome rather than state.
+
+   Declared on the two dashboard <main> classes (not :root) so the
+   values cannot leak off these pages even if this file is ever linked
+   somewhere else by mistake. Custom properties inherit, so every card
+   inside picks them up.
+   -------------------------------------------------------------------- */
+/* UPDATE — app-wide purple border sprint.
+   These two values were originally rgba(139, 92, 246, 0.35) / 0.55, tuned
+   for the dashboards in isolation. The system now has ONE container-edge
+   token, --purple-border, declared in color-scheme.css and used by every
+   card, panel, table frame and modal in the app, so the dashboards point at
+   it instead of keeping a near-miss purple of their own. That is what makes
+   a dashboard card and an inventory card read as the same component.
+
+   The separate "bottom" value is now the same token as the other three
+   edges: a heavier bottom edge was a per-dashboard flourish, and a uniform
+   1px frame on all four sides is the rule the rest of the system follows.
+   The border-bottom-color declarations below are left in place (now
+   redundant rather than removed) so the structure of this file, and the
+   reasoning recorded against each selector, stays intact.
+
+   Still colour-only — no border-width or border-style is set anywhere in
+   this file, so the "nothing can move" guarantee below is unaffected. */
+main.maintenance-admin-dashboard-page,
+main.staff-dashboard-page {
+    --dash-card-accent: var(--purple-border, rgba(139, 92, 246, 0.35));
+    --dash-card-accent-bottom: var(--purple-border, rgba(139, 92, 246, 0.55));
+}
+
+/* ---- Why nothing can move ------------------------------------------
+   Every card targeted here ALREADY has a 1px border on all four edges
+   (verified in the browser, not assumed: .card, .summary-card,
+   .dashboard-hero-kpi-item, .hd-card, .stat-card all computed to
+   "1px 1px 1px 1px" before this file existed). So this file only ever
+   sets border-*-COLOR, never border-width and never border-style.
+
+   Because border-width is untouched, the border box is mathematically
+   identical before and after — no reflow, no card resize, no shifted
+   grid, and no chance of horizontal overflow at any viewport. That is
+   also why the brief's "1-2px" is satisfied by recolouring the
+   existing 1px rather than thickening anything to 2px: going to 2px
+   would add 2px to every card's width and height and could push a
+   grid row over its track at narrow widths.
+
+   The one card that computed to 0px borders — .card.dashboard-hero-panel,
+   the invisible wrapper around the five Administrator KPI tiles — is
+   deliberately left at 0px. Recolouring a zero-width border is a no-op,
+   so the five tiles inside it get the accent individually and no purple
+   box is drawn around the group.
+   -------------------------------------------------------------------- */
+
+/* ---- Why !important, and why the selectors are doubled --------------
+   Neither is decoration. dashboard.inline.css already ships, at line
+   ~3068:
+
+     :root[data-theme-resolved='light'] .dashboard-bottom .card,
+     :root[data-theme-resolved='light'] .recent-reports-card,
+     :root[data-theme-resolved='light'] .dashboard-timeline-card,
+     :root[data-theme-resolved='light'] .dashboard-hero-kpi-item,
+     :root[data-theme-resolved='light'] ... .summary-card {
+         border-color: var(--border) !important;
+     }
+
+   and <html> really does carry data-theme-resolved="light", so that
+   block is live. It beats a plain override twice over: !important
+   cannot be outranked by a non-important declaration at any source
+   order, and its specificity is (0,4,0) — measured, not guessed: a
+   first attempt at `main.maintenance-admin-dashboard-page .card`
+   (0,2,1) loaded last, parsed fine, resolved its custom property, and
+   still lost, leaving every border grey.
+
+   So each family gets TWO rules:
+
+     1. a plain `main.<page> :is(...)` rule at (0,2,1), and
+     2. the same list re-anchored on :root[data-theme-resolved='light']
+        at (0,4,1), which outranks the block above outright.
+
+   Rule 2 alone would have been enough today, but it would silently
+   stop working if that attribute ever went away. Rule 1 is the
+   fallback for exactly that case — and it is a safe one, because the
+   rule it would then be competing against is gated on the SAME
+   attribute, so both disappear together and rule 1 is left
+   uncontested. The cards stay purple either way.
+   -------------------------------------------------------------------- */
+
+/* Administrator + Head Maintenance both carry
+   <main class="container maintenance-admin-dashboard-page">. */
+main.maintenance-admin-dashboard-page
+    :is(.card, .summary-card, .academic-period-card, .dashboard-hero-kpi-item, .hd-card) {
+    border-color: var(--dash-card-accent) !important;
+    border-bottom-color: var(--dash-card-accent-bottom) !important;
+}
+
+:root[data-theme-resolved='light'] main.maintenance-admin-dashboard-page
+    :is(.card, .summary-card, .academic-period-card, .dashboard-hero-kpi-item, .hd-card) {
+    border-color: var(--dash-card-accent) !important;
+    border-bottom-color: var(--dash-card-accent-bottom) !important;
+}
+
+/* The Head Maintenance KPI cards already carry a deliberate 3px solid
+   #8b5cf6 top bar. Recolouring all four edges would have replaced that
+   solid bar with the translucent accent and WEAKENED an existing design
+   decision, so these rules skip the top edge and only bring the other
+   three sides into line with it. */
+main.maintenance-admin-dashboard-page .hd-kpi-card,
+:root[data-theme-resolved='light'] main.maintenance-admin-dashboard-page .hd-kpi-card {
+    border-right-color: var(--dash-card-accent) !important;
+    border-left-color: var(--dash-card-accent) !important;
+    border-bottom-color: var(--dash-card-accent-bottom) !important;
+}
+
+/* ---- "Low Stock Items" needs one more tier --------------------------
+   The Low Stock card is .summary-card.summary-card-alert inside
+   .dashboard-feature-cards-grid, and dashboard.inline.css targets it
+   with an extra class:
+
+     :root[data-theme-resolved='light']
+       .dashboard-feature-cards-grid .summary-card.summary-card-alert {
+         border-color: var(--border) !important; }
+
+   That is (0,5,0) — one class more than the block above — which is why
+   this one card was still rendering grey after the rules above landed
+   and every other card had turned purple. Verified in the browser: 11
+   cards purple, this one left behind.
+
+   `.summary-card.summary-card` is the doubled class that matches the
+   extra weight `.summary-card-alert` contributes, so this rule reaches
+   (0,6,1) and wins — while still matching plain .summary-card and the
+   .summary-card-action variant, since all three carry .summary-card.
+   -------------------------------------------------------------------- */
+main.maintenance-admin-dashboard-page
+    :is(.summary-cards-grid, .dashboard-feature-cards-grid) .summary-card.summary-card,
+:root[data-theme-resolved='light'] main.maintenance-admin-dashboard-page
+    :is(.summary-cards-grid, .dashboard-feature-cards-grid) .summary-card.summary-card,
+main.maintenance-admin-dashboard-page
+    :is(.summary-cards-grid, .dashboard-feature-cards-grid) .summary-card.summary-card:hover,
+:root[data-theme-resolved='light'] main.maintenance-admin-dashboard-page
+    :is(.summary-cards-grid, .dashboard-feature-cards-grid) .summary-card.summary-card:hover {
+    border-color: var(--dash-card-accent) !important;
+    border-bottom-color: var(--dash-card-accent-bottom) !important;
+}
+
+/* ---- Maintenance Staff ---------------------------------------------
+   <main class="container staff-dashboard-page">. Same treatment, same
+   two custom properties.
+
+   .card (which is what .chart-card / .status-chart-card /
+   .priority-chart-card are) has an even 1px border, so it takes the
+   accent on all four edges. */
+main.staff-dashboard-page .card,
+:root[data-theme-resolved='light'] main.staff-dashboard-page .card {
+    border-color: var(--dash-card-accent) !important;
+    border-bottom-color: var(--dash-card-accent-bottom) !important;
+}
+
+/* .stat-card looked at first like the .hd-kpi-card case:
+   staff-dashboard.inline.css:356 gives it
+   `border-top: 3px solid var(--staff-card-accent)` and sets that
+   variable per card — .stat-card-total #8b5cf6, -pending #f59e0b,
+   -progress #a855f7, -completed #10b981 — i.e. a status colour bar.
+
+   But it is NOT the same case, and the difference was only visible by
+   measuring rather than reading: the SAME file, 150 lines later at
+   :509, already overrides it —
+     :root[data-theme-resolved='light'] .staff-dashboard-page .stat-card
+       { border-color: #e5e7eb !important; }
+   which is (0,4,0) and repaints all four edges, top included. Probed
+   live with the real stylesheet mounted: all three variants computed
+   border-top-color rgb(229,231,235). So in the light theme — the only
+   theme this system has — those amber/green top bars are ALREADY grey
+   and have been for as long as that rule has existed. There is no live
+   colour code here to protect.
+
+   The top edge therefore takes the accent like every other edge. The
+   alternative (skip it, as .hd-kpi-card does) would have left a 3px
+   GREY bar sitting on top of three purple edges, which reads as a
+   rendering fault rather than a design. Still no border-width change —
+   the bar stays 3px, it is only recoloured. */
+main.staff-dashboard-page .stat-card,
+:root[data-theme-resolved='light'] main.staff-dashboard-page .stat-card,
+main.staff-dashboard-page .stat-card:hover,
+:root[data-theme-resolved='light'] main.staff-dashboard-page .stat-card:hover {
+    border-color: var(--dash-card-accent) !important;
+    border-bottom-color: var(--dash-card-accent-bottom) !important;
+}
+
+/* ---- Hover must not drop the accent --------------------------------
+   Several existing rules reset border-color back to var(--border)
+   !important on :hover (e.g. the .summary-card / .summary-card-alert
+   hover block in dashboard.inline.css, and the light-theme hover block
+   below it). Without this, every card would flick from purple to grey
+   under the cursor and read as a rendering bug.
+
+   The hover colour is deliberately IDENTICAL to the resting colour, not
+   a brighter purple. The brief asks for a border that distinguishes the
+   card without looking selected or active; brightening on hover would
+   reintroduce exactly that "active" impression. Existing hover
+   behaviour that is not border-colour (lift, shadow, cursor) is
+   untouched and still runs.
+   -------------------------------------------------------------------- */
+main.maintenance-admin-dashboard-page
+    :is(.card, .summary-card, .academic-period-card, .dashboard-hero-kpi-item, .hd-card):hover,
+:root[data-theme-resolved='light'] main.maintenance-admin-dashboard-page
+    :is(.card, .summary-card, .academic-period-card, .dashboard-hero-kpi-item, .hd-card):hover,
+main.staff-dashboard-page .card:hover,
+:root[data-theme-resolved='light'] main.staff-dashboard-page .card:hover {
+    border-color: var(--dash-card-accent) !important;
+    border-bottom-color: var(--dash-card-accent-bottom) !important;
+}
+
+main.maintenance-admin-dashboard-page .hd-kpi-card:hover,
+:root[data-theme-resolved='light'] main.maintenance-admin-dashboard-page .hd-kpi-card:hover {
+    border-right-color: var(--dash-card-accent) !important;
+    border-left-color: var(--dash-card-accent) !important;
+    border-bottom-color: var(--dash-card-accent-bottom) !important;
+}
+
+/* ---- Deliberately NOT accented --------------------------------------
+   .priority-insight-card, .priority-summary-card and .priority-total-card
+   are not dashboard cards — they are the breakdown rows rendered INSIDE
+   the "Reports by Priority" card, and they also carry a 1px border.
+   Giving them the accent too would draw purple boxes inside a purple
+   box and produce exactly the busy, over-outlined look the brief rules
+   out. Leaving them neutral grey keeps the container/content hierarchy
+   readable: purple marks a card boundary, grey marks content within one.
+
+   They are listed here only so the omission is obviously intentional
+   and nobody "fixes" it later.
+   -------------------------------------------------------------------- */

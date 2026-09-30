@@ -1,0 +1,310 @@
+/* ============================================================
+   Dashboard overview cards — dashboard-overview.css
+   Shared by the Head (maintenance-dashboard.php) and Staff
+   (staff-dashboard.php) dashboards: an SVG ring LEFT and a
+   breakdown list RIGHT, drawn by assets/js/dashboard-overview.js.
+   Scoped to the component (.hd-overview-body) rather than a page,
+   so each page keeps its own card chrome around it.
+   ============================================================ */
+
+/* Ring LEFT, breakdown RIGHT, vertically centred in the card so paired cards
+   read as balanced whatever their content height. */
+.hd-overview-body {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 28px;
+    padding: 22px 24px;
+}
+
+/* ── SVG ring ─────────────────────────────────────────────── */
+.hd-overview-body .hd-donut {
+    position: relative;
+    flex-shrink: 0;
+    width: clamp(128px, 30%, 168px);
+    aspect-ratio: 1 / 1;
+}
+
+.hd-overview-body .hd-donut-svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+}
+
+.hd-overview-body .hd-donut-track,
+.hd-overview-body .hd-donut-seg {
+    fill: none;
+    stroke-width: 13;
+}
+
+.hd-overview-body .hd-donut-track {
+    stroke: #eef0f5;
+}
+
+.hd-overview-body .hd-donut-seg {
+    cursor: pointer;
+    transition: stroke-width 0.15s ease, opacity 0.15s ease;
+    animation: hdDonutIn 0.5s ease-out both;
+}
+
+.hd-overview-body .hd-donut-segments:hover .hd-donut-seg { opacity: 0.55; }
+.hd-overview-body .hd-donut-segments .hd-donut-seg:hover { opacity: 1; stroke-width: 16; }
+
+@keyframes hdDonutIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+
+.hd-overview-body .hd-stroke-critical    { stroke: #991b1b; }
+.hd-overview-body .hd-stroke-high        { stroke: #f59e0b; }
+.hd-overview-body .hd-stroke-medium      { stroke: #3b82f6; }
+.hd-overview-body .hd-stroke-low         { stroke: #94a3b8; }
+.hd-overview-body .hd-stroke-submitted   { stroke: #3b82f6; }
+.hd-overview-body .hd-stroke-in-progress { stroke: #8b5cf6; }
+.hd-overview-body .hd-stroke-completed   { stroke: #10b981; }
+
+.hd-overview-body .hd-donut-center {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+}
+
+.hd-overview-body .hd-donut-total {
+    font-size: 2rem;
+    font-weight: 800;
+    line-height: 1;
+    letter-spacing: -0.02em;
+    color: var(--text-primary, #111827);
+}
+
+.hd-overview-body .hd-donut-caption {
+    margin-top: 4px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-muted, #6b7280);
+}
+
+.hd-overview-body .hd-donut-empty .hd-donut-total {
+    color: #cbd5e1;
+}
+
+.hd-overview-body .hd-overview-side {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+/* ── Breakdown rows ───────────────────────────────────────────
+   dot · label · count · share, with a share bar beneath. Each row links to
+   All Reports filtered by that bucket, like the matching ring segment. */
+.hd-overview-body .hd-breakdown {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.hd-overview-body .hd-breakdown-row {
+    display: grid;
+    grid-template-columns: 10px 1fr auto 42px;
+    align-items: center;
+    column-gap: 10px;
+    row-gap: 6px;
+    padding: 7px 10px;
+    margin: 0 -10px;
+    border-radius: 8px;
+    text-decoration: none;
+    color: inherit;
+    transition: background-color 0.15s ease;
+}
+
+.hd-overview-body .hd-breakdown-row:hover {
+    background: rgba(139, 92, 246, 0.06);
+}
+
+.hd-overview-body .hd-breakdown-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 3px;
+}
+
+.hd-overview-body .hd-breakdown-label {
+    font-size: 0.84rem;
+    font-weight: 500;
+    color: var(--text-secondary, #374151);
+}
+
+.hd-overview-body .hd-breakdown-count {
+    font-size: 0.92rem;
+    font-weight: 700;
+    color: var(--text-primary, #111827);
+    font-variant-numeric: tabular-nums;
+}
+
+.hd-overview-body .hd-breakdown-pct {
+    font-size: 0.75rem;
+    color: var(--text-muted, #6b7280);
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+.hd-overview-body .hd-breakdown-track {
+    grid-column: 2 / -1;
+    height: 5px;
+    border-radius: 999px;
+    background: #eef0f5;
+    overflow: hidden;
+}
+
+.hd-overview-body .hd-breakdown-fill {
+    display: block;
+    width: 0;
+    height: 100%;
+    border-radius: inherit;
+    transition: width 0.5s ease;
+}
+
+.hd-overview-body .hd-dot-critical    { background: #991b1b; }
+.hd-overview-body .hd-dot-high        { background: #f59e0b; }
+.hd-overview-body .hd-dot-medium      { background: #3b82f6; }
+.hd-overview-body .hd-dot-low         { background: #94a3b8; }
+
+/* Status colors match the Administrator dashboard's "Reports by Status". */
+.hd-overview-body .hd-dot-submitted   { background: #3b82f6; }
+.hd-overview-body .hd-dot-in-progress { background: #8b5cf6; }
+.hd-overview-body .hd-dot-completed   { background: #10b981; }
+
+/* ── Summary panel (footer under the breakdown) ─────────────
+   Default purple (completion rate); --alert (red) / --clear (green) for a
+   priority "needs attention" note. */
+.hd-overview-body .hd-summary-panel {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: baseline;
+    row-gap: 2px;
+    padding: 10px 14px;
+    border-radius: 8px;
+    border: 1px solid rgba(139, 92, 246, 0.2);
+    background: rgba(139, 92, 246, 0.05);
+}
+
+.hd-overview-body .hd-summary-label {
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #6d28d9;
+}
+
+.hd-overview-body .hd-summary-value {
+    font-size: 1rem;
+    font-weight: 800;
+    color: #6d28d9;
+    font-variant-numeric: tabular-nums;
+}
+
+.hd-overview-body .hd-summary-text {
+    grid-column: 1 / -1;
+    font-size: 0.78rem;
+    color: var(--text-primary, #111827);
+}
+
+.hd-overview-body .hd-summary-panel--alert {
+    border-color: rgba(239, 68, 68, 0.22);
+    background: rgba(239, 68, 68, 0.06);
+}
+
+.hd-overview-body .hd-summary-panel--alert .hd-summary-label,
+.hd-overview-body .hd-summary-panel--alert .hd-summary-value { color: #b91c1c; }
+
+.hd-overview-body .hd-summary-panel--clear {
+    border-color: rgba(16, 185, 129, 0.22);
+    background: rgba(16, 185, 129, 0.06);
+}
+
+.hd-overview-body .hd-summary-panel--clear .hd-summary-label,
+.hd-overview-body .hd-summary-panel--clear .hd-summary-value { color: #047857; }
+
+/* ── Phone width: stack ring above the breakdown ───────────── */
+@media (max-width: 560px) {
+    .hd-overview-body {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 18px;
+        padding: 18px 16px;
+    }
+    .hd-overview-body .hd-donut {
+        align-self: center;
+        width: 150px;
+    }
+}
+
+/* ── Dark mode ─────────────────────────────────────────────── */
+:root:not([data-theme-resolved='light']) .hd-overview-body .hd-donut-total,
+:root:not([data-theme-resolved='light']) .hd-overview-body .hd-breakdown-count,
+:root:not([data-theme-resolved='light']) .hd-overview-body .hd-summary-text {
+    color: #f1f5f9;
+}
+
+:root:not([data-theme-resolved='light']) .hd-overview-body .hd-donut-caption,
+:root:not([data-theme-resolved='light']) .hd-overview-body .hd-breakdown-pct {
+    color: #94a3b8;
+}
+
+:root:not([data-theme-resolved='light']) .hd-overview-body .hd-breakdown-label {
+    color: #cbd5e1;
+}
+
+:root:not([data-theme-resolved='light']) .hd-overview-body .hd-donut-track {
+    stroke: rgba(148, 163, 184, 0.16);
+}
+
+:root:not([data-theme-resolved='light']) .hd-overview-body .hd-breakdown-track {
+    background: rgba(148, 163, 184, 0.16);
+}
+
+:root:not([data-theme-resolved='light']) .hd-overview-body .hd-donut-empty .hd-donut-total {
+    color: #475569;
+}
+
+:root:not([data-theme-resolved='light']) .hd-overview-body .hd-breakdown-row:hover {
+    background: rgba(255, 255, 255, 0.04);
+}
+
+/* Critical's #991b1b nearly disappears on a dark card — lift it. */
+:root:not([data-theme-resolved='light']) .hd-overview-body .hd-stroke-critical { stroke: #dc2626; }
+:root:not([data-theme-resolved='light']) .hd-overview-body .hd-dot-critical    { background: #dc2626; }
+
+:root:not([data-theme-resolved='light']) .hd-overview-body .hd-summary-panel {
+    background: rgba(139, 92, 246, 0.1);
+    border-color: rgba(139, 92, 246, 0.28);
+}
+
+:root:not([data-theme-resolved='light']) .hd-overview-body .hd-summary-label,
+:root:not([data-theme-resolved='light']) .hd-overview-body .hd-summary-value {
+    color: #c4b5fd;
+}
+
+:root:not([data-theme-resolved='light']) .hd-overview-body .hd-summary-panel--alert {
+    background: rgba(239, 68, 68, 0.08);
+    border-color: rgba(239, 68, 68, 0.24);
+}
+
+:root:not([data-theme-resolved='light']) .hd-overview-body .hd-summary-panel--alert .hd-summary-label,
+:root:not([data-theme-resolved='light']) .hd-overview-body .hd-summary-panel--alert .hd-summary-value { color: #fca5a5; }
+
+:root:not([data-theme-resolved='light']) .hd-overview-body .hd-summary-panel--clear {
+    background: rgba(16, 185, 129, 0.08);
+    border-color: rgba(16, 185, 129, 0.24);
+}
+
+:root:not([data-theme-resolved='light']) .hd-overview-body .hd-summary-panel--clear .hd-summary-label,
+:root:not([data-theme-resolved='light']) .hd-overview-body .hd-summary-panel--clear .hd-summary-value { color: #6ee7b7; }

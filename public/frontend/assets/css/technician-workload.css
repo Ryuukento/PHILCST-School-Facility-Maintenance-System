@@ -1,0 +1,273 @@
+/* ===================================================================
+   TASK — Technician Workload card.
+
+   A NEW, self-contained stylesheet, loaded LAST on the two dashboards
+   that host the card (dashboard.php = Administrator,
+   maintenance-dashboard.php = Head Maintenance). The standing design
+   brief puts the shared stylesheets off-limits, so nothing here edits
+   styles.css / layout.css / color-scheme.css / dashboard.inline.css /
+   hd-dashboard.css — and because this file loads last, every rule wins
+   on source order alone. There is not a single !important below.
+
+   Every colour is an existing design-system token (color-scheme.css):
+   purple accent --primary / --primary-dark / --primary-bg, text
+   --text-primary / --text-secondary, border --border-light, shadow
+   --shadow-xs. No new palette is introduced.
+
+   The card CHROME (border, radius, padding, header typography) is NOT
+   restyled here — on each dashboard the card reuses that page's own
+   existing card classes (.card/.card-header/.card-body on the
+   Administrator dashboard, .hd-card/.hd-card-header/.hd-card-body on
+   the Head Maintenance dashboard), so it inherits that page's spacing,
+   radius and shadow automatically and stays visually native to it.
+   Only the inside of the card — the technician rows and the bars — is
+   defined here, once, shared by both pages.
+   =================================================================== */
+
+/* Both host cards sit in a full-width row, so the list flows into as many
+   columns as the width allows (one per ~260px) instead of stretching a
+   handful of 8px bars across the whole dashboard. It collapses to a
+   single column on narrow screens without a media query.
+
+   It also scrolls rather than growing without bound: the roster can be
+   long on a system-wide (Administrator) view, and the brief asks for a
+   card that stays a normal dashboard card and is "not excessively
+   large". */
+.tw-list {
+    display: grid;
+    /* 288px rather than the original 260px: each row now carries an avatar
+       and a designation line, so a narrower column started clipping names
+       to an ellipsis at common dashboard widths. */
+    grid-template-columns: repeat(auto-fill, minmax(288px, 1fr));
+    gap: 0.9rem 1.5rem;
+    max-height: 19rem;
+    overflow-y: auto;
+    padding-right: 0.25rem;
+}
+
+/* Avatar on the left, everything else in a column beside it. */
+.tw-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.625rem;
+}
+
+.tw-main {
+    flex: 1;
+    /* Without this a long name refuses to shrink and pushes the counts out
+       of the column instead of ellipsing. */
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+}
+
+/* ---- Avatar ---------------------------------------------------------
+   Same two-case treatment the sidebar already uses: the stored
+   users.avatar image when one exists, otherwise the first initial on the
+   lavender surface token. No identity-derived colours — one neutral
+   accent for everyone. */
+.tw-avatar {
+    flex-shrink: 0;
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--primary-bg);
+    border: 1px solid var(--border-light);
+}
+
+.tw-avatar-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.tw-avatar-initial {
+    font-size: 0.8125rem;
+    font-weight: 700;
+    line-height: 1;
+    color: var(--primary-dark);
+}
+
+/* Name + designation on the left, counts on the right, bar underneath. */
+.tw-row-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.75rem;
+}
+
+.tw-identity {
+    display: flex;
+    flex-direction: column;
+    gap: 0.05rem;
+    min-width: 0;
+}
+
+.tw-name {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* The designation line — "Head • Computer" / "Staff • Computer".
+   Secondary weight and colour so it reads as a qualifier of the name
+   above it rather than competing with it, but always present, because
+   the list now mixes the Head in with the technicians and the role has
+   to stay legible at a glance. */
+.tw-meta {
+    font-size: 0.6875rem;
+    font-weight: 500;
+    line-height: 1.3;
+    color: var(--text-secondary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.tw-counts {
+    flex-shrink: 0;
+    font-size: 0.75rem;
+    /* Matches .tw-name's line box so the counts still sit level with the
+       name now that .tw-row-head aligns to flex-start (it used to align on
+       the baseline, which the two-line identity block broke). */
+    line-height: 1.4;
+    color: var(--text-secondary);
+    white-space: nowrap;
+}
+
+/* The active count is the number the card is really about, so it is the
+   only part rendered in the accent colour. */
+.tw-count-active {
+    font-weight: 700;
+    color: var(--primary-dark);
+}
+
+.tw-count-sep {
+    margin: 0 0.35rem;
+    opacity: 0.55;
+}
+
+/* ---- The bar -------------------------------------------------------
+   Purely a RELATIVE visual comparison: the busiest technician is full
+   width and everyone else is a share of that (the percentage is computed
+   server-side by TechnicianWorkloadService::withRelativeBars()).
+
+   Deliberately ONE colour at every length. It is not a red/amber/green
+   capacity gauge, because this system defines no workload ceiling — so
+   there is no threshold at which a bar could honestly turn "overloaded"
+   red, and colouring it as though there were would invent a rule the
+   application does not have.
+   -------------------------------------------------------------------- */
+.tw-bar {
+    position: relative;
+    height: 8px;
+    border-radius: 999px;
+    background: var(--primary-bg);
+    overflow: hidden;
+}
+
+.tw-bar-fill {
+    display: block;
+    height: 100%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, var(--primary-light), var(--primary));
+    /* Width is set inline per row from the server-computed percentage —
+       it is real data, so it cannot live in a stylesheet. */
+    transition: width 0.35s ease;
+}
+
+/* Someone with nothing assigned keeps their row and their (empty) track
+   — the brief explicitly forbids hiding zero-workload personnel, since
+   "who is free" is half of what the card is for. The track alone reads
+   as a real 0 rather than as a missing bar. This applies to the Head
+   exactly as it does to a technician. */
+.tw-row-idle .tw-name {
+    color: var(--text-secondary);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .tw-bar-fill {
+        transition: none;
+    }
+}
+
+/* ---- Empty / error state -------------------------------------------
+   Deliberately its own class rather than the .dashboard-empty-state the
+   Head Maintenance dashboard already uses: that class is defined only in
+   hd-dashboard.css / maintenance-dashboard.inline.css, which the
+   Administrator dashboard does not load, so reusing it would have styled
+   the card on one dashboard and left it bare on the other. One class
+   defined here renders identically on both.
+   -------------------------------------------------------------------- */
+.tw-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 1.75rem 1rem;
+    text-align: center;
+    color: var(--text-secondary);
+}
+
+.tw-empty svg {
+    width: 34px;
+    height: 34px;
+    color: var(--primary-light);
+}
+
+.tw-empty p {
+    margin: 0;
+    font-size: 0.8125rem;
+}
+
+/* ---- Host-row placement ---------------------------------------------
+   The card is a full-width row on its host dashboard. This rule only
+   makes that row sit in the page's existing rhythm — it adds no chrome
+   of its own, and is scoped to a wrapper class that exists nowhere
+   else, so nothing already on the page is reachable.
+
+   The companion `main.maintenance-admin-dashboard-page .hd-workload-row`
+   rule was removed when the card was taken off the Head Maintenance
+   dashboard: `.hd-workload-row` no longer exists in any page, so that
+   rule could never match again. This stylesheet is still loaded by the
+   Administrator dashboard, which is why the file itself stays.
+
+   Administrator: <main> is a TWO-COLUMN grid. A new child is
+   auto-placed into a single column, which made the card render at half
+   width beside empty space — the page's other full-width rows
+   (.dashboard-charts-row, .dashboard-timeline-row) each opt out with
+   grid-column: 1 / -1, so this row does the same. Verified in the
+   browser, not assumed: before this rule the row measured 781px against
+   the timeline row's 1577px.
+
+   No margin-bottom here on purpose — that grid already supplies a 24px
+   row gap, and adding a margin on top of it would space this one card
+   differently from every other row on the page. */
+.dashboard-workload-row {
+    grid-column: 1 / -1;
+}
+
+/* Narrow screens: the counts drop under the name instead of squeezing it
+   to an ellipsis. */
+@media (max-width: 480px) {
+    .tw-row-head {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.15rem;
+    }
+
+    .tw-name,
+    .tw-meta {
+        white-space: normal;
+    }
+}

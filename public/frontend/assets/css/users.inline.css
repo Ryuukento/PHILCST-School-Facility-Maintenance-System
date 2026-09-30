@@ -1,0 +1,1210 @@
+﻿.users-page-container {
+    width: calc(100% - var(--sidebar-width));
+    max-width: calc(100% - var(--sidebar-width));
+    margin-left: var(--sidebar-width);
+    margin-right: 0;
+    padding-left: 24px;
+    padding-right: 24px;
+}
+
+.navbar .navbar-container {
+    max-width: none;
+    margin: 0;
+    padding-left: 24px;
+    padding-right: 24px;
+}
+
+#sidebar.collapsed ~ main.users-page-container {
+    width: calc(100% - var(--sidebar-width-collapsed));
+    max-width: calc(100% - var(--sidebar-width-collapsed));
+    margin-left: var(--sidebar-width-collapsed);
+}
+
+.users-page-container #users-container {
+    overflow-x: auto;
+}
+
+.users-search-input {
+    width: 100%;
+    min-height: 44px;
+    padding: 0.75rem 0.95rem;
+    margin-bottom: 1rem;
+    border: 1px solid rgba(148, 163, 184, 0.35);
+    border-radius: 10px;
+    background: #0f1b31;
+    color: #dce8fc;
+}
+
+.users-search-input:focus {
+    outline: none;
+    border-color: #60a5fa;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+}
+
+.users-table {
+    width: 100%;
+    border-collapse: collapse;
+    border: 1px solid rgba(168, 139, 250, 0.25);
+    background: #171225;
+}
+
+.users-table th,
+.users-table td {
+    padding: 10px;
+    border: 1px solid rgba(148, 163, 184, 0.2);
+}
+
+.users-table th {
+    text-align: left;
+    background: #2a1747;
+    color: #efe7ff;
+}
+
+.users-table td {
+    color: #f3ecff;
+}
+
+.users-table tbody tr td {
+    background: #171225;
+}
+
+.users-table tbody tr:nth-child(even) {
+    background: #211536;
+}
+
+.users-table tbody tr:nth-child(even) td {
+    background: #211536;
+}
+
+.users-table tbody tr:hover {
+    background: rgba(139, 92, 246, 0.14);
+}
+
+.users-table tbody tr:hover td {
+    background: rgba(139, 92, 246, 0.14);
+}
+
+.users-muted-cell {
+    color: #b5c6e1 !important;
+}
+
+.users-actions-col {
+    text-align: center;
+    white-space: normal;
+    min-width: 240px;
+    vertical-align: middle;
+}
+
+.users-actions-group {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.45rem;
+}
+
+.users-status-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    padding: 4px 10px;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.users-status-active {
+    background: rgba(16, 185, 129, 0.18);
+    color: #a7f3d0;
+    border: 1px solid rgba(16, 185, 129, 0.34);
+}
+
+.users-status-pending {
+    background: rgba(245, 158, 11, 0.2);
+    color: #fde68a;
+    border: 1px solid rgba(245, 158, 11, 0.36);
+}
+
+.users-status-inactive,
+.users-status-suspended {
+    background: rgba(239, 68, 68, 0.18);
+    color: #fecaca;
+    border: 1px solid rgba(248, 113, 113, 0.36);
+}
+
+.users-action-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 34px;
+    min-width: 88px;
+    border: none;
+    border-radius: 8px;
+    padding: 6px 10px;
+    font-size: 12px;
+    font-weight: 700;
+    color: #fff;
+    cursor: pointer;
+    margin: 0;
+    box-shadow: 0 8px 16px rgba(15, 23, 42, 0.18);
+    transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
+}
+
+.users-action-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 12px 20px rgba(15, 23, 42, 0.22);
+    filter: brightness(1.04);
+}
+
+.users-action-approve { background: linear-gradient(135deg, #7c3aed, #6d28d9); }
+.users-action-reject { background: linear-gradient(135deg, #be185d, #9f1239); }
+.users-action-activate { background: linear-gradient(135deg, #0f766e, #115e59); }
+.users-action-inactive { background: linear-gradient(135deg, #7c2d12, #9a3412); }
+.users-action-edit { background: linear-gradient(135deg, #2563eb, #1d4ed8); }
+.users-action-edit .ui-icon { margin-right: 4px; }
+
+.users-page-alert {
+    padding: 0.75rem 1rem;
+    border-radius: 10px;
+    margin-bottom: 1rem;
+    font-weight: 600;
+}
+
+.users-page-alert-success {
+    background: rgba(16, 185, 129, 0.18);
+    color: #a7f3d0;
+    border: 1px solid rgba(16, 185, 129, 0.36);
+}
+
+.users-page-alert-error {
+    background: rgba(239, 68, 68, 0.18);
+    color: #fecaca;
+    border: 1px solid rgba(248, 113, 113, 0.36);
+}
+
+.users-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(2, 8, 23, 0.65);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2100;
+    padding: 1rem;
+}
+
+.users-modal-card {
+    background: #0f1b31;
+    width: min(520px, 95vw);
+    max-height: calc(100vh - 48px);
+    overflow-y: auto;
+    border-radius: 12px;
+    padding: 1.25rem;
+    box-shadow: 0 20px 50px rgba(2, 8, 23, 0.55);
+    border: 1px solid rgba(148, 163, 184, 0.35);
+}
+
+.users-modal-section-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 1.1rem 0 0.85rem;
+    padding-top: 1rem;
+    border-top: 1px solid rgba(148, 163, 184, 0.22);
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #a78bfa;
+}
+
+.users-modal-section-title:first-of-type {
+    margin-top: 0;
+    padding-top: 0;
+    border-top: none;
+}
+
+.users-modal-title {
+    margin: 0 0 0.5rem 0;
+    color: #e7effd;
+}
+
+.users-modal-desc {
+    margin: 0 0 1rem 0;
+    color: #b7c8e3;
+}
+
+.users-modal-field {
+    margin-bottom: 1rem;
+}
+
+/* COMPACT REGISTER FORM — this row wrapper pairs related fields side by side
+   so the Add New User modal is not excessively tall. Flex (rather than a fixed
+   2-column grid) is deliberate: syncRoleDependentFields() hides
+   #register-department-group for the Administrator role, and a flex item that
+   is display:none leaves the flow entirely, so the surviving Role field grows
+   to the full row width instead of being stranded at half width.
+   `min-width: 0` keeps a long placeholder from forcing horizontal scroll. */
+.users-modal-inline-fields {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 0.75rem 1rem;
+    margin-bottom: 1rem;
+}
+
+.users-modal-field-inline {
+    flex: 1 1 200px;
+    min-width: 0;
+    margin-bottom: 0;
+}
+
+.users-modal-label {
+    display: block;
+    margin-bottom: 0.4rem;
+    font-weight: 600;
+    color: #c8d7ee;
+}
+
+/* Narrow/mobile — force a single column so labels and inputs stay readable
+   and nothing scrolls horizontally. */
+@media (max-width: 640px) {
+    .users-modal-inline-fields {
+        flex-direction: column;
+    }
+
+    .users-modal-field-inline {
+        flex: 1 1 auto;
+        width: 100%;
+    }
+}
+
+.users-modal-select {
+    width: 100%;
+    min-height: 42px;
+    padding: 0.6rem 0.75rem;
+    border-radius: 10px;
+    border: 1px solid rgba(148, 163, 184, 0.4);
+    background: #11213b;
+    color: #eaf2ff;
+}
+
+.users-modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.6rem;
+}
+
+.users-modal-btn {
+    padding: 0.55rem 0.9rem;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 700;
+    border: 1px solid transparent;
+}
+
+.users-modal-btn-secondary {
+    border-color: rgba(148, 163, 184, 0.45);
+    background: #0f1b31;
+    color: #d8e6fb;
+}
+
+.users-modal-btn-primary { background: linear-gradient(135deg, #2563eb, #1d4ed8); color: #fff; }
+.users-modal-btn-warning { background: linear-gradient(135deg, #b45309, #92400e); color: #fff; }
+.users-modal-btn-danger { background: linear-gradient(135deg, #b91c1c, #991b1b); color: #fff; }
+.users-modal-btn-success { background: linear-gradient(135deg, #16a34a, #15803d); color: #fff; }
+
+.users-empty {
+    padding: 2rem;
+}
+
+.users-page-container {
+    width: calc(100% - var(--sidebar-width));
+    max-width: calc(100% - var(--sidebar-width));
+    margin-left: var(--sidebar-width);
+    margin-right: 0;
+    padding: 24px;
+}
+
+#sidebar.collapsed ~ main.users-page-container {
+    width: calc(100% - var(--sidebar-width-collapsed));
+    max-width: calc(100% - var(--sidebar-width-collapsed));
+    margin-left: var(--sidebar-width-collapsed);
+}
+
+.users-page-shell {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+.users-page-hero {
+    display: flex;
+    align-items: flex-end;
+    justify-content: flex-start;
+    gap: 16px;
+    padding: 8px 4px 0;
+    color: #f4ecff;
+}
+
+.users-page-hero-copy h2 {
+    margin: 4px 0 6px;
+    font-size: 2rem;
+    line-height: 1.05;
+    color: #f8f4ff;
+}
+
+.users-page-hero-copy p {
+    margin: 0;
+    color: #c7b8e0;
+    max-width: 720px;
+}
+
+@media (max-width: 768px) {
+    .users-page-container,
+    #sidebar.collapsed ~ main.users-page-container {
+        margin-left: 0 !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        padding-left: 12px;
+        padding-right: 12px;
+    }
+
+    .users-page-hero-copy h2 {
+        font-size: 1.5rem;
+    }
+
+    .users-toolbar-actions,
+    .users-toolbar-actions .users-page-btn {
+        width: 100%;
+    }
+}
+
+.users-page-kicker {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    font-size: 11px;
+    font-weight: 800;
+    color: #c084fc;
+}
+
+.users-page-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 38px;
+    padding: 0 14px;
+    border-radius: 8px;
+    border: 1px solid transparent;
+    font-size: 14px;
+    font-weight: 700;
+    text-decoration: none;
+    cursor: pointer;
+    transition: transform 0.18s ease, box-shadow 0.18s ease, background-color 0.18s ease;
+}
+
+.users-page-btn:hover {
+    transform: translateY(-1px);
+}
+
+.users-page-btn-primary {
+    background: linear-gradient(135deg, #8b5cf6, #6d28d9);
+    color: #fff;
+    box-shadow: 0 10px 22px rgba(139, 92, 246, 0.26);
+}
+
+.users-page-btn-secondary {
+    background: rgba(255, 255, 255, 0.04);
+    color: #ede4ff;
+    border-color: rgba(196, 181, 253, 0.24);
+}
+
+.users-page-btn-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.22);
+    font-size: 14px;
+    line-height: 1;
+}
+
+.users-toolbar {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 14px;
+    flex-wrap: wrap;
+}
+
+.users-toolbar-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    margin-left: auto;
+    margin-top: 0;
+    min-height: 46px;
+}
+
+.users-search-wrap {
+    flex: 1 1 360px;
+}
+
+.users-role-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.users-role-filter {
+    min-height: 34px;
+    padding: 0 12px;
+    border-radius: 999px;
+    border: 1px solid rgba(168, 139, 250, 0.28);
+    background: rgba(255, 255, 255, 0.04);
+    color: #e8dcfb;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: transform 0.18s ease, border-color 0.18s ease, background-color 0.18s ease;
+}
+
+.users-role-filter:hover {
+    transform: translateY(-1px);
+    border-color: rgba(192, 132, 252, 0.55);
+}
+
+.users-role-filter.is-active {
+    background: linear-gradient(135deg, #8b5cf6, #6d28d9);
+    border-color: rgba(196, 181, 253, 0.65);
+    color: #ffffff;
+    box-shadow: 0 8px 18px rgba(109, 40, 217, 0.32);
+}
+
+.users-summary {
+    color: #b7a3d4;
+    font-size: 13px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.users-page-container #users-container {
+    overflow: visible;
+}
+
+.users-search-input {
+    width: 100%;
+    min-height: 46px;
+    padding: 0.75rem 0.95rem;
+    border: 1px solid rgba(168, 139, 250, 0.2);
+    border-radius: 12px;
+    background: rgba(14, 10, 26, 0.8);
+    color: #f4ecff;
+    box-shadow: 0 10px 30px rgba(5, 8, 22, 0.24);
+}
+
+.users-search-input:focus {
+    outline: none;
+    border-color: #c084fc;
+    box-shadow: 0 0 0 4px rgba(192, 132, 252, 0.16);
+}
+
+.users-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 14px;
+}
+
+.users-loading-grid {
+    min-height: 360px;
+}
+
+.users-card {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    /* min-height, not a fixed height: the Edit button pushes some cards
+       (the "active + pending password reset" case) to 3 action buttons,
+       which wrap onto a second line. A fixed 452px + overflow:hidden was
+       silently clipping that wrapped row's bottom edge instead of letting
+       the card grow. min-height keeps every card the same size in the
+       common case while letting a taller card (3 buttons, or the optional
+       designation row) grow instead of clipping. */
+    min-height: 452px;
+    border-radius: 18px;
+    overflow: hidden;
+    background: linear-gradient(180deg, rgba(27, 16, 48, 0.96) 0%, rgba(18, 11, 34, 0.98) 100%);
+    border: 1px solid rgba(168, 139, 250, 0.18);
+    box-shadow: 0 18px 40px rgba(0, 0, 0, 0.28);
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+/* TASK 17 — Notification Deep Linking: brief pulse applied to the user
+   card a notification deep-link (?highlight=<user_id>) points at, so
+   landing on a filtered/paginated grid still makes the target obvious. */
+.users-card-highlight {
+    border-color: rgba(168, 139, 250, 0.85);
+    box-shadow: 0 0 0 3px rgba(168, 139, 250, 0.35), 0 18px 40px rgba(0, 0, 0, 0.28);
+}
+
+.users-card-media {
+    position: relative;
+    min-height: 245px;
+    background: radial-gradient(circle at 20% 20%, rgba(168, 85, 247, 0.38), transparent 28%), linear-gradient(135deg, rgba(35, 20, 64, 0.96), rgba(8, 7, 18, 1));
+}
+
+.users-card-media-avatar-wrap,
+.users-avatar-wrap {
+    position: relative;
+    width: 100%;
+    height: 100%;
+}
+
+.users-card-media-image,
+.users-card-media-fallback {
+    width: 100%;
+    height: 100%;
+    display: block;
+    object-fit: cover;
+}
+
+.users-card-media-fallback {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+
+.users-card-media-fallback-hidden,
+.users-avatar-fallback-hidden {
+    display: none;
+}
+
+.users-card-media-orbit {
+    position: absolute;
+    inset: auto auto 24px 24px;
+    width: 160px;
+    height: 160px;
+    border-radius: 50%;
+    border: 1px solid rgba(216, 180, 254, 0.16);
+    box-shadow: 0 0 0 38px rgba(139, 92, 246, 0.08), 0 0 0 76px rgba(59, 130, 246, 0.05);
+    background: radial-gradient(circle, rgba(192, 132, 252, 0.22) 0%, transparent 70%);
+}
+
+.users-card-media-initials {
+    position: relative;
+    width: 112px;
+    height: 112px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 42px;
+    font-weight: 900;
+    letter-spacing: 0.05em;
+    color: #fff;
+    background: linear-gradient(135deg, #8b5cf6, #3b82f6);
+    box-shadow: 0 18px 36px rgba(0, 0, 0, 0.28);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.users-card-body {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 16px 16px 18px;
+    flex: 1;
+}
+
+.users-card-headline h3 {
+    margin: 0;
+    font-size: 18px;
+    line-height: 1.15;
+    color: #fff7ff;
+}
+
+.users-card-name-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.users-role-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 6px;
+    padding: 3px 8px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 800;
+    color: #fff;
+    background: #64748b;
+}
+
+.users-role-super_admin { background: linear-gradient(135deg, #ef4444, #dc2626); }
+.users-role-maintenance_admin { background: linear-gradient(135deg, #16a34a, #15803d); }
+.users-role-maintenance_staff { background: linear-gradient(135deg, #2563eb, #1d4ed8); }
+.users-role-user { background: linear-gradient(135deg, #64748b, #475569); }
+.users-role-client { background: linear-gradient(135deg, #0f766e, #115e59); }
+
+.users-card-meta {
+    display: grid;
+    gap: 8px;
+    color: #d7cbe8;
+    font-size: 13px;
+}
+
+.users-card-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    white-space: nowrap;
+}
+
+.users-card-icon {
+    color: #a78bfa;
+    font-size: 13px;
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+}
+
+.users-card-row-text {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+}
+
+.users-mini-avatar {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    color: #fff;
+    font-weight: 800;
+    font-size: 12px;
+}
+
+.users-card-badges {
+    position: absolute;
+    left: 16px;
+    right: 16px;
+    bottom: 16px;
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    align-items: center;
+}
+
+.users-status-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 6px 10px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.02em;
+    color: #fff;
+    background: rgba(255, 255, 255, 0.12);
+    backdrop-filter: blur(10px);
+}
+
+.users-status-pill.is-active { background: rgba(16, 185, 129, 0.28); }
+.users-status-pill.is-pending { background: rgba(245, 158, 11, 0.28); }
+.users-status-pill.is-inactive { background: rgba(239, 68, 68, 0.28); }
+
+.users-status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex: 0 0 8px;
+}
+
+.users-status-dot.is-active { background: #22c55e; }
+.users-status-dot.is-pending { background: #f59e0b; }
+.users-status-dot.is-inactive { background: #fb7185; }
+
+.users-card-actions {
+    margin-top: auto;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.users-action-btn {
+    min-height: 34px;
+    padding: 0 12px;
+    border: none;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 800;
+    color: #fff;
+    cursor: pointer;
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.18);
+}
+
+.users-action-approve { background: linear-gradient(135deg, #2563eb, #1d4ed8); }
+.users-action-reject { background: linear-gradient(135deg, #be185d, #9f1239); }
+.users-action-activate { background: linear-gradient(135deg, #0f766e, #115e59); }
+.users-action-edit { background: linear-gradient(135deg, #4f46e5, #4338ca); }
+.users-action-edit .ui-icon { margin-right: 4px; }
+.users-action-inactive {
+    background: linear-gradient(135deg, #dc2626, #b91c1c);
+    border: 1px solid rgba(254, 202, 202, 0.35);
+    box-shadow: 0 10px 20px rgba(185, 28, 28, 0.35);
+}
+
+.users-page-alert {
+    padding: 0.75rem 1rem;
+    border-radius: 10px;
+    margin-bottom: 1rem;
+    font-weight: 600;
+}
+
+.users-page-alert-success {
+    background: rgba(16, 185, 129, 0.18);
+    color: #d1fae5;
+    border: 1px solid rgba(16, 185, 129, 0.28);
+}
+
+.users-page-alert-error {
+    background: rgba(239, 68, 68, 0.16);
+    color: #fee2e2;
+    border: 1px solid rgba(239, 68, 68, 0.28);
+}
+
+/* Readability fix (2026-09-22): both .users-page-alert-success/-error
+   definitions in this file (this one and the near-duplicate earlier in the
+   stylesheet) pair pale mint/pink text with an equally pale tinted
+   background — built for a dark page background, invisible on the actual
+   light User Management page. Single override here (higher specificity)
+   fixes both declarations; backgrounds/borders/layout untouched. */
+:root[data-theme-resolved='light'] .users-page-alert-success {
+    color: #065f46 !important;
+}
+:root[data-theme-resolved='light'] .users-page-alert-error {
+    color: #991b1b !important;
+}
+
+.users-pagination {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    padding-top: 6px;
+}
+
+.users-page-nav {
+    min-width: 36px;
+    min-height: 36px;
+    padding: 0 12px;
+    border-radius: 8px;
+    border: 1px solid rgba(168, 139, 250, 0.2);
+    background: rgba(255, 255, 255, 0.04);
+    color: #e6def5;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.users-page-nav.is-active {
+    background: linear-gradient(135deg, #8b5cf6, #6d28d9);
+    color: #fff;
+    border-color: transparent;
+}
+
+.users-page-nav.is-disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.users-modal-input {
+    width: 100%;
+    min-height: 42px;
+    padding: 0.6rem 0.75rem;
+    border-radius: 10px;
+    border: 1px solid rgba(148, 163, 184, 0.4);
+    background: rgba(255, 255, 255, 0.06);
+    color: #f8f4ff;
+}
+
+.users-modal-input:focus {
+    outline: none;
+    border-color: #c084fc;
+    box-shadow: 0 0 0 4px rgba(192, 132, 252, 0.12);
+}
+
+.users-modal-input-error {
+    border-color: #ef4444;
+    box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.12);
+    background: rgba(239, 68, 68, 0.05);
+}
+
+.users-modal-input-error:focus {
+    border-color: #ef4444;
+    box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.2);
+}
+
+/* COMPACT REGISTER FORM — widened from 540px because the fields are now paired
+   two-per-row; at the old width each column would have been too cramped for the
+   longer placeholders (e.g. "Optional (e.g., Jr., Sr., III)"). Still capped at
+   95vw, so narrow viewports are unaffected. */
+.users-register-modal-card {
+    width: min(680px, 95vw);
+}
+
+.users-modal-field-error {
+    display: none;
+    margin-top: 0.35rem;
+    font-size: 12px;
+    color: #fecaca;
+    font-weight: 600;
+    padding: 0.35rem 0.5rem;
+    background: rgba(239, 68, 68, 0.08);
+    border-radius: 6px;
+    border-left: 2px solid #ef4444;
+}
+
+.users-modal-field-error.is-visible {
+    display: block;
+    animation: slideDown 0.2s ease-out;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-4px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.users-empty-state {
+    padding: 2rem;
+}
+
+.users-empty-state strong,
+.users-empty-state span {
+    color: #f1e8ff;
+}
+
+.users-skeleton-card {
+    position: relative;
+    overflow: hidden;
+    min-height: 452px;
+    background: linear-gradient(90deg, rgba(42, 24, 74, 0.95) 0%, rgba(29, 18, 52, 0.95) 50%, rgba(42, 24, 74, 0.95) 100%);
+    background-size: 200% 100%;
+    animation: users-shimmer 1.4s ease infinite;
+}
+
+.users-skeleton-card::before,
+.users-skeleton-card::after {
+    content: '';
+    position: absolute;
+    border-radius: 999px;
+    background: rgba(203, 213, 225, 0.75);
+}
+
+.users-skeleton-card::before {
+    top: 24px;
+    left: 24px;
+    width: 110px;
+    height: 160px;
+    border-radius: 20px;
+}
+
+.users-skeleton-card::after {
+    top: 36px;
+    left: 156px;
+    width: calc(100% - 180px);
+    height: 18px;
+    box-shadow: 0 28px 0 rgba(203, 213, 225, 0.52), 0 58px 0 rgba(203, 213, 225, 0.34), 0 132px 0 rgba(203, 213, 225, 0.22);
+}
+
+@keyframes users-shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
+
+@media (max-width: 1180px) {
+    .users-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 900px) {
+    .users-page-hero,
+    .users-toolbar {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .users-toolbar-actions {
+        width: 100%;
+        margin-left: 0;
+        justify-content: space-between;
+    }
+
+    .users-grid { grid-template-columns: 1fr; }
+
+    .users-role-filters {
+        width: 100%;
+    }
+}
+
+@media (max-width: 640px) {
+    .users-page-container {
+        width: 100%;
+        max-width: 100%;
+        margin-left: 0;
+        padding: 18px 14px;
+    }
+
+    #sidebar.collapsed ~ main.users-page-container {
+        width: 100%;
+        max-width: 100%;
+        margin-left: 0;
+    }
+
+    .users-grid { grid-template-columns: 1fr; }
+
+    .users-page-hero-copy h2 {
+        font-size: 1.6rem;
+    }
+
+    .users-page-hero-actions {
+        width: 100%;
+    }
+
+    .users-page-btn {
+        flex: 1 1 auto;
+    }
+
+    .users-toolbar-actions {
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+
+    .users-summary {
+        width: 100%;
+        white-space: normal;
+    }
+}
+
+.users-error {
+    color: #fecaca;
+    padding: 1rem;
+}
+
+/* Light mode: user management uses white cards and black text. */
+:root[data-theme-resolved='light'] .users-page-hero,
+:root[data-theme-resolved='light'] .users-page-hero-copy h2,
+:root[data-theme-resolved='light'] .users-page-hero-copy p,
+:root[data-theme-resolved='light'] .users-page-kicker,
+:root[data-theme-resolved='light'] .users-summary {
+    color: #111827 !important;
+}
+
+:root[data-theme-resolved='light'] .users-search-input,
+:root[data-theme-resolved='light'] .users-modal-input,
+:root[data-theme-resolved='light'] .users-modal-select {
+    background: #ffffff !important;
+    color: #111827 !important;
+    border-color: #d1d5db !important;
+    box-shadow: none;
+}
+
+:root[data-theme-resolved='light'] .users-role-filter,
+:root[data-theme-resolved='light'] .users-page-nav {
+    background: #ffffff !important;
+    color: #111827 !important;
+    border-color: #d1d5db !important;
+}
+
+:root[data-theme-resolved='light'] .users-role-filter.is-active,
+:root[data-theme-resolved='light'] .users-page-nav.is-active {
+    /* TASK 79: the light-theme override above (.users-role-filter) sets
+       background:#ffffff for every filter pill, including the active one --
+       this rule only overrode color/border-color, so the active pill ended
+       up white text on a white background (invisible label) in light mode.
+       Restoring the same brand gradient the dark theme/base .is-active
+       state already uses (line 464) keeps the active pill legible and
+       visually consistent across themes. */
+    background: linear-gradient(135deg, #8b5cf6, #6d28d9) !important;
+    color: #ffffff !important;
+    border-color: transparent !important;
+}
+
+/* Container tier for User Management: the user cards, the outer frame of the
+   users table, and the modal shell. The table's th/td rules further down are
+   deliberately left neutral grey — purple marks the container edge, not every
+   cell. */
+:root[data-theme-resolved='light'] .users-card,
+:root[data-theme-resolved='light'] .users-table,
+:root[data-theme-resolved='light'] .users-modal-card,
+:root[data-theme-resolved='light'] .users-skeleton-card {
+    background: #ffffff !important;
+    border-color: var(--purple-border, #e5e7eb) !important;
+    box-shadow: 0 12px 24px rgba(15, 23, 42, 0.08) !important;
+}
+
+:root[data-theme-resolved='light'] .users-card-media {
+    background: linear-gradient(135deg, #f8fafc, #eef2ff) !important;
+}
+
+/* Readability fix (2026-09-22): .users-status-pill's white text on a
+   translucent-white pill was designed for the dark .users-card-media
+   gradient above. In light mode that card is overridden to a near-white
+   gradient (rule above), so the white-on-white pill text became invisible.
+   Text-only + background-opacity tweak per status; the active/pending/
+   inactive color-coding itself is unchanged. */
+:root[data-theme-resolved='light'] .users-status-pill.is-active {
+    background: rgba(16, 185, 129, 0.16) !important;
+    color: #065f46 !important;
+}
+:root[data-theme-resolved='light'] .users-status-pill.is-pending {
+    background: rgba(245, 158, 11, 0.18) !important;
+    color: #92400e !important;
+}
+:root[data-theme-resolved='light'] .users-status-pill.is-inactive {
+    background: rgba(239, 68, 68, 0.16) !important;
+    color: #991b1b !important;
+}
+
+:root[data-theme-resolved='light'] .users-card-headline h3,
+:root[data-theme-resolved='light'] .users-card-meta,
+:root[data-theme-resolved='light'] .users-card-row,
+:root[data-theme-resolved='light'] .users-card-icon,
+:root[data-theme-resolved='light'] .users-error,
+:root[data-theme-resolved='light'] .users-empty-state strong,
+:root[data-theme-resolved='light'] .users-empty-state span,
+:root[data-theme-resolved='light'] .users-modal-title,
+:root[data-theme-resolved='light'] .users-modal-desc,
+:root[data-theme-resolved='light'] .users-modal-label,
+:root[data-theme-resolved='light'] .users-modal-field-error {
+    color: #111827 !important;
+}
+
+:root[data-theme-resolved='light'] .users-mini-avatar {
+    background: #f3f4f6 !important;
+    border-color: #d1d5db !important;
+    color: #111827 !important;
+}
+
+:root[data-theme-resolved='light'] .users-table th {
+    background: #f9fafb !important;
+    color: #111827 !important;
+    border-color: #e5e7eb !important;
+}
+
+:root[data-theme-resolved='light'] .users-table td,
+:root[data-theme-resolved='light'] .users-table tbody tr td,
+:root[data-theme-resolved='light'] .users-table tbody tr:nth-child(even) td {
+    background: #ffffff !important;
+    color: #111827 !important;
+    border-color: #e5e7eb !important;
+}
+
+:root[data-theme-resolved='light'] .users-table tbody tr:hover td {
+    background: #f9fafb !important;
+}
+
+:root[data-theme-resolved='light'] .users-muted-cell {
+    color: #374151 !important;
+}
+
+:root[data-theme-resolved='light'] .users-modal-btn-secondary {
+    background: #ffffff !important;
+    color: #111827 !important;
+    border-color: #d1d5db !important;
+}
+
+:root[data-theme-resolved='light'] .users-modal-overlay {
+    background: rgba(15, 23, 42, 0.42);
+}
+
+:root[data-theme-resolved='light'] .users-modal-section-title {
+    color: #6d28d9 !important;
+    border-top-color: #e5e7eb !important;
+}
+
+/* Designation row — slightly bolder than the plain department/meta rows */
+.users-card-designation-text {
+    font-weight: 600;
+    color: var(--text-primary, #111827);
+}
+:root[data-theme-resolved='light'] .users-card-designation-text {
+    color: #111827;
+}
+:root:not([data-theme-resolved='light']) .users-card-designation-text {
+    color: #f1f5f9;
+}
+
+/* Show/hide password eye (Add New User + Reset Password dialogs). The button
+   used to carry an inline near-white color (rgba(248,244,255,0.82)) meant for
+   the dark theme, which made it invisible on the white light-theme input, and
+   a hard-coded top offset that only lined up by coincidence with the label
+   height. It now sits in a wrapper around just the input, so it is always
+   vertically centred on it, and takes a color per theme. */
+.users-password-wrap {
+    position: relative;
+}
+
+.users-password-wrap .users-modal-input {
+    padding-right: 46px;
+}
+
+.users-password-toggle {
+    position: absolute;
+    top: 50%;
+    right: 8px;
+    transform: translateY(-50%);
+    width: 32px;
+    height: 32px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    color: #cbd5e1;
+    cursor: pointer;
+    transition: color 0.15s ease, background-color 0.15s ease;
+}
+
+.users-password-toggle:hover,
+.users-password-toggle[aria-pressed='true'] {
+    color: #c084fc;
+    background: rgba(192, 132, 252, 0.12);
+}
+
+.users-password-toggle:focus-visible {
+    outline: 2px solid #c084fc;
+    outline-offset: 1px;
+}
+
+:root[data-theme-resolved='light'] .users-password-toggle {
+    color: #6b7280;
+}
+
+:root[data-theme-resolved='light'] .users-password-toggle:hover,
+:root[data-theme-resolved='light'] .users-password-toggle[aria-pressed='true'] {
+    color: #7c3aed;
+    background: rgba(124, 58, 237, 0.08);
+}

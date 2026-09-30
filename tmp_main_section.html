@@ -1,0 +1,349 @@
+<main class="container maintenance-admin-dashboard-page">
+    <!-- ============================================================
+         TASK 31.7 — Administrator Dashboard layout redesign.
+         Replaces the single "mega card" that used to wrap the whole page
+         (hero header, all 5 KPI stats, both feature cards, and all 4
+         bottom-row cards inside one <div class="card"><div class="card-body">)
+         with distinct top-level sections, matching the approved reference's
+         composition: a hero panel (greeting + KPI strip in one card) beside
+         the Academic Session card, then feature cards, then a 3-column
+         charts+Recent Reports row, then Inventory Status on its own row.
+         Every id/class the JS queries, every onclick handler, and every PHP
+         variable is unchanged — only how these same elements are grouped
+         and styled changed. No new widget/section with fabricated data was
+         added (the reference's "Maintenance Activity Timeline" has no
+         corresponding data source in this app and was intentionally left
+         out rather than faked). -->
+    <div class="dashboard-hero-row">
+        <!-- Hero panel: greeting + KPI strip unified into one card, matching
+             the reference (previously the 5 KPI stats lived in a separate
+             bordered grid below the hero). Same .dashboard-page-header-title/
+             -subtitle classes and $headerGreeting/$headerUserName variables
+             as before — copy/logic unchanged, only nesting changed. -->
+        <div class="card dashboard-hero-panel">
+            <div class="card-header d-flex justify-between align-center dashboard-hero-header">
+                <div class="dashboard-page-header" style="margin-bottom: 0;">
+                    <div>
+                        <p class="dashboard-kicker">Dashboard Overview</p>
+                        <h1 class="dashboard-page-header-title"><?php echo htmlspecialchars($headerGreeting); ?>, <?php echo htmlspecialchars(explode(' ', $headerUserName)[0]); ?>! &#128075;</h1>
+                        <p class="dashboard-page-header-subtitle">Here's what's happening in your maintenance operations today.</p>
+                    </div>
+                </div>
+                <?php if (($user['role'] ?? '') === 'super_admin'): ?>
+                <!-- TASK 25.4 — Semester Settings button. .dashboard-page-header-actions
+                     is defined in enterprise-dashboard.css and needed no new CSS. -->
+                <div class="dashboard-page-header-actions">
+                    <a href="<?php echo public_url('/frontend/pages/semester-settings.php'); ?>" id="school-settings-edit-btn" class="btn btn-sm btn-secondary academic-period-settings-btn" aria-label="Open Semester Settings">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                            <circle cx="12" cy="12" r="3"></circle>
+                            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                        </svg>
+                        Semester Settings
+                    </a>
+                </div>
+                <?php endif; ?>
+            </div>
+            <div class="card-body dashboard-hero-kpi-body">
+                <!-- TASK 31.7 — 5 KPI stats, restyled as a compact inline strip
+                     (dividers, not individual bordered cards) matching the
+                     reference. Same ids/onclick handlers/data — only the
+                     outer wrapper class changed from .summary-card to
+                     .dashboard-hero-kpi-item, so the old .summary-cards-grid
+                     card-chrome rules (border/shadow/background) no longer
+                     apply here; the icon/title/value/desc inner classes are
+                     unchanged and get fresh, page-scoped compact styling. -->
+                <div class="dashboard-hero-kpi-row">
+                    <!-- Total Reports -->
+                    <div class="dashboard-hero-kpi-item" onclick="navigateToReportsCard('total')">
+                        <div class="summary-card-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                <path d="M14 2v6h6"></path>
+                            </svg>
+                        </div>
+                        <div class="summary-card-content">
+                            <h3 class="summary-card-title">Total reports</h3>
+                            <div class="summary-card-value" id="stat-total">-</div>
+                            <p class="summary-card-desc summary-trend-positive" id="stat-total-desc">this semester</p>
+                        </div>
+                    </div>
+
+                    <!-- Reports Today -->
+                    <div class="dashboard-hero-kpi-item" onclick="navigateToReportsCard('today')">
+                        <div class="summary-card-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="3" y="4" width="18" height="18" rx="2"></rect>
+                                <path d="M16 2v4M8 2v4M3 10h18"></path>
+                            </svg>
+                        </div>
+                        <div class="summary-card-content">
+                            <h3 class="summary-card-title">Reports today</h3>
+                            <div class="summary-card-value" id="stat-today">-</div>
+                            <p class="summary-card-desc summary-trend-positive">submitted today</p>
+                        </div>
+                    </div>
+
+                    <!-- Pending Tasks -->
+                    <div class="dashboard-hero-kpi-item" onclick="navigateToReportsCard('pending_tasks')">
+                        <div class="summary-card-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="9"></circle>
+                                <path d="M12 7v6l4 2"></path>
+                            </svg>
+                        </div>
+                        <div class="summary-card-content">
+                            <h3 class="summary-card-title">Pending tasks</h3>
+                            <div class="summary-card-value" id="stat-pending">-</div>
+                            <p class="summary-card-desc summary-trend-warning" id="stat-pending-desc">needs attention</p>
+                        </div>
+                    </div>
+
+                    <!-- In Progress -->
+                    <div class="dashboard-hero-kpi-item" onclick="navigateToReportsCard('in_progress')">
+                        <div class="summary-card-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M20 7a5 5 0 0 1-7 4.6L7.6 17A2 2 0 1 1 5 14.4l5.4-5.4A5 5 0 1 1 20 7z"></path>
+                            </svg>
+                        </div>
+                        <div class="summary-card-content">
+                            <h3 class="summary-card-title">In progress</h3>
+                            <div class="summary-card-value" id="stat-in-progress">-</div>
+                            <p class="summary-card-desc summary-trend-positive" id="stat-in-progress-desc">on track</p>
+                        </div>
+                    </div>
+
+                    <!-- Completed -->
+                    <div class="dashboard-hero-kpi-item" onclick="navigateToReportsCard('completed')">
+                        <div class="summary-card-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M20 6L9 17l-5-5"></path>
+                            </svg>
+                        </div>
+                        <div class="summary-card-content">
+                            <h3 class="summary-card-title">Completed</h3>
+                            <div class="summary-card-value" id="stat-completed">-</div>
+                            <p class="summary-card-desc summary-trend-positive" id="stat-completed-desc">this semester</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <?php if (($user['role'] ?? '') === 'super_admin'): ?>
+        <!-- TASK 25.3/25.4 — Enterprise Academic Session Status Card.
+             Purely a presentational upgrade of the Task 25 read-only
+             semester widget: renders the exact same backend fields
+             Task 25.2 already returns (current_semester, semester_status,
+             the 4 semester dates, semester_days_until_start) as a bordered
+             status card with a colored badge instead of plain text. Nothing
+             here computes or re-derives semester state — see
+             renderSchoolSettingsLabel() below, which only formats values it
+             is handed. TASK 31.7 — now a direct sibling of the hero panel
+             inside .dashboard-hero-row (same row, matched height) instead of
+             nested inside the hero's own action cluster, per the reference. -->
+        <div id="school-settings-widget" class="academic-period-card dashboard-hero-session-card">
+            <div class="academic-period-card-header">
+                <span class="academic-period-card-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="4" width="18" height="18" rx="2"></rect>
+                        <path d="M16 2v4M8 2v4M3 10h18"></path>
+                    </svg>
+                </span>
+                <span class="academic-period-card-title">Current Academic Session</span>
+            </div>
+            <div id="academic-period-card-body" class="academic-period-card-body">
+                <span class="academic-period-skeleton">Loading semester…</span>
+            </div>
+        </div>
+        <?php endif; ?>
+    </div>
+
+    <!-- TASK 31.2/31.7 — Low Stock + Buildings Overview feature-card row.
+         Same elements, same ids/onclick handlers/hrefs as before; only its
+         ancestor changed (used to sit inside the mega-card's .card-body). -->
+    <div class="dashboard-feature-cards-grid">
+        <!-- Low Stock Items Card -->
+        <div class="summary-card summary-card-alert summary-card-action" onclick="navigateToReportsCard('low_stock')">
+            <div class="summary-card-content">
+                <h3 class="summary-card-title">Low stock</h3>
+                <div class="summary-card-value" id="stat-low">-</div>
+                <p class="summary-card-desc summary-trend-danger">restock now</p>
+                <span class="summary-card-cta">View Inventory &rarr;</span>
+            </div>
+            <div class="summary-card-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M10.29 3.86l-8 14A1 1 0 0 0 3.14 19h17.72a1 1 0 0 0 .85-1.5l-8-14a1 1 0 0 0-1.72 0z"></path>
+                    <path d="M12 9v4"></path>
+                    <path d="M12 17h.01"></path>
+                </svg>
+            </div>
+        </div>
+
+        <!-- Buildings Overview Card -->
+        <div class="summary-card summary-card-buildings summary-card-action" onclick="navigateToBuildingsOverview()">
+            <div class="summary-card-content">
+                <h3 class="summary-card-title">Buildings overview</h3>
+                <div class="summary-card-value summary-card-value-action">Open</div>
+                <p class="summary-card-desc">browse buildings and rooms</p>
+                <span class="summary-card-cta">View Buildings &rarr;</span>
+            </div>
+            <div class="summary-card-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M3 21h18"></path>
+                    <path d="M5 21V7l7-4 7 4v14"></path>
+                    <path d="M9 9h6"></path>
+                    <path d="M9 13h6"></path>
+                </svg>
+            </div>
+        </div>
+    </div>
+
+    <!-- TASK 31.7 — Charts + Recent Reports, 3 columns in one row (reference
+         composition). Recent Reports moved out of the old 2x2 "bottom"
+         grid to sit alongside the two charts; Inventory Status now gets its
+         own full-width row below (see .dashboard-inventory-row) since the
+         reference doesn't show it (screenshot cuts off before it) and it
+         reads better as a wide table widget than a cramped 4th column.
+         .dashboard-bottom is kept as a second class on both new row
+         containers purely to reuse its existing card chrome/header/body/
+         responsive-breakpoint CSS (dashboard.inline.css) without
+         duplicating it — every id the JS queries below is unchanged. -->
+    <div class="dashboard-charts-row dashboard-bottom">
+        <div class="card chart-card status-chart-card">
+            <div class="card-header">
+                <div class="status-chart-head-row">
+                    <div class="dashboard-card-head-title">
+                        <span class="dashboard-card-head-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21.21 15.89A10 10 0 1 1 8 2.83"></path>
+                                <path d="M22 12A10 10 0 0 0 12 2v10z"></path>
+                            </svg>
+                        </span>
+                        <h2>Reports by Status</h2>
+                    </div>
+                    <!-- TASK 31.4 — freshness caption. Reuses the .status-live-badge
+                         class (already defined in dashboard.inline.css, previously
+                         unused/dead CSS) — no new styles introduced. Text is set/kept
+                         current by updateStatusChartFreshness() below, driven purely
+                         by the same successful stats fetch already powering this
+                         chart; no new endpoint or polling of the backend. -->
+                    <span class="status-live-badge" id="status-chart-updated">Updated —</span>
+                </div>
+                <p class="text-muted mb-0">Current distribution of report statuses. &nbsp;<span id="status-chart-month" class="chart-month-pill"></span></p>
+            </div>
+            <div class="card-body status-chart-body">
+                <div style="position:relative;height:280px;">
+                    <canvas id="reportsStatusChart" class="chart-canvas" style="display:block;width:100%;height:280px;"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="card chart-card priority-chart-card">
+            <div class="card-header">
+                <div class="status-chart-head-row">
+                    <div class="dashboard-card-head-title">
+                        <span class="dashboard-card-head-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="18" y1="20" x2="18" y2="10"></line>
+                                <line x1="12" y1="20" x2="12" y2="4"></line>
+                                <line x1="6" y1="20" x2="6" y2="14"></line>
+                            </svg>
+                        </span>
+                        <h2>Reports by Priority</h2>
+                    </div>
+                </div>
+                <p class="text-muted mb-0">Priority levels across all reports. &nbsp;<span id="priority-chart-month" class="chart-month-pill"></span></p>
+            </div>
+            <div class="card-body">
+                <div style="position:relative;height:280px;">
+                    <canvas id="reportsPriorityChart" class="chart-canvas" style="display:block;width:100%;height:280px;"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="card recent-reports-card">
+            <div class="card-header recent-reports-header">
+                <div class="dashboard-card-head-title">
+                    <span class="dashboard-card-head-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                            <path d="M14 2v6h6"></path>
+                        </svg>
+                    </span>
+                    <h2>Recent Reports</h2>
+                </div>
+                <a href="/School_Facility_Maintenance_System/frontend/pages/reports.php" class="recent-reports-link">View all &rarr;</a>
+            </div>
+            <div class="card-body recent-reports-body">
+                <!-- TASK 31.3 — no wrapper class here anymore: the icon-chip
+                     rows rendered by renderRecentActivity() bring their own
+                     self-contained box (.recent-report-list). This container
+                     previously carried .recent-reports-table-wrap (the
+                     gradient panel still used by the Inventory Status widget
+                     below), which would have double-boxed the new rows. -->
+                <div id="recentActivity">
+                    <!-- Recent reports list will render here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- TASK 27/31.7 — Inventory Status card, reused exactly from the
+         Maintenance Staff Dashboard (staff-dashboard.php, the
+         ".inventory-status-card" beside its Recent Reports card):
+         same markup, same classes (.card.recent-reports-card,
+         .recent-reports-table-wrap/-head/-body, .recent-report-*
+         cells, .badge-danger/-warning), same loading text
+         ("Loading inventory..."), same empty state, and the same
+         GET /api/inventory-stock endpoint (already open to
+         super_admin — see InventoryStockController::READ_ROLES —
+         so no backend change was needed). Per the reference composition,
+         it now gets its own full-width row below the 3-column charts row
+         (the reference screenshot cuts off before this section, and a
+         wide table widget reads better full-width than as a cramped 4th
+         column). .dashboard-bottom is kept as a second class here purely
+         to reuse its existing card chrome/header/body CSS without
+         duplicating it. -->
+    <div class="dashboard-inventory-row dashboard-bottom">
+        <div class="card recent-reports-card inventory-status-card">
+            <div class="card-header recent-reports-header">
+                <div class="dashboard-card-head-title">
+                    <span class="dashboard-card-head-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M16.5 9.4 7.5 4.21"></path>
+                            <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                            <path d="M3.27 6.96 12 12.01l8.73-5.05"></path>
+                            <path d="M12 22.08V12"></path>
+                        </svg>
+                    </span>
+                    <h2>Inventory Status</h2>
+                </div>
+                <!-- TASK 31.5 — token cleanup: the 3 inline style="" attributes this
+                     row previously carried are now page-scoped classes
+                     (.inventory-status-actions / .inventory-status-summary /
+                     .inventory-export-btn) reusing var(--muted-text) for the summary
+                     text color. Same ids/classes/DOM structure the widget's JS
+                     queries (#dashboard-inventory-summary, #dashboard-inventory-export-btn,
+                     .btn.btn-secondary) — unchanged. -->
+                <div class="inventory-status-actions">
+                    <span id="dashboard-inventory-summary" class="inventory-status-summary"></span>
+                    <button type="button" id="dashboard-inventory-export-btn" class="btn btn-secondary inventory-export-btn">Export CSV</button>
+                    <a href="/School_Facility_Maintenance_System/frontend/pages/inventory.php" class="recent-reports-link">View all &rarr;</a>
+                </div>
+            </div>
+            <div class="card-body">
+                <p class="text-muted recent-reports-subtitle">Items needing attention — low stock and out of stock.</p>
+                <div id="dashboard-inventory-widget"><div class="loading">Loading inventory...</div></div>
+            </div>
+        </div>
+    </div>
+</main>
+
+<!-- TASK 25: the School Settings modal was removed — semester schedule
+     configuration now lives on the dedicated Semester Settings page
+     (public/frontend/pages/semester-settings.php), reached via the
+     "Semester Settings" button above. The dashboard only ever displays
+     the current semester read-only; see renderSchoolSettingsLabel() below. -->
+
+<!-- Building Modal -->
+<div id="buildingModal" class="modal">

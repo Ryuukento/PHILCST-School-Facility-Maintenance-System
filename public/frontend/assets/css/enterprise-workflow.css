@@ -1,0 +1,316 @@
+/**
+ * Enterprise Maintenance Workflow visual language.
+ * Shared, additive polish layer for the post-submission maintenance
+ * workflow pages: maintenance-report-detail.php, maintenance-create-report.php,
+ * repair-assignment.php, repair-detail.php, repair-update.php,
+ * dispatch-create.php, dispatch-detail.php, dispatches.php.
+ *
+ * Loads after enterprise-reports.css (and each page's own stylesheets)
+ * so these rules win without needing !important. This file only adds
+ * NEW components not already covered by enterprise-reports.css
+ * (.form-section, .form-row-2/3, .report-info-card, .report-timeline,
+ * .table-responsive chrome, etc. are reused as-is from that file).
+ *
+ * PHP/SQL/JS logic, APIs, permissions, validation and workflow are
+ * unchanged; this file only adds visual structure/polish.
+ */
+
+/* ====================================================================
+   Form row — 4 columns (repair-update.php: date/date/date/cost row).
+   Mirrors .form-row-2/.form-row-3 from enterprise-reports.css.
+   ==================================================================== */
+.form-row-4 {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+}
+
+.form-row-4 .form-group {
+    margin-bottom: 0;
+}
+
+@media (max-width: 992px) {
+    .form-row-4 {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 640px) {
+    .form-row-4 {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* ====================================================================
+   Technician / assignee search — replaces hardcoded inline dark-mode
+   styling in maintenance-report-detail.php's "assigned to" search UI
+   with theme-token-based chrome, mirroring the .need-change-* pattern
+   from create-report.inline.css.
+   ==================================================================== */
+.assignment-search-wrap {
+    position: relative;
+}
+
+.assignment-selected {
+    display: none;
+    margin-top: 8px;
+    padding: 8px 12px;
+    border-radius: 8px;
+    background: var(--primary-bg, rgba(59, 130, 246, 0.12));
+    border: 1px solid var(--primary, rgba(96, 165, 250, 0.3));
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--primary, #1d4ed8);
+}
+
+.assignment-results {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    z-index: 200;
+    margin-top: 4px;
+    padding: 6px;
+    max-height: 240px;
+    overflow-y: auto;
+    border: 1px solid var(--border, #e5e7eb);
+    border-radius: 10px;
+    background: var(--card-color, #ffffff);
+    box-shadow: var(--shadow-md, 0 12px 28px rgba(2, 6, 23, 0.18));
+}
+
+.assignment-result-item {
+    display: block;
+    width: 100%;
+    padding: 8px 10px;
+    border: none;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--text-light, #111827);
+    text-align: left;
+    font-size: 13px;
+    cursor: pointer;
+    transition: background 0.15s ease;
+}
+
+.assignment-result-item span {
+    color: var(--text-muted, #6b7280);
+}
+
+.assignment-result-item:hover,
+.assignment-result-item.active {
+    background: var(--primary-bg, #f3e8ff);
+}
+
+.assignment-empty {
+    padding: 8px 10px;
+    color: var(--text-muted, #6b7280);
+    font-size: 13px;
+}
+
+/* ====================================================================
+   Dispatch item row (dispatch-create.php "Items to Dispatch" list).
+   Replaces the inline row.style.cssText previously set from JS.
+   ==================================================================== */
+.dc-item-row {
+    display: grid;
+    grid-template-columns: 1fr 120px auto;
+    gap: 8px;
+    margin-bottom: 8px;
+    align-items: center;
+}
+
+@media (max-width: 640px) {
+    .dc-item-row {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* ====================================================================
+   Item stock-status badges (dispatch-detail.php item table). Follows
+   the same rgba background / saturated text / rgba border pattern as
+   the existing dispatch workflow badges in color-scheme.css
+   (.badge-approved / .badge-released / .badge-cancelled).
+   ==================================================================== */
+.badge-available    { background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.25); }
+.badge-low-stock     { background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.25); }
+.badge-out-of-stock  { background: rgba(239, 68, 68, 0.15);  color: #f87171; border: 1px solid rgba(239, 68, 68, 0.25); }
+
+/* ====================================================================
+   Table-responsive chrome — extend the enterprise-reports.css table
+   wrapper treatment to the workflow pages' own table containers
+   (dispatch-detail.php's #dd-items-container, which already carries
+   .table-responsive but lives outside the report-management page
+   scopes so it did not previously receive the chrome).
+   ==================================================================== */
+.maintenance-workflow-page .table-responsive,
+.dispatch-detail-page .table-responsive {
+    overflow-x: auto;
+    border-radius: var(--radius-lg, 16px);
+    border: 1px solid var(--border, #e5e7eb);
+    background: var(--card-color, #ffffff);
+    box-shadow: var(--shadow-sm, 0 1px 3px rgba(15, 23, 42, 0.08));
+}
+
+.maintenance-workflow-page .table-responsive .table,
+.dispatch-detail-page .table-responsive .table {
+    border-radius: 0;
+    box-shadow: none;
+    margin: 0;
+}
+
+.maintenance-workflow-page .table-responsive table thead th,
+.dispatch-detail-page .table-responsive table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    font-size: 12px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.maintenance-workflow-page .table-responsive table tbody tr:nth-child(even),
+.dispatch-detail-page .table-responsive table tbody tr:nth-child(even) {
+    background: rgba(148, 163, 184, 0.06);
+}
+
+.maintenance-workflow-page .table-responsive table tbody tr:hover,
+.dispatch-detail-page .table-responsive table tbody tr:hover {
+    background: rgba(109, 40, 217, 0.07);
+}
+
+/* ====================================================================
+   Shared card-hover polish — shadow-only feedback per DESIGN_SYSTEM.md
+   §19 (no translateY lift), matching enterprise-reports.css.
+   ==================================================================== */
+.form-section,
+.report-info-card {
+    transition: box-shadow 180ms ease, border-color 180ms ease;
+}
+
+/* ====================================================================
+   Dispatch Details — professional "information card" grid
+   (dispatch-detail.php). Each field becomes a compact card inside the
+   existing .report-detail-grid (2-col, collapses to 1 col at 768px,
+   already defined in enterprise-reports.css) instead of a plain label/
+   value list. Same tokens as .report-info-card and the dashboards'
+   .stat-icon-chip icon-chip pattern — an additive variant, not a new
+   visual language. Presentation only; no data/behavior added.
+   ==================================================================== */
+.dispatch-detail-page .dispatch-info-card {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    border: 1px solid var(--border, #e5e7eb);
+    border-radius: var(--radius-lg, 16px);
+    background: var(--card-color, #ffffff);
+    padding: 16px 18px;
+    transition: box-shadow 180ms ease, border-color 180ms ease;
+}
+
+.dispatch-detail-page .dispatch-info-card-wide {
+    grid-column: 1 / -1;
+}
+
+.dispatch-detail-page .dispatch-info-icon {
+    flex-shrink: 0;
+    width: 42px;
+    height: 42px;
+    border-radius: var(--radius-md, 12px);
+    display: grid;
+    place-items: center;
+    font-size: 19px;
+    line-height: 1;
+    background: var(--primary-bg, #f3e8ff);
+    color: var(--primary, #6d28d9);
+}
+
+.dispatch-detail-page .dispatch-info-body {
+    min-width: 0;
+}
+
+.dispatch-detail-page .dispatch-info-label {
+    margin: 0 0 4px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    color: var(--text-muted, #6b7280);
+}
+
+.dispatch-detail-page .dispatch-info-value {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text-light, #111827);
+    word-break: break-word;
+}
+
+.dispatch-detail-page .dispatch-info-value .report-unassigned {
+    font-weight: 400;
+}
+
+/* Header action buttons (Print / Back) — wrap cleanly instead of
+   crowding the title on narrow screens. */
+.dispatch-detail-page .dd-header-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+@media (max-width: 640px) {
+    .dispatch-detail-page .card-header.d-flex {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 12px;
+    }
+
+    .dispatch-detail-page .dd-header-actions .btn {
+        flex: 1 1 auto;
+    }
+}
+
+/* ====================================================================
+   Dispatch Timeline — reuses .report-timeline/.report-timeline-item/
+   .report-timeline-dot/.report-timeline-content as-is (enterprise-
+   reports.css). Adds two additional step states on top of the existing
+   default (current/in-progress, purple) and .report-timeline-item-done
+   (completed, green): a muted "not yet reached" state and a danger
+   state for a cancelled dispatch's terminal step.
+   ==================================================================== */
+.report-timeline-item-pending .report-timeline-dot {
+    background: var(--text-muted, #9ca3af);
+    box-shadow: 0 0 0 3px rgba(148, 163, 184, 0.15);
+}
+
+.report-timeline-item-pending .report-timeline-content strong,
+.report-timeline-item-pending .report-timeline-content span {
+    color: var(--text-muted, #9ca3af);
+}
+
+.report-timeline-item-cancelled .report-timeline-dot {
+    background: var(--danger-color, #ef4444);
+    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.15);
+}
+
+.report-timeline-item-cancelled .report-timeline-content strong {
+    color: var(--danger-color, #ef4444);
+}
+
+/* ====================================================================
+   Line Items table polish (dispatch-detail.php). Numeric columns
+   (Quantity / Available Stock) right-align via the existing .text-right
+   utility (styles.css); no columns/data changed.
+   ==================================================================== */
+.dispatch-detail-page .dd-items-table th.text-right,
+.dispatch-detail-page .dd-items-table td.text-right {
+    text-align: right;
+}
+
+@media (max-width: 768px) {
+    .dispatch-detail-page .dispatch-info-card {
+        padding: 14px 16px;
+    }
+}
+

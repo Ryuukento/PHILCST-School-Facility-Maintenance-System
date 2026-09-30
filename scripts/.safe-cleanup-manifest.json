@@ -1,0 +1,385 @@
+{
+    "createdAt":  "2026-04-03T12:53:52.5521585+08:00",
+    "projectRoot":  "C:\\xampp\\htdocs\\School_Facility_Maintenance_System",
+    "archiveFolder":  "C:\\xampp\\htdocs\\School_Facility_Maintenance_System\\_legacy_archive_20260403_125352",
+    "items":  [
+                  {
+                      "name":  "backend",
+                      "originalPath":  "C:\\xampp\\htdocs\\School_Facility_Maintenance_System\\backend",
+                      "archivedPath":  "C:\\xampp\\htdocs\\School_Facility_Maintenance_System\\_legacy_archive_20260403_125352\\backend",
+                      "isDirectory":  true
+                  },
+                  {
+                      "name":  "database",
+                      "originalPath":  "C:\\xampp\\htdocs\\School_Facility_Maintenance_System\\database",
+                      "archivedPath":  "C:\\xampp\\htdocs\\School_Facility_Maintenance_System\\_legacy_archive_20260403_125352\\database",
+                      "isDirectory":  true
+                  },
+                  {
+                      "name":  "docs",
+                      "originalPath":  "C:\\xampp\\htdocs\\School_Facility_Maintenance_System\\docs",
+                      "archivedPath":  "C:\\xampp\\htdocs\\School_Facility_Maintenance_System\\_legacy_archive_20260403_125352\\docs",
+                      "isDirectory":  true
+                  },
+                  {
+                      "name":  "frontend",
+                      "originalPath":  "C:\\xampp\\htdocs\\School_Facility_Maintenance_System\\frontend",
+                      "archivedPath":  "C:\\xampp\\htdocs\\School_Facility_Maintenance_System\\_legacy_archive_20260403_125352\\frontend",
+                      "isDirectory":  true
+                  },
+                  {
+                      "name":  "Guide",
+                      "originalPath":  "C:\\xampp\\htdocs\\School_Facility_Maintenance_System\\Guide",
+                      "archivedPath":  "C:\\xampp\\htdocs\\School_Facility_Maintenance_System\\_legacy_archive_20260403_125352\\Guide",
+                      "isDirectory":  true
+                  },
+                  {
+                      "name":  "logs",
+                      "originalPath":  "C:\\xampp\\htdocs\\School_Facility_Maintenance_System\\logs",
+                      "archivedPath":  "C:\\xampp\\htdocs\\School_Facility_Maintenance_System\\_legacy_archive_20260403_125352\\logs",
+                      "isDirectory":  true
+                  },
+                  {
+                      "name":  "vendor",
+                      "originalPath":  "C:\\xampp\\htdocs\\School_Facility_Maintenance_System\\vendor",
+                      "archivedPath":  "C:\\xampp\\htdocs\\School_Facility_Maintenance_System\\_legacy_archive_20260403_125352\\vendor",
+                      "isDirectory":  true
+                  },
+                  {
+                      "name":  ".htaccess",
+                      "originalPath":  "C:\\xampp\\htdocs\\School_Facility_Maintenance_System\\.htaccess",
+                      "archivedPath":  "C:\\xampp\\htdocs\\School_Facility_Maintenance_System\\_legacy_archive_20260403_125352\\.htaccess",
+                      "isDirectory":  false
+                  },
+                  {
+                      "name":  "API_TEST.inline.css",
+                      "originalPath":  "C:\\xampp\\htdocs\\School_Facility_Maintenance_System\\API_TEST.inline.css",
+                      "archivedPath":  "C:\\xampp\\htdocs\\School_Facility_Maintenance_System\\_legacy_archive_20260403_125352\\API_TEST.inline.css",
+                      "isDirectory":  false
+                  },
+                  {
+                      "name":  "API_TEST.php",
+                      "originalPath":  "C:\\xampp\\htdocs\\School_Facility_Maintenance_System\\API_TEST.php",
+                      "archivedPath":  "C:\\xampp\\htdocs\\School_Facility_Maintenance_System\\_legacy_archive_20260403_125352\\API_TEST.php",
+                      "isDirectory":  false
+                  },
+                  {
+                      "name":  "check_db.php",
+                      "originalPath":  "C:\\xampp\\htdocs\\School_Facility_Maintenance_System\\check_db.php",
+                      "archivedPath":  "C:\\xampp\\htdocs\\School_Facility_Maintenance_System\\_legacy_archive_20260403_125352\\check_db.php",
+                      "isDirectory":  false
+                  },
+                  {
+                      "name":  "check_migration.php",
+                      "originalPath":  "C:\\xampp\\htdocs\\School_Facility_Maintenance_System\\check_migration.php",
+                      "archivedPath":  "C:\\xampp\\htdocs\\School_Facility_Maintenance_System\\_legacy_archive_20260403_125352\\check_migration.php",
+                      "isDirectory":  false
+                  },
+                  {
+                      "name":  "check_reports.php",
+                      "originalPath":  "C:\\xampp\\htdocs\\School_Facility_Maintenance_System\\check_reports.php",
+                      "archivedPath":  "C:\\xampp\\htdocs\\School_Facility_Maintenance_System\\_legacy_archive_20260403_125352\\check_reports.php",
+                      "isDirectory":  false
+                  },
+                  {
+                      "name":  "check_user_restore.php",
+                      "originalPath":  "C:\\xampp\\htdocs\\School_Facility_Maintenance_System\\check_user_restore.php",
+                      "archivedPath":  "C:\\xampp\\htdocs\\School_Facility_Maintenance_System\\_legacy_archive_20260403_125352\\check_user_restore.php",
+                      "isDirectory":  false
+                  },
+                  {
+                      "name":  "composer.json",
+                      "originalPath":  "C:\\xampp\\htdocs\\School_Facility_Maintenance_System\\composer.json",
+                      "archivedPath":  "C:\\xampp\\htdocs\\School_Facility_Maintenance_System\\_legacy_archive_20260403_125352\\composer.json",
+                      "isDirectory":  false
+                  },
+                  {
+                      "name":  "composer.lock",
+                      "originalPath":  "C:\\xampp\\htdocs\\School_Facility_Maintenance_System\\composer.lock",
+                      "archivedPath":  "C:\\xampp\\htdocs\\School_Facility_Maintenance_System\\_legacy_archive_20260403_125352\\composer.lock",
+                      "isDirectory":  false
+                  },
+                  {
+                      "name":  "debug-login.php",
+                      "originalPath":  "C:\\xampp\\htdocs\\School_Facility_Maintenance_System\\debug-login.php",
+                      "archivedPath":  "C:\\xampp\\htdocs\\School_Facility_Maintenance_System\\_legacy_archive_20260403_125352\\debug-login.php",
+                      "isDirectory":  false
+                  },
+                  {
+                      "name":  "debug.inline.css",
+                      "originalPath":  "C:\\xampp\\htdocs\\School_Facility_Maintenance_System\\debug.inline.css",
+                      "archivedPath":  "C:\\xampp\\htdocs\\School_Facility_Maintenance_System\\_legacy_archive_20260403_125352\\debug.inline.css",
+                      "isDirectory":  false
+                  },
+                  {
+                      "name":  "debug.php",
+                      "originalPath":  "C:\\xampp\\htdocs\\School_Facility_Maintenance_System\\debug.php",
+                      "archivedPath":  "C:\\xampp\\htdocs\\School_Facility_Maintenance_System\\_legacy_archive_20260403_125352\\debug.php",
+                      "isDirectory":  false
+                  },
+                  {
+                      "name":  "DEBUG_REPORTS.html",
+                      "originalPath":  "C:\\xampp\\htdocs\\School_Facility_Maintenance_System\\DEBUG_REPORTS.html",
+                      "archivedPath":  "C:\\xampp\\htdocs\\School_Facility_Maintenance_System\\_legacy_archive_20260403_125352\\DEBUG_REPORTS.html",
+                      "isDirectory":  false
+                  },
+                  {
+                      "name":  "DEBUG_REPORTS.inline.css",
+                      "originalPath":  "C:\\xampp\\htdocs\\School_Facility_Maintenance_System\\DEBUG_REPORTS.inline.css",
+                      "archivedPath":  "C:\\xampp\\htdocs\\School_Facility_Maintenance_System\\_legacy_archive_20260403_125352\\DEBUG_REPORTS.inline.css",
+                      "isDirectory":  false
+                  },
+                  {
+                      "name":  "DIAGNOSE.inline.css",
+                      "originalPath":  "C:\\xampp\\htdocs\\School_Facility_Maintenance_System\\DIAGNOSE.inline.css",
+                      "archivedPath":  "C:\\xampp\\htdocs\\School_Facility_Maintenance_System\\_legacy_archive_20260403_125352\\DIAGNOSE.inline.css",
+                      "isDirectory":  false
+                  },
+                  {
+                      "name":  "DIAGNOSE.php",
+                      "originalPath":  "C:\\xampp\\htdocs\\School_Facility_Maintenance_System\\DIAGNOSE.php",
+                      "archivedPath":  "C:\\xampp\\htdocs\\School_Facility_Maintenance_System\\_legacy_archive_20260403_125352\\DIAGNOSE.php",
+                      "isDirectory":  false
+                  },
+                  {
+                      "name":  "diagnostic-check.php",
+                      "originalPath":  "C:\\xampp\\htdocs\\School_Facility_Maintenance_System\\diagnostic-check.php",
+                      "archivedPath":  "C:\\xampp\\htdocs\\School_Facility_Maintenance_System\\_legacy_archive_20260403_125352\\diagnostic-check.php",
+                      "isDirectory":  false
+                  },
+                  {
+                      "name":  "diagnostic.php",
+                      "originalPath":  "C:\\xampp\\htdocs\\School_Facility_Maintenance_System\\diagnostic.php",
+                      "archivedPath":  "C:\\xampp\\htdocs\\School_Facility_Maintenance_System\\_legacy_archive_20260403_125352\\diagnostic.php",
+                      "isDirectory":  false
+                  },
+                  {
+                      "name":  "DIRECT_API_TEST.html",
+                      "originalPath":  "C:\\xampp\\htdocs\\School_Facility_Maintenance_System\\DIRECT_API_TEST.html",
+                      "archivedPath":  "C:\\xampp\\htdocs\\School_Facility_Maintenance_System\\_legacy_archive_20260403_125352\\DIRECT_API_TEST.html",
+                      "isDirectory":  false
+                  },
+                  {
+                      "name":  "DIRECT_API_TEST.inline.css",
+                      "originalPath":  "C:\\xampp\\htdocs\\School_Facility_Maintenance_System\\DIRECT_API_TEST.inline.css",
+                      "archivedPath":  "C:\\xampp\\htdocs\\School_Facility_Maintenance_System\\_legacy_archive_20260403_125352\\DIRECT_API_TEST.inline.css",
+                      "isDirectory":  false
+                  },
+                  {
+                      "name":  "DIRECT_DB_TEST.inline.css",
+                      "originalPath":  "C:\\xampp\\htdocs\\School_Facility_Maintenance_System\\DIRECT_DB_TEST.inline.css",
+                      "archivedPath":  "C:\\xampp\\htdocs\\School_Facility_Maintenance_System\\_legacy_archive_20260403_125352\\DIRECT_DB_TEST.inline.css",
+                      "isDirectory":  false
+                  },
+                  {
+                      "name":  "DIRECT_DB_TEST.php",
+                      "originalPath":  "C:\\xampp\\htdocs\\School_Facility_Maintenance_System\\DIRECT_DB_TEST.php",
+                      "archivedPath":  "C:\\xampp\\htdocs\\School_Facility_Maintenance_System\\_legacy_archive_20260403_125352\\DIRECT_DB_TEST.php",
+                      "isDirectory":  false
+                  },
+                  {
+                      "name":  "DOCS_HUB.html",
+                      "originalPath":  "C:\\xampp\\htdocs\\School_Facility_Maintenance_System\\DOCS_HUB.html",
+                      "archivedPath":  "C:\\xampp\\htdocs\\School_Facility_Maintenance_System\\_legacy_archive_20260403_125352\\DOCS_HUB.html",
+                      "isDirectory":  false
+                  },
+                  {
+                      "name":  "DOCS_HUB.inline.css",
+                      "originalPath":  "C:\\xampp\\htdocs\\School_Facility_Maintenance_System\\DOCS_HUB.inline.css",
+                      "archivedPath":  "C:\\xampp\\htdocs\\School_Facility_Maintenance_System\\_legacy_archive_20260403_125352\\DOCS_HUB.inline.css",
+                      "isDirectory":  false
+                  },
+                  {
+                      "name":  "FRESH_SETUP.inline.css",
+                      "originalPath":  "C:\\xampp\\htdocs\\School_Facility_Maintenance_System\\FRESH_SETUP.inline.css",
+                      "archivedPath":  "C:\\xampp\\htdocs\\School_Facility_Maintenance_System\\_legacy_archive_20260403_125352\\FRESH_SETUP.inline.css",
+                      "isDirectory":  false
+                  },
+                  {
+                      "name":  "FRESH_SETUP.php",
+                      "originalPath":  "C:\\xampp\\htdocs\\School_Facility_Maintenance_System\\FRESH_SETUP.php",
+                      "archivedPath":  "C:\\xampp\\htdocs\\School_Facility_Maintenance_System\\_legacy_archive_20260403_125352\\FRESH_SETUP.php",
+                      "isDirectory":  false
+                  },
+                  {
+                      "name":  "FULL_DIAGNOSTIC.inline.css",
+                      "originalPath":  "C:\\xampp\\htdocs\\School_Facility_Maintenance_System\\FULL_DIAGNOSTIC.inline.css",
+                      "archivedPath":  "C:\\xampp\\htdocs\\School_Facility_Maintenance_System\\_legacy_archive_20260403_125352\\FULL_DIAGNOSTIC.inline.css",
+                      "isDirectory":  false
+                  },
+                  {
+                      "name":  "FULL_DIAGNOSTIC.php",
+                      "originalPath":  "C:\\xampp\\htdocs\\School_Facility_Maintenance_System\\FULL_DIAGNOSTIC.php",
+                      "archivedPath":  "C:\\xampp\\htdocs\\School_Facility_Maintenance_System\\_legacy_archive_20260403_125352\\FULL_DIAGNOSTIC.php",
+                      "isDirectory":  false
+                  },
+                  {
+                      "name":  "IMPORT_DATABASE.inline.css",
+                      "originalPath":  "C:\\xampp\\htdocs\\School_Facility_Maintenance_System\\IMPORT_DATABASE.inline.css",
+                      "archivedPath":  "C:\\xampp\\htdocs\\School_Facility_Maintenance_System\\_legacy_archive_20260403_125352\\IMPORT_DATABASE.inline.css",
+                      "isDirectory":  false
+                  },
+                  {
+                      "name":  "IMPORT_DATABASE.php",
+                      "originalPath":  "C:\\xampp\\htdocs\\School_Facility_Maintenance_System\\IMPORT_DATABASE.php",
+                      "archivedPath":  "C:\\xampp\\htdocs\\School_Facility_Maintenance_System\\_legacy_archive_20260403_125352\\IMPORT_DATABASE.php",
+                      "isDirectory":  false
+                  },
+                  {
+                      "name":  "import_db.php",
+                      "originalPath":  "C:\\xampp\\htdocs\\School_Facility_Maintenance_System\\import_db.php",
+                      "archivedPath":  "C:\\xampp\\htdocs\\School_Facility_Maintenance_System\\_legacy_archive_20260403_125352\\import_db.php",
+                      "isDirectory":  false
+                  },
+                  {
+                      "name":  "index.php",
+                      "originalPath":  "C:\\xampp\\htdocs\\School_Facility_Maintenance_System\\index.php",
+                      "archivedPath":  "C:\\xampp\\htdocs\\School_Facility_Maintenance_System\\_legacy_archive_20260403_125352\\index.php",
+                      "isDirectory":  false
+                  },
+                  {
+                      "name":  "QUICK_REFERENCE.txt",
+                      "originalPath":  "C:\\xampp\\htdocs\\School_Facility_Maintenance_System\\QUICK_REFERENCE.txt",
+                      "archivedPath":  "C:\\xampp\\htdocs\\School_Facility_Maintenance_System\\_legacy_archive_20260403_125352\\QUICK_REFERENCE.txt",
+                      "isDirectory":  false
+                  },
+                  {
+                      "name":  "READ_ME_FIRST.txt",
+                      "originalPath":  "C:\\xampp\\htdocs\\School_Facility_Maintenance_System\\READ_ME_FIRST.txt",
+                      "archivedPath":  "C:\\xampp\\htdocs\\School_Facility_Maintenance_System\\_legacy_archive_20260403_125352\\READ_ME_FIRST.txt",
+                      "isDirectory":  false
+                  },
+                  {
+                      "name":  "REPORTS_DISPLAY_TEST.html",
+                      "originalPath":  "C:\\xampp\\htdocs\\School_Facility_Maintenance_System\\REPORTS_DISPLAY_TEST.html",
+                      "archivedPath":  "C:\\xampp\\htdocs\\School_Facility_Maintenance_System\\_legacy_archive_20260403_125352\\REPORTS_DISPLAY_TEST.html",
+                      "isDirectory":  false
+                  },
+                  {
+                      "name":  "REPORTS_DISPLAY_TEST.inline.css",
+                      "originalPath":  "C:\\xampp\\htdocs\\School_Facility_Maintenance_System\\REPORTS_DISPLAY_TEST.inline.css",
+                      "archivedPath":  "C:\\xampp\\htdocs\\School_Facility_Maintenance_System\\_legacy_archive_20260403_125352\\REPORTS_DISPLAY_TEST.inline.css",
+                      "isDirectory":  false
+                  },
+                  {
+                      "name":  "script-test.inline.css",
+                      "originalPath":  "C:\\xampp\\htdocs\\School_Facility_Maintenance_System\\script-test.inline.css",
+                      "archivedPath":  "C:\\xampp\\htdocs\\School_Facility_Maintenance_System\\_legacy_archive_20260403_125352\\script-test.inline.css",
+                      "isDirectory":  false
+                  },
+                  {
+                      "name":  "script-test.php",
+                      "originalPath":  "C:\\xampp\\htdocs\\School_Facility_Maintenance_System\\script-test.php",
+                      "archivedPath":  "C:\\xampp\\htdocs\\School_Facility_Maintenance_System\\_legacy_archive_20260403_125352\\script-test.php",
+                      "isDirectory":  false
+                  },
+                  {
+                      "name":  "SEED_MAINTENANCE_USERS.inline.css",
+                      "originalPath":  "C:\\xampp\\htdocs\\School_Facility_Maintenance_System\\SEED_MAINTENANCE_USERS.inline.css",
+                      "archivedPath":  "C:\\xampp\\htdocs\\School_Facility_Maintenance_System\\_legacy_archive_20260403_125352\\SEED_MAINTENANCE_USERS.inline.css",
+                      "isDirectory":  false
+                  },
+                  {
+                      "name":  "SEED_MAINTENANCE_USERS.php",
+                      "originalPath":  "C:\\xampp\\htdocs\\School_Facility_Maintenance_System\\SEED_MAINTENANCE_USERS.php",
+                      "archivedPath":  "C:\\xampp\\htdocs\\School_Facility_Maintenance_System\\_legacy_archive_20260403_125352\\SEED_MAINTENANCE_USERS.php",
+                      "isDirectory":  false
+                  },
+                  {
+                      "name":  "START_HERE.html",
+                      "originalPath":  "C:\\xampp\\htdocs\\School_Facility_Maintenance_System\\START_HERE.html",
+                      "archivedPath":  "C:\\xampp\\htdocs\\School_Facility_Maintenance_System\\_legacy_archive_20260403_125352\\START_HERE.html",
+                      "isDirectory":  false
+                  },
+                  {
+                      "name":  "START_HERE.inline.css",
+                      "originalPath":  "C:\\xampp\\htdocs\\School_Facility_Maintenance_System\\START_HERE.inline.css",
+                      "archivedPath":  "C:\\xampp\\htdocs\\School_Facility_Maintenance_System\\_legacy_archive_20260403_125352\\START_HERE.inline.css",
+                      "isDirectory":  false
+                  },
+                  {
+                      "name":  "SYSTEM_DIAGRAM.html",
+                      "originalPath":  "C:\\xampp\\htdocs\\School_Facility_Maintenance_System\\SYSTEM_DIAGRAM.html",
+                      "archivedPath":  "C:\\xampp\\htdocs\\School_Facility_Maintenance_System\\_legacy_archive_20260403_125352\\SYSTEM_DIAGRAM.html",
+                      "isDirectory":  false
+                  },
+                  {
+                      "name":  "SYSTEM_DIAGRAM.inline.css",
+                      "originalPath":  "C:\\xampp\\htdocs\\School_Facility_Maintenance_System\\SYSTEM_DIAGRAM.inline.css",
+                      "archivedPath":  "C:\\xampp\\htdocs\\School_Facility_Maintenance_System\\_legacy_archive_20260403_125352\\SYSTEM_DIAGRAM.inline.css",
+                      "isDirectory":  false
+                  },
+                  {
+                      "name":  "SYSTEM_TEST.html",
+                      "originalPath":  "C:\\xampp\\htdocs\\School_Facility_Maintenance_System\\SYSTEM_TEST.html",
+                      "archivedPath":  "C:\\xampp\\htdocs\\School_Facility_Maintenance_System\\_legacy_archive_20260403_125352\\SYSTEM_TEST.html",
+                      "isDirectory":  false
+                  },
+                  {
+                      "name":  "SYSTEM_TEST.inline.css",
+                      "originalPath":  "C:\\xampp\\htdocs\\School_Facility_Maintenance_System\\SYSTEM_TEST.inline.css",
+                      "archivedPath":  "C:\\xampp\\htdocs\\School_Facility_Maintenance_System\\_legacy_archive_20260403_125352\\SYSTEM_TEST.inline.css",
+                      "isDirectory":  false
+                  },
+                  {
+                      "name":  "TECHNICAL_SUMMARY.md",
+                      "originalPath":  "C:\\xampp\\htdocs\\School_Facility_Maintenance_System\\TECHNICAL_SUMMARY.md",
+                      "archivedPath":  "C:\\xampp\\htdocs\\School_Facility_Maintenance_System\\_legacy_archive_20260403_125352\\TECHNICAL_SUMMARY.md",
+                      "isDirectory":  false
+                  },
+                  {
+                      "name":  "temp_check.php",
+                      "originalPath":  "C:\\xampp\\htdocs\\School_Facility_Maintenance_System\\temp_check.php",
+                      "archivedPath":  "C:\\xampp\\htdocs\\School_Facility_Maintenance_System\\_legacy_archive_20260403_125352\\temp_check.php",
+                      "isDirectory":  false
+                  },
+                  {
+                      "name":  "test.php",
+                      "originalPath":  "C:\\xampp\\htdocs\\School_Facility_Maintenance_System\\test.php",
+                      "archivedPath":  "C:\\xampp\\htdocs\\School_Facility_Maintenance_System\\_legacy_archive_20260403_125352\\test.php",
+                      "isDirectory":  false
+                  },
+                  {
+                      "name":  "TEST.ps1",
+                      "originalPath":  "C:\\xampp\\htdocs\\School_Facility_Maintenance_System\\TEST.ps1",
+                      "archivedPath":  "C:\\xampp\\htdocs\\School_Facility_Maintenance_System\\_legacy_archive_20260403_125352\\TEST.ps1",
+                      "isDirectory":  false
+                  },
+                  {
+                      "name":  "TEST_REPORTS_API.inline.css",
+                      "originalPath":  "C:\\xampp\\htdocs\\School_Facility_Maintenance_System\\TEST_REPORTS_API.inline.css",
+                      "archivedPath":  "C:\\xampp\\htdocs\\School_Facility_Maintenance_System\\_legacy_archive_20260403_125352\\TEST_REPORTS_API.inline.css",
+                      "isDirectory":  false
+                  },
+                  {
+                      "name":  "TEST_REPORTS_API.php",
+                      "originalPath":  "C:\\xampp\\htdocs\\School_Facility_Maintenance_System\\TEST_REPORTS_API.php",
+                      "archivedPath":  "C:\\xampp\\htdocs\\School_Facility_Maintenance_System\\_legacy_archive_20260403_125352\\TEST_REPORTS_API.php",
+                      "isDirectory":  false
+                  },
+                  {
+                      "name":  "TEST_REPORTS_SIMULATION.inline.css",
+                      "originalPath":  "C:\\xampp\\htdocs\\School_Facility_Maintenance_System\\TEST_REPORTS_SIMULATION.inline.css",
+                      "archivedPath":  "C:\\xampp\\htdocs\\School_Facility_Maintenance_System\\_legacy_archive_20260403_125352\\TEST_REPORTS_SIMULATION.inline.css",
+                      "isDirectory":  false
+                  },
+                  {
+                      "name":  "TEST_REPORTS_SIMULATION.php",
+                      "originalPath":  "C:\\xampp\\htdocs\\School_Facility_Maintenance_System\\TEST_REPORTS_SIMULATION.php",
+                      "archivedPath":  "C:\\xampp\\htdocs\\School_Facility_Maintenance_System\\_legacy_archive_20260403_125352\\TEST_REPORTS_SIMULATION.php",
+                      "isDirectory":  false
+                  },
+                  {
+                      "name":  "USE_CASE_DIAGRAM.html",
+                      "originalPath":  "C:\\xampp\\htdocs\\School_Facility_Maintenance_System\\USE_CASE_DIAGRAM.html",
+                      "archivedPath":  "C:\\xampp\\htdocs\\School_Facility_Maintenance_System\\_legacy_archive_20260403_125352\\USE_CASE_DIAGRAM.html",
+                      "isDirectory":  false
+                  },
+                  {
+                      "name":  "USE_CASE_DIAGRAM.inline.css",
+                      "originalPath":  "C:\\xampp\\htdocs\\School_Facility_Maintenance_System\\USE_CASE_DIAGRAM.inline.css",
+                      "archivedPath":  "C:\\xampp\\htdocs\\School_Facility_Maintenance_System\\_legacy_archive_20260403_125352\\USE_CASE_DIAGRAM.inline.css",
+                      "isDirectory":  false
+                  }
+              ]
+}

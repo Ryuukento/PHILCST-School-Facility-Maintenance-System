@@ -1,0 +1,1079 @@
+/**
+ * PHILCST Sidebar Navigation Styles
+ *
+ * DARK PURPLE SIDEBAR + LIGHT MAIN CONTENT.
+ *
+ * The application is LIGHT THEME ONLY — this file does NOT reintroduce dark
+ * mode. The sidebar is a deliberate dark-purple *surface* inside a light app,
+ * the same way an enterprise shell uses a dark navigation rail against a light
+ * workspace. Nothing here can leak into the page body: every colour below is
+ * published as a --sidebar-* custom property, and those properties are read
+ * ONLY by this file and sidebar-submenu.css. Every other stylesheet that
+ * mentions --sidebar-* reads --sidebar-width / --sidebar-width-collapsed for
+ * layout maths and never touches the colours.
+ *
+ * Single source of truth: the palette is declared once, in the bare :root
+ * block. It is intentionally NOT repeated under
+ * :root[data-theme-resolved='light'] any more — that duplicate used to hold the
+ * old white-sidebar values, and leaving it would have overridden this palette
+ * on every page (the attribute is always 'light' now). Declaring it on bare
+ * :root also means the sidebar renders correctly on the few standalone pages
+ * that never emit the theme attribute at all.
+ */
+
+:root {
+    /* Surfaces — deep purple rail, one step lighter for raised cards
+       (brand block, user profile) so they read as panels, not stripes. */
+    --sidebar-bg: #160d29;
+    --sidebar-surface: #1d1235;
+
+    /* States. --sidebar-active-bg is the filled pill behind the current page;
+       --sidebar-accent is the left indicator bar.
+       --sidebar-hover was 0.10 alpha, which was barely perceptible against the
+       rail; 0.16 makes the hover target actually visible without turning the
+       row into a second active state. */
+    --sidebar-hover: rgba(167, 139, 250, 0.16);
+    --sidebar-active: #a78bfa;
+    --sidebar-active-border: #a78bfa;
+    --sidebar-active-bg: #3a205c;
+    --sidebar-active-text: #ffffff;
+    --sidebar-accent: #8b5cf6;
+
+    /* Text. Every value below is measured against the surface it actually sits
+       on, not against an assumed one:
+
+         --sidebar-text       #e5e1ef  on #160d29  -> 14.6:1
+         --sidebar-icon       #cfc8dd  on #160d29  -> 11.5:1
+         --sidebar-text-muted #afa5c2  on #160d29  ->  8.0:1
+         --sidebar-active-text #ffffff on #3a205c  -> 13.6:1
+
+       The previous values (#b9b0cc / #8f84a8) measured ~9:1 and ~5.4:1 — they
+       passed AA on paper but read as grey-on-grey at normal desktop
+       brightness, which is the readability complaint this addresses. Muted is
+       a *step down in emphasis*, not a step down in legibility: even the
+       section-label colour clears AAA for small text. */
+    --sidebar-text: #e5e1ef;
+    --sidebar-text-hover: #ffffff;
+    --sidebar-text-muted: #afa5c2;
+
+    /* Icons get their own token instead of inheriting the label colour and
+       then being dimmed with opacity. Opacity-dimming was the bug: it
+       composited the icon against the rail a second time, so the effective
+       icon contrast was far below the label's and could not be reasoned about
+       from the palette alone. */
+    --sidebar-icon: #cfc8dd;
+
+    --sidebar-divider: rgba(167, 139, 250, 0.14);
+
+    --sidebar-profile-bg: #1d1235;
+    --sidebar-profile-border: rgba(167, 139, 250, 0.16);
+    --sidebar-profile-name: #ffffff;
+    --sidebar-profile-title: #cfc8dd;
+
+    --sidebar-width: 260px;
+    --sidebar-width-collapsed: 76px;
+    --transition-speed: 0.25s;
+    --glow-color: rgba(139, 92, 246, 0.25);
+}
+
+/* The former :root[data-theme-resolved='dark'] palette block was removed with
+   the same reasoning as the light duplicate above: the attribute can only ever
+   hold 'light', so that block matched nothing, and keeping a second sidebar
+   palette next to this one would have made it ambiguous which set of values is
+   actually live. The rail is dark unconditionally now — by design, not by
+   theme. */
+
+/* ========================================
+   SIDEBAR BASE STYLES
+   ======================================== */
+
+.sidebar {
+    position: fixed;
+    left: 0;
+    top: 0;
+    height: 100vh;
+    width: var(--sidebar-width);
+    background: var(--sidebar-bg);
+    /* The rail declares its own default text colour rather than inheriting
+       whatever the light page body happens to set. Anything inside the sidebar
+       that does not name a colour now falls back to a legible one instead of
+       to main-content slate. */
+    color: var(--sidebar-text);
+    padding: 18px 16px 20px;
+    display: flex;
+    flex-direction: column;
+    border-right: 1px solid var(--sidebar-divider);
+    z-index: 1000;
+    transition: width var(--transition-speed) ease-in-out;
+    /* Slightly deeper than the old light-sidebar shadow so the dark rail still
+       reads as separated from the light workspace next to it. */
+    box-shadow: 10px 0 34px rgba(22, 13, 41, 0.16);
+    overflow-y: auto;
+    overflow-x: hidden;
+    /* Tells the browser to draw the native (Firefox) scrollbar and any form
+       controls in this subtree against a dark surface. Scoped to .sidebar, so
+       the light main content is unaffected. */
+    color-scheme: dark;
+}
+
+.sidebar.collapsed {
+    width: var(--sidebar-width-collapsed);
+}
+
+/* Scrollbar Styling — kept subtle so a long nav list does not put a bright
+   stripe down the edge of the rail. */
+.sidebar {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(167, 139, 250, 0.30) transparent;
+}
+
+.sidebar::-webkit-scrollbar {
+    width: 6px;
+}
+
+.sidebar::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.sidebar::-webkit-scrollbar-thumb {
+    background: rgba(167, 139, 250, 0.26);
+    border-radius: 3px;
+}
+
+.sidebar::-webkit-scrollbar-thumb:hover {
+    background: rgba(167, 139, 250, 0.44);
+}
+
+/* ========================================
+   SIDEBAR TOGGLE BUTTON (Mobile)
+   ======================================== */
+
+.sidebar-toggle {
+    position: absolute;
+    top: 1rem;
+    right: -3rem;
+    width: 2.5rem;
+    height: 2.5rem;
+    /* --sidebar-active is now a light lavender (#a78bfa) used for active-row
+       accents; as a button fill behind white hamburger bars it would sit at
+       roughly 2:1. Use the deeper accent instead. */
+    background: var(--sidebar-accent);
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    display: none;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 5px;
+    z-index: 1001;
+    transition: all var(--transition-speed) ease-in-out;
+}
+
+.sidebar-toggle:hover {
+    background: var(--sidebar-active-border);
+    box-shadow: 0 0 15px var(--glow-color);
+}
+
+.hamburger-icon {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.hamburger-icon span {
+    width: 1.2rem;
+    height: 2px;
+    background: white;
+    border-radius: 2px;
+    transition: all var(--transition-speed) ease-in-out;
+}
+
+/* Hamburger animation when sidebar is open */
+.sidebar.open .hamburger-icon span:nth-child(1) {
+    transform: rotate(45deg) translate(8px, 8px);
+}
+
+.sidebar.open .hamburger-icon span:nth-child(2) {
+    opacity: 0;
+}
+
+.sidebar.open .hamburger-icon span:nth-child(3) {
+    transform: rotate(-45deg) translate(7px, -7px);
+}
+
+/* ========================================
+   SIDEBAR HEADER
+   ======================================== */
+
+.sidebar-header {
+    height: var(--header-height);
+    min-height: var(--header-height);
+    padding: 0 1.25rem;
+    border-bottom: 1px solid var(--sidebar-divider);
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    overflow: hidden;
+}
+
+.logo-container {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    width: 100%;
+    min-height: var(--header-height);
+}
+
+.logo-icon {
+    width: 28px;
+    height: 28px;
+    color: var(--sidebar-active-border);
+    flex-shrink: 0;
+    transition: transform var(--transition-speed) ease-in-out;
+}
+
+.system-name {
+    font-size: 1.35rem;
+    font-weight: 700;
+    /* Was #111827 (near-black) — unreadable on the dark rail. */
+    color: var(--sidebar-profile-name);
+    margin: 0;
+    white-space: nowrap;
+    letter-spacing: 0.2px;
+    transition: opacity var(--transition-speed) ease-in-out;
+    font-family: 'Manrope', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.sidebar-header .logo-container img.sidebar-logo {
+    background: transparent;
+    border: 0;
+    padding: 0;
+    box-shadow: none;
+}
+
+.sidebar.collapsed .system-name {
+    opacity: 0;
+    width: 0;
+    overflow: hidden;
+}
+
+.sidebar.collapsed .logo-container {
+    justify-content: center;
+}
+
+/* ========================================
+   NAVIGATION MENU
+   ======================================== */
+
+.sidebar-nav {
+    flex: 1;
+    overflow-y: auto;
+    /* Was 22px. The section labels now carry their own top margin, so the old
+       gap here stacked on top of that and pushed the first item down. */
+    padding: 6px 0 0.75rem;
+}
+
+.sidebar-shell {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    min-height: 100%;
+}
+
+/* The brand block holds the PHILCST crest and nothing else. It used to be a
+   horizontal lockup — a gradient "F" tile plus a title/subtitle pair — so the
+   old `gap`, `.sidebar-brand-mark`, `.sidebar-brand-text`, `.sidebar-brand-title`
+   and `.sidebar-brand-subtitle` rules went with that markup. No other file
+   referenced them.
+
+   THE BRAND BLOCK IS NO LONGER A CARD. It used to be a 228px-wide white
+   rounded rectangle — `padding: 14px 10px`, a 1px --sidebar-profile-border and
+   `border-radius: 14px` over `background: #ffffff` — with the crest sitting
+   inside it. That plate is what read as "logo in a box", so every one of those
+   four properties is gone and this element is now nothing but a transparent
+   centring wrapper. It paints no background, so no card can reappear here.
+
+   The light surface did not simply vanish, because it was never decoration: the
+   crest is line-art that is ~51% dark pixels (sampled straight out of the PNG,
+   mean luminance 127/255) on a TRANSPARENT canvas, so on the #160d29 rail it
+   would read as a dark smudge. The surface moved onto the image itself, where it
+   is clipped by the very same `border-radius: 50%` as the logo — so what renders
+   is one circular institutional mark, not a plate with a logo on top of it. */
+.sidebar-brand {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 0;
+}
+
+/* The circle IS the logo element — there is no wrapper drawing it, which is what
+   keeps this from being "a round card around the logo".
+
+   `cover` is deliberate and does NOT crop the artwork. logo.png is a 642x314
+   canvas whose opaque content is a 301x301 round crest sitting dead-centre; the
+   corners of that bounding box are themselves alpha=0, i.e. the mark is a circle
+   already. `contain` would fit the 642 WIDTH — including the ~52% of the file
+   that is empty transparent margin — and shrink the visible crest to under half
+   the circle, leaving a thick white ring. `cover` scales the short edge (314) to
+   fill and trims the margin off symmetrically, so the scaled crest lands at
+   301/314 = 96% of the box: entirely inside the circle, nothing clipped. Aspect
+   ratio is preserved by both keywords; neither can stretch or distort.
+
+   padding + border-box hold the crest 4px clear of the circle's edge. The
+   background is painted to the border box (the default), so the white disc still
+   fills the full 88px and the padding reads as an even rim. */
+.sidebar-brand-logo {
+    display: block;
+    box-sizing: border-box;
+    width: 88px;
+    height: 88px;
+    aspect-ratio: 1 / 1;
+    padding: 4px;
+    border-radius: 50%;
+    background: #ffffff;
+    object-fit: cover;
+    flex-shrink: 0;
+}
+
+/* Spacing below the crest. In the legacy shell .sidebar-brand is a child of
+   .sidebar-shell, which already supplies `gap: 14px`; the Blade shell has no
+   .sidebar-shell wrapper, so there the brand is a direct child of .sidebar and
+   would sit only 6px above Dashboard (.sidebar-nav's own padding-top). The child
+   combinator matches the Blade case only, giving both shells the same 14px
+   without double-spacing the legacy one. */
+.sidebar > .sidebar-brand {
+    margin-bottom: 14px;
+}
+
+/* Collapsed rail. --sidebar-width-collapsed (76px) is narrower than the 88px
+   circle, so the logo has to shrink or it would force a horizontal scrollbar.
+   Only the diameter changes — border-radius: 50% above is a percentage, so the
+   smaller box stays a true circle with no second declaration needed.
+
+   The old `.sidebar.collapsed .sidebar-brand { padding: 8px }` is gone with the
+   plate it was insetting; the wrapper has no padding in either state now. */
+.sidebar.collapsed .sidebar-brand-logo {
+    width: 44px;
+    height: 44px;
+    padding: 2px;
+}
+
+.nav-menu {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    /* Tight: rows are visually separated by the active pill, not by air. */
+    gap: 2px;
+}
+
+/* Section labels (DESIGN_SYSTEM.md §13 Grouping).
+   Smaller than nav text, muted, letter-spaced, and separated from the group
+   ABOVE by the top margin rather than by padding on all sides — that is what
+   makes each label read as the start of a new group. */
+.nav-section-label {
+    padding: 0 0.75rem 0.3rem;
+    margin: 0.85rem 0 0;
+}
+
+/* The first label in the list has no preceding group to separate from. */
+.nav-section-label:first-child {
+    margin-top: 0;
+}
+
+.nav-section-label span {
+    font-size: 0.6875rem;   /* 11px — one clear step below the 14px nav text */
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.09em;
+    color: var(--sidebar-text-muted);
+}
+
+/* ========================================
+   NAVIGATION ITEMS & LINKS
+   ======================================== */
+
+.nav-item {
+    position: relative;
+}
+
+.nav-link {
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+    /* Compact rows. min-height pins every row to the same height whether or
+       not it wraps, which is what makes the icon column look mechanically
+       aligned down the rail. */
+    padding: 0.5rem 0.75rem;
+    min-height: 38px;
+    margin: 0 0.3rem;
+    color: var(--sidebar-text);
+    text-decoration: none;
+    border-radius: 10px;
+    /* Only the properties that actually change — `all` also animated the
+       border and layout metrics, which made rows shimmer on hover. */
+    transition: background-color var(--transition-speed) ease,
+                color var(--transition-speed) ease;
+    cursor: pointer;
+    border: 1px solid transparent;
+    font-weight: 600;
+    font-size: 0.875rem;    /* 14px */
+    white-space: nowrap;
+    position: relative;
+    min-width: 0;
+}
+
+.nav-link:hover {
+    background: var(--sidebar-hover);
+    color: var(--sidebar-text-hover);
+    /* The old rule nudged the row 2px right on hover. Dropped: it fought the
+       fixed icon column and, on the narrowest layouts, could push the row
+       under .sidebar's overflow-x:hidden. */
+}
+
+/* Active Link Styles (DESIGN_SYSTEM.md §13)
+   One rule, not three. The previous file styled .active once and then
+   overrode it under both data-theme-resolved values; with light permanently
+   resolved, the light override was the only live one and it painted a pale
+   lavender pill with dark purple text — invisible on a dark rail. */
+.nav-link.active {
+    background: var(--sidebar-active-bg);
+    border-color: rgba(167, 139, 250, 0.26);
+    outline: none;
+    color: var(--sidebar-active-text);
+    box-shadow: none;
+}
+
+.nav-link.active:hover {
+    background: var(--sidebar-active-bg);
+    color: var(--sidebar-active-text);
+}
+
+/* Subtle left accent bar. Sits inside the row's own box (not in the gutter at
+   left:-0.3rem, which overlapped the sidebar padding) so it can never be
+   clipped by overflow-x:hidden. */
+.nav-link.active::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    height: 55%;
+    width: 3px;
+    border-radius: 0 var(--radius-full, 9999px) var(--radius-full, 9999px) 0;
+    background: var(--sidebar-accent);
+}
+
+.logout-link {
+    color: var(--sidebar-text);
+}
+
+.logout-link .nav-icon,
+.logout-link .nav-text {
+    color: inherit;
+}
+
+/* Log Out keeps its red affordance, retuned for the dark rail — the previous
+   light-theme rule set near-black text, which was unreadable here. */
+.logout-link:hover,
+.logout-link:focus-visible {
+    color: #fecaca;
+    background: rgba(239, 68, 68, 0.14);
+    border-color: rgba(239, 68, 68, 0.28);
+}
+
+/* ========================================
+   NAVIGATION ICONS
+   ======================================== */
+
+/* Small, simple line icons — 24px read as oversized decoration next to 14px
+   labels. 18px keeps the whole rail on one visual weight. */
+.nav-icon {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+    /* An explicit colour, NOT currentColor + opacity. The icon still reads one
+       step lighter than its label, but by using a defined token whose contrast
+       is measured (11.5:1) rather than by fading it into the background. */
+    color: var(--sidebar-icon);
+    transition: color var(--transition-speed) ease;
+}
+
+.nav-link:hover .nav-icon {
+    /* The old scale(1.1) on hover made icons jitter out of the column. */
+    color: var(--sidebar-text-hover);
+}
+
+/* Active row: icon matches the active text colour rather than taking its own
+   tint, so the pill reads as one solid unit. */
+.nav-link.active .nav-icon {
+    color: var(--sidebar-active-text);
+}
+
+/* ========================================
+   SETTINGS SUBMENU
+   ======================================== */
+
+.settings-item .nav-link {
+    position: relative;
+}
+
+.nav-caret {
+    margin-left: auto;
+    font-size: 0.85rem;
+    /* Was 0.8. See the matching note in sidebar-submenu.css: emphasis comes
+       from the colour token, never from fading content into the rail. */
+    opacity: 1;
+    color: var(--sidebar-text-muted);
+    transition: transform var(--transition-speed) ease-in-out,
+                opacity var(--transition-speed) ease-in-out;
+}
+
+.settings-submenu {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    max-height: 0;
+    opacity: 0;
+    overflow: hidden;
+    transition: max-height var(--transition-speed) ease-in-out,
+                opacity var(--transition-speed) ease-in-out;
+}
+
+.settings-item.settings-open .settings-submenu {
+    max-height: 360px;
+    opacity: 1;
+}
+
+.settings-item.settings-open .nav-caret {
+    transform: rotate(180deg);
+    opacity: 1;
+}
+
+.sidebar.collapsed .settings-submenu,
+.sidebar.collapsed .nav-caret {
+    opacity: 0;
+    pointer-events: none;
+}
+
+/* ========================================
+   NAVIGATION TEXT
+   ======================================== */
+
+.nav-text {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    transition: opacity var(--transition-speed) ease-in-out;
+    /* Long labels ("Preventive Maintenance", "Deployment Tracking") fit at the
+       current 260px width, but the font-size accessibility setting can scale
+       them past it. Ellipsis degrades gracefully instead of forcing a
+       horizontal scrollbar or clipping mid-glyph. */
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.sidebar.collapsed .nav-text {
+    opacity: 0;
+    width: 0;
+    overflow: hidden;
+}
+
+/* Collapsed Mode - Icon only */
+.sidebar.collapsed .nav-link {
+    justify-content: center;
+    padding: 0.875rem;
+    gap: 0;
+}
+
+/* ========================================
+   SIDEBAR FOOTER
+   ======================================== */
+
+.sidebar-footer {
+    border-top: 1px solid var(--sidebar-divider);
+    padding: 0.75rem 0.3rem 0;
+    flex-shrink: 0;
+    /* Pins the user card to the bottom of the rail when the nav list is short,
+       instead of letting it float directly under the last item. */
+    margin-top: auto;
+}
+
+.sidebar-footer .nav-menu {
+    padding: 0;
+    gap: 0.5rem;
+}
+
+.sidebar-user-profile {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.6rem;
+    border-radius: 12px;
+    background: var(--sidebar-surface);
+    border: 1px solid var(--sidebar-profile-border);
+    min-width: 0;
+}
+
+.sidebar-user-avatar-wrap {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    overflow: hidden;
+    flex-shrink: 0;
+}
+
+/* The avatar fallback is a plain initial; give it the brand gradient so the
+   card does not show a bare square on users with no uploaded photo. */
+.sidebar-user-avatar-wrap .avatar-circle {
+    width: 100%;
+    height: 100%;
+    display: grid;
+    place-items: center;
+    background: linear-gradient(135deg, #8b5cf6, #6d28d9);
+    color: #fff;
+    font-weight: 700;
+    font-size: 0.9rem;
+}
+
+.sidebar-user-avatar-wrap .avatar-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.sidebar-user-meta {
+    min-width: 0;
+}
+
+/* max-width:140px was a fixed guess that clipped before the card actually ran
+   out of room; min-width:0 on the flex parent plus ellipsis lets the name use
+   whatever space the avatar leaves. */
+.sidebar-user-meta .user-name {
+    color: var(--sidebar-profile-name);
+    font-size: 0.85rem;
+    font-weight: 700;
+    line-height: 1.25;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.sidebar-user-meta .user-title {
+    color: var(--sidebar-text-muted);
+    font-size: 0.75rem;
+    line-height: 1.25;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.sidebar.collapsed .sidebar-user-profile {
+    justify-content: center;
+    padding: 0.4rem;
+}
+
+.sidebar.collapsed .sidebar-user-meta {
+    opacity: 0;
+    width: 0;
+    overflow: hidden;
+}
+
+/* ========================================
+   SETTINGS LOGOUT SUBITEM
+   ======================================== */
+
+/* NOTE: .settings-subitem / .logout-subitem belong to the retired settings
+   submenu and are not present in either sidebar template any more. They are
+   left in place per the project rule against deleting shared CSS speculatively,
+   but their hardcoded light-surface greys (#6b7280 text, #111827 active) are
+   re-pointed at the sidebar tokens — if anything ever re-renders these rows,
+   invisible grey-on-purple text is not a useful thing to inherit. */
+.settings-subitem {
+    margin: 0.15rem 1rem 0.15rem 2.6rem;
+    padding: 0.58rem 0.85rem;
+    font-size: 0.88rem;
+    border-radius: 8px;
+    border: 1px solid transparent;
+    color: var(--sidebar-text);
+}
+
+.settings-subitem:hover {
+    background: var(--sidebar-hover);
+    border-color: rgba(167, 139, 250, 0.26);
+}
+
+.settings-subitem.active {
+    background: var(--sidebar-active-bg);
+    border-color: rgba(167, 139, 250, 0.26);
+    color: var(--sidebar-active-text);
+}
+
+.logout-subitem {
+    margin: 0.15rem 1rem 0.35rem 2.6rem;
+    padding: 0.65rem 0.85rem;
+    font-size: 0.9rem;
+    background: transparent;
+    border-radius: 8px;
+    border: 1px solid transparent;
+    color: var(--sidebar-text);
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+}
+
+.logout-subitem:hover {
+    background: rgba(239, 68, 68, 0.14);
+    border-color: rgba(239, 68, 68, 0.28);
+    color: #fecaca;
+}
+
+/* ========================================
+   MOBILE MENU BUTTON (relocated out of the removed top header)
+   ========================================
+
+   #sidebarToggleMobile used to be the first child of the top header bar, which
+   was fixed to the top of the page and therefore positioned the button for it.
+   With the bar gone the button moved into the sidebar includes, immediately
+   before <aside class="sidebar">, and has to position itself.
+
+   This is the ONLY way to open navigation below 768px: .sidebar-toggle is
+   display:none at that breakpoint and the rail sits at translateX(-100%). It
+   is the same element with the same id, so sidebar.js binds it unchanged.
+
+   Loaded by both shells, so one rule covers legacy PHP and Blade. The visual
+   box (size/border/background) still comes from styles.css / laravel-shell.css
+   as before; only placement is set here. */
+.sidebar-toggle-mobile {
+    position: fixed;
+    top: 14px;
+    left: 14px;
+    /* Above the rail (1000) and its overlay (1100) would be wrong — when the
+       drawer is open the button must not float over it. It sits below the
+       drawer (1200) and is hidden outright while open, see below. */
+    z-index: 1050;
+    box-shadow: 0 6px 18px rgba(22, 13, 41, 0.18);
+}
+
+/* sidebar.js already toggles this class on <body> whenever the drawer opens or
+   closes, so no JS change was needed to get a hook. Hiding rather than layering
+   keeps the open drawer clean and stops the button from sitting on top of the
+   overlay the user taps to dismiss.
+
+   Targeted by id on purpose: laravel-shell.css loads after this file and sets
+   `body[data-user-role] .sidebar-toggle-mobile { display: inline-flex }` at
+   (0,2,1). A class-only rule here would tie on specificity and lose on source
+   order, leaving the button visible over the open drawer in the Blade shell.
+   The id lifts this to (1,1,0) so it wins in both shells without !important. */
+body.sidebar-mobile-open #sidebarToggleMobile {
+    display: none;
+}
+
+/* ========================================
+   SIDEBAR OVERLAY (Mobile)
+   ======================================== */
+
+.sidebar-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, var(--opacity-overlay-backdrop, 0.5));
+    opacity: 0;
+    visibility: hidden;
+    /* Must sit above .navbar(1000)/.sidebar-toggle(1001)/.notification-dropdown(1001)
+       so the header is dimmed too, but below the mobile drawer itself (1200). */
+    z-index: 1100;
+    transition: opacity var(--transition-speed) ease-in-out,
+                visibility var(--transition-speed) ease-in-out;
+}
+
+.sidebar.mobile-open + .sidebar-overlay {
+    opacity: 1;
+    visibility: visible;
+}
+
+/* ========================================
+   RESPONSIVE DESIGN
+   ======================================== */
+
+/* Tablets (768px and below) */
+@media (max-width: 768px) {
+    .sidebar {
+        width: var(--sidebar-width);
+        position: fixed;
+        left: 0;
+        /* header removed: the rail used to be pushed down by the top bar and
+           shortened to match it. It now starts at the very top and runs the
+           full viewport height, exactly like the desktop rule at line ~90. */
+        top: 0;
+        height: 100vh;
+        transform: translateX(-100%);
+        transition: transform var(--transition-speed) ease-in-out;
+        z-index: 1200;
+        pointer-events: auto;
+    }
+
+    .sidebar.mobile-open {
+        width: var(--sidebar-width);
+        transform: translateX(0);
+        pointer-events: auto;
+    }
+
+    .sidebar.mobile-open .nav-text {
+        opacity: 1;
+    }
+
+    .sidebar.mobile-open .system-name {
+        opacity: 1;
+    }
+
+    .sidebar.mobile-open + .sidebar-overlay {
+        opacity: 1;
+        visibility: visible;
+    }
+
+    .sidebar-toggle {
+        display: none;
+    }
+
+    .sidebar-header {
+        padding: 0;
+        min-height: var(--header-height);
+        justify-content: center;
+    }
+
+    .logo-container {
+        justify-content: center;
+        gap: 0;
+    }
+
+    .sidebar-header .logo-icon {
+        width: 26px;
+        height: 26px;
+    }
+
+    .nav-section-label,
+    .sidebar-footer,
+    .sidebar-user-profile,
+    .sidebar-user-meta,
+    .settings-submenu,
+    .nav-caret,
+    .settings-item.settings-open .settings-submenu {
+        display: none;
+    }
+
+    /* ...but put the grouping and the user card BACK once the drawer is open.
+       The block above was written for the narrow icon-rail state; when
+       .mobile-open is set the drawer shows full-width labelled rows, so
+       suppressing the section headers and the account area there left the
+       mobile navigation flatter and less informative than the desktop one for
+       no reason. (While the drawer is closed the whole sidebar is translated
+       off-screen, so hiding them buys nothing in that state either.) */
+    .sidebar.mobile-open .nav-section-label,
+    .sidebar.mobile-open .sidebar-footer {
+        display: block;
+    }
+
+    .sidebar.mobile-open .sidebar-user-profile {
+        display: flex;
+    }
+
+    .sidebar.mobile-open .sidebar-user-meta {
+        display: block;
+    }
+
+    .nav-text {
+        opacity: 0;
+    }
+
+    .system-name {
+        opacity: 0;
+    }
+
+    .nav-link {
+        margin: 0.35rem 0.4rem;
+        padding: 0.85rem 0;
+        justify-content: center;
+        gap: 0;
+    }
+
+    .sidebar.mobile-open .nav-link {
+        justify-content: flex-start;
+        gap: 0.75rem;
+        padding: 0.6rem 1rem;
+        margin: 0 0.5rem;
+        /* 44px is the touch-target floor; the desktop rail's 38px rows are
+           comfortable with a pointer but tight with a thumb. */
+        min-height: 44px;
+    }
+
+    .sidebar-nav {
+        /* Matches the desktop rail's 6px; the old 22px stacked on top of the
+           section labels' own top margin. */
+        padding-top: 8px;
+        padding-bottom: calc(env(safe-area-inset-bottom, 0px) + var(--space-4, 16px));
+    }
+
+    .nav-menu {
+        gap: 0.35rem;
+    }
+
+    body[data-user-role] main,
+    body[data-user-role] .main-content,
+    body[data-user-role] .content,
+    body[data-user-role] .container {
+        margin-left: 0;
+    }
+}
+
+body.sidebar-mobile-open {
+    overflow: hidden;
+}
+
+/* Small Phones (480px and below) */
+@media (max-width: 480px) {
+    :root {
+        --sidebar-width-collapsed: 60px;
+    }
+
+    .sidebar-toggle {
+        right: -2.5rem;
+        width: 2.2rem;
+        height: 2.2rem;
+    }
+
+    .hamburger-icon span {
+        width: 1rem;
+    }
+
+    .logo-icon {
+        width: 24px;
+        height: 24px;
+    }
+
+    .nav-icon {
+        width: 18px;
+        height: 18px;
+    }
+
+    body[data-user-role] .main-content,
+    body[data-user-role] .app-footer {
+        margin-left: 0;
+    }
+}
+
+/* ========================================
+   ANIMATIONS & TRANSITIONS
+   ======================================== */
+
+@keyframes slideIn {
+    from {
+        transform: translateX(-100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes glow {
+    0%, 100% {
+        box-shadow: 0 0 10px var(--glow-color);
+    }
+    50% {
+        box-shadow: 0 0 20px var(--glow-color);
+    }
+}
+
+/* The active row used to run the slideIn keyframes on every page load, sweeping
+   in from translateX(-100%). Removed: it is visual noise on a navigation rail,
+   it re-ran on each navigation, and the off-screen start position was a
+   horizontal-overflow risk. The @keyframes are left defined above in case any
+   other rule references them. */
+
+/* Focus states for accessibility (DESIGN_SYSTEM.md §18).
+   A light-purple ring, because the old rgba(124,58,237,.35) violet barely
+   separated from the dark purple rail. Drawn with outline rather than
+   box-shadow so it is still visible in forced-colors / high-contrast mode,
+   and offset inward so it cannot be clipped by overflow-x:hidden. */
+.nav-link:focus-visible {
+    outline: 2px solid #c4b5fd;
+    outline-offset: -2px;
+    box-shadow: none;
+}
+
+/* ========================================
+   BODY ADJUSTMENTS
+   ======================================== */
+
+body {
+    margin: 0;
+    padding: 0;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* Main content area adjustment for sidebar */
+main, .main-content, .content, .container, .app-footer {
+    margin-left: var(--sidebar-width);
+    transition: margin-left var(--transition-speed) ease-in-out;
+}
+
+/* Navbar adjustment for sidebar */
+#sidebar ~ .navbar,
+#sidebar ~ .navbar.navbar-dark {
+    margin-left: 0;
+    width: 100%;
+    transition: margin-left var(--transition-speed) ease-in-out,
+                width var(--transition-speed) ease-in-out;
+}
+
+/* Adjust when sidebar is collapsed */
+.sidebar.collapsed ~ main,
+.sidebar.collapsed ~ .main-content,
+.sidebar.collapsed ~ .content,
+.sidebar.collapsed ~ .container,
+.sidebar.collapsed ~ .app-footer {
+    margin-left: var(--sidebar-width-collapsed);
+}
+
+.sidebar.collapsed ~ .navbar,
+.sidebar.collapsed ~ .navbar-dark {
+    margin-left: 0;
+    width: 100%;
+}
+
+@media (max-width: 768px) {
+    main, .main-content, .content, .container, .app-footer {
+        margin-left: 0;
+    }
+
+    #sidebar ~ .navbar,
+    #sidebar ~ .navbar.navbar-dark {
+        margin-left: 0;
+        width: 100%;
+    }
+}
+
+/* Print Styles */
+@media print {
+    .sidebar,
+    .sidebar-toggle,
+    .sidebar-overlay,
+    .app-footer {
+        display: none;
+    }
+
+    main, .main-content, .content, .container,
+    #sidebar ~ .navbar,
+    #sidebar ~ .navbar.navbar-dark {
+        margin-left: 0;
+        width: 100%;
+    }
+}
+

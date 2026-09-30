@@ -1,0 +1,78 @@
+﻿.report-view-page {
+    width: calc(100% - var(--sidebar-width));
+    max-width: calc(100% - var(--sidebar-width));
+    margin-left: var(--sidebar-width);
+    margin-right: 0;
+    padding-left: 24px;
+    padding-right: 24px;
+}
+
+.navbar .navbar-container {
+    max-width: none;
+    margin: 0;
+    padding-left: 24px;
+    padding-right: 24px;
+}
+
+#sidebar.collapsed ~ main.report-view-page {
+    width: calc(100% - var(--sidebar-width-collapsed));
+    max-width: calc(100% - var(--sidebar-width-collapsed));
+    margin-left: var(--sidebar-width-collapsed);
+}
+
+@media (max-width: 992px) {
+    .report-view-page {
+        width: calc(100% - var(--sidebar-width-collapsed));
+        max-width: calc(100% - var(--sidebar-width-collapsed));
+        margin-left: var(--sidebar-width-collapsed);
+    }
+}
+
+@media (max-width: 640px) {
+    .navbar .navbar-container,
+    .report-view-page {
+        padding-left: 14px;
+        padding-right: 14px;
+    }
+}
+
+.report-view-page .card {
+    border-radius: 16px;
+}
+
+.report-view-page .card-header {
+    padding: 20px 24px;
+}
+
+.report-view-page .card-body {
+    padding: 18px 24px 24px;
+}
+
+.report-view-page .card + .card {
+    margin-top: 18px !important;
+}
+
+.report-view-page .btn {
+    border-radius: 10px;
+}
+
+.report-view-page #inventory-workflow-output .table {
+    margin-top: 8px;
+}
+
+.report-view-page #inventory-workflow-output .table th,
+.report-view-page #inventory-workflow-output .table td {
+    white-space: nowrap;
+}
+
+@media (max-width: 768px) {
+    .report-view-page .card-header,
+    .report-view-page .card-body {
+        padding-left: 14px;
+        padding-right: 14px;
+    }
+
+    .report-view-page .btn {
+        width: 100%;
+    }
+}

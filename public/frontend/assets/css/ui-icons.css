@@ -1,0 +1,99 @@
+/* ============================================================================
+   TASK 7 — UI icon sizing and alignment
+   ----------------------------------------------------------------------------
+   The icons themselves carry no colour: every one is stroke="currentColor", so
+   whatever text colour already applies at the call site drives the icon too.
+   That is what makes Light and Dark theme work without a single duplicated
+   rule here — the existing theme variables already set the text colour, and
+   the icon simply follows it.
+
+   This file exists only to solve the two problems an inline <svg> has that an
+   emoji did not: it needs an explicit box, and it needs to sit on the text
+   baseline properly. It is a NEW file — no shared stylesheet was edited.
+   ========================================================================= */
+
+.ui-icon {
+    /* Sized in em so an icon tracks the ~12px UI text it sits beside, per the
+       readability standard, instead of being pinned to one pixel size. The
+       width/height attributes on the element are the no-CSS fallback. */
+    width: 1.15em;
+    height: 1.15em;
+
+    /* The emoji these replaced were inline glyphs sitting on the baseline.
+       vertical-align keeps the visual rhythm identical, so swapping them in
+       causes no layout shift. */
+    display: inline-block;
+    vertical-align: -0.18em;
+
+    /* Never let an icon squash inside a flex row (button, badge, table cell). */
+    flex-shrink: 0;
+}
+
+/* Inside a flex container the baseline trick is unnecessary and can misalign;
+   flex centring handles it instead. */
+.btn .ui-icon,
+.badge .ui-icon {
+    vertical-align: -0.15em;
+}
+
+/* ---------------------------------------------------------------------------
+   Size steps, for call sites that need to break out of the em-relative default
+   ------------------------------------------------------------------------ */
+.ui-icon-sm { width: 14px;  height: 14px;  vertical-align: -0.2em; }
+.ui-icon-md { width: 18px;  height: 18px;  vertical-align: -0.25em; }
+.ui-icon-lg { width: 24px;  height: 24px;  vertical-align: -0.3em; }
+.ui-icon-xl { width: 32px;  height: 32px;  vertical-align: middle; }
+
+/* Empty-state artwork: large, centred, and deliberately muted so it reads as
+   illustration rather than as a control. */
+.ui-icon-empty {
+    width: 44px;
+    height: 44px;
+    vertical-align: middle;
+    opacity: 0.45;
+    stroke-width: 1.5;
+}
+
+/* ---------------------------------------------------------------------------
+   Status colouring
+   These four map onto the existing semantic palette rather than inventing new
+   colours, and each is paired with retained status TEXT at every call site —
+   colour is never the sole carrier of meaning (Phase 9).
+   ------------------------------------------------------------------------ */
+.ui-icon-success { color: var(--color-success, #16a34a); }
+.ui-icon-danger  { color: var(--color-danger,  #dc2626); }
+.ui-icon-warning { color: var(--color-warning, #d97706); }
+.ui-icon-info    { color: var(--color-info,    #2563eb); }
+
+/* Inside a badge the badge's own foreground colour already encodes the state,
+   so the icon should inherit it rather than fight it. */
+.badge .ui-icon-success,
+.badge .ui-icon-danger,
+.badge .ui-icon-warning,
+.badge .ui-icon-info {
+    color: inherit;
+}
+
+/* Dark theme: the semantic colours above are tuned for a light surface and go
+   muddy on a dark one. These lift them to the lighter ramp the Enterprise Dark
+   Theme already uses elsewhere. Icons that inherit currentColor are untouched
+   here — they follow their text and need no override. */
+:root[data-theme-resolved='dark'] .ui-icon-success { color: var(--color-success-400, #4ade80); }
+:root[data-theme-resolved='dark'] .ui-icon-danger  { color: var(--color-danger-400,  #f87171); }
+:root[data-theme-resolved='dark'] .ui-icon-warning { color: var(--color-warning-400, #fbbf24); }
+:root[data-theme-resolved='dark'] .ui-icon-info    { color: var(--color-info-400,    #60a5fa); }
+
+/* Icon-only controls keep a comfortable hit target even though the glyph is
+   small — the emoji buttons they replace were text-sized and already tight. */
+.ui-icon-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .ui-icon {
+        transition: none;
+    }
+}

@@ -1,0 +1,488 @@
+/* ============================================================================
+   TOP APP BAR
+   ----------------------------------------------------------------------------
+   Styles the compact purple bar rendered by includes/utility-bar.php: page
+   identity on the left (breadcrumb + title), control cluster on the right
+   (search, semester, New report, notifications).
+
+   Why a separate file instead of editing styles.css:
+     * styles.css is shared framework CSS and is off-limits for feature work.
+     * The existing .notification-* block in styles.css (~line 1736) was written
+       for the dark navbar the bell used to sit in — .notification-bell is
+       `color: #d8e5fb; height: 100%` and .notification-count is absolutely
+       positioned against a full-height bar. Dropped into this bar those
+       produce a near-invisible pale-blue bell and a badge floating in the wrong
+       place. Everything below re-points those two, scoped under .utility-bar so
+       nothing else that may still use .notification-* is affected.
+     * Loading this file last means every override wins on source order and not
+       one !important is needed.
+
+   THE LIGHT-THEME BLANKET RULE. styles.css ends with
+       :root[data-theme-resolved='light'] h1|h2|h3|p|label|span
+           :not(:where(.sidebar *)) { color: #1e293b }
+   at specificity (0,2,1). That rule paints EVERY heading and <span> outside the
+   sidebar dark slate — including this bar's title, breadcrumb and semester
+   text, which sit on purple. Source order cannot fix that, so each text rule
+   below that targets an h1 or a span carries the same
+   `:root[data-theme-resolved='light']` prefix, landing at (0,3,1) and winning
+   on specificity instead. This is the same pattern the sidebar and
+   problem-type-selector.css already use. Still no !important anywhere.
+
+   The dropdown's own internals are deliberately NOT restyled: they already draw
+   from --card-color / --border / --text-light / --muted-text / --muted-card,
+   which resolve light on their own now that light is the only theme.
+   ========================================================================= */
+
+:root {
+    /* Single knob for the bar's height. Referenced by the main-content offset
+       below, so the two can never drift apart. 64px is what the two-line page
+       identity (11px breadcrumb over a 17px title) needs while still being
+       far shorter than the 76px navbar that was removed — the bar must stay
+       visibly smaller than the old full-width header. */
+    --utility-bar-height: 64px;
+
+    /* Every control in the cluster shares one height so the row reads as a
+       single band rather than four differently-sized chips. */
+    --ub-control-height: 36px;
+
+    /* PHILCST purple, deep -> medium, left -> right.
+       The deep end (#2e1065) sits against the sidebar rail (#160d29) so the two
+       dark purples meet without a seam; the medium end (#4c1d95) is where the
+       controls live, which keeps them on the brightest part of the bar.
+       Both ends clear 10:1 against white text:
+           #ffffff on #2e1065 -> 15.2:1
+           #ffffff on #4c1d95 -> 10.9:1
+       These are bar-local tokens, declared here rather than in the shared
+       palette, because nothing outside this bar should inherit them. */
+    --utility-bar-bg-deep: #2e1065;
+    --utility-bar-bg-mid: #4c1d95;
+
+    /* The translucent "glass" skin shared by the search field and the semester
+       pill. Translucent rather than a solid colour so each control picks up
+       whatever point of the gradient it happens to sit on and can never
+       mismatch the bar behind it. */
+    --ub-control-bg: rgba(255, 255, 255, 0.12);
+    --ub-control-bg-hover: rgba(255, 255, 255, 0.2);
+    --ub-control-border: rgba(255, 255, 255, 0.22);
+    --ub-control-border-hover: rgba(255, 255, 255, 0.38);
+}
+
+/* ----------------------------------------------------------------------------
+   THE BAR
+   Fixed, so it stays put while the page scrolls and never participates in the
+   flow that <main> and the sidebar already share. It starts where the sidebar
+   ends.
+
+   NOTE what is NOT here, and must never be added: a system logo, the system
+   name, the school name, a theme toggle, a user profile chip. The PHILCST logo
+   belongs to the sidebar; Account and Log Out belong to the sidebar footer.
+   -------------------------------------------------------------------------- */
+.utility-bar {
+    position: fixed;
+    top: 0;
+    left: var(--sidebar-width, 260px);
+    right: 0;
+    height: var(--utility-bar-height);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 0 clamp(14px, 2vw, 28px);
+    box-sizing: border-box;
+    /* Purple, completing the rail-plus-bar frame around the light content.
+       NOTE: no `color` is set on this element on purpose. The notification
+       dropdown is a DESCENDANT of .utility-bar, so a blanket white `color`
+       here would inherit straight into the dropdown panel and render its
+       titles, messages and timestamps white-on-white. White is set on the
+       individual controls below, which the dropdown is not a child of. */
+    background: linear-gradient(90deg,
+                var(--utility-bar-bg-deep) 0%,
+                var(--utility-bar-bg-mid) 100%);
+    /* A darker purple hairline rather than --border (#e5e7eb): a light grey
+       line on a dark purple bar reads as a bright scratch. */
+    border-bottom: 1px solid rgba(12, 4, 32, 0.45);
+    box-shadow: 0 2px 8px rgba(46, 16, 101, 0.18);
+    /* Below every sidebar layer — rail 1000, overlay 1100, mobile drawer 1200,
+       mobile menu button 1050 — so an open drawer covers the bar instead of
+       being punched through by it. */
+    z-index: 900;
+    transition: left 0.3s ease-in-out;
+}
+
+/* The bar is a later sibling of #sidebar (header.php includes the sidebar,
+   then this), so it can follow the rail's collapsed state without any JS. */
+#sidebar.collapsed ~ .utility-bar {
+    left: var(--sidebar-width-collapsed, 76px);
+}
+
+/* ----------------------------------------------------------------------------
+   MAIN CONTENT OFFSET
+   <main> is in normal flow and would otherwise start underneath the fixed bar.
+   Only the top padding moves; the horizontal padding and the sidebar margin set
+   in styles.css are left exactly as they are. min-height drops by the same
+   amount so the page does not grow past the viewport and gain a scrollbar it
+   did not have before.
+   -------------------------------------------------------------------------- */
+body[data-user-role] main {
+    padding-top: calc(var(--utility-bar-height) + 24px);
+    min-height: calc(100vh - var(--utility-bar-height));
+}
+
+body[data-user-role] main.container {
+    padding-top: calc(var(--utility-bar-height) + 20px);
+}
+
+/* ----------------------------------------------------------------------------
+   LEFT — PAGE IDENTITY
+   min-width:0 on both the flex item and the title is what lets the title
+   ellipsize instead of forcing the bar wider than the viewport; a flex item's
+   automatic minimum size is its min-content width until you say otherwise, and
+   a long title ("Preventive Maintenance") would otherwise push the control
+   cluster off-screen.
+   -------------------------------------------------------------------------- */
+.ub-lead {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 2px;
+    min-width: 0;
+    /* Grows to fill, but yields to the controls first: the cluster on the right
+       is fixed-purpose, the title is the part that can safely be truncated. */
+    flex: 1 1 auto;
+}
+
+.ub-breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    min-width: 0;
+    font-size: 11px;
+    font-weight: 500;
+    line-height: 1.2;
+    letter-spacing: 0.01em;
+    white-space: nowrap;
+    overflow: hidden;
+}
+
+/* Deliberately dimmer than the title — the breadcrumb is context, not the
+   heading. rgba white rather than a flat grey so it stays keyed to the purple
+   underneath at any point of the gradient. Still 5.4:1 against #4c1d95. */
+:root[data-theme-resolved='light'] .utility-bar .ub-crumb {
+    color: rgba(255, 255, 255, 0.66);
+}
+
+:root[data-theme-resolved='light'] .utility-bar .ub-crumb-sep {
+    color: rgba(255, 255, 255, 0.4);
+}
+
+.utility-bar .ub-crumb-link {
+    text-decoration: none;
+    border-radius: 4px;
+    transition: color 0.18s ease;
+}
+
+:root[data-theme-resolved='light'] .utility-bar .ub-crumb-link:hover {
+    color: #ffffff;
+    text-decoration: underline;
+}
+
+.utility-bar .ub-crumb-link:focus-visible {
+    outline: 2px solid #ffffff;
+    outline-offset: 2px;
+}
+
+/* The heading. Sized to be clearly the primary line without reintroducing the
+   oversized system name the removed navbar carried. */
+:root[data-theme-resolved='light'] .utility-bar .ub-title {
+    margin: 0;
+    padding: 0;
+    min-width: 0;
+    font-size: 17px;
+    font-weight: 700;
+    line-height: 1.25;
+    letter-spacing: -0.01em;
+    color: #ffffff;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* ----------------------------------------------------------------------------
+   RIGHT — CONTROL CLUSTER
+   flex-shrink is allowed on the cluster so the search field (the only elastic
+   member) can give width back to a long page title before anything overflows.
+   -------------------------------------------------------------------------- */
+.ub-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+    flex: 0 1 auto;
+}
+
+/* ----------------------------------------------------------------------------
+   SEMESTER
+   Read-only status, so: no hover state, no cursor change, no focus ring. The
+   dot is paired with the text label on purpose — the state must never be
+   carried by colour alone.
+   -------------------------------------------------------------------------- */
+.ub-semester {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    height: var(--ub-control-height);
+    flex-shrink: 0;
+    padding: 0 13px;
+    box-sizing: border-box;
+    border: 1px solid var(--ub-control-border);
+    border-radius: 999px;
+    background: var(--ub-control-bg);
+}
+
+.ub-semester-dot {
+    width: 8px;
+    height: 8px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    /* The same success green the rest of the app uses for "running". The soft
+       ring is what makes an 8px dot register against the purple. */
+    background: #10b981;
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.25);
+}
+
+/* current_semester is NULL whenever today falls outside every configured
+   range (upcoming / semester break / school year completed). That is a real,
+   named state — not an error and not "first semester by default" — so it gets
+   the app's amber rather than the green. */
+.ub-semester-idle .ub-semester-dot {
+    background: #f59e0b;
+    box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.25);
+}
+
+.ub-semester-text {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    min-width: 0;
+    line-height: 1.15;
+}
+
+:root[data-theme-resolved='light'] .utility-bar .ub-semester-name {
+    color: #ffffff;
+    font-size: 12px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+:root[data-theme-resolved='light'] .utility-bar .ub-semester-year {
+    color: rgba(255, 255, 255, 0.62);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+}
+
+/* ----------------------------------------------------------------------------
+   THE BELL
+   Unchanged behaviour; sized to match the other controls in the cluster.
+   -------------------------------------------------------------------------- */
+.utility-bar .notification-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+    /* styles.css sets 100%, which was the old full-height navbar cell. */
+    height: auto;
+    /* styles.css line ~674 also sets `line-height: var(--header-height)` here —
+       76px. That was harmless when the wrapper only ever held a 76px-tall
+       navbar cell, but line-height INHERITS, so every line of text inside the
+       dropdown (which is a descendant) was being laid out on a 76px baseline:
+       each notification row rendered ~400px tall with the title, message and
+       timestamp floating far apart. Resetting it here is the one line that
+       makes the dropdown legible. */
+    line-height: 1.5;
+}
+
+.utility-bar .notification-bell {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--ub-control-height);
+    height: var(--ub-control-height);
+    padding: 0;
+    box-sizing: border-box;
+    border-radius: 10px;
+    background: var(--ub-control-bg);
+    border: 1px solid var(--ub-control-border);
+    box-shadow: none;
+    /* The glyph. ui_icon('bell') draws from currentColor, so this one
+       declaration is the whole icon colour. White on #4c1d95 is 10.9:1.
+       Setting it HERE and not on .utility-bar is deliberate — see the note on
+       the bar above about the dropdown inheriting. */
+    color: #ffffff;
+    cursor: pointer;
+    transition: background-color 0.18s ease, border-color 0.18s ease,
+                color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.utility-bar .notification-bell:hover {
+    background: var(--ub-control-bg-hover);
+    border-color: var(--ub-control-border-hover);
+    color: #ffffff;
+    box-shadow: 0 4px 12px rgba(12, 4, 32, 0.28);
+}
+
+/* Was --primary-color (#6d28d9): a purple focus ring on a purple bar is
+   invisible, which would have silently removed the keyboard focus indicator
+   from this control. White reads against both ends of the gradient. */
+.utility-bar .notification-bell:focus-visible {
+    outline: 2px solid #ffffff;
+    outline-offset: 2px;
+}
+
+.utility-bar .notification-bell-icon {
+    display: block;
+    width: 19px;
+    height: 19px;
+}
+
+/* ----------------------------------------------------------------------------
+   THE UNREAD BADGE
+   notification.js owns its text ('3', '9+') and its inline display (flex/none),
+   so nothing here may set `display` — position and skin only. THE BADGE STAYS
+   VISIBLE WHENEVER THERE ARE UNREAD ROWS; nothing below can hide it.
+
+   The white ring is LOAD-BEARING on a purple bar. #dc2626 against #4c1d95 is
+   only ~2.3:1 — red on purple is genuinely muddy — so the ring, not the fill,
+   is what makes the badge pop. Do not drop it to save a declaration and do not
+   recolour it to match the bar. The count itself stays white on red at 4.8:1.
+   -------------------------------------------------------------------------- */
+/* Three classes deep on purpose. The badge is a <span>, and styles.css ends
+   with a light-theme blanket rule — `:root[data-theme-resolved='light']
+   span:not(:where(.sidebar *))` at (0,2,1) — that paints EVERY span outside the
+   sidebar #1e293b. A two-class selector here loses to it on specificity no
+   matter how late this file loads, which rendered the unread count as dark
+   slate on red (~1.5:1, effectively unreadable). (0,3,0) beats (0,2,1) without
+   needing !important. */
+.utility-bar .notification-wrapper .notification-count {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    box-sizing: border-box;
+    border-radius: 999px;
+    background: #dc2626;
+    border: 2px solid var(--utility-bar-bg-mid);
+    color: #ffffff;
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1;
+    align-items: center;
+    justify-content: center;
+}
+
+/* ----------------------------------------------------------------------------
+   THE DROPDOWN
+   Anchored to .notification-wrapper by styles.css; only the box is adjusted so
+   it hangs clear of the bar and can never be wider than the viewport.
+   -------------------------------------------------------------------------- */
+.utility-bar .notification-dropdown {
+    width: min(340px, calc(100vw - 24px));
+    max-height: min(420px, calc(100vh - var(--utility-bar-height) - 24px));
+    top: calc(100% + 10px);
+    border-radius: 14px;
+    box-shadow: 0 18px 45px rgba(15, 23, 42, 0.16);
+}
+
+/* ----------------------------------------------------------------------------
+   RESPONSIVE
+   The cluster sheds its least essential member first, in this order:
+       academic year  ->  semester pill.
+   Each of those is either redundant or available elsewhere at the width it is
+   dropped, so nothing becomes unreachable.
+   -------------------------------------------------------------------------- */
+
+/* The pill keeps the semester (the status) and drops the academic year (the
+   context), which the Dashboard's Academic Session card still shows in full. */
+@media (max-width: 1080px) {
+    .ub-semester-year {
+        display: none;
+    }
+
+    .ub-semester-text {
+        line-height: 1.2;
+    }
+}
+
+/* Laptops / small desktops — match the tighter gutter styles.css uses here. */
+@media (max-width: 992px) {
+    .utility-bar {
+        padding-left: 12px;
+        padding-right: 12px;
+        gap: 12px;
+    }
+
+    .ub-semester {
+        display: none;
+    }
+}
+
+/* Tablets and phones. The rail is off-canvas below this breakpoint, so the bar
+   spans the full width and #sidebarToggleMobile (fixed at top:14px / left:14px,
+   38px square) lands inside the bar's 64px band — the extra left padding is
+   what keeps the breadcrumb and title from sliding under it. */
+@media (max-width: 768px) {
+    .utility-bar,
+    #sidebar.collapsed ~ .utility-bar {
+        left: 0;
+        padding-left: 62px;
+        padding-right: 12px;
+    }
+
+    .ub-breadcrumb {
+        display: none;
+    }
+
+    :root[data-theme-resolved='light'] .utility-bar .ub-title {
+        font-size: 15px;
+    }
+
+    /* Mirrors the selector list styles.css uses at this breakpoint so this wins
+       on source order rather than specificity. It replaces that block's flat
+       64px, which was sized for the menu button alone. */
+    body[data-user-role] main,
+    body[data-user-role] main.container,
+    body[data-user-role] #sidebar.collapsed ~ main.container {
+        padding-top: calc(var(--utility-bar-height) + 16px);
+    }
+
+    /* styles.css repeats the navbar-era sizing at this breakpoint in ONE grouped
+       rule — `body[data-user-role] .notification-bell, ... .notification-wrapper
+       { height: 64px; line-height: 64px }` — at (0,2,1), which outranks the
+       plain `.utility-bar` selectors above no matter how late this file loads.
+       Left alone it stretched the chip to 64px, so the badge clipped against
+       the top of the bar. The prefix here restores the desktop sizing and stops
+       the 64px line-height inheriting down into the dropdown. */
+    body[data-user-role] .utility-bar .notification-wrapper {
+        height: auto;
+        line-height: 1.5;
+    }
+
+    body[data-user-role] .utility-bar .notification-bell {
+        height: var(--ub-control-height);
+        line-height: 1;
+        padding: 0;
+    }
+}
+
+/* Phones. */
+@media (max-width: 560px) {
+    .utility-bar {
+        padding-left: 58px;
+        padding-right: 10px;
+        gap: 8px;
+    }
+}

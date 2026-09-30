@@ -1,0 +1,1981 @@
+:root {
+    --buildings-page-gap: 1.25rem;
+    --buildings-hero-border: rgba(148, 163, 184, 0.22);
+    --buildings-hero-shadow: 0 20px 48px rgba(15, 23, 42, 0.06);
+    --buildings-surface: var(--card-color, #ffffff);
+    --buildings-surface-muted: rgba(248, 250, 252, 0.85);
+}
+
+:root[data-theme-resolved='dark'] {
+    --buildings-hero-border: rgba(148, 163, 184, 0.16);
+    --buildings-hero-shadow: 0 20px 48px rgba(2, 8, 23, 0.32);
+    --buildings-surface: var(--card-color, #111827);
+    --buildings-surface-muted: rgba(17, 24, 39, 0.75);
+}
+
+.buildings-page-container {
+    display: flex;
+    flex-direction: column;
+    gap: var(--buildings-page-gap);
+}
+
+.buildings-page-hero {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1.5rem;
+    padding: 1.75rem 1.9rem;
+    border: 1px solid var(--buildings-hero-border);
+    border-radius: 24px;
+    background:
+        radial-gradient(circle at top right, rgba(96, 165, 250, 0.12), transparent 28%),
+        linear-gradient(135deg, rgba(255, 255, 255, 0.96), rgba(249, 247, 255, 0.92));
+    box-shadow: var(--buildings-hero-shadow);
+    overflow: hidden;
+}
+
+:root[data-theme-resolved='dark'] .buildings-page-hero {
+    background:
+        radial-gradient(circle at top right, rgba(96, 165, 250, 0.15), transparent 28%),
+        linear-gradient(135deg, rgba(17, 24, 39, 0.98), rgba(15, 23, 42, 0.94));
+}
+
+.buildings-page-hero-copy {
+    flex: 1 1 520px;
+    min-width: 0;
+}
+
+.buildings-page-hero-copy h2 {
+    margin: 0 0 0.5rem;
+    font-size: clamp(1.5rem, 2vw, 2rem);
+    line-height: 1.1;
+    color: var(--text-light, #111827);
+}
+
+.buildings-page-hero-copy p {
+    margin: 0;
+    max-width: 760px;
+    color: var(--muted-text, #6b7280);
+}
+
+:root[data-theme-resolved='dark'] .buildings-page-hero-copy h2 {
+    color: var(--text-light, #f8fafc);
+}
+
+:root[data-theme-resolved='dark'] .buildings-page-hero-copy p {
+    color: var(--muted-text, #94a3b8);
+}
+
+.buildings-page-hero-copy .eyebrow {
+    margin: 0 0 0.5rem;
+    font-size: 0.73rem;
+    font-weight: 800;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: #2563eb;
+}
+
+.buildings-page-hero-metrics {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(100px, 1fr));
+    gap: 0.75rem;
+    min-width: min(380px, 100%);
+}
+
+.buildings-page-hero-metrics > div,
+.buildings-page-hero-metrics > a,
+.buildings-page-hero-metrics > button {
+    padding: 1rem 1rem 0.95rem;
+    border-radius: 18px;
+    background: var(--buildings-surface);
+    border: 1px solid var(--border);
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.04);
+}
+
+.buildings-page-hero-metrics > a,
+.buildings-page-hero-metrics > button {
+    display: block;
+    width: 100%;
+    font: inherit;
+    text-align: left;
+    text-decoration: none;
+    color: inherit;
+    cursor: default;
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+.buildings-page-hero-metrics strong {
+    display: block;
+    margin-bottom: 0.25rem;
+    font-size: 0.95rem;
+    color: var(--text-light, #111827);
+}
+
+.buildings-page-hero-metrics span {
+    font-size: 0.78rem;
+    color: var(--muted-text, #6b7280);
+}
+
+.buildings-hero-metric-action {
+    cursor: pointer;
+    transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+.buildings-hero-metric-action:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 14px 30px rgba(15, 23, 42, 0.1);
+    border-color: rgba(37, 99, 235, 0.35);
+}
+
+.buildings-hero-metric-action:focus-visible {
+    outline: 2px solid #2563eb;
+    outline-offset: 2px;
+    transform: translateY(-2px);
+    box-shadow: 0 14px 30px rgba(15, 23, 42, 0.1);
+    border-color: rgba(37, 99, 235, 0.35);
+}
+
+.buildings-hero-metric-disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
+.buildings-hero-metric-lock {
+    margin-left: 0.3rem;
+    font-size: 0.75em;
+    vertical-align: middle;
+}
+
+/* Keep the three quick-nav metric cards (Rooms / Deployments / Inventory)
+   the same height and vertically centered regardless of label length
+   (e.g. the "Deployments" locked state has an extra lock glyph). */
+.buildings-page-hero-metrics > div,
+.buildings-page-hero-metrics > a,
+.buildings-page-hero-metrics > button {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    min-height: 72px;
+}
+
+:root[data-theme-resolved='dark'] .buildings-page-hero-metrics > div,
+:root[data-theme-resolved='dark'] .buildings-page-hero-metrics > a,
+:root[data-theme-resolved='dark'] .buildings-page-hero-metrics > button {
+    background: var(--surface);
+    border-color: var(--border);
+}
+
+:root[data-theme-resolved='dark'] .buildings-hero-metric-action:hover,
+:root[data-theme-resolved='dark'] .buildings-hero-metric-action:focus-visible {
+    box-shadow: 0 14px 30px rgba(2, 8, 23, 0.4);
+    border-color: rgba(96, 165, 250, 0.45);
+}
+
+:root[data-theme-resolved='dark'] .buildings-page-hero-metrics strong {
+    color: var(--text-light, #f8fafc);
+}
+
+:root[data-theme-resolved='dark'] .buildings-page-hero-metrics span {
+    color: var(--muted-text, #94a3b8);
+}
+
+.buildings-overview-card {
+    border-radius: 24px;
+    overflow: hidden;
+}
+
+:root[data-theme-resolved='dark'] .buildings-overview-card {
+    background: var(--surface);
+    border-color: var(--border);
+}
+
+.buildings-overview-card #overviewHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.buildings-overview-card #overviewTitle {
+    margin: 0;
+}
+
+.buildings-overview-card #overviewSubtitle {
+    margin-top: 0.25rem;
+}
+
+.header-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.625rem;
+    justify-content: flex-end;
+    align-items: center;
+}
+
+.room-search-wrap {
+    margin-bottom: 1.1rem;
+    padding: 1rem;
+    border-radius: 18px;
+    border: 1px solid var(--border);
+    background: var(--buildings-surface-muted);
+}
+
+.room-search-toolbar {
+    display: grid;
+    gap: 0.9rem;
+}
+
+.room-search-input {
+    width: 100%;
+    min-height: 46px;
+    padding: 0.8rem 1rem;
+    border-radius: 14px;
+    border: 1px solid var(--border);
+    background: var(--buildings-surface);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
+}
+
+.room-search-input:focus {
+    outline: none;
+    border-color: rgba(59, 130, 246, 0.7);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
+}
+
+.room-category-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+}
+
+/* The [hidden] attribute is how setRoomSearchVisibility() toggles this section
+   (see buildings-overview.php). Author stylesheets take precedence over the UA
+   stylesheet's `[hidden] { display: none }` rule at equal specificity, so
+   without this the `display: flex` above would win and the category chips
+   would stay visible on the Items view even though JS sets hidden=true. */
+.room-category-filters[hidden] {
+    display: none;
+}
+
+.room-category-filter {
+    border: 1px solid var(--border);
+    background: var(--buildings-surface);
+    color: var(--muted-text, #6b7280);
+    padding: 0.62rem 0.9rem;
+    border-radius: 999px;
+    font-size: 0.88rem;
+    font-weight: 700;
+    transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease, color 180ms ease, background 180ms ease;
+}
+
+.room-category-filter:hover {
+    transform: translateY(-1px);
+    border-color: rgba(59, 130, 246, 0.45);
+    color: var(--text-light, #111827);
+}
+
+.room-category-filter.is-active {
+    background: linear-gradient(135deg, #2563eb, #0f766e);
+    color: #ffffff;
+    border-color: transparent;
+    box-shadow: 0 10px 24px rgba(37, 99, 235, 0.2);
+}
+
+.summary-cards-grid {
+    align-items: stretch;
+}
+
+.summary-card {
+    position: relative;
+}
+
+.summary-card .summary-card-content {
+    position: relative;
+    z-index: 1;
+}
+
+.summary-card-action {
+    cursor: pointer;
+}
+
+.summary-card-action:hover {
+    transform: translateY(-2px);
+}
+
+:root[data-theme-resolved='dark'] .summary-card-action:hover {
+    transform: translateY(-2px);
+}
+
+/* TASK 18 — highlight for ?highlight=<building_id> deep links (Building
+   Updated notification). Mirrors .users-card-highlight's color. The base
+   .summary-card border (styles.css) is unscoped/no-!important, and this
+   file loads after styles.css, so a plain .summary-card-highlight class
+   already wins on source order — no extra specificity needed. */
+.summary-card-highlight {
+    border-color: rgba(168, 139, 250, 0.85) !important;
+    box-shadow: 0 0 0 3px rgba(168, 139, 250, 0.35), 0 18px 40px rgba(0, 0, 0, 0.28) !important;
+}
+
+/* TASK 41 — room category label (Office/Classroom/Labs/Utility) as a
+   compact pill instead of plain unstyled block text. createEntityCard()
+   in buildings-overview.php already assigns .summary-card-badge to this
+   span; no stylesheet previously targeted the class, so it rendered as a
+   bare <span> with default flow styling. Reuses the exact blue accent
+   already established by .floor-card-badge below — no new colors/design
+   language introduced. */
+#overviewContainer .summary-card-badge {
+    display: inline-block;
+    margin-top: 0.2rem;
+    padding: 0.2rem 0.65rem;
+    border-radius: 999px;
+    background: rgba(37, 99, 235, 0.1);
+    border: 1px solid rgba(37, 99, 235, 0.22);
+    color: #2563eb;
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    line-height: 1.4;
+}
+
+:root[data-theme-resolved='dark'] #overviewContainer .summary-card-badge {
+    background: rgba(96, 165, 250, 0.14);
+    border-color: rgba(96, 165, 250, 0.32);
+    color: #60a5fa;
+}
+
+/* TASK 42A — room-level item cards (createItemCard() in buildings-overview.php)
+   show each room_asset row's individual fields (asset_code, brand, model,
+   condition, status) instead of a collapsed "Qty/Status" line. Each row is one
+   physical unit deployed via the Deploy to Room flow (TASK 37.2 split deploys
+   into per-unit room_asset rows), so this grid is the on-site identification
+   detail a technician actually needs.
+
+   TASK 59 — the card previously rode on the generic .summary-card KPI shell
+   (fixed 280px width, hardcoded purple border, flex-row layout, clickable
+   hover-lift), which visually orphaned it from the Building → Floor → Room
+   card family below (.building-card/.floor-card/.room-card: 18px radius,
+   var(--border), var(--buildings-surface), neutral shadow, ~44px tinted icon
+   badge). .item-asset-card adopts that same shell vocabulary. Unlike its
+   three siblings this card is not a drill-down target, so it intentionally
+   omits cursor:pointer and the translateY hover-lift — only a subtle
+   border/shadow transition remains, and the delete icon (see .card-delete
+   below) stays the sole independently-interactive element. */
+.item-asset-card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    height: auto;
+    min-height: 140px;
+    padding: 1.1rem 1.15rem 1.15rem;
+    border-radius: 18px;
+    border: 1px solid var(--border);
+    background: var(--buildings-surface);
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.04);
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.item-asset-card:hover {
+    border-color: rgba(37, 99, 235, 0.35);
+    box-shadow: 0 12px 26px rgba(15, 23, 42, 0.07);
+}
+
+:root[data-theme-resolved='dark'] .item-asset-card {
+    background: var(--surface);
+    border-color: var(--border);
+}
+
+/* TASK 77 — "Items in [Room]" now renders two card groups (room_asset rows,
+   then dispatch-deployed items) inside the same CSS grid (#overviewContainer
+   .summary-cards-grid, auto-fit columns) as the room_asset cards above, so
+   this heading needs to explicitly span every column rather than sitting in
+   its own cell. */
+.items-section-heading {
+    grid-column: 1 / -1;
+    margin: 0.5rem 0 -0.25rem;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--text-secondary, #64748b);
+}
+
+:root[data-theme-resolved='dark'] .item-asset-card:hover {
+    border-color: rgba(96, 165, 250, 0.4);
+    box-shadow: 0 12px 26px rgba(2, 8, 23, 0.35);
+}
+
+.item-asset-card-header {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    margin-bottom: 0.75rem;
+    /* Keeps the name clear of the absolutely-positioned .card-delete icon
+       (top:8px; right:8px) in the corner above it. */
+    padding-right: 1.75rem;
+}
+
+.item-asset-card-icon {
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    font-size: 1.2rem;
+    background: rgba(37, 99, 235, 0.1);
+}
+
+:root[data-theme-resolved='dark'] .item-asset-card-icon {
+    background: rgba(96, 165, 250, 0.14);
+}
+
+.item-asset-card-name {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 700;
+    line-height: 1.3;
+    color: var(--text-light, #111827);
+    overflow-wrap: anywhere;
+}
+
+/* TASK 58 (Fix 3) — .card-delete is assigned by createItemCard() in
+   buildings-overview.php (the delete/trash icon on each item card) but had
+   no live styling: its only prior definition lived in the orphaned,
+   unloaded buildings-overview.inline.css, so it rendered as an unstyled
+   inline block instead of a positioned icon button. Recreated here verbatim
+   from that file — position/placement only, no new design language. Its
+   position:relative anchor comes from .summary-card (line ~289, used by the
+   dead/unused createEntityCard() building branch — see comment at
+   buildings-overview.php:1211) or .item-asset-card (above) depending on
+   which card type it's placed in. .card-actions is NOT recreated: it is
+   only referenced by that same dead code path, not by any live code path,
+   so recreating it would be styling nothing. */
+.card-delete {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    font-size: 16px;
+    cursor: pointer;
+    opacity: 0.6;
+    /* TASK 59 — neutralizes default <button> chrome now that createItemCard()
+       renders this as a <button type="button"> instead of a <div> (see
+       buildings-overview.php); a no-op for the still-<div>-based dead
+       createEntityCard() path. No visual change from the prior styling. */
+    background: none;
+    border: none;
+    padding: 0;
+    line-height: 1;
+}
+
+.card-delete:hover {
+    opacity: 1;
+}
+
+.card-delete:focus-visible {
+    opacity: 1;
+    outline: 2px solid #2563eb;
+    outline-offset: 2px;
+    border-radius: 4px;
+}
+
+:root[data-theme-resolved='dark'] .card-delete:focus-visible {
+    outline-color: #60a5fa;
+}
+
+.item-detail-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.4rem 0.75rem;
+}
+
+.item-detail-row {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    min-width: 0;
+}
+
+.item-detail-label {
+    font-size: 0.68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--text-muted, #6b7280);
+}
+
+.item-detail-value {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text, #1f2937);
+    overflow-wrap: anywhere;
+}
+
+.item-detail-value.is-empty {
+    font-weight: 500;
+    font-style: italic;
+    color: var(--text-muted, #9ca3af);
+    opacity: 0.85;
+}
+
+/* TASK 52 — Asset Code is the field that uniquely identifies this physical
+   unit (e.g. AI-R101-01), but it rendered with the exact same weight/color
+   as Brand/Model/Condition/Status, so it had no visual priority on the card.
+   This gives it a compact monospace chip so it reads instantly as an
+   identifier rather than ordinary metadata — reusing the same blue accent
+   token already established for #overviewContainer .summary-card-badge
+   above (rgba(37,99,235,...) / #2563eb), not a new color. */
+.item-detail-row-code {
+    grid-column: 1 / -1;
+}
+
+.item-detail-value.item-detail-value-code {
+    display: inline-block;
+    width: fit-content;
+    max-width: 100%;
+    white-space: nowrap;
+    font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+    font-weight: 700;
+    font-size: 0.78rem;
+    letter-spacing: 0.02em;
+    padding: 0.1rem 0.45rem;
+    border-radius: 6px;
+    background: rgba(37, 99, 235, 0.1);
+    border: 1px solid rgba(37, 99, 235, 0.22);
+    color: #2563eb;
+}
+
+:root[data-theme-resolved='dark'] .item-detail-value.item-detail-value-code {
+    background: rgba(96, 165, 250, 0.14);
+    border-color: rgba(96, 165, 250, 0.32);
+    color: #60a5fa;
+}
+
+:root[data-theme-resolved='dark'] .item-detail-label {
+    color: rgba(226, 232, 240, 0.6);
+}
+
+:root[data-theme-resolved='dark'] .item-detail-value {
+    color: #e2e8f0;
+}
+
+:root[data-theme-resolved='dark'] .item-detail-value.is-empty {
+    color: rgba(226, 232, 240, 0.5);
+}
+
+/* ---------------------------------------------------------------------
+   Floors view (#overviewContainer.floors-grid + .floor-card)
+   Polish only: improves spacing/typography/grouping/alignment for the
+   existing floor cards and gives the drill-down arrow a cleaner chip
+   treatment. Markup and JS (createFloorCard) are unchanged.
+   ------------------------------------------------------------------- */
+#overviewContainer.floors-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
+    gap: 1rem;
+    align-items: stretch;
+}
+
+.floor-card {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1.1rem 1.25rem;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    background: var(--buildings-surface);
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.04);
+    transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+.floor-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 14px 30px rgba(15, 23, 42, 0.1);
+    border-color: rgba(37, 99, 235, 0.35);
+}
+
+.floor-card:focus-visible {
+    outline: 2px solid #2563eb;
+    outline-offset: 2px;
+}
+
+.floor-card-badge {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: rgba(37, 99, 235, 0.1);
+    border: 1px solid rgba(37, 99, 235, 0.22);
+    color: #2563eb;
+    font-size: 0.95rem;
+    font-weight: 800;
+}
+
+.floor-card-content {
+    flex: 1 1 auto;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+}
+
+.floor-card-name {
+    margin: 0;
+    font-size: 1.02rem;
+    font-weight: 700;
+    color: var(--text-light, #111827);
+}
+
+.floor-card-desc {
+    margin: 0;
+    font-size: 0.86rem;
+    color: var(--muted-text, #6b7280);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.floor-card-stats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-top: 0.15rem;
+}
+
+.floor-stat {
+    font-size: 0.82rem;
+    color: var(--muted-text, #6b7280);
+}
+
+.floor-stat strong {
+    color: var(--text-light, #111827);
+    font-weight: 700;
+}
+
+.floor-card-arrow {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: var(--buildings-surface-muted);
+    border: 1px solid var(--border);
+    color: var(--muted-text, #6b7280);
+    font-size: 0.95rem;
+    transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease, transform 0.15s ease;
+}
+
+.floor-card:hover .floor-card-arrow {
+    background: rgba(37, 99, 235, 0.1);
+    border-color: rgba(37, 99, 235, 0.35);
+    color: #2563eb;
+    transform: translateX(2px);
+}
+
+:root[data-theme-resolved='dark'] .floor-card {
+    background: var(--surface);
+    border-color: var(--border);
+}
+
+:root[data-theme-resolved='dark'] .floor-card:hover {
+    box-shadow: 0 14px 30px rgba(2, 8, 23, 0.4);
+    border-color: rgba(96, 165, 250, 0.45);
+}
+
+:root[data-theme-resolved='dark'] .floor-card-badge {
+    background: rgba(96, 165, 250, 0.14);
+    border-color: rgba(96, 165, 250, 0.32);
+    color: #60a5fa;
+}
+
+:root[data-theme-resolved='dark'] .floor-card-name {
+    color: var(--text-light, #f8fafc);
+}
+
+:root[data-theme-resolved='dark'] .floor-card-desc,
+:root[data-theme-resolved='dark'] .floor-stat {
+    color: var(--muted-text, #94a3b8);
+}
+
+:root[data-theme-resolved='dark'] .floor-stat strong {
+    color: var(--text-light, #f8fafc);
+}
+
+:root[data-theme-resolved='dark'] .floor-card-arrow {
+    background: var(--surface-muted, rgba(17, 24, 39, 0.75));
+    border-color: var(--border);
+    color: var(--muted-text, #94a3b8);
+}
+
+:root[data-theme-resolved='dark'] .floor-card:hover .floor-card-arrow {
+    background: rgba(96, 165, 250, 0.16);
+    border-color: rgba(96, 165, 250, 0.4);
+    color: #60a5fa;
+}
+
+/* TASK 58 (Fix 2) — styles.css defines a broad, light-theme-scoped rule
+   (:root[data-theme-resolved='light'] h1,h2,h3,p,label,span { color:#1e293b })
+   whose specificity (0,2,1) beats the plain single-class
+   .floor-card-desc/.floor-stat rules above (0,1,0), so in light theme these
+   elements rendered dark navy instead of the intended muted gray. This
+   theme-scoped override (0,3,0) wins on specificity without touching the
+   existing dark-theme rule immediately above. Same pattern already used for
+   .room-card-context/.building-card-stat-label. */
+:root[data-theme-resolved='light'] .floor-card-desc,
+:root[data-theme-resolved='light'] .floor-stat {
+    color: var(--muted-text, #6b7280);
+}
+
+.print-preview-page {
+    position: relative;
+    margin: 1.25rem 0 0;
+    padding: 1.5rem;
+    max-width: 1100px;
+    background: var(--buildings-surface);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    box-shadow: 0 18px 48px rgba(15, 23, 42, 0.08);
+}
+
+.print-preview-sheet {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.print-preview-header {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 1rem;
+    align-items: flex-start;
+}
+
+.print-preview-branding {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    flex: 1 1 420px;
+}
+
+.print-preview-logo {
+    width: 78px;
+    height: auto;
+    border-radius: 12px;
+    object-fit: contain;
+}
+
+.print-preview-school,
+.print-preview-title {
+    line-height: 1.3;
+}
+
+.print-preview-school {
+    font-size: 0.95rem;
+    color: var(--muted-text, #6b7280);
+}
+
+.print-preview-title {
+    margin-top: 0.35rem;
+    font-size: 1.15rem;
+    font-weight: 700;
+}
+
+.print-preview-meta {
+    display: grid;
+    gap: 0.65rem;
+    min-width: 240px;
+}
+
+.print-preview-body {
+    background: var(--surface-muted, #f9f9f9);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 1rem;
+    min-height: 260px;
+}
+
+.print-preview-footer {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 1rem;
+    align-items: center;
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--border);
+}
+
+.print-preview-summary {
+    font-weight: 600;
+}
+
+.print-preview-signatures {
+    display: grid;
+    gap: 0.55rem;
+    min-width: 280px;
+}
+
+.print-preview-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 0.75rem;
+    font-size: 0.92rem;
+}
+
+.print-preview-table th,
+.print-preview-table td {
+    border: 1px solid var(--border);
+    padding: 0.55rem 0.7rem;
+    text-align: left;
+}
+
+.print-preview-table th {
+    background: var(--surface-muted, #f2f4f8);
+    font-weight: 700;
+}
+
+.print-room-group {
+    margin-bottom: 1.4rem;
+}
+
+.print-room-heading {
+    font-size: 1rem;
+    margin-bottom: 0.65rem;
+    font-weight: 700;
+}
+
+.print-room-subtotal {
+    margin-top: 0.75rem;
+    font-weight: 600;
+}
+
+.print-preview-loading,
+.print-preview-empty {
+    padding: 1.5rem;
+    text-align: center;
+    color: var(--muted-text, #6b7280);
+}
+
+:root[data-theme-resolved='dark'] .print-preview-page {
+    background: var(--surface);
+}
+
+:root[data-theme-resolved='dark'] .print-preview-body {
+    background: var(--surface-muted);
+}
+
+:root[data-theme-resolved='dark'] .print-preview-table th {
+    background: var(--surface-muted, #172033);
+}
+
+.screen-only {
+    display: block;
+}
+
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 2000;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(17, 24, 39, 0.52);
+    backdrop-filter: blur(6px);
+    animation: buildingsFadeIn 0.2s ease-out;
+}
+
+.modal.show {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+@keyframes buildingsFadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+.modal-content {
+    background: var(--buildings-surface);
+    border: 1px solid var(--border);
+    border-radius: 24px;
+    width: min(92vw, 560px);
+    min-height: 320px;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 28px 74px rgba(15, 23, 42, 0.16);
+    overflow: hidden;
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    padding: 24px 24px 18px;
+    border-bottom: 1px solid var(--border);
+}
+
+.modal-header h2 {
+    margin: 0;
+    font-size: 20px;
+    color: var(--text-light, #111827);
+}
+
+.modal-close {
+    font-size: 28px;
+    font-weight: 600;
+    cursor: pointer;
+    /* Readability fix (2026-09-22): was #9ca3af (~2.5:1 on the white modal),
+       under WCAG's 3:1 floor for UI controls. */
+    color: #6b7280;
+    transition: color 0.2s ease, transform 0.2s ease;
+}
+
+.modal-close:hover {
+    color: #2563eb;
+    transform: rotate(90deg);
+}
+
+.modal-body {
+    padding: 24px;
+    flex: 1;
+    overflow-y: auto;
+}
+
+.modal-body .form-group {
+    margin-bottom: 16px;
+}
+
+.modal-body label {
+    display: block;
+    margin-bottom: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #374151;
+}
+
+.modal-body .form-control {
+    width: 100%;
+    padding: 12px 14px;
+    background: var(--buildings-surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    color: var(--text-light, #111827);
+    font-family: inherit;
+    font-size: 14px;
+    transition: all 0.2s ease;
+}
+
+.modal-body .form-control:focus {
+    outline: none;
+    border-color: rgba(59, 130, 246, 0.8);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
+}
+
+.modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    padding: 18px 24px 24px;
+    border-top: 1px solid var(--border);
+}
+
+.modal-footer .btn {
+    padding: 10px 18px;
+    border-radius: 12px;
+    border: 1px solid rgba(209, 213, 219, 0.95);
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    transition: all 0.2s ease;
+}
+
+.modal-footer .btn-secondary {
+    background: var(--buildings-surface);
+    color: #374151;
+}
+
+.modal-footer .btn-secondary:hover {
+    background: #f8fafc;
+    border-color: #cbd5e1;
+}
+
+.modal-footer .btn-primary {
+    background: linear-gradient(135deg, #2563eb, #0f766e);
+    color: #ffffff;
+    border-color: transparent;
+}
+
+.modal-footer .btn-primary:hover {
+    background: linear-gradient(135deg, #1d4ed8, #115e59);
+}
+
+@media (max-width: 992px) {
+    .buildings-page-hero {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .buildings-page-hero-metrics {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        min-width: 0;
+    }
+
+    #overviewContainer.floors-grid {
+        grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    }
+}
+
+@media (max-width: 768px) {
+    .buildings-page-container {
+        gap: 1rem;
+    }
+
+    .buildings-page-hero {
+        padding: 1.2rem;
+        border-radius: 20px;
+    }
+
+    .buildings-page-hero-metrics {
+        grid-template-columns: 1fr;
+    }
+
+    #overviewContainer.floors-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .floor-card {
+        flex-wrap: wrap;
+    }
+
+    .floor-card-stats {
+        gap: 0.6rem;
+    }
+
+    .buildings-overview-card #overviewHeader {
+        flex-direction: column;
+    }
+
+    .header-actions {
+        width: 100%;
+        justify-content: flex-start;
+    }
+
+    .room-search-wrap,
+    .print-preview-page {
+        padding: 1rem;
+    }
+
+    .modal-content {
+        width: min(94vw, 560px);
+    }
+}
+
+/* ============================================================
+   TASK 46 — Buildings Overview: enterprise stat cards, search/
+   sort/view toolbar, and redesigned building cards (top-level
+   "Buildings" list only — the floor/room/item drill-down markup,
+   classes, and JS data flow above are all untouched). Reuses the
+   existing PHILCST --primary purple + --color-info blue +
+   --success-color green + --accent orange + --danger red tokens
+   already defined in styles.css / color-scheme.css; no new color
+   language introduced. Selectors are scoped to
+   #buildingsStatsSection / #buildingToolbarWrap / .building-card*
+   so this cannot leak into other pages.
+   ============================================================ */
+
+/* ---- Summary stat cards ---- */
+.buildings-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+    gap: 0.85rem;
+    margin: 0 0 var(--buildings-page-gap);
+}
+
+/* The [hidden] attribute is how setBuildingChromeVisibility() toggles this
+   section (see buildings-overview.php). Author stylesheets take precedence
+   over the UA stylesheet's `[hidden] { display: none }` rule at equal
+   specificity, so without this the `display: grid` above would win and the
+   stat cards would stay visible while drilled into Floors/Rooms/Items. */
+.buildings-stats-grid[hidden],
+.building-toolbar-wrap[hidden] {
+    display: none;
+}
+
+.buildings-stat-card {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 0.95rem 1.05rem;
+    border-radius: 16px;
+    border: 1px solid var(--border);
+    background: var(--buildings-surface);
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.04);
+    min-height: 84px;
+}
+
+.buildings-stat-icon {
+    flex: 0 0 auto;
+    display: grid;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    font-size: 1.05rem;
+    background: rgba(139, 92, 246, 0.12);
+    color: var(--primary, #8b5cf6);
+}
+
+.buildings-stat-card--floors .buildings-stat-icon {
+    background: rgba(59, 130, 246, 0.12);
+    color: var(--color-info, #3b82f6);
+}
+
+.buildings-stat-card--rooms .buildings-stat-icon {
+    background: rgba(16, 185, 129, 0.12);
+    color: var(--success-color, #10b981);
+}
+
+.buildings-stat-card--items .buildings-stat-icon {
+    background: rgba(245, 158, 11, 0.14);
+    color: var(--accent, #f59e0b);
+}
+
+.buildings-stat-card--pending .buildings-stat-icon {
+    background: rgba(220, 38, 38, 0.12);
+    color: var(--danger, #dc2626);
+}
+
+.buildings-stat-body {
+    min-width: 0;
+}
+
+.buildings-stat-label {
+    margin: 0 0 0.2rem;
+    font-size: 0.68rem;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted-text, #6b7280);
+}
+
+.buildings-stat-value {
+    margin: 0;
+    font-size: 1.5rem;
+    line-height: 1.15;
+    font-weight: 800;
+    color: var(--text-light, #111827);
+}
+
+.buildings-stat-desc {
+    margin: 0.15rem 0 0;
+    font-size: 0.76rem;
+    color: var(--muted-text, #6b7280);
+}
+
+:root[data-theme-resolved='dark'] .buildings-stat-card {
+    background: var(--surface);
+    border-color: var(--border);
+}
+
+/* ---- Toolbar: search / sort / view toggle ---- */
+.building-toolbar-wrap {
+    margin-bottom: 1.1rem;
+    padding: 0.85rem 1rem;
+    border-radius: 16px;
+    border: 1px solid var(--border);
+    background: var(--buildings-surface-muted);
+}
+
+.building-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+}
+
+.building-toolbar-search {
+    flex: 1 1 260px;
+    min-width: 200px;
+}
+
+.building-search-input {
+    width: 100%;
+    min-height: 42px;
+    padding: 0.65rem 0.9rem;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    background: var(--buildings-surface);
+    color: var(--text-light, #111827);
+}
+
+.building-search-input:focus {
+    outline: none;
+    border-color: rgba(139, 92, 246, 0.6);
+    box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.14);
+}
+
+/* TASK 101B — persistent Building -> Floor -> Room filter row. Sizing, colour,
+   focus ring, dark theme and the <=768px stacking all come from the existing
+   .building-toolbar / .building-toolbar-search / .building-search-input rules;
+   these three only stack each label above its input and mute the hint line. */
+.building-cascade-toolbar {
+    align-items: flex-end;
+}
+
+.building-cascade-label {
+    display: block;
+    margin-bottom: 0.35rem;
+}
+
+.building-cascade-hint {
+    margin: 0.6rem 0 0.85rem;
+    font-size: 0.78rem;
+    color: var(--muted-text, #6b7280);
+}
+
+.building-toolbar-controls {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+}
+
+.building-sort-label {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--muted-text, #6b7280);
+    white-space: nowrap;
+}
+
+.building-sort-select {
+    min-height: 42px;
+    padding: 0.5rem 2rem 0.5rem 0.8rem;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    background: var(--buildings-surface);
+    color: var(--text-light, #111827);
+    font-size: 0.86rem;
+}
+
+.building-sort-select:focus-visible {
+    outline: none;
+    border-color: rgba(139, 92, 246, 0.6);
+    box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.14);
+}
+
+.building-view-toggle {
+    display: inline-flex;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.building-view-btn {
+    padding: 0.5rem 0.9rem;
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: var(--muted-text, #6b7280);
+    background: var(--buildings-surface);
+    border: none;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+}
+
+.building-view-btn + .building-view-btn {
+    border-left: 1px solid var(--border);
+}
+
+.building-view-btn.is-active {
+    background: var(--primary, #8b5cf6);
+    color: #ffffff;
+}
+
+.building-view-btn:focus-visible {
+    outline: 2px solid var(--primary, #8b5cf6);
+    outline-offset: -2px;
+}
+
+:root[data-theme-resolved='dark'] .building-toolbar-wrap {
+    background: var(--surface-muted, rgba(17, 24, 39, 0.75));
+    border-color: var(--border);
+}
+
+:root[data-theme-resolved='dark'] .building-search-input,
+:root[data-theme-resolved='dark'] .building-sort-select,
+:root[data-theme-resolved='dark'] .building-view-btn {
+    background: var(--surface);
+    border-color: var(--border);
+    color: var(--text-light);
+}
+
+:root[data-theme-resolved='dark'] .building-view-btn.is-active {
+    background: var(--primary, #8b5cf6);
+    color: #ffffff;
+}
+
+/* ---- Building cards ---- */
+#overviewContainer.building-cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 1rem;
+    align-items: stretch;
+}
+
+#overviewContainer.building-cards-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.building-card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    padding: 1.1rem 1.15rem 1.15rem;
+    border-radius: 18px;
+    border: 1px solid var(--border);
+    background: var(--buildings-surface);
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.04);
+    cursor: pointer;
+    transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+.building-card:hover {
+    transform: translateY(-2px);
+    border-color: rgba(139, 92, 246, 0.4);
+    box-shadow: 0 16px 34px rgba(15, 23, 42, 0.1);
+}
+
+.building-card:focus-visible {
+    outline: 2px solid var(--primary, #8b5cf6);
+    outline-offset: 2px;
+}
+
+.building-card-top {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 0.85rem;
+}
+
+/* TASK 64 — enlarged from the old 44px emoji icon box to comfortably frame
+   the illustration image (see .building-card-illustration below) while
+   reusing the same rounded, tinted container this element already had. */
+/* TASK 65 — enlarged further (72px -> 80px) and given a subtle purple-tinted
+   border/glow so the illustration reads as a distinct visual anchor rather
+   than a flat tinted square. */
+.building-card-icon {
+    display: grid;
+    place-items: center;
+    flex: 0 0 auto;
+    width: 80px;
+    height: 80px;
+    border-radius: 18px;
+    overflow: hidden;
+    background: rgba(139, 92, 246, 0.12);
+    border: 1px solid rgba(139, 92, 246, 0.18);
+    box-shadow: 0 0 0 4px rgba(139, 92, 246, 0.05);
+}
+
+.building-card-illustration {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    transition: transform 0.15s ease;
+}
+
+.building-card:hover .building-card-illustration {
+    transform: scale(1.04);
+}
+
+.building-card-menu-btn {
+    display: grid;
+    place-items: center;
+    flex: 0 0 auto;
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--muted-text, #6b7280);
+    font-size: 1.1rem;
+    line-height: 1;
+    cursor: pointer;
+    transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.building-card-menu-btn:hover,
+.building-card-menu-btn:focus-visible {
+    background: rgba(139, 92, 246, 0.12);
+    border-color: rgba(139, 92, 246, 0.28);
+    color: var(--primary, #8b5cf6);
+    outline: none;
+}
+
+/* TASK 64 — name moved inside .building-card-top (next to the illustration)
+   so it no longer needs bottom margin; flex:1 lets it fill the space
+   between the illustration and the menu button. */
+.building-card-name {
+    flex: 1 1 auto;
+    min-width: 0;
+    margin: 0;
+    font-size: 1.05rem;
+    font-weight: 700;
+    line-height: 1.3;
+    color: var(--text-light, #111827);
+    overflow-wrap: anywhere;
+}
+
+.building-card-stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.5rem;
+    padding: 0.7rem 0;
+    margin-bottom: 0.85rem;
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+}
+
+.building-card-stat {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.15rem;
+    text-align: center;
+}
+
+.building-card-stat-value {
+    font-size: 1.05rem;
+    font-weight: 800;
+    color: var(--text-light, #111827);
+}
+
+.building-card-stat-label {
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    color: var(--muted-text, #6b7280);
+}
+
+/* TASK 56 — styles.css has a broad, higher-specificity light-theme rule
+   (:root[data-theme-resolved='light'] h1,h2,h3,p,label,span { color:#1e293b })
+   that overrides this <span>'s intended muted-text color, making the
+   ROOMS/FLOORS/ITEMS labels render as dark text instead of a muted
+   secondary tone. Re-assert the existing --muted-text token at matching
+   specificity, same pattern used for .room-card-context /
+   .room-card-category-value in Task 55, rather than editing the shared
+   stylesheet. */
+:root[data-theme-resolved='light'] .building-card-stat-label {
+    color: var(--muted-text, #6b7280);
+}
+
+.building-card-view-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    width: 100%;
+    padding: 0.6rem 0.8rem;
+    margin-top: auto;
+    border-radius: 12px;
+    border: 1px solid rgba(139, 92, 246, 0.3);
+    background: rgba(139, 92, 246, 0.1);
+    color: var(--primary, #8b5cf6);
+    font-size: 0.86rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
+}
+
+.building-card-view-btn:hover,
+.building-card-view-btn:focus-visible {
+    background: rgba(139, 92, 246, 0.18);
+    border-color: rgba(139, 92, 246, 0.5);
+    outline: none;
+}
+
+.building-card-view-btn span {
+    transition: transform 0.15s ease;
+}
+
+.building-card-view-btn:hover span {
+    transform: translateX(2px);
+}
+
+/* List view: horizontal layout reusing the same card, echoing .floor-card's
+   row treatment for visual consistency with the Floors drill-down view. */
+.building-cards-list .building-card {
+    flex-direction: row;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.85rem 1.1rem;
+}
+
+/* TASK 64 — name now lives inside .building-card-top, so in list view the
+   top row itself must grow to fill the row (it used to be a fixed-size
+   icon+menu box); the illustration is also sized down to stay compact in
+   the row, per Task 64 Part 14's list-view guidance. */
+.building-cards-list .building-card-top {
+    margin-bottom: 0;
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.building-cards-list .building-card-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 14px;
+}
+
+.building-cards-list .building-card-name {
+    margin: 0 1rem 0 0;
+}
+
+.building-cards-list .building-card-stats {
+    flex: 0 0 auto;
+    border: none;
+    padding: 0;
+    margin: 0 1rem 0 0;
+    grid-auto-flow: column;
+    grid-template-columns: repeat(3, auto);
+    gap: 1.1rem;
+}
+
+.building-cards-list .building-card-view-btn {
+    flex: 0 0 auto;
+    width: auto;
+    margin-top: 0;
+    padding: 0.55rem 1rem;
+}
+
+:root[data-theme-resolved='dark'] .building-card {
+    background: var(--surface);
+    border-color: var(--border);
+}
+
+:root[data-theme-resolved='dark'] .building-card:hover {
+    border-color: rgba(167, 139, 250, 0.5);
+    box-shadow: 0 16px 34px rgba(2, 8, 23, 0.4);
+}
+
+:root[data-theme-resolved='dark'] .building-card-icon {
+    background: rgba(167, 139, 250, 0.16);
+    border-color: rgba(167, 139, 250, 0.28);
+    box-shadow: 0 0 0 4px rgba(167, 139, 250, 0.08);
+}
+
+:root[data-theme-resolved='dark'] .building-card.summary-card-highlight {
+    border-color: rgba(168, 139, 250, 0.85) !important;
+    box-shadow: 0 0 0 3px rgba(168, 139, 250, 0.35), 0 18px 40px rgba(0, 0, 0, 0.28) !important;
+}
+
+.building-card.summary-card-highlight {
+    border-color: rgba(168, 139, 250, 0.85);
+    box-shadow: 0 0 0 3px rgba(168, 139, 250, 0.35), 0 18px 40px rgba(0, 0, 0, 0.2);
+}
+
+@media (max-width: 992px) {
+    .buildings-stats-grid {
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    }
+}
+
+@media (max-width: 768px) {
+    .buildings-stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .building-toolbar {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .building-toolbar-controls {
+        justify-content: space-between;
+    }
+
+    #overviewContainer.building-cards-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .building-cards-list .building-card {
+        flex-wrap: wrap;
+    }
+
+    .building-cards-list .building-card-stats {
+        order: 3;
+        width: 100%;
+        justify-content: space-between;
+        margin: 0.6rem 0 0;
+    }
+
+    .building-cards-list .building-card-view-btn {
+        order: 4;
+        width: 100%;
+        margin-top: 0.6rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .buildings-stats-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* ============================================================
+   TASK 55 — Buildings Overview: Room card + drill-down polish.
+   Purely visual/CSS additions; no JS filtering logic, backend,
+   RBAC, or navigation behavior is touched. Room cards move off the
+   generic .summary-card (fixed 280x140, KPI-label styling) onto a
+   dedicated .room-card that mirrors .building-card's geometry
+   (padding/border-radius/shadow/hover) with the blue accent already
+   established by .floor-card / the room category badge elsewhere in
+   this file — no new color language introduced. The stat cells
+   intentionally reuse .building-card-stat/-stat-value/-stat-label
+   as-is (added alongside .room-card-stats) instead of duplicating
+   that CSS. Renders inside the existing #overviewContainer.summary-
+   cards-grid grid (styles.css: repeat(auto-fit, minmax(280px, 1fr)))
+   so no container-class change was needed.
+   ============================================================ */
+
+.room-category-filter:focus-visible {
+    outline: 2px solid #2563eb;
+    outline-offset: 2px;
+}
+
+.room-card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    padding: 1.1rem 1.15rem 1.15rem;
+    border-radius: 18px;
+    border: 1px solid var(--border);
+    background: var(--buildings-surface);
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.04);
+    cursor: pointer;
+    transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+.room-card:hover {
+    transform: translateY(-2px);
+    border-color: rgba(37, 99, 235, 0.4);
+    box-shadow: 0 14px 30px rgba(15, 23, 42, 0.1);
+}
+
+.room-card:focus-visible {
+    outline: 2px solid #2563eb;
+    outline-offset: 2px;
+}
+
+/* TASK 69 — header row (icon / name / ⋮ menu), mirrors .building-card-top
+   so the room card's top-of-card hierarchy matches the building card's. */
+.room-card-top {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    margin-bottom: 0.75rem;
+}
+
+.room-card-icon {
+    display: grid;
+    place-items: center;
+    flex: 0 0 auto;
+    width: 48px;
+    height: 48px;
+    border-radius: 14px;
+    font-size: 1.35rem;
+    background: rgba(37, 99, 235, 0.1);
+    border: 1px solid rgba(37, 99, 235, 0.18);
+    box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.05);
+}
+
+.room-card-name {
+    flex: 1 1 auto;
+    min-width: 0;
+    margin: 0;
+    font-size: 1.05rem;
+    font-weight: 700;
+    line-height: 1.3;
+    color: var(--text-light, #111827);
+    overflow-wrap: anywhere;
+}
+
+/* TASK 67 — room-card kebab menu (Edit Room / Delete Room). Reuses
+   .building-card-menu-btn for the trigger button so it matches the building
+   card's menu affordance.
+   TASK 69 — moved from absolute top-right positioning into the .room-card-top
+   flex row (alongside icon/name) so it no longer requires the .room-card-name
+   padding-right overlap hack; the dropdown itself stays position:absolute,
+   anchored to this wrap via position:relative. */
+.room-card-menu-wrap {
+    position: relative;
+    flex: 0 0 auto;
+    margin-left: auto;
+}
+
+.room-card-menu-dropdown {
+    display: none;
+    position: absolute;
+    top: calc(100% + 4px);
+    right: 0;
+    min-width: 150px;
+    padding: 0.35rem;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: var(--buildings-surface);
+    box-shadow: 0 12px 28px rgba(15, 23, 42, 0.16);
+    z-index: 20;
+}
+
+.room-card-menu-wrap.open .room-card-menu-dropdown {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+}
+
+.room-card-menu-item {
+    display: block;
+    width: 100%;
+    padding: 0.45rem 0.6rem;
+    border: none;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--text-light, #111827);
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-align: left;
+    cursor: pointer;
+    transition: background 0.15s ease;
+}
+
+.room-card-menu-item:hover,
+.room-card-menu-item:focus-visible {
+    background: rgba(139, 92, 246, 0.12);
+    outline: none;
+}
+
+.room-card-menu-item-danger {
+    color: #dc2626;
+}
+
+.room-card-menu-item-danger:hover,
+.room-card-menu-item-danger:focus-visible {
+    background: rgba(220, 38, 38, 0.12);
+}
+
+.room-card-context {
+    margin: 0 0 0.75rem;
+    font-size: 0.82rem;
+    color: var(--muted-text, #6b7280);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.room-card-stats {
+    grid-template-columns: repeat(2, 1fr);
+}
+
+.room-card-category-value {
+    color: #2563eb;
+}
+
+:root[data-theme-resolved='dark'] .room-card {
+    background: var(--surface);
+    border-color: var(--border);
+}
+
+:root[data-theme-resolved='dark'] .room-card:hover {
+    border-color: rgba(96, 165, 250, 0.45);
+    box-shadow: 0 14px 30px rgba(2, 8, 23, 0.4);
+}
+
+:root[data-theme-resolved='dark'] .room-card-icon {
+    background: rgba(96, 165, 250, 0.14);
+    border-color: rgba(96, 165, 250, 0.28);
+    box-shadow: 0 0 0 4px rgba(96, 165, 250, 0.08);
+}
+
+:root[data-theme-resolved='dark'] .room-card-category-value {
+    color: #60a5fa;
+}
+
+/* styles.css has a broad, higher-specificity light-theme rule
+   (:root[data-theme-resolved='light'] h1,h2,h3,p,label,span { color:#1e293b })
+   that otherwise overrides .room-card-context's muted-text color and
+   .room-card-category-value's blue accent (both render as plain <p>/<span>).
+   Re-assert the intended colors at matching specificity, same pattern as
+   the dark-theme overrides above, rather than editing the shared stylesheet. */
+:root[data-theme-resolved='light'] .room-card-context {
+    color: var(--muted-text, #6b7280);
+}
+
+:root[data-theme-resolved='light'] .room-card-category-value {
+    color: #2563eb;
+}
+
+/* Empty states (renderEmptyOverview()) — new classes added alongside the
+   existing .summary-card/-content/-title/-desc classes so Item cards (which
+   also use .summary-card-title) are unaffected. Spans the full grid width
+   instead of floating as a narrow fixed-size 280x140 .summary-card. */
+#overviewContainer .overview-empty-card {
+    width: 100%;
+    height: auto;
+    min-height: 200px;
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: default;
+}
+
+.overview-empty-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    padding: 1.5rem 1rem;
+    text-align: center;
+}
+
+.overview-empty-icon {
+    display: grid;
+    place-items: center;
+    width: 52px;
+    height: 52px;
+    margin-bottom: 0.3rem;
+    border-radius: 50%;
+    background: var(--buildings-surface-muted);
+    border: 1px solid var(--border);
+    font-size: 1.5rem;
+    opacity: 0.85;
+}
+
+#overviewContainer .overview-empty-title {
+    margin: 0;
+    font-size: 0.98rem;
+    font-weight: 700;
+    text-transform: none;
+    letter-spacing: normal;
+    color: var(--text-light, #111827);
+}
+
+#overviewContainer .overview-empty-desc {
+    margin: 0;
+    max-width: 320px;
+    font-size: 0.85rem;
+    color: var(--muted-text, #6b7280);
+}
+
+:root[data-theme-resolved='dark'] .overview-empty-icon {
+    background: var(--surface-muted, rgba(17, 24, 39, 0.75));
+    border-color: var(--border);
+}
+
+@media (max-width: 480px) {
+    .room-card {
+        padding: 1rem;
+    }
+}
+
+@media print {
+    body * {
+        visibility: hidden;
+    }
+
+    .print-preview-page,
+    .print-preview-page * {
+        visibility: visible;
+    }
+
+    .print-preview-page {
+        position: static !important;
+        margin: 0;
+        width: auto !important;
+        box-shadow: none;
+        border: none;
+        border-radius: 0;
+        padding: 0;
+    }
+
+    .print-preview-page .print-preview-actions {
+        display: none;
+    }
+
+    .print-preview-page .print-preview-sheet {
+        gap: 0.5rem;
+    }
+
+    .screen-only {
+        display: none !important;
+    }
+
+    @page {
+        margin: 12mm;
+    }
+}
+
+/* ===================================================================
+   APP-WIDE PURPLE BORDER ACCENT — Buildings Overview
+   ===================================================================
+   Part of the system-wide container-edge pass. Every selector listed
+   here ALREADY has a 1px border declared above; this block only
+   recolours it. No border-width, border-style, radius, padding or size
+   is touched, so the border box is mathematically identical and nothing
+   can reflow or overflow at any viewport. (.buildings-overview-card is
+   deliberately absent: it has no border at all, and adding one would
+   change layout.)
+
+   Two tiers only, matching the rest of the app:
+     --purple-border   major cards, panels, the modal shell, popovers
+     --purple-control  search inputs, selects, filter pills, toggles
+
+   DELIBERATELY LEFT NEUTRAL GREY, so purple keeps meaning "container"
+   rather than "every line on the page":
+     .modal-header / .modal-footer            interior dividers
+     .building-card-stats top/bottom rules    interior divider
+     .building-view-btn + .building-view-btn  internal separator
+     .print-preview-table th/td               table cells
+     .floor-card-arrow and small icon chips   internal ornaments
+
+   No !important. These rules sit at the end of the same file as the
+   declarations they override and carry equal specificity, so source
+   order alone is enough. The dark-theme blocks above are inert (this
+   app is light-only) and are left untouched.
+   =================================================================== */
+.buildings-page-hero-metrics > div,
+.buildings-page-hero-metrics > a,
+.buildings-page-hero-metrics > button,
+.room-search-wrap,
+.item-asset-card,
+.floor-card,
+.buildings-stat-card,
+.building-toolbar-wrap,
+.building-card,
+.room-card,
+.room-card-menu,
+.modal-content {
+    border-color: var(--purple-border, var(--border));
+}
+
+.room-search-input,
+.room-category-filter,
+.building-search-input,
+.building-sort-select,
+.building-view-toggle {
+    border-color: var(--purple-control, var(--border));
+}

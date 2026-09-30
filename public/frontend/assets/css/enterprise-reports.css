@@ -1,0 +1,397 @@
+/**
+ * Enterprise Report Management visual language.
+ * Shared, additive polish layer for reports.php, create-report.php,
+ * report-detail.php, damage-reports.php, repair-requests.php.
+ * Loads after each page's own stylesheets so these rules win without
+ * needing !important. Targets each page's existing selectors/markup —
+ * PHP/SQL/JS logic, APIs, permissions, validation and report workflow
+ * are unchanged; this file only adds visual structure/polish.
+ */
+
+/* ====================================================================
+   Search + filter row (damage-reports.php, repair-requests.php).
+   Search input grows, selects share remaining space, action button
+   stays compact — wraps to a single column on small screens instead
+   of the previous fixed inline grid-template-columns (which did not
+   collapse on mobile).
+   ==================================================================== */
+.report-filters-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 14px;
+}
+
+.report-filters-row .search-bar {
+    flex: 2 1 240px;
+}
+
+.report-filters-row .filter-select,
+.report-filters-row select.form-control,
+.report-filters-row input.form-control[type="search"] {
+    flex: 1 1 160px;
+    min-width: 0;
+}
+
+.report-filters-row > .btn {
+    flex: 0 0 auto;
+}
+
+@media (max-width: 640px) {
+    .report-filters-row {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .report-filters-row .search-bar,
+    .report-filters-row .filter-select,
+    .report-filters-row select.form-control,
+    .report-filters-row input.form-control[type="search"],
+    .report-filters-row > .btn {
+        flex: 1 1 auto;
+        width: 100%;
+    }
+}
+
+/* ====================================================================
+   Table wrapper chrome. `.table-responsive` previously had no base
+   styling anywhere in the app (only a light-mode color override that
+   assumed one existed), so wide tables had no horizontal-scroll
+   affordance on tablet/mobile. Scoped to the report-management pages
+   only for this phase.
+   ==================================================================== */
+.damage-reports-page .table-responsive,
+.repair-requests-page .table-responsive {
+    overflow-x: auto;
+    border-radius: var(--radius-lg, 16px);
+    border: 1px solid var(--border, #e5e7eb);
+    background: var(--card-color, #ffffff);
+    box-shadow: var(--shadow-sm, 0 1px 3px rgba(15, 23, 42, 0.08));
+}
+
+.damage-reports-page .table-responsive .table,
+.repair-requests-page .table-responsive .table {
+    border-radius: 0;
+    box-shadow: none;
+    margin: 0;
+}
+
+.damage-reports-page .table-responsive .ui-empty-state,
+.repair-requests-page .table-responsive .ui-empty-state {
+    border: none;
+    border-radius: 0;
+    background: transparent;
+}
+
+/* Sticky, readable table headers + subtle row zebra/hover for report tables. */
+.damage-reports-page .table-responsive table thead th,
+.repair-requests-page .table-responsive table thead th,
+.reports-page-container .reports-table thead th,
+.reports-page-container #reports-container table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    font-size: 12px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.damage-reports-page .table-responsive table tbody tr:nth-child(even),
+.repair-requests-page .table-responsive table tbody tr:nth-child(even),
+.reports-page-container .reports-table tbody tr:nth-child(even),
+.reports-page-container #reports-container table tbody tr:nth-child(even) {
+    background: rgba(148, 163, 184, 0.06);
+}
+
+.damage-reports-page .table-responsive table tbody tr:hover,
+.repair-requests-page .table-responsive table tbody tr:hover,
+.reports-page-container .reports-table tbody tr:hover,
+.reports-page-container #reports-container table tbody tr:hover {
+    background: rgba(109, 40, 217, 0.07);
+}
+
+/* ====================================================================
+   Simple prev/next pagination bar (damage-reports.php), aligned with
+   the card-style pagination chrome already used on reports.php.
+   ==================================================================== */
+.report-pagination-bar {
+    margin-top: 16px;
+    padding: 12px 16px;
+    border: 1px solid var(--border, rgba(148, 163, 184, 0.32));
+    border-radius: var(--radius-lg, 12px);
+    background: var(--card-color, #ffffff);
+}
+
+.report-pagination-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+@media (max-width: 480px) {
+    .report-pagination-controls {
+        flex-direction: column;
+        align-items: stretch;
+        text-align: center;
+    }
+}
+
+/* ====================================================================
+   Multi-section form layout (create-report.php, repair-requests.php
+   create form). Purely structural/visual wrapping around the existing
+   .form-group fields — field ids/names/required attributes untouched.
+   ==================================================================== */
+.form-section {
+    border: 1px solid var(--border, #e5e7eb);
+    border-radius: var(--radius-lg, 16px);
+    background: var(--card-color, #ffffff);
+    padding: 20px;
+    margin-bottom: 18px;
+}
+
+.form-section + .form-section {
+    margin-top: 0;
+}
+
+.form-section-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 16px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--border, #e5e7eb);
+}
+
+.form-section-index {
+    flex-shrink: 0;
+    width: 28px;
+    height: 28px;
+    display: grid;
+    place-items: center;
+    border-radius: 999px;
+    background: var(--primary-bg, #f3e8ff);
+    color: var(--primary, #6d28d9);
+    font-weight: 700;
+    font-size: 13px;
+}
+
+.form-section-title {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text-light, #111827);
+}
+
+.form-section-subtitle {
+    margin: 2px 0 0;
+    font-size: 13px;
+    color: var(--text-muted, #6b7280);
+}
+
+.form-section-optional {
+    font-weight: 400;
+    font-size: 13px;
+    color: var(--text-muted, #6b7280);
+}
+
+.form-section-body .form-group:last-child {
+    margin-bottom: 0;
+}
+
+.form-row-2 {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+}
+
+.form-row-3 {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+}
+
+.form-row-2 .form-group,
+.form-row-3 .form-group {
+    margin-bottom: 0;
+}
+
+@media (max-width: 768px) {
+    .form-row-2,
+    .form-row-3 {
+        grid-template-columns: 1fr;
+    }
+
+    .form-section {
+        padding: 16px;
+    }
+}
+
+.create-report-actions {
+    margin-top: 4px;
+}
+
+/* ====================================================================
+   Report Detail — information cards + timeline (report-detail.php).
+   ==================================================================== */
+.report-detail-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 18px;
+}
+
+.report-info-card-wide {
+    grid-column: 1 / -1;
+}
+
+.report-info-card {
+    border: 1px solid var(--border, #e5e7eb);
+    border-radius: var(--radius-lg, 16px);
+    background: var(--card-color, #ffffff);
+    padding: 18px 20px;
+}
+
+.report-info-card-title {
+    margin: 0 0 14px;
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text-light, #111827);
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--border, #e5e7eb);
+}
+
+.report-info-list {
+    margin: 0;
+    display: grid;
+    gap: 12px;
+}
+
+.report-info-row {
+    display: grid;
+    grid-template-columns: 140px 1fr;
+    gap: 10px;
+    align-items: start;
+}
+
+.report-info-row dt {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    color: var(--text-muted, #6b7280);
+}
+
+.report-info-row dd {
+    margin: 0;
+    color: var(--text-light, #111827);
+    word-break: break-word;
+}
+
+.report-unassigned {
+    color: var(--text-muted, #6b7280);
+    font-style: italic;
+}
+
+.report-description-box {
+    background: var(--muted-card, #f5f3ff);
+    padding: 15px;
+    border-radius: 10px;
+    border-left: 4px solid var(--primary-color, #6d28d9);
+    line-height: 1.6;
+    color: var(--text-light, #111827);
+}
+
+.report-attachments-empty {
+    color: var(--text-muted, #6b7280);
+    font-size: 14px;
+}
+
+.report-attachments-list {
+    margin: 0;
+    padding-left: 18px;
+    display: grid;
+    gap: 6px;
+}
+
+.report-attachments-list a {
+    color: var(--primary, #6d28d9);
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.report-attachments-list a:hover {
+    text-decoration: underline;
+}
+
+.report-timeline {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 0;
+}
+
+.report-timeline-item {
+    position: relative;
+    padding: 0 0 20px 26px;
+    border-left: 2px solid var(--border, #e5e7eb);
+}
+
+.report-timeline-item:last-child {
+    padding-bottom: 0;
+    border-left-color: transparent;
+}
+
+.report-timeline-dot {
+    position: absolute;
+    left: -7px;
+    top: 2px;
+    width: 12px;
+    height: 12px;
+    border-radius: 999px;
+    background: var(--primary, #6d28d9);
+    box-shadow: 0 0 0 3px var(--primary-bg, #f3e8ff);
+}
+
+.report-timeline-item-done .report-timeline-dot {
+    background: var(--success, #059669);
+    box-shadow: 0 0 0 3px var(--success-bg, #ecfdf5);
+}
+
+.report-timeline-content {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.report-timeline-content strong {
+    font-size: 13px;
+    color: var(--text-light, #111827);
+}
+
+.report-timeline-content span {
+    font-size: 13px;
+    color: var(--text-muted, #6b7280);
+}
+
+@media (max-width: 768px) {
+    .report-detail-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .report-info-row {
+        grid-template-columns: 1fr;
+        gap: 2px;
+    }
+}
+
+/* ====================================================================
+   Shared card-hover polish for report-management cards — shadow-only
+   feedback per DESIGN_SYSTEM.md §19 (no translateY lift).
+   ==================================================================== */
+.form-section,
+.report-info-card {
+    transition: box-shadow 180ms ease, border-color 180ms ease;
+}

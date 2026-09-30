@@ -1,0 +1,2478 @@
+﻿:root {
+            --auth-gradient: linear-gradient(90deg, #7c3aed 0%, #a855f7 100%);
+            --auth-accent: #a855f7;
+            --auth-accent-deep: #6d28d9;
+            --auth-ink: #f7f2ff;
+            --auth-muted: #cdbfe6;
+            --auth-input: rgba(58, 25, 102, 0.42);
+            --auth-border: rgba(168, 85, 247, 0.42);
+            /* Updated by keyboard-aware-scroll.js in login.blade.php to the on-screen
+               keyboard's height, so the form has real scroll room to clear it. */
+            --kb-offset: 0px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Plus Jakarta Sans', 'Segoe UI', Tahoma, sans-serif;
+            background:
+                radial-gradient(circle at 14% 12%, rgba(168, 85, 247, 0.24) 0%, rgba(168, 85, 247, 0) 34%),
+                radial-gradient(circle at 88% 86%, rgba(196, 181, 253, 0.18) 0%, rgba(196, 181, 253, 0) 38%),
+                linear-gradient(180deg, #0a0618 0%, #120a29 46%, #221047 100%);
+            position: relative;
+            overflow: hidden;
+            -webkit-text-size-adjust: 100%;
+            text-size-adjust: 100%;
+        }
+
+        body::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background:
+                linear-gradient(rgba(168, 85, 247, 0.1) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(168, 85, 247, 0.1) 1px, transparent 1px);
+            background-size: 40px 40px;
+            pointer-events: none;
+        }
+
+        body::after {
+            content: "";
+            position: absolute;
+            inset: -20% -10%;
+            pointer-events: none;
+            background-image:
+                radial-gradient(circle, rgba(255, 255, 255, 0.85) 0 1.2px, transparent 1.3px),
+                radial-gradient(circle, rgba(196, 181, 253, 0.75) 0 1.4px, transparent 1.5px),
+                radial-gradient(circle, rgba(168, 85, 247, 0.65) 0 1.1px, transparent 1.2px),
+                radial-gradient(circle, rgba(216, 180, 254, 0.8) 0 1.3px, transparent 1.4px);
+            background-size: 160px 160px, 230px 230px, 190px 190px, 280px 280px;
+            background-position: 0 0, 35px 65px, 100px 25px, 70px 140px;
+            opacity: 0.55;
+            animation: floatingParticlesDrift 14s linear infinite, floatingParticlesTwinkle 3.8s ease-in-out infinite;
+            z-index: 1;
+        }
+
+        @keyframes floatingParticlesDrift {
+            0% {
+                transform: translate3d(0, 0, 0);
+            }
+            50% {
+                transform: translate3d(-28px, -42px, 0);
+            }
+            100% {
+                transform: translate3d(-56px, -84px, 0);
+            }
+        }
+
+        @keyframes floatingParticlesTwinkle {
+            0%,
+            100% {
+                opacity: 0.34;
+                filter: drop-shadow(0 0 0 rgba(216, 180, 254, 0));
+            }
+            50% {
+                opacity: 0.62;
+                filter: drop-shadow(0 0 7px rgba(216, 180, 254, 0.42));
+            }
+        }
+
+        main.login-container {
+            margin: 0;
+            padding: 18px;
+            background: transparent !important;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        .login-container {
+            position: relative;
+            z-index: 2;
+            width: 100%;
+            max-width: none;
+            flex: 1 1 auto;
+        }
+
+        /* TASK F (login redesign v2) — large, soft decorative arcs behind the
+           card, per the "large subtle circular/arc decorative elements"
+           requirement. Purely cosmetic: negative z-index keeps it behind
+           .card (which has no explicit z-index / position, so it paints in
+           the normal in-flow stacking step, above negative-z-index content)
+           without needing to touch the card's own stacking. pointer-events
+           is off so it can never intercept clicks/keyboard focus. */
+        .login-container::before {
+            content: "";
+            position: absolute;
+            inset: -12% -6%;
+            z-index: -1;
+            pointer-events: none;
+            background-image:
+                radial-gradient(circle at 12% 18%, rgba(168, 85, 247, 0.16) 0%, rgba(168, 85, 247, 0) 30%),
+                radial-gradient(circle at 90% 82%, rgba(139, 92, 246, 0.14) 0%, rgba(139, 92, 246, 0) 32%);
+        }
+
+        .login-container::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            z-index: -1;
+            pointer-events: none;
+            border-radius: 50%;
+            width: min(64vw, 900px);
+            height: min(64vw, 900px);
+            max-width: 900px;
+            max-height: 900px;
+            margin: auto;
+            border: 1px solid rgba(196, 181, 253, 0.08);
+            box-shadow: 0 0 0 60px rgba(196, 181, 253, 0.03) inset;
+        }
+
+        .login-container .card {
+            /* TASK #16D — reverted to the original 980x640 footprint.
+               TASK #16C had widened this to 1100x760 to make room for the
+               450px logo; that made the whole card (including the right
+               login panel) visibly larger, which is explicitly not
+               wanted. The 450px logo is now fit inside this original,
+               unchanged card size by tightening the left panel's own
+               internal spacing instead (see the @media (min-width: 901px)
+               spacing block and the logo rule, both further down this
+               file). The existing @media (max-width: 900px) block further
+               down this file already fully overrides width/height/
+               min-height/max-height for the single-column mobile/tablet
+               layout and is untouched.
+
+               TASK E (login redesign) — sized down again to a ~900x600
+               footprint per the requested ~850-950 x 560-620 envelope
+               (980x640 read as slightly larger than wanted). The 450px
+               logo referenced above is being reduced in the same change
+               (see .login-container .pitch-panel .form-brand img further
+               down this file), so the "tight spacing to fit a big logo
+               into an unchanged card" problem this comment describes no
+               longer applies — logo and card are shrinking together. */
+            width: min(900px, calc(100vw - 36px));
+            min-height: 580px;
+            height: min(600px, calc(100vh - 88px));
+            max-height: calc(100vh - 88px);
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            border-radius: 22px;
+            overflow: hidden;
+            background: rgba(28, 13, 66, 0.9);
+            box-shadow: 0 34px 80px rgba(16, 8, 45, 0.62);
+            border: 1px solid rgba(139, 92, 246, 0.3);
+            backdrop-filter: blur(10px);
+        }
+
+        .login-container .card.register-mode {
+            grid-template-columns: 1fr 1fr;
+        }
+
+        /* TASK #16D — the TASK #16C "large tablet" (900-1200px) card
+           override that used to live here has been removed. It only
+           existed to restore the 980/640 size at 900-1200px while the
+           base rule above was enlarged to 1100/760 for true desktop; now
+           that the base rule itself is back to 980/640 at every width
+           down to the existing 900px stacking breakpoint, that extra tier
+           is redundant. The 450px logo is shown uniformly from >900px
+           down to the 900px breakpoint (see the logo rule further down
+           this file); the pre-existing @media (max-width: 900px) block
+           still fully overrides card sizing for the single-column
+           mobile/tablet layout below that, untouched. */
+
+        .form-panel {
+            background: rgba(17, 7, 44, 0.95);
+            padding: 34px 34px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-left: 1px solid rgba(139, 92, 246, 0.24);
+            order: 2;
+            overflow-y: auto;
+            max-height: 100%;
+        }
+
+        .form-panel-inner {
+            width: 100%;
+            max-width: 400px;
+            margin: auto;
+        }
+
+        .login-container .card:not(.register-mode) .form-panel {
+            padding: 44px 40px;
+        }
+
+        .login-container .card:not(.register-mode) .auth-title {
+            font-size: 3.1rem;
+            margin-bottom: 10px;
+        }
+
+        .login-container .card:not(.register-mode) .auth-subtitle {
+            font-size: 1.08rem;
+            /* TASK F (login redesign v2) — was 30px, tuned for when the
+               forgot-password form (the only :not(.register-mode) form with
+               a subtitle at the time) was the sole consumer. #login-form now
+               has its own restored subtitle too, and the card's height is
+               capped (~600px, see .login-container .card), so this is
+               trimmed to keep the taller sign-in view fitting without an
+               internal scrollbar; still comfortably more than the base
+               .auth-subtitle's 22px. */
+            margin-bottom: 20px;
+        }
+
+        .login-container .card:not(.register-mode) .form-group {
+            margin-bottom: 18px;
+        }
+
+        .login-container .card:not(.register-mode) .form-group label {
+            font-size: 0.96rem;
+            margin-bottom: 8px;
+        }
+
+        .login-container .card:not(.register-mode) .form-group input {
+            padding: 16px 16px;
+            font-size: 1.04rem;
+            border-radius: 12px;
+        }
+
+        .login-container .card:not(.register-mode) .password-field-wrapper input {
+            padding-right: 50px;
+        }
+
+        .login-container .card:not(.register-mode) .password-toggle-btn {
+            width: 34px;
+            height: 34px;
+        }
+
+        .login-container .card:not(.register-mode) .password-toggle-btn svg {
+            width: 20px;
+            height: 20px;
+        }
+
+        .login-container .card:not(.register-mode) .remember-me-control {
+            font-size: 1rem;
+            gap: 10px;
+        }
+
+        .login-container .card:not(.register-mode) .remember-me-control input {
+            width: 18px;
+            height: 18px;
+        }
+
+        .login-container .card:not(.register-mode) .btn {
+            padding: 15px 24px;
+            font-size: 0.9rem;
+        }
+
+        .form-brand {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            gap: 8px;
+            margin-top: -86px;
+            margin-bottom: 2px;
+        }
+
+        .form-brand img {
+            width: 350px;
+            height: 350px;
+            max-width: min(74vw, 350px);
+            object-fit: contain;
+            display: block;
+            padding: 0;
+            border-radius: 0;
+            background: transparent;
+            box-shadow: none;
+        }
+
+        .form-brand-text {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            gap: 4px;
+            min-width: 0;
+            transform: translateY(-42px);
+        }
+
+        .form-brand-name {
+            color: #ffffff;
+            font-size: 1.18rem;
+            line-height: 1.15;
+            font-weight: 800;
+            letter-spacing: -0.01em;
+        }
+
+        .form-brand-subtitle {
+            color: #a99acf;
+            font-size: 0.95rem;
+            line-height: 1.2;
+            font-weight: 500;
+        }
+
+        .form-panel form {
+            width: 100%;
+        }
+
+        .auth-title {
+            font-size: 2.55rem;
+            line-height: 1.15;
+            letter-spacing: -0.02em;
+            color: var(--auth-ink);
+            margin-bottom: 6px;
+            font-weight: 800;
+            text-align: left;
+        }
+
+        .auth-subtitle {
+            color: var(--auth-muted);
+            font-size: 0.95rem;
+            text-align: left;
+            margin-bottom: 22px;
+        }
+
+        #alert-container {
+            margin-bottom: 14px;
+        }
+
+        .alert {
+            padding: 11px 13px;
+            border-radius: 10px;
+            font-size: 0.88rem;
+            animation: fadeIn 0.2s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-2px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .alert-danger {
+            background: rgba(127, 29, 29, 0.32);
+            border: 1px solid rgba(248, 113, 113, 0.56);
+            color: #fecaca;
+        }
+
+        .login-lock-alert {
+            border-radius: 12px;
+            padding: 12px 14px;
+            background: linear-gradient(180deg, rgba(127, 29, 29, 0.52), rgba(80, 18, 34, 0.5));
+            border-color: rgba(252, 165, 165, 0.62);
+            box-shadow: 0 10px 24px rgba(57, 9, 18, 0.34);
+        }
+
+        .login-lock-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 6px;
+        }
+
+        .login-lock-title {
+            font-size: 0.82rem;
+            font-weight: 800;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            color: #fecdd3;
+        }
+
+        .login-lock-timer {
+            font-variant-numeric: tabular-nums;
+            font-size: 0.84rem;
+            font-weight: 800;
+            color: #fee2e2;
+            border: 1px solid rgba(252, 165, 165, 0.55);
+            border-radius: 999px;
+            background: rgba(69, 10, 10, 0.36);
+            padding: 3px 9px;
+            line-height: 1;
+        }
+
+        .login-lock-message {
+            font-size: 0.83rem;
+            color: #fecaca;
+            margin-bottom: 8px;
+        }
+
+        .login-lock-progress {
+            width: 100%;
+            height: 6px;
+            border-radius: 999px;
+            background: rgba(254, 205, 211, 0.24);
+            overflow: hidden;
+        }
+
+        .login-lock-progress-fill {
+            display: block;
+            height: 100%;
+            border-radius: inherit;
+            background: linear-gradient(90deg, #fb7185 0%, #fda4af 50%, #fecdd3 100%);
+            transition: width 0.85s linear;
+        }
+
+        .alert-success {
+            background: rgba(6, 95, 70, 0.32);
+            border: 1px solid rgba(52, 211, 153, 0.5);
+            color: #a7f3d0;
+        }
+
+        .form-group {
+            margin-bottom: 14px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 6px;
+            font-size: 0.84rem;
+            color: #c4b5fd;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+        }
+
+        .form-group input {
+            width: 100%;
+            border: 1px solid var(--auth-border);
+            border-radius: 12px;
+            background: var(--auth-input);
+            color: #f5f3ff;
+            padding: 13px 14px;
+            font-size: 0.94rem;
+            font-family: inherit;
+            transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #a78bfa;
+            box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.3);
+            background: rgba(93, 52, 181, 0.42);
+        }
+
+        .form-group input::placeholder {
+            color: #8f7ac4;
+        }
+
+        .password-field-wrapper {
+            position: relative;
+        }
+
+        .password-field-wrapper input {
+            padding-right: 46px;
+        }
+
+        /* Keep password field visual stable across focus/readonly/autofill states. */
+        .password-field-wrapper input,
+        .password-field-wrapper input:active,
+        .password-field-wrapper input[readonly] {
+            background-color: var(--auth-input) !important;
+            color: #f5f3ff !important;
+            -webkit-text-fill-color: #f5f3ff;
+            caret-color: #f5f3ff;
+        }
+
+        .password-field-wrapper input:focus {
+            background-color: rgba(93, 52, 181, 0.42) !important;
+            -webkit-text-fill-color: #f5f3ff;
+        }
+
+        .password-field-wrapper input:-webkit-autofill,
+        .password-field-wrapper input:-webkit-autofill:hover,
+        .password-field-wrapper input:-webkit-autofill:focus,
+        .password-field-wrapper input:-webkit-autofill:active {
+            -webkit-text-fill-color: #f5f3ff !important;
+            -webkit-box-shadow: 0 0 0 1000px var(--auth-input) inset !important;
+            box-shadow: 0 0 0 1000px var(--auth-input) inset !important;
+            transition: background-color 5000s ease-in-out 0s;
+        }
+
+        /* Hide browser-native password reveal/clear icons to avoid duplicate eye button. */
+        .password-field-wrapper input[type='password']::-ms-reveal,
+        .password-field-wrapper input[type='password']::-ms-clear {
+            display: none;
+        }
+
+        .password-toggle-btn {
+            position: absolute;
+            top: 50%;
+            right: 8px;
+            transform: translateY(-50%);
+            width: 30px;
+            height: 30px;
+            border: none;
+            border-radius: 6px;
+            background: transparent;
+            color: #a78bfa;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .password-toggle-btn:hover {
+            color: #f5f3ff;
+            background: rgba(139, 92, 246, 0.22);
+        }
+
+        .password-toggle-btn:focus-visible {
+            outline: 2px solid #a78bfa;
+            outline-offset: 1px;
+        }
+
+        .password-toggle-btn svg {
+            width: 18px;
+            height: 18px;
+        }
+
+        .login-options-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            margin: 10px 0 6px;
+        }
+
+        .remember-me-control {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: #d8cbff;
+            font-size: 0.84rem;
+            font-weight: 600;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .remember-me-control input {
+            width: 16px;
+            height: 16px;
+            margin: 0;
+            accent-color: #8b5cf6;
+            flex-shrink: 0;
+        }
+
+        .forgot-password-link {
+            border: none;
+            background: transparent;
+            color: #bda8ff;
+            font-size: 0.82rem;
+            font-weight: 700;
+            cursor: pointer;
+            padding: 0;
+            text-decoration: underline;
+            text-underline-offset: 2px;
+        }
+
+        .forgot-password-link:hover {
+            color: #e5dcff;
+        }
+
+        .forgot-password-link:focus-visible {
+            outline: 2px solid #a78bfa;
+            outline-offset: 2px;
+            border-radius: 4px;
+        }
+
+        .btn {
+            width: 100%;
+            border: none;
+            /* TASK E (login redesign) — was 999px (full pill). The redesign
+               spec calls for a professional ~10-12px radius consistent with
+               the inputs, not a pill shape. This is the only place button
+               radius is set (later rules only touch .btn-primary's
+               background/shadow/min-height/padding), so this one change
+               reshapes both Sign In and the secondary "Back to Sign In"
+               buttons. Chip-style elements like .login-lock-timer /
+               .login-lock-progress are unrelated (not <button>s) and are
+               intentionally left as pills. */
+            border-radius: 12px;
+            padding: 12px 20px;
+            cursor: pointer;
+            font-family: inherit;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            font-size: 0.76rem;
+            transition: transform 0.15s ease, box-shadow 0.2s ease, background-color 0.2s ease, border-color 0.2s ease;
+        }
+
+        .btn-primary {
+            margin-top: 6px;
+            color: #ffffff;
+            background: var(--auth-gradient);
+            box-shadow: 0 10px 22px rgba(124, 77, 255, 0.38);
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            transform: translateY(-1px);
+            box-shadow: 0 14px 28px rgba(124, 77, 255, 0.46);
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.72;
+            cursor: not-allowed;
+        }
+
+        .auth-or-separator {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            margin: 9px 0 2px;
+            color: #b9a8df;
+            font-size: 0.74rem;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        .auth-or-separator::before,
+        .auth-or-separator::after {
+            content: "";
+            flex: 1;
+            height: 1px;
+            background: linear-gradient(90deg, rgba(139, 92, 246, 0), rgba(139, 92, 246, 0.45));
+        }
+
+        .auth-or-separator::after {
+            background: linear-gradient(90deg, rgba(139, 92, 246, 0.45), rgba(139, 92, 246, 0));
+        }
+
+        .btn-secondary {
+            margin-top: 10px;
+            color: #d8cbff;
+            background: rgba(26, 12, 63, 0.54);
+            border: 1px solid rgba(139, 92, 246, 0.4);
+        }
+
+        .btn-secondary:hover:not(:disabled) {
+            transform: translateY(-1px);
+            background: rgba(109, 40, 217, 0.3);
+        }
+
+        .form-note {
+            margin-top: 14px;
+            color: #9f8bc9;
+            text-align: center;
+            font-size: 0.78rem;
+            line-height: 1.5;
+        }
+
+        .form-field-error {
+            position: relative;
+        }
+
+        .form-field-error input {
+            border-color: #f87171 !important;
+            background-color: rgba(127, 29, 29, 0.26) !important;
+        }
+
+        .form-field-error input:focus {
+            border-color: #ef4444 !important;
+            box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1) !important;
+        }
+
+        .form-field-valid input {
+            border-color: #34d399 !important;
+            background-color: rgba(6, 95, 70, 0.28) !important;
+        }
+
+        .form-field-valid input:focus {
+            border-color: #22c55e !important;
+            box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.1) !important;
+        }
+
+        .field-error-text {
+            font-size: 0.75rem;
+            color: #fca5a5;
+            margin-top: 4px;
+            display: none;
+        }
+
+        .form-field-error .field-error-text {
+            display: block;
+        }
+
+        .password-strength-meter {
+            margin-top: 6px;
+            height: 4px;
+            border-radius: 999px;
+            background: rgba(139, 92, 246, 0.3);
+            overflow: hidden;
+            display: none;
+        }
+
+        .password-strength-meter.active {
+            display: block;
+        }
+
+        .password-strength-bar {
+            height: 100%;
+            width: 0%;
+            transition: width 0.2s ease, background-color 0.2s ease;
+            border-radius: 999px;
+        }
+
+        .password-strength-bar.weak {
+            width: 33%;
+            background-color: #ef4444;
+        }
+
+        .password-strength-bar.fair {
+            width: 66%;
+            background-color: #f59e0b;
+        }
+
+        .password-strength-bar.strong {
+            width: 100%;
+            background-color: #22c55e;
+        }
+
+        .password-strength-text {
+            font-size: 0.72rem;
+            margin-top: 3px;
+            font-weight: 600;
+        }
+
+        .password-strength-text.weak {
+            color: #ef4444;
+        }
+
+        .password-strength-text.fair {
+            color: #f59e0b;
+        }
+
+        .password-strength-text.strong {
+            color: #22c55e;
+        }
+
+        .pitch-panel {
+            background:
+                radial-gradient(circle at 74% 12%, rgba(139, 92, 246, 0.28) 0%, rgba(139, 92, 246, 0) 42%),
+                linear-gradient(170deg, #3a197c 0%, #2b1163 55%, #241053 100%);
+            display: flex;
+            align-items: flex-start;
+            justify-content: flex-start;
+            position: relative;
+            padding: 42px 34px 0;
+            overflow: hidden;
+            border-right: 1px solid rgba(139, 92, 246, 0.2);
+            order: 1;
+        }
+
+        .pitch-content {
+            width: 100%;
+            color: #efe9ff;
+            display: flex;
+            flex-direction: column;
+            min-height: 100%;
+            justify-content: space-between;
+            gap: 10px;
+        }
+
+        .pitch-tag {
+            width: fit-content;
+            border-radius: 999px;
+            border: 1px solid rgba(196, 181, 253, 0.45);
+            color: #ddd6fe;
+            font-size: 0.72rem;
+            font-weight: 700;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            padding: 6px 12px;
+            margin-bottom: 18px;
+            background: rgba(139, 92, 246, 0.22);
+        }
+
+        .pitch-title {
+            font-size: 2.55rem;
+            line-height: 1.13;
+            font-weight: 800;
+            letter-spacing: -0.02em;
+            margin-bottom: 14px;
+            color: #f5f3ff;
+        }
+
+        .pitch-title .accent {
+            color: #c4b5fd;
+        }
+
+        .pitch-text {
+            color: #cbbbf3;
+            font-size: 1.03rem;
+            line-height: 1.7;
+            max-width: 460px;
+            margin-bottom: 18px;
+        }
+
+        .pitch-image-wrap {
+            margin-top: auto;
+            padding-top: 0;
+            width: calc(100% + 68px);
+            margin-left: -34px;
+            display: flex;
+            justify-content: stretch;
+            align-items: flex-end;
+        }
+
+        .pitch-image-wrap img {
+            width: 100%;
+            max-width: none;
+            max-height: 320px;
+            height: auto;
+            min-height: 0;
+            object-fit: contain;
+            object-position: center bottom;
+            display: block;
+            border-radius: 14px;
+            box-shadow: 0 14px 36px rgba(9, 4, 28, 0.45);
+            border: 1px solid rgba(226, 208, 255, 0.3);
+            animation: pitchImagePopIn 0.65s cubic-bezier(0.2, 0.85, 0.25, 1) both;
+        }
+
+        @keyframes pitchImagePopIn {
+            0% {
+                opacity: 0;
+                transform: translateY(22px) scale(0.96);
+            }
+            100% {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        .pitch-stats {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 10px;
+            margin-top: 56px;
+        }
+
+        .stat-box {
+            border: 1px solid rgba(167, 139, 250, 0.24);
+            background: rgba(124, 77, 255, 0.16);
+            border-radius: 12px;
+            padding: 12px 10px;
+            text-align: center;
+            box-shadow: inset 0 0 0 1px rgba(167, 139, 250, 0.15);
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            line-height: 1;
+            font-weight: 800;
+            color: #ddd6fe;
+            letter-spacing: -0.02em;
+        }
+
+        .stat-label {
+            margin-top: 5px;
+            font-size: 0.8rem;
+            color: #bca8ea;
+            font-weight: 600;
+        }
+
+        .pitch-chips {
+            margin-top: auto;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            padding-top: 28px;
+        }
+
+        .pitch-chip {
+            font-size: 0.78rem;
+            color: #dccdff;
+            border: 1px solid rgba(167, 139, 250, 0.24);
+            background: rgba(76, 29, 149, 0.34);
+            border-radius: 9px;
+            padding: 6px 11px;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-weight: 600;
+        }
+
+        .pitch-chip::before {
+            content: "";
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: #c4b5fd;
+        }
+
+        .mode-register-only {
+            display: none;
+        }
+
+        .login-container .card.register-mode .form-panel {
+            order: 2;
+        }
+
+        .login-container .card.register-mode .pitch-panel {
+            order: 1;
+        }
+
+        .login-container .card.register-mode .mode-login-only {
+            display: none;
+        }
+
+        .login-container .card.register-mode .mode-register-only {
+            display: block;
+        }
+
+        .form-hidden {
+            display: none;
+        }
+
+        #register-form .auth-subtitle {
+            margin-bottom: 12px;
+        }
+
+        #register-form .form-group {
+            margin-bottom: 11px;
+        }
+
+        #register-form .btn-primary {
+            margin-top: 4px;
+        }
+
+        #register-form .btn-secondary {
+            margin-top: 8px;
+        }
+
+        @media (max-width: 900px) {
+            .login-container .card,
+            .login-container .card.register-mode {
+                width: min(560px, calc(100vw - 24px));
+                min-height: 0;
+                height: auto;
+                grid-template-columns: 1fr;
+                margin-top: 50px;
+            }
+
+            .form-panel,
+            .login-container .card.register-mode .form-panel {
+                order: 2;
+                padding: 32px 22px;
+            }
+
+            .form-brand img {
+                width: 180px;
+                height: 180px;
+            }
+
+            .pitch-panel,
+            .login-container .card.register-mode .pitch-panel {
+                order: 1;
+                min-height: 310px;
+                border-right: 0;
+                border-bottom: 1px solid rgba(167, 139, 250, 0.24);
+                padding: 26px 22px 0;
+            }
+
+            .pitch-image-wrap {
+                width: calc(100% + 44px);
+                margin-left: -22px;
+            }
+
+            .pitch-image-wrap img {
+                max-height: 260px;
+                height: auto;
+                min-height: 0;
+                object-fit: contain;
+            }
+
+            .auth-title {
+                font-size: 2.1rem;
+            }
+
+            .auth-subtitle {
+                font-size: 0.98rem;
+            }
+
+            .login-container .card:not(.register-mode) .form-panel {
+                padding: 32px 22px;
+            }
+
+            .login-container .card:not(.register-mode) .auth-title {
+                font-size: 2.1rem;
+                margin-bottom: 6px;
+            }
+
+            .login-container .card:not(.register-mode) .auth-subtitle {
+                font-size: 0.98rem;
+                margin-bottom: 22px;
+            }
+
+            .login-container .card:not(.register-mode) .form-group {
+                margin-bottom: 14px;
+            }
+
+            .login-container .card:not(.register-mode) .form-group label {
+                font-size: 0.84rem;
+                margin-bottom: 6px;
+            }
+
+            .login-container .card:not(.register-mode) .form-group input {
+                padding: 13px 14px;
+                font-size: 0.94rem;
+            }
+
+            .login-container .card:not(.register-mode) .remember-me-control {
+                font-size: 0.84rem;
+                gap: 8px;
+            }
+
+            .login-container .card:not(.register-mode) .remember-me-control input {
+                width: 16px;
+                height: 16px;
+            }
+
+            .login-container .card:not(.register-mode) .btn {
+                padding: 12px 20px;
+                font-size: 0.76rem;
+            }
+
+            .pitch-title {
+                font-size: 2rem;
+            }
+
+            .pitch-stats {
+                margin-top: 28px;
+            }
+        }
+
+        @media (max-width: 460px) {
+            main.login-container {
+                padding: 10px;
+            }
+
+            .form-panel {
+                padding: 26px 16px;
+            }
+
+            .form-brand img {
+                width: 120px;
+                height: 120px;
+            }
+
+            .pitch-image-wrap {
+                width: calc(100% + 32px);
+                margin-left: -16px;
+            }
+
+            .pitch-title {
+                font-size: 1.65rem;
+            }
+
+            .pitch-text {
+                font-size: 0.92rem;
+            }
+
+
+        /* Professional blue enterprise overrides */
+        :root {
+            --auth-gradient: linear-gradient(135deg, #2563eb 0%, #0ea5e9 100%);
+            --auth-accent: #3b82f6;
+            --auth-accent-deep: #1d4ed8;
+            --auth-ink: #f4f8ff;
+            --auth-muted: #b6c8e4;
+            --auth-input: rgba(17, 33, 59, 0.8);
+            --auth-border: rgba(148, 163, 184, 0.35);
+        }
+
+        body {
+            background:
+                radial-gradient(circle at 14% 12%, rgba(59, 130, 246, 0.24) 0%, rgba(59, 130, 246, 0) 36%),
+                radial-gradient(circle at 86% 84%, rgba(14, 165, 233, 0.24) 0%, rgba(14, 165, 233, 0) 38%),
+                linear-gradient(180deg, #07111f 0%, #0a162a 46%, #10213d 100%);
+        }
+
+        body::before {
+            background:
+                linear-gradient(rgba(96, 165, 250, 0.08) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(96, 165, 250, 0.08) 1px, transparent 1px);
+        }
+
+        .login-container .card {
+            background: rgba(15, 27, 49, 0.9);
+            box-shadow: 0 34px 80px rgba(2, 8, 23, 0.62);
+            border: 1px solid rgba(148, 163, 184, 0.28);
+        }
+
+        .form-panel {
+            background: rgba(10, 20, 38, 0.95);
+            border-left: 1px solid rgba(148, 163, 184, 0.24);
+        }
+
+        .form-brand-subtitle,
+        .form-note {
+            color: #9db0cf;
+        }
+
+        .form-group label {
+            color: #c7d7ef;
+        }
+
+        .form-group input {
+            color: #edf3ff;
+        }
+
+        .form-group input:focus {
+            border-color: #60a5fa;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.26);
+            background: rgba(20, 42, 76, 0.9);
+        }
+
+        .form-group input::placeholder {
+            color: #8ea6c9;
+        }
+
+        .password-toggle-btn {
+            color: #9cb5d8;
+        }
+
+        .password-toggle-btn:hover {
+            color: #f8fbff;
+            background: rgba(59, 130, 246, 0.22);
+        }
+
+        .remember-me-control {
+            color: #d0dcf0;
+        }
+
+        .remember-me-control input {
+            accent-color: #2563eb;
+        }
+
+        .btn-primary {
+            box-shadow: 0 10px 22px rgba(37, 99, 235, 0.38);
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            box-shadow: 0 14px 28px rgba(37, 99, 235, 0.46);
+        }
+
+        .btn-secondary {
+            color: #d7e6fd;
+            background: rgba(17, 33, 59, 0.56);
+            border: 1px solid rgba(148, 163, 184, 0.4);
+        }
+
+        .btn-secondary:hover:not(:disabled) {
+            background: rgba(30, 64, 175, 0.3);
+        }
+
+        .pitch-panel {
+            background:
+                radial-gradient(circle at 74% 12%, rgba(59, 130, 246, 0.28) 0%, rgba(59, 130, 246, 0) 42%),
+                linear-gradient(170deg, #15335e 0%, #122b4f 55%, #102443 100%);
+            border-right: 1px solid rgba(148, 163, 184, 0.24);
+        }
+
+        .pitch-tag {
+            border: 1px solid rgba(147, 197, 253, 0.45);
+            color: #dbeafe;
+            background: rgba(37, 99, 235, 0.22);
+        }
+
+        .pitch-title .accent {
+            color: #93c5fd;
+        }
+
+        .pitch-text {
+            color: #c5d8f3;
+        }
+
+        .stat-box {
+            border: 1px solid rgba(147, 197, 253, 0.3);
+            background: rgba(37, 99, 235, 0.18);
+            box-shadow: inset 0 0 0 1px rgba(147, 197, 253, 0.18);
+        }
+
+        .stat-value {
+            color: #dbeafe;
+        }
+
+        .stat-label {
+            color: #b7cff0;
+        }
+
+        .pitch-chip {
+            color: #deebff;
+            border: 1px solid rgba(147, 197, 253, 0.3);
+            background: rgba(30, 64, 175, 0.28);
+        }
+
+        .pitch-chip::before {
+            background: #93c5fd;
+        }
+            .form-brand-name {
+                font-size: 0.88rem;
+            }
+
+            .form-brand-subtitle {
+                font-size: 0.72rem;
+            }
+
+            .auth-title {
+                font-size: 1.78rem;
+            }
+
+            .pitch-panel {
+                min-height: 240px;
+                padding: 14px;
+            }
+
+            .pitch-image-wrap {
+                margin-top: 10px;
+            }
+
+            .pitch-image-wrap img {
+                height: 200px;
+                min-height: 170px;
+                border-radius: 12px;
+            }
+
+            .pitch-title {
+                font-size: 1.55rem;
+            }
+
+            .pitch-stats {
+                grid-template-columns: 1fr;
+                gap: 8px;
+            }
+
+            .stat-value {
+                font-size: 1.5rem;
+            }
+        }
+
+/* Final safeguard: keep login side image fully visible (no crop). */
+.pitch-panel .pitch-image-wrap {
+    margin-top: auto !important;
+    align-items: flex-end !important;
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    justify-content: stretch !important;
+    width: calc(100% + 20px) !important;
+    margin-left: -10px !important;
+    padding: 6px 0 0 !important;
+}
+
+.pitch-panel .pitch-image-wrap img {
+    width: 100% !important;
+    height: 100% !important;
+    min-height: 250px !important;
+    max-height: 100% !important;
+    max-width: 100% !important;
+    object-fit: cover !important;
+    object-position: center center !important;
+}
+
+/* TASK F (login redesign v2) — REVERSAL of the earlier "white side panel"
+   tweak above (kept here in history via this comment, not deleted
+   silently): the new reference design calls for the left branding panel to
+   be a dark purple/institutional panel again, with high-contrast white
+   typography, matching Image 2. Removing the !important white/dark-text
+   overrides lets the base `.pitch-panel` rule (dark gradient,
+   `color: #efe9ff`) and the base `.form-brand-name` / `.form-brand-subtitle`
+   colors (white / light lavender, both defined earlier in this file) apply
+   again unmodified. The right-hand `.form-panel` stays white — untouched by
+   this block, both before and after this change. */
+.login-container .pitch-panel .form-brand {
+    padding-left: 16px;
+    padding-right: 16px;
+}
+
+@media (max-width: 900px) {
+    html, body {
+        overflow-x: hidden;
+        overflow-y: auto;
+        height: 100%;
+        position: relative;
+    }
+
+    body {
+        display: block;
+        /* svh (small viewport height), not dvh: dvh grows live as Chrome's
+           address bar hides on scroll, which shrinks the scrollable range
+           mid-scroll and makes the browser clamp scrollTop back toward 0.
+           svh is fixed to the viewport size with browser UI fully expanded,
+           so it never changes during a scroll gesture. */
+        min-height: 100svh;
+        height: auto;
+        position: relative;
+    }
+
+    body::after {
+        opacity: 0.22;
+        animation-duration: 20s, 5s;
+    }
+
+    main.login-container {
+        position: static;
+        min-height: auto;
+        height: auto;
+        padding: 12px;
+        align-items: flex-start;
+        overflow: visible;
+        display: block;
+        flex: none;
+    }
+
+    .login-container .card,
+    .login-container .card.register-mode {
+        width: min(560px, calc(100vw - 24px));
+        max-height: none;
+        height: auto;
+        min-height: 0;
+        grid-template-columns: 1fr;
+        margin-top: 0;
+        border-radius: 18px;
+        overflow: hidden;
+    }
+
+    .pitch-panel,
+    .login-container .card.register-mode .pitch-panel {
+        order: 1;
+        min-height: 96px;
+        border-right: 0;
+        border-bottom: 1px solid rgba(167, 139, 250, 0.18);
+        padding: 8px 12px 0;
+    }
+
+    .pitch-content {
+        gap: 4px;
+    }
+
+    .form-brand {
+        margin-top: 0;
+        gap: 4px;
+    }
+
+    .form-brand img {
+        width: min(112px, 34vw);
+        height: auto;
+        max-width: 112px;
+    }
+
+    .form-brand-text {
+        transform: none;
+    }
+
+    .pitch-image-wrap {
+        width: 100%;
+        margin-left: 0;
+    }
+
+    .pitch-image-wrap img {
+        max-height: 82px;
+        min-height: 68px;
+        object-fit: cover;
+    }
+
+    .form-panel,
+    .login-container .card.register-mode .form-panel {
+        order: 2;
+        padding: 18px 16px 22px;
+        border-left: 0;
+        overflow: visible;
+    }
+
+    .login-container .card:not(.register-mode) .form-panel {
+        padding: 18px 16px 22px;
+    }
+
+    .auth-title {
+        font-size: clamp(1.75rem, 7vw, 2.1rem);
+    }
+
+    .auth-subtitle {
+        font-size: 0.95rem;
+    }
+
+    .login-container .card:not(.register-mode) .auth-title {
+        font-size: clamp(1.75rem, 7vw, 2.1rem);
+    }
+
+    .login-container .card:not(.register-mode) .auth-subtitle {
+        font-size: 0.9rem;
+        margin-bottom: 14px;
+    }
+
+    .login-container .card:not(.register-mode) .form-group,
+    #register-form .form-group {
+        margin-bottom: 12px;
+    }
+
+    .login-container .card:not(.register-mode) .form-group label,
+    .form-group label {
+        font-size: 0.8rem;
+        margin-bottom: 6px;
+    }
+
+    .login-container .card:not(.register-mode) .form-group input,
+    .form-group input {
+        padding: 12px 13px;
+        font-size: 16px;
+    }
+
+    .login-options-row {
+        margin: 6px 0 4px;
+    }
+
+    .login-container .card:not(.register-mode) .btn,
+    .btn {
+        padding: 12px 18px;
+    }
+
+    .pitch-title {
+        font-size: 1.8rem;
+    }
+
+    .pitch-text {
+        font-size: 0.92rem;
+    }
+}
+
+/* Keyboard-aware mobile behavior: while a login/register field is focused
+   (class toggled by keyboard-aware-scroll.js), collapse the hero/branding
+   panel and reserve scroll room so the field + submit button always clear
+   the on-screen keyboard, similar to Gmail/Facebook/GCash. Scoped to the
+   existing mobile breakpoint only -- desktop/tablet layout is untouched. */
+@media (max-width: 900px) {
+    .pitch-panel,
+    .login-container .card.register-mode .pitch-panel {
+        transition: min-height 0.22s ease, padding 0.22s ease, opacity 0.18s ease;
+    }
+
+    body.keyboard-open .pitch-panel,
+    body.keyboard-open .login-container .card.register-mode .pitch-panel {
+        min-height: 0;
+        height: 0;
+        padding: 0;
+        opacity: 0;
+        overflow: hidden;
+        border-bottom: 0;
+        pointer-events: none;
+    }
+
+    .form-panel-inner {
+        transition: padding-bottom 0.2s ease;
+    }
+
+    body.keyboard-open .form-panel-inner {
+        padding-bottom: var(--kb-offset, 0px);
+    }
+}
+
+@media (max-width: 480px) {
+    main.login-container {
+        padding: 10px;
+        min-height: 100svh;
+        height: auto;
+    }
+
+    .login-container .card,
+    .login-container .card.register-mode {
+        width: calc(100vw - 20px);
+        border-radius: 16px;
+        margin-bottom: 12px;
+    }
+
+    .pitch-panel,
+    .login-container .card.register-mode .pitch-panel {
+        min-height: 64px;
+        padding: 5px 10px 0;
+    }
+
+    .form-brand img {
+        width: min(76px, 26vw);
+    }
+
+    .pitch-image-wrap img {
+        max-height: 44px;
+        min-height: 36px;
+        border-radius: 10px;
+    }
+
+    .form-panel,
+    .login-container .card.register-mode .form-panel,
+    .login-container .card:not(.register-mode) .form-panel {
+        padding: 16px 14px 18px;
+    }
+
+    .auth-title {
+        font-size: 1.7rem;
+    }
+
+    .auth-subtitle {
+        font-size: 0.86rem;
+    }
+
+    .login-container .card:not(.register-mode) .form-group input,
+    .form-group input {
+        padding: 11px 12px;
+    }
+
+    .login-container .card:not(.register-mode) .btn,
+    .btn {
+        padding: 11px 16px;
+    }
+}
+
+@media (max-width: 768px) {
+    .login-container .card,
+    .login-container .card.register-mode {
+        grid-template-columns: 1fr;
+        min-height: 0;
+        height: auto;
+        max-height: none;
+    }
+
+    .form-panel,
+    .login-container .card.register-mode .form-panel,
+    .login-container .card:not(.register-mode) .form-panel {
+        padding-top: 28px;
+    }
+
+    .form-panel-inner {
+        max-width: 100%;
+    }
+}
+
+/* ===================================================================
+   LIGHT SIGN-IN PANEL
+   -------------------------------------------------------------------
+   The right-hand Sign In panel was dark purple while the rest of the
+   system has moved to a light UI. This block repaints that panel
+   white and takes its text/inputs to dark-on-light. It is UI only —
+   no markup, no JS, no auth logic was touched.
+
+   WHY IT LIVES AT THE END OF THIS FILE, not in a new stylesheet:
+   login.css is already the login page's own stylesheet (the brief says
+   not to create a duplicate one), and this file has accumulated
+   several layered override blocks over time — including a
+   "Professional blue enterprise overrides" block that is, almost
+   certainly by accident, nested INSIDE the `@media (max-width: 460px)`
+   query that opens earlier in the file, so it only ever applies on
+   very narrow screens. Rewriting those older blocks in place risked
+   changing behaviour at breakpoints unrelated to this task, so this
+   block is appended last instead: on source order alone it wins
+   everywhere, at every width, including inside that stray 460px block.
+
+   `!important` appears ONLY where the rule being overridden is itself
+   `!important` (the password field's anti-autofill rules and the
+   validation-state rules). Nothing else needs it.
+
+   The LEFT branding/pitch panel, the logo and the campus image are
+   deliberately NOT touched here — the existing white treatment for
+   that side already sits above.
+   =================================================================== */
+
+/* Re-point the file's own design tokens at the light palette. Rules
+   further up that already read these variables (the title, subtitle,
+   inputs and primary button) pick the new values up automatically.
+   The purple accent is the system purple from color-scheme.css, which
+   index.php loads immediately before this file. */
+:root {
+    --auth-gradient: linear-gradient(135deg, #8b5cf6 0%, #a78bfa 100%);
+    --auth-accent: #8b5cf6;
+    --auth-accent-deep: #6d28d9;
+    --auth-ink: #0f172a;      /* near-black navy for the Sign In heading */
+    --auth-muted: #475569;    /* readable secondary text on white */
+    --auth-input: #f8fafc;    /* very light gray field fill */
+    --auth-border: #cbd5e1;   /* subtle gray field border */
+}
+
+/* ---- The panel itself ---------------------------------------------
+   White, with a soft light border + shadow so it reads as a distinct
+   surface against the page background. Rounded corners and the
+   two-column grid are inherited untouched from the rules above. */
+.login-container .card {
+    background: #ffffff;
+    /* TASK #16 — clean, clearly-visible purple border (system accent) so the
+       white card reads as a distinct surface against the dark purple page
+       background, per the reference design. Rounded corners (border-radius
+       is inherited untouched from the base .login-container .card rule
+       above) are preserved automatically since border follows the box's
+       existing radius. */
+    border: 2px solid var(--auth-accent, #8b5cf6);
+    box-shadow: 0 24px 60px rgba(76, 29, 149, 0.16), 0 2px 8px rgba(15, 23, 42, 0.06);
+}
+
+.login-container .form-panel {
+    background: #ffffff;
+    border-left: 1px solid rgba(139, 92, 246, 0.16);
+}
+
+/* ---- Typography ---------------------------------------------------
+   Sizes, weights and letter-spacing are all left alone — only colour
+   changes, so the existing hierarchy is preserved exactly. */
+
+.login-container .auth-title {
+    color: #0f172a;
+}
+
+.login-container .auth-subtitle {
+    color: #475569;
+}
+
+/* TASK F (login redesign v2) — the 24px override that used to live here was
+   added when #login-form had no subtitle element at all, to replace the
+   breathing room a removed eyebrow/subtitle pair used to provide below
+   "Sign In". Section 6 of this task restores a subtitle ("Access your
+   account to continue") to #login-form's markup, so that compensation is
+   no longer needed; letting the base `.auth-title` margin-bottom (6px)
+   apply again avoids double-spacing now that a real .auth-subtitle
+   element follows the heading, exactly as it does for the other two
+   forms on this page. */
+
+.login-container .form-group label {
+    color: #334155;
+}
+
+/* ---- Inputs -------------------------------------------------------
+   Light fill, dark text, subtle gray border; purple border + ring on
+   focus. Padding/radius/size untouched. */
+.login-container .form-group input {
+    background: #f8fafc;
+    /* TASK #16 — light purple-tinted border at rest (same light-purple tone
+       already used elsewhere on this page for .btn-secondary/.alert-info),
+       stepping up to the full system purple + ring on focus below. Purely a
+       colour change: padding, radius, and every input attribute/behaviour
+       are untouched. */
+    border: 1px solid #ddd6fe;
+    color: #0f172a;
+}
+
+.login-container .form-group input::placeholder {
+    color: #94a3b8;
+}
+
+.login-container .form-group input:focus {
+    border-color: #8b5cf6;
+    box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.18);
+    background: #ffffff;
+}
+
+/* The password field's "keep the visual stable across
+   focus/readonly/autofill" rules above are !important, so the light
+   equivalents have to be too. Same intent, light values. */
+.login-container .password-field-wrapper input,
+.login-container .password-field-wrapper input:active,
+.login-container .password-field-wrapper input[readonly] {
+    background-color: #f8fafc !important;
+    color: #0f172a !important;
+    -webkit-text-fill-color: #0f172a;
+    caret-color: #0f172a;
+}
+
+.login-container .password-field-wrapper input:focus {
+    background-color: #ffffff !important;
+    -webkit-text-fill-color: #0f172a;
+}
+
+.login-container .password-field-wrapper input:-webkit-autofill,
+.login-container .password-field-wrapper input:-webkit-autofill:hover,
+.login-container .password-field-wrapper input:-webkit-autofill:focus,
+.login-container .password-field-wrapper input:-webkit-autofill:active {
+    -webkit-text-fill-color: #0f172a !important;
+    -webkit-box-shadow: 0 0 0 1000px #f8fafc inset !important;
+    box-shadow: 0 0 0 1000px #f8fafc inset !important;
+}
+
+/* ---- Password visibility toggle (behaviour unchanged) ------------- */
+.login-container .password-toggle-btn {
+    color: #64748b;
+}
+
+.login-container .password-toggle-btn:hover {
+    color: #6d28d9;
+    background: rgba(139, 92, 246, 0.12);
+}
+
+.login-container .password-toggle-btn:focus-visible {
+    outline: 2px solid #8b5cf6;
+}
+
+/* ---- Remember me (behaviour unchanged) ---------------------------- */
+.login-container .remember-me-control {
+    color: #1e293b;
+}
+
+.login-container .remember-me-control input {
+    accent-color: #8b5cf6;
+}
+
+/* ---- Forgot password (behaviour unchanged) ------------------------ */
+.login-container .forgot-password-link {
+    color: #7c3aed;
+}
+
+.login-container .forgot-password-link:hover {
+    color: #5b21b6;
+}
+
+.login-container .forgot-password-link:focus-visible {
+    outline: 2px solid #8b5cf6;
+}
+
+/* ---- Buttons ------------------------------------------------------
+   The primary button stays purple and prominent against the white
+   panel — it now carries the system purple gradient. */
+.login-container .btn-primary {
+    color: #ffffff;
+    background: linear-gradient(135deg, #8b5cf6 0%, #a78bfa 100%);
+    box-shadow: 0 10px 22px rgba(139, 92, 246, 0.32);
+    /* TASK #16B — target 48-52px button height. The base .btn rule (higher
+       up in this file) sets padding/font-size/border-radius/transition;
+       min-height is additive here and doesn't touch any of that, so the
+       pill shape, label text and click behaviour are unchanged. */
+    min-height: 50px;
+    padding: 14px 24px;
+}
+
+.login-container .btn-primary:hover:not(:disabled) {
+    box-shadow: 0 14px 28px rgba(139, 92, 246, 0.42);
+    /* base .btn-primary:hover (earlier in this file) already applies
+       transform: translateY(-1px) for the subtle lift; untouched here. */
+}
+
+/* TASK #16B — slightly pressed look on click. The base file has no
+   :active rule for this button, so this is purely additive. */
+.login-container .btn-primary:active:not(:disabled) {
+    transform: translateY(0);
+    box-shadow: 0 6px 14px rgba(139, 92, 246, 0.3);
+}
+
+/* Secondary ("Back to Sign In") has to stop being a dark-on-dark chip
+   now that the panel behind it is white. */
+.login-container .btn-secondary {
+    color: #4c1d95;
+    background: #f5f3ff;
+    border: 1px solid #ddd6fe;
+}
+
+.login-container .btn-secondary:hover:not(:disabled) {
+    background: #ede9fe;
+    border-color: #c4b5fd;
+}
+
+.login-container .auth-or-separator {
+    color: #64748b;
+}
+
+.login-container .form-note {
+    color: #64748b;
+}
+
+/* ---- Footer (NEW element, TASK #16B) --------------------------------
+   Small, muted, centered copyright line at the bottom of the right
+   panel, shared across all three forms (sign in / forgot password /
+   register) since it sits outside the <form> elements in the markup.
+   Kept deliberately compact (small font, modest margin/padding) so it
+   doesn't push the card's fixed-height layout (.login-container .card
+   has a capped height further up this file) into scrolling on the
+   default sign-in view. */
+.login-container .auth-footer {
+    margin: 18px 0 0;
+    padding-top: 12px;
+    border-top: 1px solid rgba(139, 92, 246, 0.12);
+    text-align: center;
+    color: #94a3b8;
+    font-size: 0.72rem;
+    font-weight: 500;
+    letter-spacing: 0.01em;
+}
+
+/* ---- Alerts on a white panel --------------------------------------
+   These were translucent light-on-dark fills; on white they had to be
+   re-tinted or they would have been unreadable. Wording, markup and
+   the JS that toggles them are unchanged. */
+.login-container .alert-danger {
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    color: #b91c1c;
+}
+
+.login-container .alert-success {
+    background: #f0fdf4;
+    border: 1px solid #bbf7d0;
+    color: #15803d;
+}
+
+.login-container .alert-info {
+    background: #f5f3ff;
+    border: 1px solid #ddd6fe;
+    color: #5b21b6;
+}
+
+.login-container .login-lock-alert {
+    background: #fef2f2;
+    border-color: #fecaca;
+    box-shadow: 0 10px 24px rgba(185, 28, 28, 0.1);
+}
+
+.login-container .login-lock-title {
+    color: #b91c1c;
+}
+
+.login-container .login-lock-timer {
+    color: #991b1b;
+    border: 1px solid #fca5a5;
+    background: #fee2e2;
+}
+
+.login-container .login-lock-message {
+    color: #b91c1c;
+}
+
+.login-container .login-lock-progress {
+    background: rgba(185, 28, 28, 0.16);
+}
+
+/* ---- Validation states (register form) ----------------------------
+   The rules being overridden are !important, so these must be too.
+   Only colours change; which class is applied when is still decided
+   by the existing validation JS. */
+.login-container .form-field-error input {
+    border-color: #ef4444 !important;
+    background-color: #fef2f2 !important;
+}
+
+.login-container .form-field-valid input {
+    border-color: #22c55e !important;
+    background-color: #f0fdf4 !important;
+}
+
+.login-container .field-error-text {
+    color: #dc2626;
+}
+
+.login-container .password-strength-meter {
+    background: #e9e4f8;
+}
+
+/* ------------------------------------------------------------------------
+   LEFT PANEL BRANDING REFINEMENT: one cohesive centered composition
+   ------------------------------------------------------------------------
+   Follow-up to the block this replaces. That first pass put the system
+   title in its own bordered/boxed card, pinned to the bottom of the panel
+   (reusing .pitch-image-wrap's old bottom-alignment plumbing) while the
+   logo/school-name group stayed pinned to the top -- .pitch-content's
+   original `justify-content: space-between` split them apart, leaving a
+   large empty gap between the two.
+
+   This revision groups the logo, school name/subtitle, a thin divider,
+   and the system title into a single wrapper, `.pitch-brand-group`, and
+   centers that whole group vertically with `margin: auto 0`. Auto margins
+   on a flex child absorb all free space evenly above and below it,
+   regardless of the parent's own justify-content -- so .pitch-content's
+   pre-existing `space-between` (left untouched, see the base rule above)
+   has nothing left to distribute once there's only one child, and simply
+   becomes inert. That's what removes the excessive empty space: the
+   composition now sits centered as one block instead of being stretched
+   to the panel's full height.
+
+   The title itself dropped its boxed background/border/shadow -- it's
+   now plain, centered text under a subtle gradient divider line, sized
+   smaller than the school name (`.form-brand-name`) via clamp() so it
+   scales without overflowing at any width. The markup no longer uses
+   `.pitch-image-wrap` at all (see index.php); that class's rules, and
+   its responsive per-breakpoint variants scattered through the @media
+   blocks earlier in this file, are consequently now fully inert (they
+   already stopped matching an <img> after the previous change, and now
+   don't match anything at all). They're deliberately left in place
+   rather than hunted down across every breakpoint block, the same
+   "delete vs. deliberately left inert" approach already used elsewhere
+   in this codebase -- removing them is low-value and carries real risk
+   of mismatched braces in a file this size for a purely cosmetic
+   cleanup. The logo and school name/subtitle text are unchanged aside
+   from a smaller, uniform logo size (see .form-brand img below) so the
+   whole group reads as one balanced unit instead of a giant hero image
+   above two small lines of text. The right-side Sign In panel is not
+   touched by any rule in this block. */
+.pitch-brand-group {
+    margin: auto 0;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: clamp(14px, 2.4vw, 22px);
+}
+
+.login-container .pitch-panel .form-brand {
+    margin: 0;
+    gap: 10px;
+}
+
+.login-container .pitch-panel .form-brand-text {
+    transform: none;
+}
+
+.login-container .pitch-panel .form-brand img {
+    /* TASK E (login redesign) — was an explicit 450x450 (TASK #16C/16D),
+       sized to be a dominant hero image inside the old 980x640 card. The
+       redesign spec calls for a logo that's "prominent, not oversized"
+       inside the new, smaller ~900x600 card (see .login-container .card
+       above), so this drops to 190x190. Same asset
+       (public/frontend/assets/images/logo.png); object-fit: contain is
+       restated here (in addition to the low-specificity base rule
+       earlier in this file) so the aspect ratio is guaranteed preserved
+       no matter which rule "wins" elsewhere. This applies uniformly from
+       >900px down to the existing 900px breakpoint — see the tablet
+       (<=900px) and mobile (<=480px) overrides appended at the end of
+       this file, which step this box down further, without touching
+       this rule.
+
+       The @media (min-width: 901px) block that used to sit here (tighter
+       pitch-panel/form-brand gaps) existed solely to squeeze the old
+       450px logo into the card without overlapping the text below it.
+       At 190px that pressure is gone, so it was removed rather than kept
+       as a no-op layer — the base .pitch-panel / .pitch-brand-group /
+       .form-brand gaps (earlier in this file) now apply directly and
+       give the smaller logo more natural breathing room. */
+    width: 190px;
+    height: 190px;
+    max-width: 190px;
+    object-fit: contain;
+    /* TASK F (login redesign v2) — soft purple glow around the logo, per
+       the "purple glow around logo" / "premium institutional brand panel"
+       requirement. drop-shadow (not box-shadow) so it follows the logo's
+       actual (non-rectangular) opaque pixels rather than its bounding box. */
+    filter: drop-shadow(0 0 26px rgba(168, 85, 247, 0.45));
+}
+
+/* TASK F (login redesign v2) — top-of-panel tagline and bottom-of-panel
+   campus-life text, per spec section 4. Both are new elements; markup added
+   in index.php as direct children of .pitch-content, flanking
+   .pitch-brand-group. .pitch-content already centers .pitch-brand-group
+   vertically via that group's own `margin: auto 0` (see the "LEFT PANEL
+   BRANDING REFINEMENT" comment above) — because only .pitch-brand-group has
+   auto margins, it alone absorbs the panel's free vertical space, which
+   pins this tagline to the top and the campus text to the bottom without
+   any extra positioning rules here. */
+.pitch-tagline {
+    margin: 0;
+    text-align: center;
+    color: #c4b5fd;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+}
+
+/* Investigated public/frontend/assets/images/ for an existing campus or
+   building photo to sit behind this text (per spec: "prefer existing
+   assets, do not invent/download a new one"). None of the project's
+   existing image assets are suitable: 1.jpg/Ube.jpg/Violet.jpg are
+   promotional uniform photos with real faces, 2.jpg/3.jpg are indoor
+   event/stage photos, and buildings-illustration.png /
+   buildings-overview-illustration.png are blue-neon isometric icon
+   graphics already used elsewhere (buildings-overview.php) and clash with
+   this purple palette. So this is plain script-style text directly on the
+   panel's own dark gradient, with no background image — see the final
+   report for this note surfaced to the user rather than silently worked
+   around. */
+.pitch-campus-text {
+    margin: 0;
+    text-align: left;
+    align-self: flex-start;
+    color: rgba(233, 213, 255, 0.72);
+    font-family: Georgia, 'Times New Roman', serif;
+    font-style: italic;
+    font-size: 0.92rem;
+    letter-spacing: 0.01em;
+}
+
+.pitch-divider {
+    display: block;
+    width: 56px;
+    height: 3px;
+    border-radius: 999px;
+    background: linear-gradient(
+        90deg,
+        rgba(139, 92, 246, 0) 0%,
+        rgba(139, 92, 246, 0.85) 50%,
+        rgba(139, 92, 246, 0) 100%
+    );
+}
+
+.pitch-system-title {
+    margin: 0;
+    width: 100%;
+    max-width: 320px;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: none;
+    box-shadow: none;
+    text-align: center;
+    /* TASK F (login redesign v2) — was #5b21b6 (deep purple), tuned for the
+       now-reverted white panel. Now the panel is dark again, this needs to
+       be a light tone to stay readable; matches the light-lavender used by
+       .form-brand-subtitle elsewhere on this same panel. */
+    color: #ddd6fe;
+    font-family: 'Poppins', 'Plus Jakarta Sans', 'Segoe UI', sans-serif;
+    font-weight: 800;
+    letter-spacing: 0.015em;
+    line-height: 1.42;
+    font-size: clamp(0.8rem, 0.55vw + 0.65rem, 0.95rem);
+    text-wrap: balance;
+}
+
+/* ---------------------------------------------------------------------
+   TASK E (login redesign) — responsive logo sizing (tablet + mobile).
+   Appended at the very end of the file (same "later wins" pattern used
+   throughout this stylesheet) so these overrides beat the 190x190
+   desktop rule on `.login-container .pitch-panel .form-brand img` above
+   at matching viewport widths, without editing that rule or touching
+   the several other already-inert `.form-brand img` declarations
+   scattered through the older @media blocks earlier in this file (those
+   have lower selector specificity and were already superseded before
+   this update — left alone deliberately, per the same reasoning
+   documented next to the desktop rule; this same specificity gap is why
+   those older rules' 112px/76px figures were never actually reaching the
+   screen and are not a reference point for the values below).
+   Two tiers, using the same selector so source order alone decides which
+   wins at a given width (narrower condition placed LATER so it correctly
+   beats the wider one it's nested inside):
+     - <=900px "tablet": scales with viewport width, capped well below
+       the old 300-350px so the single-column stacked pitch-panel (see
+       the <=900px block above) stays compact instead of being pushed
+       tall by an oversized logo.
+     - <=480px "mobile": smaller still, so Logo -> branding -> Sign In
+       all fit near the top of the screen without pushing the form down
+       past the fold. */
+@media (max-width: 900px) {
+    .login-container .pitch-panel .form-brand img {
+        width: clamp(120px, 18vw, 150px);
+        height: clamp(120px, 18vw, 150px);
+        max-width: clamp(120px, 18vw, 150px);
+        object-fit: contain;
+    }
+}
+
+@media (max-width: 480px) {
+    .login-container .pitch-panel .form-brand img {
+        width: clamp(80px, 22vw, 100px);
+        height: clamp(80px, 22vw, 100px);
+        max-width: clamp(80px, 22vw, 100px);
+        object-fit: contain;
+    }
+}
+
+/* =========================================================================
+   TASK F (login redesign v2) — right (Sign In) panel additions
+   -------------------------------------------------------------------------
+   New, purely additive rules for: the small accent line above "Sign In",
+   left-aligned icons inside the username/password fields, the redesigned
+   arrow + "Sign In" button, and the "Secure Access" divider row above the
+   footer. None of these rename/remove any existing selector above — the
+   existing input/button/footer rules keep doing everything they did
+   before; these only add new classes used by new markup in index.php.
+   ========================================================================= */
+
+/* Small purple line above the "Sign In" heading. Decorative only. */
+.signin-accent-line {
+    display: block;
+    width: 44px;
+    height: 3px;
+    border-radius: 999px;
+    margin-bottom: 8px;
+    background: linear-gradient(90deg, #8b5cf6 0%, #c4b5fd 100%);
+}
+
+/* Left-aligned icon inside the username field. `.input-icon-wrapper` is a
+   new, single-purpose wrapper (only used around #username) so this can't
+   affect the register/forgot-password forms, which don't use it. */
+.input-icon-wrapper {
+    position: relative;
+}
+
+.input-icon-wrapper .input-icon,
+.password-field-wrapper .input-icon {
+    position: absolute;
+    top: 50%;
+    left: 14px;
+    transform: translateY(-50%);
+    width: 18px;
+    height: 18px;
+    color: #94a3b8;
+    pointer-events: none;
+}
+
+/* Specificity note: .login-container .card:not(.register-mode) .form-group
+   input (defined much earlier in this file, for the ~16px/13px/11px
+   padding tiers across breakpoints) has 4 classes + 1 element, the same
+   specificity as the selectors below -- both prefixes are repeated here so
+   this tied selector wins purely by being later in the file, at every
+   breakpoint, without needing !important or touching those older rules. */
+.login-container .card:not(.register-mode) .input-icon-wrapper input,
+.input-icon-wrapper input {
+    padding-left: 42px;
+}
+
+/* Password field already has right-side padding reserved for the
+   show/hide toggle (see .password-field-wrapper input rules above); this
+   only adds the matching left-side space for the new lock icon. Same
+   specificity-tie reasoning as .input-icon-wrapper input above. */
+.login-container .card:not(.register-mode) .password-field-wrapper input,
+.password-field-wrapper input {
+    padding-left: 42px;
+}
+
+/* Arrow + "Sign In" button. `.btn` already centers its label by default in
+   every browser tested (buttons center inline content); flex here just
+   guarantees a consistent gap between the arrow and the text and keeps
+   both vertically centered, for both this button and the plain-text
+   secondary button, which is unaffected since it has only one child. */
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.btn-arrow-icon {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+}
+
+/* "Secure Access" divider row, sits between the button and the footer. */
+.secure-access-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.secure-access-line {
+    flex: 1 1 auto;
+    height: 1px;
+    background: linear-gradient(90deg, rgba(139, 92, 246, 0), rgba(139, 92, 246, 0.35), rgba(139, 92, 246, 0));
+}
+
+.secure-access-text {
+    flex: 0 0 auto;
+    color: #94a3b8;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+/* The secure-access row above now provides the visual divider that this
+   footer rule used to provide on its own (see the "Footer" comment further
+   up this file) — drop the footer's own top border/margin so there isn't a
+   double line, while keeping its font/color/padding exactly as before. */
+.login-container .auth-footer {
+    border-top: 0;
+    margin-top: 6px;
+    padding-top: 0;
+}
+
+/* Login spam protection — "N attempts left before sign-in is locked" line
+   under a failed sign-in message (see the login form's catch block). */
+.login-container .login-attempts-warning {
+    margin-top: 6px;
+    padding-top: 6px;
+    border-top: 1px dashed rgba(185, 28, 28, 0.3);
+    font-size: 0.85em;
+    font-weight: 700;
+    color: #9a3412;
+}
+
+/* =========================================================================
+   LOGIN POLISH (2026-09-26) — appended last so it wins by source order,
+   the pattern this stylesheet uses throughout.
+   - The "A Better Learning Environment" line and the "© 2026 … All rights
+     reserved." footer were removed from index.php on request.
+   - Bigger logo. logo.png is 642x314 with the seal centred between wide
+     transparent margins, so `object-fit: contain` in a square box drew the
+     seal at under half the box. `cover` crops the empty margins, so the seal
+     itself fills the box; the box also grows from 190px to 230px.
+   - Purple username/password icons (darker while the field has focus),
+     a firmer purple sign-in button, and a softer entrance.
+   ========================================================================= */
+
+/* Left panel — logo with a soft halo ring behind it. */
+.login-container .pitch-panel .form-brand {
+    position: relative;
+    gap: 16px;
+}
+
+.login-container .pitch-panel .form-brand img {
+    width: 230px;
+    height: 230px;
+    max-width: 230px;
+    object-fit: cover;
+    object-position: center;
+    position: relative;
+    z-index: 1;
+    filter: drop-shadow(0 0 34px rgba(168, 85, 247, 0.55)) drop-shadow(0 10px 22px rgba(15, 5, 40, 0.45));
+    transition: transform 0.35s ease;
+}
+
+.login-container .pitch-panel .form-brand::before {
+    content: "";
+    position: absolute;
+    top: -14px;
+    left: 50%;
+    width: 258px;
+    height: 258px;
+    transform: translateX(-50%);
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(167, 139, 250, 0.22) 0%, rgba(139, 92, 246, 0.08) 55%, rgba(139, 92, 246, 0) 72%);
+    border: 1px solid rgba(196, 181, 253, 0.18);
+    pointer-events: none;
+}
+
+.login-container .pitch-panel .form-brand:hover img {
+    transform: scale(1.03);
+}
+
+.login-container .pitch-panel .form-brand-subtitle {
+    font-size: clamp(0.85rem, 0.3vw + 0.78rem, 0.98rem);
+    color: #d8ccff;
+}
+
+@media (max-width: 900px) {
+    .login-container .pitch-panel .form-brand img {
+        width: clamp(140px, 22vw, 180px);
+        height: clamp(140px, 22vw, 180px);
+        max-width: clamp(140px, 22vw, 180px);
+    }
+    .login-container .pitch-panel .form-brand::before {
+        width: clamp(160px, 25vw, 204px);
+        height: clamp(160px, 25vw, 204px);
+        top: -12px;
+    }
+}
+
+@media (max-width: 480px) {
+    .login-container .pitch-panel .form-brand img {
+        width: clamp(104px, 30vw, 128px);
+        height: clamp(104px, 30vw, 128px);
+        max-width: clamp(104px, 30vw, 128px);
+    }
+    .login-container .pitch-panel .form-brand::before {
+        width: clamp(120px, 34vw, 146px);
+        height: clamp(120px, 34vw, 146px);
+        top: -9px;
+    }
+}
+
+/* Right panel — purple field icons, clearer focus. */
+.login-container .input-icon-wrapper .input-icon,
+.login-container .password-field-wrapper .input-icon {
+    width: 19px;
+    height: 19px;
+    color: #8b5cf6;
+    transition: color 0.2s ease, transform 0.2s ease;
+}
+
+.login-container .input-icon-wrapper:focus-within .input-icon,
+.login-container .password-field-wrapper:focus-within .input-icon {
+    color: #6d28d9;
+    transform: translateY(-50%) scale(1.08);
+}
+
+.login-container .card:not(.register-mode) .input-icon-wrapper input,
+.login-container .card:not(.register-mode) .password-field-wrapper input {
+    min-height: 52px;
+    border-radius: 12px;
+    border-color: #e4defa;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+}
+
+.login-container .card:not(.register-mode) .input-icon-wrapper input:hover,
+.login-container .card:not(.register-mode) .password-field-wrapper input:hover {
+    border-color: #c4b5fd;
+}
+
+.login-container .card:not(.register-mode) .input-icon-wrapper input:focus,
+.login-container .card:not(.register-mode) .password-field-wrapper input:focus {
+    border-color: #8b5cf6;
+    box-shadow: 0 0 0 4px rgba(139, 92, 246, 0.16);
+}
+
+.login-container .password-toggle-btn {
+    color: #8b5cf6;
+}
+
+.login-container .remember-me-control input {
+    accent-color: #7c3aed;
+}
+
+.login-container .forgot-password-link {
+    font-weight: 600;
+}
+
+/* Sign In button — deeper purple gradient with a gentle shine on hover. */
+.login-container .btn-primary {
+    background: linear-gradient(135deg, #6d28d9 0%, #8b5cf6 55%, #a78bfa 100%);
+    background-size: 160% 100%;
+    background-position: 0% 50%;
+    border: 0;
+    border-radius: 12px;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    box-shadow: 0 12px 26px rgba(109, 40, 217, 0.34);
+    transition: background-position 0.35s ease, box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.login-container .btn-primary:hover:not(:disabled) {
+    background-position: 100% 50%;
+    box-shadow: 0 16px 32px rgba(109, 40, 217, 0.42);
+    transform: translateY(-1px);
+}
+
+.login-container .btn-primary:hover:not(:disabled) .btn-arrow-icon {
+    transform: translateX(3px);
+}
+
+.login-container .btn-arrow-icon {
+    transition: transform 0.2s ease;
+}
+
+.login-container .btn-primary:disabled {
+    background: linear-gradient(135deg, #a78bfa 0%, #c4b5fd 100%);
+    box-shadow: none;
+}
+
+/* With the footer gone, give the Secure Access row a little room below. */
+.login-container .secure-access-row {
+    margin-top: 16px;
+}
+
+.login-container .secure-access-text {
+    color: #8b5cf6;
+}
+
+/* Soft entrance for the whole card. */
+@keyframes loginCardIn {
+    from { opacity: 0; transform: translateY(10px) scale(0.99); }
+    to   { opacity: 1; transform: none; }
+}
+
+.login-container .card {
+    animation: loginCardIn 0.45s ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .login-container .card,
+    .login-container .pitch-panel .form-brand img,
+    .login-container .btn-primary {
+        animation: none;
+        transition: none;
+    }
+}
+
+/* =========================================================================
+   LOGIN MOBILE SCROLL FIX (2026-09-27) — appended last so it wins.
+   1. One scroller: on phones `html, body { height: 100%; overflow-y: auto }`
+      (earlier in this file) made both elements scroll containers; the two
+      fought over the scroll, so reaching the bottom — or the address bar
+      hiding/showing — snapped the page back up. The document now scrolls
+      normally as a single page.
+   2. Keyboard room: `body.keyboard-open` (set by the sign-in page's script
+      while a field has focus) already collapses the logo panel and pads the
+      form by --kb-offset; this adds breathing room under the form so the
+      focused field and the Sign In button can scroll clear of the keyboard.
+   Desktop keeps its fixed, centred layout (these rules are phone/tablet only).
+   ========================================================================= */
+@media (max-width: 900px) {
+    /* Sideways clipping lives on <html> ONLY: overflow set on the root is
+       applied to the page viewport itself (the normal document scroll), not a
+       nested scroll box. <body> must stay `overflow: visible` on both axes —
+       `overflow-x: hidden` there would silently turn its overflow-y into
+       `auto` and make it a second scroller again. */
+    html {
+        height: auto !important;
+        overflow-x: hidden !important;
+        overflow-y: auto !important;
+        overscroll-behavior-y: none;
+    }
+
+    body {
+        height: auto !important;
+        min-height: 100svh;
+        overflow: visible !important;
+    }
+
+    /* The decorative background layers are larger than the screen on
+       purpose (the particle layer drifts). Pinned to the screen, they no
+       longer widen/lengthen the scrollable page now that <body> does not
+       clip them. */
+    body::before,
+    body::after {
+        position: fixed !important;
+    }
+
+    /* The container glow bled ~23px past each side (inset -6%), widening
+       the page so phones could pan sideways. Keep it within the screen. */
+    .login-container::before {
+        left: 0;
+        right: 0;
+    }
+
+    body.keyboard-open .form-panel-inner {
+        padding-bottom: calc(var(--kb-offset, 0px) + 24px);
+    }
+}
+
+/* Desktop: lift the logo group slightly — the space above it (under the
+   "SERVICE • FACILITIES • A BETTER CAMPUS" tagline) was noticeably larger
+   than needed. The group stays vertically centred (margin: auto 0); the
+   extra bottom padding simply moves its centre up by half its size. */
+@media (min-width: 901px) {
+    .login-container .pitch-panel .pitch-brand-group {
+        padding-bottom: 64px;
+    }
+}
+
+/* ============================================================
+   BRAND TEXT SPACING (2026-09-27)
+   The seal's halo eats most of the 16px gap, so the college name
+   read as glued to the logo. Push the brand text down a bit.
+   ============================================================ */
+.login-container .pitch-panel .form-brand-text {
+    margin-top: 14px;
+}
+
+@media (max-width: 900px) {
+    .login-container .pitch-panel .form-brand-text {
+        margin-top: 8px;
+    }
+}
+
+/* Give the system title more breathing room below the divider. */
+.login-container .pitch-panel .pitch-system-title {
+    margin-top: 18px;
+}
+
+@media (max-width: 900px) {
+    .login-container .pitch-panel .pitch-system-title {
+        margin-top: 10px;
+    }
+}

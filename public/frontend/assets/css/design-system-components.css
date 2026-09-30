@@ -1,0 +1,562 @@
+/* ===================================================================
+   Design System Components — Shared Foundation
+   ===================================================================
+   Canonical implementation for components identified in
+   COMPONENT_GOVERNANCE.md §7 as having NO existing owner anywhere
+   in the codebase: Toast Notifications, Empty States, Pagination,
+   Search Bars, Filter Bars.
+
+   Status: net-new foundation only. Nothing currently links this file
+   and no page markup has been changed to use it — see
+   COMPONENT_GOVERNANCE.md / this phase's summary for adoption steps.
+
+   Dependencies: consumes tokens defined in color-scheme.css and
+   styles.css (§21 token catalog) — load this file after both.
+   Every rule below falls back to a literal value if a token is
+   missing, so the file degrades gracefully if loaded alone.
+
+   Conventions followed (DESIGN_SYSTEM.md):
+   - Color/spacing/radius/shadow only via var() tokens (§21, §30).
+   - Light/dark handled automatically: every token used here already
+     resolves per [data-theme-resolved='light'|'dark'] in styles.css,
+     so no theme-specific overrides are needed in this file unless a
+     value doesn't come from a themed token (flagged inline where so).
+   - :focus-visible ring via --shadow-focus (§18).
+   - No `transform: translateY()` hover-lift, no bounce/elastic easing (§19).
+   - prefers-reduced-motion is handled globally in styles.css
+     (`*, *::before, *::after { animation-duration: 0.001ms !important; }`)
+     so no component below needs its own reduced-motion override.
+   - No !important anywhere in this file — every selector below is
+     new and has no competing definition to out-rank.
+   =================================================================== */
+
+
+/* ===================================================================
+   1. TOAST NOTIFICATIONS
+   ===================================================================
+   Matches the existing markup already produced by utils.js's
+   UI.toast()/Components.toast(): `#toast-container` > `.toast.toast-{type}`.
+   That JS sets the container's position/top/right/z-index/max-width
+   via inline style — this file does not fight that; it only adds
+   layout (flex/gap) the inline style doesn't set, and makes the
+   `.toast` element itself responsive so it never overflows small
+   viewports regardless of the container's fixed inline width.
+
+   Exported classes:
+     #toast-container      layout wrapper (created by utils.js)
+     .toast                 base toast surface
+     .toast-success/-warning/-danger/-info   left-accent color variant
+                             (also accepts .toast-error as an alias for
+                             .toast-danger, since DESIGN_SYSTEM.md §25
+                             names the variant "error")
+     .toast-icon             optional icon slot (20px, currentColor)
+     .toast-message           optional text wrapper
+     .toast-close             optional dismiss button
+   =================================================================== */
+
+#toast-container {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3, 12px);
+    pointer-events: none; /* clicks pass through the gaps between toasts */
+}
+
+.toast {
+    pointer-events: auto;
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-3, 12px);
+    width: 100%;
+    max-width: min(92vw, 360px);
+    padding: var(--space-3, 12px) var(--space-4, 16px);
+    background: var(--surface-card, var(--card-color, #ffffff));
+    color: var(--text-body, var(--text-primary, #111827));
+    border-left: 4px solid var(--color-info, #3b82f6);
+    border-radius: var(--radius-md, 10px);
+    box-shadow: var(--shadow-lg, 0 12px 28px rgba(15, 23, 42, 0.12));
+    font-family: var(--font-family-base, inherit);
+    font-size: var(--text-sm, 0.8125rem);
+    line-height: 1.5;
+    word-break: break-word;
+    animation: sfms-toast-in var(--duration-base, 220ms) var(--motion-ease, ease) both;
+}
+
+:root[data-theme-resolved='dark'] .toast {
+    /* DESIGN_SYSTEM.md §6: same shadow shape, higher-opacity black in dark theme */
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+}
+
+.toast-success { border-left-color: var(--color-success, #10b981); }
+.toast-warning { border-left-color: var(--color-warning, #f59e0b); }
+.toast-danger,
+.toast-error   { border-left-color: var(--color-danger, #dc2626); }
+.toast-info    { border-left-color: var(--color-info, #3b82f6); }
+
+.toast-icon {
+    flex-shrink: 0;
+    width: 20px;
+    height: 20px;
+    margin-top: 1px;
+    color: currentColor;
+}
+
+.toast-message {
+    flex: 1;
+}
+
+.toast-close {
+    flex-shrink: 0;
+    appearance: none;
+    background: transparent;
+    border: none;
+    padding: var(--space-1, 4px);
+    margin: calc(var(--space-1, 4px) * -1);
+    color: var(--text-muted, var(--muted-text, #6b7280));
+    font-size: var(--text-md, 1rem);
+    line-height: 1;
+    cursor: pointer;
+    border-radius: var(--radius-sm, 6px);
+}
+
+.toast-close:hover {
+    color: var(--text-body, var(--text-primary, #111827));
+}
+
+.toast-close:focus-visible,
+.toast:focus-visible {
+    outline: none;
+    box-shadow: var(--shadow-focus, 0 0 0 3px var(--color-primary-100, #f3e8ff));
+}
+
+@keyframes sfms-toast-in {
+    from { opacity: 0; transform: translateX(16px); }
+    to   { opacity: 1; transform: none; }
+}
+
+
+/* ===================================================================
+   2. EMPTY STATES
+   ===================================================================
+   Per DESIGN_SYSTEM.md §23. Sits inside an existing .card/table area —
+   this component does not provide its own outer card chrome.
+
+   Exported classes:
+     .empty-state              container (centered column)
+     .empty-state-icon         48-64px icon slot, muted color
+     .empty-state-title        heading
+     .empty-state-description  supporting copy, max-width 360px
+     .empty-state-actions      wrapper for the primary action button
+   =================================================================== */
+
+.empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: var(--space-10, 40px) var(--space-4, 16px);
+}
+
+.empty-state-icon {
+    width: 56px;
+    height: 56px;
+    margin-bottom: var(--space-3, 12px);
+    color: var(--text-muted, var(--muted-text, #6b7280));
+}
+
+.empty-state-title {
+    font-family: var(--font-family-base, inherit);
+    font-size: var(--text-md, 1rem);
+    font-weight: var(--font-weight-semibold, 600);
+    color: var(--text-heading, var(--text-primary, #111827));
+    margin-bottom: var(--space-3, 12px);
+}
+
+.empty-state-description {
+    font-size: var(--text-sm, 0.8125rem);
+    color: var(--text-muted, var(--muted-text, #6b7280));
+    max-width: 360px;
+    line-height: 1.6;
+}
+
+.empty-state-actions {
+    margin-top: var(--space-6, 24px);
+}
+
+@media (max-width: 480px) {
+    .empty-state {
+        padding: var(--space-8, 32px) var(--space-3, 12px);
+    }
+}
+
+
+/* ===================================================================
+   3. PAGINATION
+   ===================================================================
+   No canonical pagination component existed anywhere in the codebase
+   (confirmed in COMPONENT_GOVERNANCE.md §2/§7) — every list page had
+   reinvented its own. This is a fresh, semantic implementation:
+   real <button> elements in a <ul>, wrapped in a <nav aria-label>.
+
+   Exported classes:
+     .pagination            <nav> wrapper
+     .pagination-list       <ul>, flex row
+     .pagination-link       page-number button (also base for prev/next)
+     .pagination-link.is-active   current page (aria-current="page" in markup)
+     .pagination-link[disabled]   prev/next at a boundary
+     .pagination-prev / .pagination-next   modifiers for the arrow buttons
+     .pagination-arrow-left / -right       CSS-drawn chevrons (no icon asset needed)
+     .pagination-ellipsis   non-interactive "…" gap marker
+   =================================================================== */
+
+.pagination-list {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--space-2, 8px);
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.pagination-link {
+    appearance: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 36px;
+    height: 36px;
+    padding: 0 var(--space-2, 8px);
+    background: var(--surface-card, #ffffff);
+    color: var(--text-body, var(--text-primary, #111827));
+    border: var(--border-width-hairline, 1px) solid var(--border-default, var(--border, #e5e7eb));
+    border-radius: var(--radius-md, 10px);
+    font-family: var(--font-family-base, inherit);
+    font-size: var(--text-sm, 0.8125rem);
+    line-height: 1;
+    cursor: pointer;
+    transition: var(--transition-base, background-color 150ms ease, border-color 150ms ease);
+}
+
+.pagination-link:hover {
+    background: var(--surface-muted, #f8fafc);
+    border-color: var(--color-primary, var(--primary, #7c3aed));
+}
+
+.pagination-link.is-active {
+    background: var(--color-primary, var(--primary, #7c3aed));
+    border-color: var(--color-primary, var(--primary, #7c3aed));
+    color: #ffffff;
+    cursor: default;
+}
+
+.pagination-link:disabled {
+    opacity: var(--opacity-disabled, 0.5);
+    cursor: not-allowed;
+}
+.pagination-link:disabled:hover {
+    background: var(--surface-card, #ffffff);
+    border-color: var(--border-default, var(--border, #e5e7eb));
+}
+
+.pagination-link:focus-visible {
+    outline: none;
+    box-shadow: var(--shadow-focus, 0 0 0 3px var(--color-primary-100, #f3e8ff));
+}
+
+.pagination-ellipsis {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 36px;
+    height: 36px;
+    color: var(--text-muted, var(--muted-text, #6b7280));
+    font-size: var(--text-sm, 0.8125rem);
+}
+
+/* CSS-drawn chevrons — no icon font/SVG asset dependency */
+.pagination-arrow {
+    display: inline-block;
+    width: 7px;
+    height: 7px;
+    border: solid currentColor;
+    border-width: 0 2px 2px 0;
+}
+.pagination-arrow-left  { transform: rotate(135deg); margin-left: 2px; }
+.pagination-arrow-right { transform: rotate(-45deg); margin-right: 2px; }
+
+/* Touch targets: bump to 44px on coarse-pointer (touch) devices per DESIGN_SYSTEM.md §18 */
+@media (pointer: coarse) {
+    .pagination-link,
+    .pagination-ellipsis {
+        min-width: 44px;
+        height: 44px;
+    }
+}
+
+@media (max-width: 480px) {
+    .pagination-list {
+        gap: var(--space-1, 4px);
+    }
+    .pagination-link,
+    .pagination-ellipsis {
+        min-width: 32px;
+        height: 32px;
+        font-size: var(--text-xs, 0.75rem);
+    }
+}
+
+
+/* ===================================================================
+   4. SEARCH BARS
+   ===================================================================
+   No canonical search component existed (governance §2/§7) — each
+   page built its own. This wraps a native <input type="search"> so
+   keyboard/IME/clear-icon (native OS) behavior is preserved for free.
+
+   Exported classes:
+     .search-bar             pill/field container
+     .search-bar-icon        16-20px leading icon slot (CSS-drawn magnifier
+                              provided by default; replace with an inline
+                              SVG in markup if a different icon is desired)
+     .search-bar-input       the actual <input>, chrome-less
+     .search-bar-clear       trailing clear button — ships hidden;
+                              add class `.has-value` to `.search-bar`
+                              (from JS, in a future phase) to reveal it
+   =================================================================== */
+
+.search-bar {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2, 8px);
+    width: 100%;
+    max-width: 320px;
+    height: 40px;
+    padding: 0 var(--space-3, 12px);
+    background: var(--surface-card, #ffffff);
+    border: var(--border-width-hairline, 1px) solid var(--border-default, var(--border, #e5e7eb));
+    border-radius: var(--radius-md, 10px);
+    transition: var(--transition-base, border-color 150ms ease, box-shadow 150ms ease);
+}
+
+.search-bar:focus-within {
+    border-color: var(--color-primary, var(--primary, #7c3aed));
+    box-shadow: var(--shadow-focus, 0 0 0 3px var(--color-primary-100, #f3e8ff));
+}
+
+.search-bar-icon {
+    flex-shrink: 0;
+    width: 16px;
+    height: 16px;
+    color: var(--text-muted, var(--muted-text, #6b7280));
+    position: relative;
+}
+
+/* Default CSS-drawn magnifying glass (used when .search-bar-icon is left empty) */
+.search-bar-icon:empty::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 11px;
+    height: 11px;
+    border: 2px solid currentColor;
+    border-radius: 50%;
+}
+.search-bar-icon:empty::after {
+    content: '';
+    position: absolute;
+    width: 6px;
+    height: 2px;
+    background: currentColor;
+    top: 11px;
+    left: 10px;
+    transform: rotate(45deg);
+    transform-origin: left center;
+}
+
+.search-bar-input {
+    flex: 1;
+    min-width: 0;
+    border: none;
+    background: transparent;
+    color: var(--text-body, var(--text-primary, #111827));
+    font-family: var(--font-family-base, inherit);
+    font-size: var(--text-base, 0.875rem);
+}
+.search-bar-input:focus {
+    outline: none;
+}
+.search-bar-input::placeholder {
+    color: var(--text-muted, var(--muted-text, #6b7280));
+}
+/* Suppress the native WebKit search-cancel icon so our own .search-bar-clear
+   button is the single, theme-consistent clear affordance */
+.search-bar-input::-webkit-search-cancel-button {
+    display: none;
+}
+
+.search-bar-clear {
+    display: none; /* revealed via .search-bar.has-value .search-bar-clear */
+    flex-shrink: 0;
+    appearance: none;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    padding: 0;
+    background: transparent;
+    border: none;
+    border-radius: var(--radius-full, 9999px);
+    color: var(--text-muted, var(--muted-text, #6b7280));
+    font-size: var(--text-md, 1rem);
+    line-height: 1;
+    cursor: pointer;
+}
+.search-bar.has-value .search-bar-clear {
+    display: inline-flex;
+}
+.search-bar-clear:hover {
+    color: var(--text-body, var(--text-primary, #111827));
+    background: var(--surface-muted, #f8fafc);
+}
+.search-bar-clear:focus-visible,
+.search-bar-input:focus-visible {
+    outline: none;
+    box-shadow: var(--shadow-focus, 0 0 0 3px var(--color-primary-100, #f3e8ff));
+}
+
+@media (max-width: 768px) {
+    .search-bar {
+        max-width: none;
+    }
+}
+
+
+/* ===================================================================
+   5. FILTER BARS
+   ===================================================================
+   No canonical filter component existed (governance §2/§7). Designed
+   to sit directly above a table/card-grid as a toolbar strip.
+
+   Exported classes:
+     .filter-bar             toolbar container (wraps below --bp-md)
+     .filter-group           label + control pairing
+     .filter-label           small label above a control
+     .filter-select           <select>, sized to match .form-control
+     .filter-chips           wrapper for active-filter pills
+     .filter-chip             one active-filter pill
+     .filter-chip-remove      × button inside a chip
+     .filter-clear-all        text/ghost action to reset all filters
+   =================================================================== */
+
+.filter-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: var(--space-4, 16px);
+    padding: var(--space-4, 16px);
+    background: var(--surface-card, #ffffff);
+    border: var(--border-width-hairline, 1px) solid var(--border-default, var(--border, #e5e7eb));
+    border-radius: var(--radius-lg, 14px);
+}
+
+.filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2, 8px);
+    min-width: 160px;
+}
+
+.filter-label {
+    font-size: var(--text-xs, 0.75rem);
+    font-weight: var(--font-weight-semibold, 600);
+    color: var(--text-body, var(--text-primary, #111827));
+}
+
+.filter-select {
+    height: 40px;
+    padding: 0 var(--space-3, 12px);
+    background: var(--surface-card, #ffffff);
+    color: var(--text-body, var(--text-primary, #111827));
+    border: var(--border-width-hairline, 1px) solid var(--border-default, var(--border, #e5e7eb));
+    border-radius: var(--radius-md, 10px);
+    font-family: var(--font-family-base, inherit);
+    font-size: var(--text-base, 0.875rem);
+}
+.filter-select:focus-visible {
+    outline: none;
+    border-color: var(--color-primary, var(--primary, #7c3aed));
+    box-shadow: var(--shadow-focus, 0 0 0 3px var(--color-primary-100, #f3e8ff));
+}
+
+.filter-chips {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2, 8px);
+}
+
+.filter-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1, 4px);
+    padding: var(--space-1, 4px) var(--space-3, 12px);
+    background: var(--color-primary-100, var(--primary-bg, #f3e8ff));
+    color: var(--color-primary-hover, var(--primary-dark, #6d28d9));
+    border-radius: var(--radius-full, 9999px);
+    font-size: var(--text-xs, 0.75rem);
+    font-weight: var(--font-weight-medium, 500);
+}
+
+.filter-chip-remove {
+    appearance: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 14px;
+    height: 14px;
+    padding: 0;
+    background: transparent;
+    border: none;
+    color: inherit;
+    font-size: var(--text-xs, 0.75rem);
+    line-height: 1;
+    cursor: pointer;
+    border-radius: var(--radius-full, 9999px);
+}
+.filter-chip-remove:hover {
+    background: rgba(0, 0, 0, 0.08);
+}
+.filter-chip-remove:focus-visible,
+.filter-select:focus-visible,
+.filter-clear-all:focus-visible {
+    outline: none;
+    box-shadow: var(--shadow-focus, 0 0 0 3px var(--color-primary-100, #f3e8ff));
+}
+
+.filter-clear-all {
+    appearance: none;
+    background: transparent;
+    border: none;
+    padding: var(--space-2, 8px) 0;
+    color: var(--color-primary, var(--primary, #7c3aed));
+    font-family: var(--font-family-base, inherit);
+    font-size: var(--text-sm, 0.8125rem);
+    font-weight: var(--font-weight-medium, 500);
+    cursor: pointer;
+}
+.filter-clear-all:hover {
+    color: var(--color-primary-hover, var(--primary-dark, #6d28d9));
+    text-decoration: underline;
+}
+
+@media (max-width: 768px) {
+    .filter-bar {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .filter-group {
+        min-width: 0;
+        width: 100%;
+    }
+}

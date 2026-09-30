@@ -1,0 +1,91 @@
+Options -Indexes
+DirectoryIndex index.php
+
+# Block direct access to sensitive dotfiles (env, git, htaccess, htpasswd).
+<FilesMatch "^\.(env|git|htaccess|htpasswd)">
+    Require all denied
+</FilesMatch>
+
+RewriteEngine On
+
+# TASK 100.2.1 remediation (2026-08-17): the FilesMatch block above only
+# matches a request's basename (e.g. it blocks a file literally named
+# ".git"), so nested paths like /.git/config or /.git/HEAD — whose basename
+# is "config" / "HEAD", not ".git" — were slipping through and being served
+# as plain static files, exposing the full repository (including git
+# history) over HTTP. This rule matches the request path itself, so it
+# blocks the .git directory and everything inside it regardless of the
+# requested file's own name.
+RewriteCond %{REQUEST_URI} (^|/)\.git(/|$) [NC]
+RewriteRule .* - [F,L]
+
+# TASK 100.2.1 remediation (2026-08-17): database/ (including
+# database/database.sqlite) has no legitimate reason to be reached over
+# HTTP — Laravel and the legacy backend both open it directly from disk,
+# never via a URL. It was previously unprotected and directly downloadable.
+RewriteRule ^database/ - [F,L]
+
+# TASK 100.2.1 follow-up (2026-08-17): db_backups/ contains real database
+# dump files (see .gitignore's "Task 82 — release hygiene" entry — these are
+# real backups that must stay on disk but must never be exposed). The
+# directory listing was already blocked (Options -Indexes, no index file),
+# but a request for a specific known/guessed filename inside it (e.g. the
+# tracked-in-history backup TASK 100.1 removed from the Git index) was still
+# served directly, since no rule protected the files themselves.
+RewriteRule ^db_backups/ - [F,L]
+
+# TASK 60 (2026-09-07): the legacy logger writes into public/logs/
+# (public/backend/utils/Logger.php:8 → __DIR__ . '/../../logs'), i.e. inside
+# the web root, and nothing denied those files. The front-controller fallback
+# at the bottom of this file does not catch them either, because it is gated on
+# `!-f` — the log file exists, so Apache serves it directly as a static asset.
+# Options -Indexes only hides the listing; the filenames are literal dates
+# (2026-04-07.log), so they need no listing to be found.
+#
+# This matters because TASK 55 (FacilityService) and TASK 59 (the legacy
+# notifications endpoint) both fixed raw-exception disclosure by routing the
+# full PDOException text into Logger::error() and returning only a generic
+# message. That RELOCATED the sensitive detail into these files rather than
+# eliminating it: the live logs carry SQLSTATE codes, missing table/column
+# names and the database name. Reading them needs no session, whereas the
+# TASK 59 defect required an authenticated one — so leaving this open would
+# have left the system more exposed after those fixes than before.
+#
+# Matched on REQUEST_URI rather than as a `^logs/` prefix so it also covers
+# Laravel's own storage/logs/laravel.log, which today is shielded only by
+# accident (the stale `^storage/` rewrite below points at a public/storage/
+# that does not exist). `(^|/)logs/` matches a whole path segment, so the live
+# `activity-logs` routes in routes/web.php are unaffected.
+RewriteCond %{REQUEST_URI} (^|/)logs/ [NC]
+RewriteRule .* - [F,L]
+
+# Preserve old hardcoded URLs after removing the laravel_app subfolder.
+RewriteRule ^laravel_app/public/(.*)$ $1 [R=302,L,NC]
+
+# Serve legacy public assets and pages from the root project URL.
+RewriteRule ^frontend/(.*)$ public/frontend/$1 [L,NC]
+RewriteRule ^backend/(.*)$ public/backend/$1 [L,NC]
+RewriteRule ^storage/(.*)$ public/storage/$1 [L,NC]
+RewriteRule ^(favicon\.ico|robots\.txt)$ public/$1 [L,NC]
+
+# TASK 58 (2026-09-07): the rewrite that used to sit here —
+#   RewriteRule ^inventory-workflow-api\.php$ public/inventory-workflow-api.php
+# — was removed together with its target shim. The shim's only statement was
+# `require_once __DIR__ . '/backend/api/inventory-workflow-api.php'`, and that
+# file was deleted in commit 6bbd38a along with the rest of public/backend/api/.
+# The rule therefore routed a public, unauthenticated URL straight into a PHP
+# fatal error that disclosed the absolute filesystem path and include_path
+# (display_errors=1). No repository code ever called the URL.
+#
+# The endpoint's eleven actions are all superseded or deliberately retired:
+# reserve/release/deploy are now the Dispatch workflow (routes/web.php), the
+# transaction/restock reads are InventoryStockController, and `deploy` +
+# syncRoomAssetFromInventory() ARE the Deploy-to-Room feature retired under
+# TASK 36 PHASE 7. The deleted target must NOT be recreated: it auto-minted a
+# persisted `maintenance_admin` $_SESSION identity for any anonymous caller.
+# See TASK_58_INVENTORY_WORKFLOW_API_SHIM_AUDIT_REPORT.md.
+
+# Send Laravel/web routes through the real public front controller.
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteRule ^ index.php [L]

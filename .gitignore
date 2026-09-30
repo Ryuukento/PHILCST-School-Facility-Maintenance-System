@@ -1,0 +1,43 @@
+*.log
+.DS_Store
+.env
+.env.mail.local
+.env.backup
+.env.production
+.phpactor.json
+.phpunit.result.cache
+/.fleet
+/.idea
+/.nova
+/.phpunit.cache
+/.vscode
+/.zed
+/auth.json
+/node_modules
+/public/build
+/public/hot
+/public/storage
+/storage/*.key
+/storage/pail
+/vendor
+Homestead.json
+Homestead.yaml
+Thumbs.db
+
+# Task 82 — release hygiene additions (2026-08-16)
+# Generated database dumps — real backups, must stay on disk, must never be committed.
+db_backups/
+# Generated PHPUnit test-run output.
+phpunit-results.xml
+# Local Claude Code tool/session state, not application source.
+.claude/
+# Runtime user-uploaded files (avatars, completion-proof photos). Note: files already
+# tracked in git history before this change remain tracked — this only stops NEW
+# uploads from being added. See DEPLOYMENT.md Section 27.
+public/frontend/assets/uploads/
+public/frontend/uploads/
+.env*.bak
+# Ignore all environment/local secret files
+.env*
+!.env.example
+!.env.production.example

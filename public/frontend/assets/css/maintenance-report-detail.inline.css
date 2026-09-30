@@ -1,0 +1,321 @@
+﻿/* ALERT STYLES - Dark Mode */
+.alert {
+    padding: 14px 16px;
+    border-radius: 8px;
+    border-left: 4px solid;
+    margin-bottom: 16px;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+.alert.alert-danger {
+    background-color: rgba(220, 38, 38, 0.2);
+    border-color: #dc2626;
+    color: #ffffff;
+}
+
+.alert.alert-success {
+    background-color: rgba(22, 163, 74, 0.2);
+    border-color: #16a34a;
+    color: #ffffff;
+}
+
+.alert.alert-warning {
+    background-color: rgba(217, 119, 6, 0.2);
+    border-color: #d97706;
+    color: #ffffff;
+}
+
+.alert.alert-info {
+    background-color: rgba(37, 99, 235, 0.2);
+    border-color: #2563eb;
+    color: #ffffff;
+}
+
+/* Light Mode */
+:root[data-theme-resolved='light'] .alert.alert-danger {
+    background-color: #fee2e2;
+    border-color: #fca5a5;
+    color: #7f1d1d;
+}
+
+:root[data-theme-resolved='light'] .alert.alert-success {
+    background-color: #dcfce7;
+    border-color: #86efac;
+    color: #15803d;
+}
+
+:root[data-theme-resolved='light'] .alert.alert-warning {
+    background-color: #fef3c7;
+    border-color: #fcd34d;
+    color: #78350f;
+}
+
+:root[data-theme-resolved='light'] .alert.alert-info {
+    background-color: #dbeafe;
+    border-color: #93c5fd;
+    color: #1e40af;
+}
+
+.assigned-report-page {
+    width: calc(100% - var(--sidebar-width));
+    max-width: calc(100% - var(--sidebar-width));
+    margin-left: var(--sidebar-width);
+    margin-right: 0;
+    margin-top: 20px;
+    padding-left: 24px;
+    padding-right: 24px;
+}
+
+.navbar .navbar-container {
+    max-width: none;
+    margin: 0;
+    padding-left: 24px;
+    padding-right: 24px;
+}
+
+#sidebar.collapsed ~ main.assigned-report-page {
+    width: calc(100% - var(--sidebar-width-collapsed));
+    max-width: calc(100% - var(--sidebar-width-collapsed));
+    margin-left: var(--sidebar-width-collapsed);
+}
+
+@media (max-width: 992px) {
+    .assigned-report-page {
+        width: calc(100% - var(--sidebar-width-collapsed));
+        max-width: calc(100% - var(--sidebar-width-collapsed));
+        margin-left: var(--sidebar-width-collapsed);
+    }
+}
+
+@media (max-width: 640px) {
+    .navbar .navbar-container,
+    .assigned-report-page {
+        padding-left: 14px;
+        padding-right: 14px;
+    }
+}
+
+.assigned-report-page .card {
+    border-radius: 16px;
+}
+
+.assigned-report-page .card-header {
+    padding: 20px 24px;
+}
+
+.assigned-report-page .card-body {
+    padding: 18px 24px 24px;
+}
+
+.assigned-report-page .card + .card {
+    margin-top: 18px !important;
+}
+
+.assigned-report-page .btn {
+    border-radius: 10px;
+}
+
+.assigned-report-page #inventory-workflow-output .table {
+    margin-top: 8px;
+}
+
+.assigned-report-page #inventory-workflow-output .table th,
+.assigned-report-page #inventory-workflow-output .table td {
+    white-space: nowrap;
+}
+
+.need-change-approval-meta {
+    display: grid;
+    gap: 8px;
+    margin-bottom: 12px;
+    padding: 12px;
+    border-radius: 10px;
+    border: 1px solid rgba(148, 163, 184, 0.35);
+    background: rgba(15, 27, 49, 0.75);
+    color: #dbe7fb;
+    line-height: 1.45;
+}
+
+:root[data-theme-resolved='light'] .assigned-report-page .card {
+    background: #ffffff !important;
+    border: 1px solid var(--purple-border, #e5e7eb) !important;
+    box-shadow: 0 12px 24px rgba(15, 23, 42, 0.08) !important;
+}
+
+:root[data-theme-resolved='light'] .assigned-report-page .card-header {
+    background: #f8fafc !important;
+    border-bottom-color: var(--purple-border-light, #e5e7eb) !important;
+}
+
+:root[data-theme-resolved='light'] .assigned-report-page .card-header h2,
+:root[data-theme-resolved='light'] .assigned-report-page .card-header h3,
+:root[data-theme-resolved='light'] .assigned-report-page .card-header p,
+:root[data-theme-resolved='light'] .assigned-report-page .card-body,
+:root[data-theme-resolved='light'] .assigned-report-page .card-body :is(h1, h2, h3, h4, h5, h6, p, span, div, label, strong, small) {
+    color: #111827 !important;
+}
+
+:root[data-theme-resolved='light'] .assigned-report-page .card-body {
+    background: #ffffff !important;
+}
+
+:root[data-theme-resolved='light'] .assigned-report-page .card-body .text-muted {
+    color: #374151 !important;
+}
+
+:root[data-theme-resolved='light'] .assigned-report-page .need-change-approval-meta {
+    background: #f8fafc !important;
+    color: #111827 !important;
+    border-color: #d1d5db !important;
+}
+
+:root[data-theme-resolved='light'] .assigned-report-page select,
+:root[data-theme-resolved='light'] .assigned-report-page textarea,
+:root[data-theme-resolved='light'] .assigned-report-page input[type='file'] {
+    background: #ffffff !important;
+    color: #111827 !important;
+    border-color: #d1d5db !important;
+}
+
+:root[data-theme-resolved='light'] .assigned-report-page .assignment-role-btn {
+    background: #ffffff !important;
+    color: #111827 !important;
+    border-color: #d1d5db !important;
+}
+
+@media (max-width: 768px) {
+    .assigned-report-page .card-header,
+    .assigned-report-page .card-body {
+        padding-left: 14px;
+        padding-right: 14px;
+    }
+
+    .assigned-report-page .btn {
+        width: 100%;
+    }
+}
+
+/* Report Title prominence (Task 28) */
+.report-title-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+#report-title {
+    font-size: 26px;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+    margin-bottom: 0;
+}
+
+.report-id-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: var(--primary-bg);
+    color: var(--primary-dark, var(--primary));
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+}
+
+.report-id-badge:empty {
+    display: none;
+}
+
+@media (max-width: 640px) {
+    #report-title {
+        font-size: 21px;
+    }
+}
+
+/* Update Status section prominence (Task 28) */
+#update-status-card {
+    border-left: 3px solid var(--primary-color, var(--primary)) !important;
+}
+
+.report-actions-kicker {
+    display: block;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 4px;
+}
+
+/* Dark-mode contrast fix (Task 28.1 finding, extended in Task 28.2): the
+   global `.card-header h2 { color: #111827; }` baseline (styles.css) has no
+   dark-theme counterpart, so these headings rendered as near-invisible dark
+   text on a dark card background. Originally scoped to Report Title and
+   Update Status only (Task 28.1); Task 28.2 confirmed the identical bug on
+   Reopen Report and Need Change Approval and extended the same fix to them
+   — these are the only 4 card headers on this page, so no others remain. */
+:root[data-theme-resolved='dark'] .assigned-report-page #report-title,
+:root[data-theme-resolved='dark'] .assigned-report-page #update-status-card .card-header h2,
+:root[data-theme-resolved='dark'] .assigned-report-page #reopen-report-card .card-header h2,
+:root[data-theme-resolved='dark'] .assigned-report-page #need-change-approval-card .card-header h2 {
+    color: var(--text-light, #f8fafc);
+}
+
+/* Update Status title centering (Task 28.2): the base `.card-header` rule
+   (styles.css) is `display:flex; justify-content:space-between`, designed
+   for a 2-item split (e.g. Report Details' title-block + back-button). With
+   three children (kicker, title, subtitle) the title's position drifted
+   based on sibling text widths instead of sitting at true center. Scoped
+   3-column grid guarantees a mathematically centered title regardless of
+   kicker/subtitle length, while keeping the subtitle right-aligned to match
+   the existing Reopen Report / Need Change Approval header convention. */
+#update-status-card .card-header {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    column-gap: 16px;
+}
+
+#update-status-card .card-header .report-actions-kicker {
+    grid-column: 1;
+    justify-self: start;
+    margin: 0;
+}
+
+#update-status-card .card-header h2 {
+    grid-column: 2;
+    text-align: center;
+    margin: 0;
+    white-space: nowrap;
+}
+
+#update-status-card .card-header p {
+    grid-column: 3;
+    justify-self: end;
+    text-align: right;
+    margin: 0;
+}
+
+@media (max-width: 768px) {
+    #update-status-card .card-header {
+        display: block;
+    }
+
+    #update-status-card .card-header .report-actions-kicker {
+        justify-self: start;
+        margin-bottom: 4px;
+    }
+
+    #update-status-card .card-header h2 {
+        text-align: left;
+        white-space: normal;
+        margin-bottom: 2px;
+    }
+
+    #update-status-card .card-header p {
+        justify-self: start;
+        text-align: left;
+    }
+}

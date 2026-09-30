@@ -1,0 +1,474 @@
+﻿.create-report-page {
+    width: calc(100% - var(--sidebar-width));
+    max-width: calc(100% - var(--sidebar-width));
+    margin-left: var(--sidebar-width);
+    margin-right: 0;
+    padding-left: 24px;
+    padding-right: 24px;
+}
+
+.navbar .navbar-container {
+    max-width: none;
+    margin: 0;
+    padding-left: 24px;
+    padding-right: 24px;
+}
+
+#sidebar.collapsed ~ main.create-report-page {
+    width: calc(100% - var(--sidebar-width-collapsed));
+    max-width: calc(100% - var(--sidebar-width-collapsed));
+    margin-left: var(--sidebar-width-collapsed);
+}
+
+.create-report-card {
+    width: 100%;
+    max-width: none;
+    margin: 0;
+}
+
+/* TASK — clearly visible purple border on the OUTER Report a Problem
+   container only. `.create-report-card` inherits the generic `.card`
+   rule (styles.css), whose border colour is the shared --purple-border
+   token at 40% alpha — deliberately subtle so it reads as a neutral
+   frame on every card app-wide, which is exactly why it looks faint
+   here. Rather than touch that shared token (styles.css / color-
+   scheme.css are the app-wide component sheets other pages depend on),
+   this page-scoped rule recolours just this one container to the solid
+   PHILCST accent already used for buttons/links/active states
+   (--primary-color, #6d28d9) — same purple family, just at full
+   strength instead of diluted. Width nudges 1px -> 2px (within spec's
+   "1-2px" range) and border-radius is left off entirely so the
+   existing .card corner radius is inherited unchanged. 2px (not 1.5px)
+   is used deliberately: Chromium snaps fractional border-widths to the
+   nearest whole device pixel at devicePixelRatio 1, so a 1.5px value
+   silently renders/computes as an indistinguishable 1px here — verified
+   with a bare, unstyled test element outside any cascade, ruling out a
+   specificity conflict. 2px avoids that rounding ambiguity and renders
+   as a real, reliably visible whole pixel on every display. Inner
+   .form-section panels (enterprise-reports.css) are untouched and keep
+   their existing neutral grey border, so only the outermost frame reads
+   as purple. Doubled selector (plain + :root[data-theme-resolved='light'])
+   mirrors the existing dashboard-card-accent.css pattern: the light-theme
+   block in styles.css repaints `.card` border-color with !important, so
+   an equal-or-higher-specificity !important rule is required to win. */
+.create-report-page .create-report-card,
+:root[data-theme-resolved='light'] .create-report-page .create-report-card {
+    border-width: 2px !important;
+    border-style: solid !important;
+    border-color: var(--primary-color, #6d28d9) !important;
+}
+
+.need-change-group {
+    margin-top: 24px;
+}
+
+/* TASK — light-theme conversion for the "Needs Replacement Item" and
+   "Link to a Deployed Asset" option cards. Both share this same
+   .need-change-* class family (only the toggle label text and the
+   wrap contents differ between the two instances), so restyling it
+   once here updates both cards identically — satisfying "both cards
+   MUST use the exact same visual style." This file is loaded ONLY by
+   create-report.php (its own <link> list confirmed via the live page:
+   no other page references create-report.inline.css), so these bare
+   selectors cannot leak onto the separate, independently-styled
+   .need-change-* instances other pages ship in their own inline
+   stylesheets (reports.inline1.css, maintenance-*-report*.inline.css,
+   enterprise-workflow.css) for their own Edit/Detail modals — those
+   are untouched, per "do not globally remove dark styling from
+   unrelated components."
+
+   Colours reuse tokens already in play elsewhere on this exact page:
+   --border/--surface/--text-primary/--text-secondary (styles.css /
+   color-scheme.css) and the --color-primary-* purple scale that
+   problem-type-selector.css already uses for this same page's
+   Problem Type cards' hover/selected states — no new colours
+   introduced. */
+.need-change-panel {
+    border: 1px solid var(--border, #e5e7eb);
+    border-radius: 12px;
+    background: var(--surface, #ffffff);
+    padding: 14px;
+    transition: border-color 0.18s ease, background-color 0.18s ease;
+}
+
+/* Hover — same weight/intent as .problem-type-card:hover elsewhere on
+   this page: a border-only tint, deliberately weaker than the checked
+   state below so the two are never confused, and never a full purple
+   fill. */
+.need-change-panel:hover {
+    border-color: var(--color-primary-300, #c4b5fd);
+}
+
+/* Checked — pure CSS via :has(), reading the existing checkbox's own
+   :checked state. No JS/behaviour change: the checkbox's change
+   handler and the show/hide logic it already drives are untouched;
+   this only adds a presentational border + light purple tint once
+   either box is ticked, instead of the old dark navy fill. */
+.need-change-panel:has(.need-change-toggle-label input[type='checkbox']:checked) {
+    border-color: var(--color-primary-600, #7c3aed);
+    background: var(--color-primary-50, #f5f3ff);
+}
+
+.need-change-toggle-label {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    cursor: pointer;
+    margin-bottom: 0;
+}
+
+.need-change-toggle-label input[type='checkbox'] {
+    width: 18px;
+    min-width: 18px;
+    height: 18px;
+    margin-top: 3px;
+    padding: 0;
+    border-radius: 4px;
+    /* Same native <input type="checkbox">, only its accent colour
+       changed to the PHILCST purple already used app-wide — unchecked
+       renders as a light box with a visible border, checked fills
+       purple with a white checkmark, both via the browser's native
+       rendering. "Do NOT replace the checkbox with a different
+       component" holds exactly: nothing but this one colour changed. */
+    accent-color: var(--primary-color, #6d28d9);
+}
+
+.need-change-toggle-text {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    line-height: 1.4;
+}
+
+.need-change-toggle-text strong {
+    color: var(--text-primary, #111827);
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.need-change-toggle-text small {
+    color: var(--text-secondary, #4b5563);
+    font-size: 12px;
+}
+
+.need-change-wrap {
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border, #e5e7eb);
+}
+
+.need-change-item-label {
+    display: block;
+    margin-bottom: 6px;
+    /* Matches .form-group label's colour (styles.css) exactly, so these
+       read as peers of "Report Title" / "Location" / etc. rather than
+       a visually distinct sub-component. */
+    color: #374151;
+    font-size: 13px;
+    font-weight: 500;
+}
+
+.need-change-search {
+    margin-bottom: 10px;
+}
+
+.need-change-selected {
+    margin-bottom: 10px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    border: 1px solid var(--color-primary-200, #ddd6fe);
+    background: var(--color-primary-50, #f5f3ff);
+    color: var(--color-primary-700, #6d28d9);
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.need-change-results {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.need-change-result-item {
+    width: 100%;
+    padding: 10px 12px;
+    border-radius: 10px;
+    border: 1px solid var(--border, #e5e7eb);
+    background: var(--surface, #ffffff);
+    color: var(--text-primary, #111827);
+    text-align: left;
+    cursor: pointer;
+    transition: border-color 0.18s ease, background 0.18s ease;
+}
+
+.need-change-result-item span {
+    color: var(--text-secondary, #4b5563);
+}
+
+.need-change-result-item:hover,
+.need-change-result-item.active {
+    border-color: var(--color-primary-300, #c4b5fd);
+    background: var(--color-primary-50, #f5f3ff);
+}
+
+.need-change-empty {
+    padding: 10px 12px;
+    border-radius: 10px;
+    border: 1px dashed var(--border, #e5e7eb);
+    color: var(--text-secondary, #4b5563);
+    font-size: 13px;
+}
+
+.need-change-note {
+    margin-top: 8px;
+    font-size: 12px;
+}
+
+@media (max-width: 992px) {
+    .create-report-page {
+        width: calc(100% - var(--sidebar-width-collapsed));
+        max-width: calc(100% - var(--sidebar-width-collapsed));
+        margin-left: var(--sidebar-width-collapsed);
+        padding-left: 16px;
+        padding-right: 16px;
+    }
+}
+
+@media (max-width: 640px) {
+    .create-report-page {
+        width: calc(100% - var(--sidebar-width-collapsed));
+        max-width: calc(100% - var(--sidebar-width-collapsed));
+        margin-left: var(--sidebar-width-collapsed);
+        padding-left: 12px;
+        padding-right: 12px;
+    }
+
+    .need-change-panel {
+        padding: 12px;
+    }
+
+    .need-change-toggle-label {
+        gap: 10px;
+    }
+}
+
+/* ============================================================
+   Create Report — minor polish (scoped to .create-report-page
+   only, so maintenance-create-report.php is unaffected).
+   Spacing/alignment only — form structure, ids, names, required
+   attributes, and JS behavior are unchanged.
+   ============================================================ */
+
+/* Give the description textarea a little more room by default. */
+.create-report-page #description {
+    min-height: 140px;
+}
+
+/* Consistent spacing above the Submit/Cancel actions. */
+.create-report-page .create-report-actions {
+    margin-top: 20px;
+}
+
+/* Slightly tighter, more precise checkbox-to-label vertical alignment. */
+.create-report-page .need-change-toggle-label {
+    align-items: center;
+}
+
+.create-report-page .need-change-toggle-label input[type='checkbox'] {
+    margin-top: 0;
+}
+
+/* A touch more breathing room between the search box and the
+   selected-item confirmation chip that appears below it. */
+.create-report-page .need-change-search {
+    margin-bottom: 12px;
+}
+
+/* TASK 37.4 — Building/Room/Equipment cascading selects, reusing the
+   .need-change-* panel/wrap/search/selected classes for visual consistency
+   with the Replacement Item section above it. */
+.asset-select-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-bottom: 4px;
+}
+
+.asset-select-grid .form-group {
+    margin-bottom: 0;
+}
+
+.asset-select-grid input:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+@media (max-width: 768px) {
+    .asset-select-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* ============================================================
+   TASK — light-theme conversion for the Building/Room/Equipment
+   searchable dropdown panels (Components.SearchableSelect,
+   assets/js/components.js). That shared component paints its
+   dropdown panel via an inline `style.cssText` (dark navy #1a1230
+   background, pale lavender #f0eaff text), and styles.css ships one
+   matching dark-theme rule, `.search-item:hover` (purple-tinted
+   background + the same pale lavender text) — both written for the
+   app's old dark theme and still used AS-IS by several OTHER pages
+   that also instantiate this exact component: dispatch-create.php,
+   preventive-maintenance.php, dispatch-detail.php and
+   damage-report-update.php. So neither components.js nor styles.css's
+   shared `.search-item:hover` rule is touched — those stay exactly as
+   they are for those other pages/consumers, per "do not globally
+   remove dark styling from unrelated components."
+
+   Instead this page-scoped block only repaints the dropdown on THIS
+   page. `!important` is required to beat the component's own inline
+   style (an external `!important` rule always wins over a plain,
+   non-important inline style, regardless of specificity/origin); the
+   `.create-report-page` ancestor prefix is what keeps every other
+   consumer of the same shared component untouched. Colours reuse the
+   same --border/--text-primary tokens already used elsewhere on this
+   page, plus the task's own light-purple hover example (#f3e8ff).
+
+   Covers all three instances that share these classes — Building,
+   Room, and Equipment search (asset-building-search/asset-room-search/
+   asset-item-search) — in one rule set, since all three are rendered
+   by the same SearchableSelect component. */
+.create-report-page .search-dropdown {
+    background: #ffffff !important;
+    border: 1px solid var(--border, #e5e7eb) !important;
+    color: var(--text-primary, #111827) !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.10) !important;
+}
+
+/* Light-themed scrollbar for the dropdown's own internal scroll
+   (max-height: 220px, overflow: auto, set inline by the component and
+   left untouched) — Chromium/WebKit + Firefox equivalents. */
+.create-report-page .search-dropdown {
+    scrollbar-width: thin;
+    scrollbar-color: var(--border, #e5e7eb) #ffffff;
+}
+
+.create-report-page .search-dropdown::-webkit-scrollbar {
+    width: 8px;
+}
+
+.create-report-page .search-dropdown::-webkit-scrollbar-track {
+    background: #ffffff;
+}
+
+.create-report-page .search-dropdown::-webkit-scrollbar-thumb {
+    background: var(--border, #e5e7eb);
+    border-radius: 8px;
+}
+
+.create-report-page .search-item {
+    color: var(--text-primary, #111827);
+}
+
+/* Overrides styles.css's shared `.search-item:hover` for this page
+   only (see block comment above) — same light-purple hover intent the
+   task asks for, with dark readable text instead of the old pale
+   lavender that only worked against the dark panel. */
+.create-report-page .search-item:hover {
+    background: #f3e8ff !important;
+    color: var(--text-primary, #111827) !important;
+}
+
+/* ============================================================
+   TASK 39 — Readability fix for the validation error alert
+   (e.g. "Please select a Building, Room, and Equipment to link
+   this report to an asset."), scoped to #alert-container on this
+   page only. Wording, validation logic, and submission behavior
+   are unchanged — presentation only.
+
+   Root cause: the shared `.alert-danger` rule in color-scheme.css
+   (loaded after styles.css, so it wins the cascade) pairs a
+   theme-invariant pale pink background (--danger-bg: #fef2f2)
+   with the theme-aware `--text-primary` token. In dark mode
+   --text-primary resolves to #f8fafc (near-white), producing
+   near-invisible white-on-pale-pink text. This override gives
+   the error alert its own theme-aware colors instead of relying
+   on --text-primary, without touching the shared .alert-danger
+   rule used on other pages.
+   ============================================================ */
+.create-report-page #alert-container .alert-danger {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 14px 16px;
+    border-radius: 10px;
+    border: 1px solid #dc2626;
+    background-color: rgba(220, 38, 38, 0.16);
+    color: #fecaca;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+.create-report-page #alert-container .alert-danger::before {
+    content: '\26A0';
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    line-height: 1;
+    font-size: 15px;
+    color: #f87171;
+}
+
+:root[data-theme-resolved='light'] .create-report-page #alert-container .alert-danger {
+    background-color: #fef2f2;
+    border-color: #fca5a5;
+    color: #991b1b;
+}
+
+:root[data-theme-resolved='light'] .create-report-page #alert-container .alert-danger::before {
+    color: #dc2626;
+}
+
+/* ============================================================
+   TASK 44 — Duplicate-warning modal context block. Reuses the
+   existing .report-info-list/.report-info-row definition-list
+   pattern from enterprise-reports.css (already linked on this
+   page) inside the shared .system-modal-card, so two identical
+   units in the same room (e.g. AI-R101-01 vs AI-R101-02) render
+   with a clearly distinguishable Equipment/Asset Code/Location
+   block instead of a single ambiguous sentence. No new tokens,
+   no new component — sizing/alignment tweaks only so the list
+   reads well inside the narrower modal card.
+   ============================================================ */
+.system-modal-card .report-info-list {
+    text-align: left;
+    margin: 4px 0 20px;
+    padding: 12px 14px;
+    border-radius: 10px;
+    border: 1px solid rgba(148, 163, 184, 0.22);
+    background: rgba(148, 163, 184, 0.08);
+}
+
+.system-modal-card .report-info-row {
+    grid-template-columns: 96px 1fr;
+    gap: 8px;
+    padding: 4px 0;
+}
+
+.system-modal-card .report-info-row dt {
+    font-size: 11px;
+}
+
+.system-modal-card .report-info-row dd {
+    font-size: 13px;
+    word-break: break-word;
+}
+
+@media (max-width: 480px) {
+    .system-modal-card .report-info-row {
+        grid-template-columns: 1fr;
+        gap: 2px;
+    }
+}

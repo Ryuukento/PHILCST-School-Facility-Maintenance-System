@@ -1,0 +1,69 @@
+﻿                body {
+                    font-family: Arial, sans-serif;
+                    margin: 16px;
+                    color: #111827;
+                }
+
+                h1 {
+                    margin: 0 0 12px;
+                    font-size: 18px;
+                }
+
+                table {
+                    width: 100%;
+                    border-collapse: collapse;
+                    table-layout: fixed;
+                    font-size: 11px;
+                }
+
+                th,
+                td {
+                    border: 1px solid #d1d5db;
+                    padding: 5px 6px;
+                    text-align: left;
+                    vertical-align: top;
+                    word-wrap: break-word;
+                    overflow-wrap: break-word;
+                }
+
+                th {
+                    background: #f3f4f6;
+                    font-weight: 700;
+                }
+
+                /* Column widths tuned so Title/Location/Created By (the
+                   longest values) get the most room while still fitting a
+                   full page width without overflow. */
+                th:nth-child(1), td:nth-child(1) { width: 4%; }
+                th:nth-child(2), td:nth-child(2) { width: 8%; }
+                th:nth-child(3), td:nth-child(3) { width: 24%; }
+                th:nth-child(4), td:nth-child(4) { width: 10%; }
+                th:nth-child(5), td:nth-child(5) { width: 8%; }
+                th:nth-child(6), td:nth-child(6) { width: 10%; }
+                th:nth-child(7), td:nth-child(7) { width: 16%; }
+                th:nth-child(8), td:nth-child(8) { width: 12%; }
+                th:nth-child(9), td:nth-child(9) { width: 8%; }
+
+                @media print {
+                    body {
+                        margin: 10mm;
+                    }
+
+                    table {
+                        font-size: 10px;
+                    }
+
+                    tr {
+                        page-break-inside: avoid;
+                    }
+
+                    thead {
+                        display: table-header-group;
+                    }
+
+                    @page {
+                        size: landscape;
+                        margin: 10mm;
+                    }
+                }
+

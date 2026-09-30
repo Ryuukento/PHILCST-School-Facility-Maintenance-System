@@ -1,0 +1,137 @@
+.audit-log-page {
+    width: calc(100% - var(--sidebar-width));
+    max-width: calc(100% - var(--sidebar-width));
+    margin-left: var(--sidebar-width);
+    margin-right: 0;
+    padding-left: 24px;
+    padding-right: 24px;
+}
+
+.audit-log-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+}
+
+.audit-log-title,
+.audit-log-subtitle {
+    margin: 0;
+}
+
+.audit-log-subtitle {
+    margin-top: 6px;
+}
+
+.audit-log-total {
+    white-space: nowrap;
+}
+
+.audit-log-filters {
+    border-bottom: 1px solid var(--border);
+}
+
+.audit-log-filter-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 10px;
+    align-items: end;
+}
+
+.audit-log-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.audit-log-table-wrap {
+    overflow: auto;
+}
+
+.audit-log-table {
+    width: 100%;
+    background: #171225;
+}
+
+.audit-log-table thead th {
+    background: #2a1747;
+    color: #efe7ff;
+}
+
+.audit-log-table tbody td {
+    color: #f3ecff;
+    background: #171225;
+}
+
+.audit-log-table tbody tr:nth-child(even) td {
+    background: #211536;
+}
+
+.audit-log-table tbody tr:hover td {
+    background: rgba(139, 92, 246, 0.14);
+}
+
+.audit-log-pagination {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 12px;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.audit-log-pagination-actions {
+    display: flex;
+    gap: 8px;
+}
+
+@media (max-width: 992px) {
+    .audit-log-page {
+        width: calc(100% - var(--sidebar-width-collapsed));
+        max-width: calc(100% - var(--sidebar-width-collapsed));
+        margin-left: var(--sidebar-width-collapsed);
+        padding-left: 16px;
+        padding-right: 16px;
+    }
+}
+
+@media (max-width: 640px) {
+    .audit-log-page {
+        width: calc(100% - var(--sidebar-width-collapsed));
+        max-width: calc(100% - var(--sidebar-width-collapsed));
+        margin-left: var(--sidebar-width-collapsed);
+        padding-left: 12px;
+        padding-right: 12px;
+    }
+
+    .audit-log-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .audit-log-actions,
+    .audit-log-pagination-actions {
+        width: 100%;
+        flex-wrap: wrap;
+    }
+}
+
+/* ── Light mode ─────────────────────────────────────────────────────────── */
+:root[data-theme-resolved='light'] .audit-log-table {
+    background: #ffffff;
+}
+:root[data-theme-resolved='light'] .audit-log-table thead th {
+    background: #f3f4f6;
+    color: #374151;
+    border-color: #e5e7eb;
+}
+:root[data-theme-resolved='light'] .audit-log-table tbody td {
+    background: #ffffff;
+    color: #1f2937;
+    border-color: #e5e7eb;
+}
+:root[data-theme-resolved='light'] .audit-log-table tbody tr:nth-child(even) td {
+    background: #f9fafb;
+}
+:root[data-theme-resolved='light'] .audit-log-table tbody tr:hover td {
+    background: rgba(99, 102, 241, 0.08);
+}

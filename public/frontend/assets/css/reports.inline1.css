@@ -1,0 +1,1094 @@
+﻿.reports-page-container {
+    width: calc(100% - var(--sidebar-width));
+    max-width: calc(100% - var(--sidebar-width));
+    margin-left: var(--sidebar-width);
+    margin-right: 0;
+    padding-left: 24px;
+    padding-right: 24px;
+}
+
+.navbar .navbar-container {
+    max-width: none;
+    margin: 0;
+    padding-left: 24px;
+    padding-right: 24px;
+}
+
+#sidebar.collapsed ~ main.reports-page-container {
+    width: calc(100% - var(--sidebar-width-collapsed));
+    max-width: calc(100% - var(--sidebar-width-collapsed));
+    margin-left: var(--sidebar-width-collapsed);
+}
+
+.reports-page-container .card {
+    margin-top: 14px;
+}
+
+.reports-page-container .card-header {
+    padding: 20px 24px;
+}
+
+.reports-page-container .card-body {
+    padding: 18px 24px 24px;
+}
+
+.reports-title-block {
+    flex: 1;
+}
+
+.reports-header-actions {
+    flex-wrap: wrap;
+}
+
+.reports-header-btn {
+    height: fit-content;
+    margin-top: 0;
+}
+
+.reports-page-container .card-header .reports-header-btn {
+    max-width: none;
+    min-width: 172px;
+    font-size: 13px;
+    padding: 10px 14px;
+}
+
+.reports-month-dropdown-wrap {
+    position: relative;
+}
+
+/* BROWSE BY MONTH — dropdown clipping fix.
+   ----------------------------------------
+   The shared `.card` rule in styles.css sets `overflow: hidden` so the card can
+   clip its children to its 14px radius. #month-picker-dropdown is absolutely
+   positioned inside .card-header, so that hidden overflow clipped it too: with a
+   short table the card ended 48px above the bottom of the open dropdown, which
+   cut the last month off entirely and sliced the one above it in half. The taller
+   the table, the further the card extended and the less visible the bug — which is
+   why it reads as intermittent.
+
+   Scoped to the reports page rather than changed in styles.css, which is shared by
+   every card in the application. Verified safe here: this card's scrollWidth equals
+   its clientWidth, so releasing the clip exposes nothing and adds no horizontal
+   scrolling; the table re-clips itself via .card-body's own overflow-x at mobile. */
+.reports-page-container .card {
+    overflow: visible;
+}
+
+/* Independently of the clip, the list is now bounded and scrolls on its own, so it
+   can never again depend on the card being tall enough to contain it. The height is
+   viewport-relative (never a fixed desktop height) with a floor so it stays usable
+   on short screens, and it is capped so the dropdown never grows unnecessarily. */
+#month-picker-dropdown .month-picker-list {
+    max-height: max(140px, min(300px, calc(100vh - 260px)));
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(168, 85, 247, 0.45) transparent;
+}
+
+/* Scrollbar matches the existing sidebar convention (6px, transparent track,
+   translucent brand-purple thumb) so it reads as part of the PHILCST theme. */
+#month-picker-dropdown .month-picker-list::-webkit-scrollbar {
+    width: 6px;
+}
+
+#month-picker-dropdown .month-picker-list::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+#month-picker-dropdown .month-picker-list::-webkit-scrollbar-thumb {
+    background: rgba(168, 85, 247, 0.45);
+    border-radius: 3px;
+}
+
+#month-picker-dropdown .month-picker-list::-webkit-scrollbar-thumb:hover {
+    background: rgba(168, 85, 247, 0.62);
+}
+
+#month-picker-dropdown .month-picker-item:hover {
+    background: rgba(148, 163, 184, 0.12);
+}
+
+#month-picker-dropdown .month-picker-item:focus-visible {
+    outline: 2px solid rgba(168, 85, 247, 0.65);
+    outline-offset: -2px;
+}
+
+/* Floating popover panel — same tier as the notification dropdown. */
+:root[data-theme-resolved='light'] #month-picker-dropdown {
+    background: #ffffff !important;
+    border-color: var(--purple-border, #e5e7eb) !important;
+    box-shadow: 0 16px 40px rgba(15, 23, 42, 0.12) !important;
+}
+
+:root[data-theme-resolved='light'] #month-picker-dropdown .month-picker-item {
+    color: #111827 !important;
+}
+
+:root[data-theme-resolved='light'] #month-picker-dropdown .month-picker-item:hover {
+    background: #f3f4f6 !important;
+}
+
+.reports-header-icon-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.reports-filters-row {
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.reports-filter-select {
+    max-width: 200px;
+}
+
+.reports-filter-date {
+    max-width: 180px;
+}
+
+.reports-week-pagination {
+    margin-bottom: 16px;
+}
+
+/* TASK 30 — dark-mode contrast fix for the Week 1-4 pagination badges
+   (All Reports page only). The shared `.week-page-btn` rule in styles.css
+   pairs a fixed dark purple text (#5b21b6) with the theme's --card-color
+   background, which resolves to a near-black #111827 in dark mode -
+   measured contrast ratio ~2:1, far below the ~4.5:1 WCAG AA minimum for
+   normal text. Light theme already pairs the same purple text with a
+   white --card-color background (~9:1 contrast) and needs no change.
+   Scoped to this page's own week-pagination container (not a blanket
+   .week-page-btn override in the shared file), since that class is also
+   used by the Maintenance Staff "All Reports" page
+   (maintenance-reports-list.php), which loads its own separate stylesheet
+   and must stay unaffected. The already-white-on-solid-purple `.active`
+   state (~6:1 contrast) is untouched; background, border, size, spacing,
+   border-radius and padding are all preserved. */
+:root[data-theme-resolved='dark'] .reports-week-pagination .week-page-btn:not(.active) {
+    color: #ffffff;
+}
+
+.reports-fallback-table {
+    width: 100%;
+}
+
+.reports-cell-compact {
+    font-size: 13px;
+}
+
+/* TASK — ALL REPORTS TABLE RESPONSIVENESS. table-layout: fixed locks the
+   JS-rendered table to a resilient grid (columns declared via the <colgroup>
+   written by displayReports() in reports.php) so long content — long titles,
+   long locations — can never stretch the table wider than its card and
+   force page-level horizontal scroll.
+
+   TASK — COLUMN WIDTH / ACTIONS OVERFLOW FIX (follow-up). The nine columns
+   below were originally percentages that always summed to exactly 100% of
+   the container. On real laptop widths that squeezed Actions (9% ≈ 90-100px)
+   below what two btn-sm buttons need, so the Edit button overflowed its
+   cell, and it left Report far wider than "#75 / Test" ever needs. Switched
+   to fixed pixel widths chosen so Actions always has room for both buttons
+   and Report is compact. Per the CSS2.1 fixed-table-layout algorithm, the
+   table's rendered width is the GREATER of 100% of the container and the
+   sum of these column widths: on wide screens (≈1920px) 100% still wins and
+   columns stretch proportionally to fill the card with no scrollbar; on
+   narrower laptop/tablet widths the pixel sum wins and the table renders at
+   that width, so the pre-existing .reports-table-wrap { overflow-x: auto; }
+   (styles.css) scopes horizontal scrolling to just the table, inside the
+   card — the page itself never gains horizontal overflow. */
+.reports-page-container .reports-table {
+    table-layout: fixed;
+    width: 100%;
+}
+
+.reports-page-container .reports-table col.col-report {
+    width: 135px;
+}
+
+.reports-page-container .reports-table col.col-department {
+    width: 125px;
+}
+
+.reports-page-container .reports-table col.col-priority {
+    width: 95px;
+}
+
+.reports-page-container .reports-table col.col-status {
+    width: 115px;
+}
+
+.reports-page-container .reports-table col.col-resolution {
+    width: 125px;
+}
+
+.reports-page-container .reports-table col.col-assigned {
+    width: 125px;
+}
+
+.reports-page-container .reports-table col.col-location {
+    width: 210px;
+}
+
+.reports-page-container .reports-table col.col-date {
+    width: 95px;
+}
+
+.reports-page-container .reports-table col.col-actions {
+    width: 165px;
+}
+
+/* REPORT cell — report_id stacked above the title, replacing the old
+   standalone ID column. Neither value changed; only where the ID renders. */
+.reports-page-container .reports-table .reports-cell-report {
+    white-space: normal;
+}
+
+.reports-id {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    color: #a78bfa;
+    line-height: 1.3;
+}
+
+.reports-title {
+    display: block;
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 1.35;
+    word-break: break-word;
+}
+
+:root[data-theme-resolved='light'] .reports-page-container .reports-id {
+    color: #7c3aed !important;
+}
+
+/* LOCATION cell — visually clipped to 2 lines with an ellipsis, but the full
+   value is still in the DOM (the `title` attribute on .reports-location-text,
+   written in reports.php) and still shown in full on the View Report page.
+   The underlying report.location string itself is never truncated. */
+.reports-page-container .reports-table .reports-cell-location {
+    white-space: normal;
+}
+
+.reports-location-text {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    line-height: 1.35;
+    word-break: break-word;
+}
+
+.reports-page-container .card-header h2 {
+    letter-spacing: 0.01em;
+}
+
+.reports-page-container .form-control,
+.reports-page-container select,
+.reports-page-container input {
+    border-radius: 10px;
+    border: 1px solid rgba(148, 163, 184, 0.35);
+    background: #0f1b31;
+    color: #dce8fc;
+}
+
+.reports-page-container .form-control:focus,
+.reports-page-container select:focus,
+.reports-page-container input:focus {
+    border-color: #60a5fa;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+    outline: none;
+}
+
+.reports-page-container .form-control {
+    min-height: 40px;
+}
+
+.reports-page-container .reports-table th,
+.reports-page-container .reports-table td,
+.reports-page-container #reports-container table th,
+.reports-page-container #reports-container table td {
+    padding: 10px 12px;
+}
+
+/* These rules address columns BY POSITION, so they had to be re-indexed again
+   when the table dropped from 12 columns to 9 (ID merged into the Report
+   cell, Type and Created By removed as standalone columns — see the TASK
+   comment above displayReports() in reports.php).
+
+   JS-rendered table (.reports-table), 9 columns:
+     1 Report | 2 Department | 3 Priority | 4 Status | 5 Resolution |
+     6 Assigned To | 7 Location | 8 Date | 9 Actions
+   nowrap is now kept only on the compact badge/date columns, whose
+   vocabulary is short and fixed (HIGH, SUBMITTED, RESOLVED, Sep 16, 2026).
+   Report, Department, Assigned To and Location are left to wrap normally
+   inside their fixed-percentage column instead — Report and Location also
+   get their own stacking/clamp rules above — so long real-world values wrap
+   instead of overflowing. */
+.reports-page-container .reports-table td:nth-child(3),
+.reports-page-container .reports-table td:nth-child(4),
+.reports-page-container .reports-table td:nth-child(5),
+.reports-page-container .reports-table td:nth-child(8) {
+    white-space: nowrap;
+}
+
+.reports-page-container .reports-table .reports-cell-actions {
+    white-space: nowrap;
+    /* Tighter horizontal padding than the table's base 12px so the fixed
+       165px Actions column has enough content room for both buttons at
+       their existing size — see .reports-actions-buttons below. Vertical
+       padding is untouched. */
+    padding-left: 8px;
+    padding-right: 8px;
+}
+
+/* TASK — ACTIONS OVERFLOW FIX. View/Edit are wrapped in this flex row so
+   they stay compact, side-by-side, with consistent spacing and never wrap
+   onto a second line or spill past the cell — the buttons themselves are
+   untouched (still .btn.btn-sm.btn-primary / .btn.btn-sm.btn-secondary), so
+   their purple-filled / purple-outline styling is unchanged. */
+.reports-page-container .reports-table .reports-actions-buttons {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 8px;
+    flex-wrap: nowrap;
+}
+
+.reports-page-container .reports-table .reports-actions-buttons .btn {
+    flex-shrink: 0;
+    white-space: nowrap;
+}
+
+/* No-JS PHP fallback table, unchanged at 8 columns:
+     1 ID | 2 Title | 3 Location | 4 Priority | 5 Status | 6 Created By |
+     7 Date | 8 Actions
+   It never had a Lifecycle column, so it keeps the original (1, 3, 4, 7, 8)
+   list verbatim — including 8, which is what stops the View/Edit buttons from
+   wrapping. */
+.reports-page-container .reports-fallback-table td:nth-child(1),
+.reports-page-container .reports-fallback-table td:nth-child(3),
+.reports-page-container .reports-fallback-table td:nth-child(4),
+.reports-page-container .reports-fallback-table td:nth-child(7),
+.reports-page-container .reports-fallback-table td:nth-child(8) {
+    white-space: nowrap;
+}
+
+.reports-pagination {
+    margin-top: 20px;
+    padding: 14px 20px;
+    border: 1px solid rgba(148, 163, 184, 0.32);
+    border-radius: 12px;
+    background: rgba(15, 27, 49, 0.78);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+/* ALL REPORTS PAGINATION VISIBILITY — renderPagination() clears the container when
+   every report fits on one page. Without this rule the nav would still paint its own
+   padding, border and background as an empty bar, because the .reports-pagination
+   `display: flex` above out-specifies the UA [hidden]/empty defaults. */
+.reports-pagination:empty {
+    display: none;
+}
+
+.reports-pagination-summary {
+    color: #b6c8e4;
+    font-size: 14px;
+}
+
+.reports-pagination-summary strong {
+    color: #ffffff;
+}
+
+.reports-pagination-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.reports-pagination-btn {
+    min-width: 42px;
+    height: 36px;
+    padding: 0 12px;
+    border-radius: 10px;
+    border: 1px solid rgba(148, 163, 184, 0.34);
+    background: rgba(13, 30, 55, 0.84);
+    color: #dbe7fb;
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 1;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.reports-pagination-btn:hover:not(:disabled) {
+    border-color: rgba(196, 181, 253, 0.88);
+    background: rgba(49, 26, 87, 0.96);
+}
+
+.reports-pagination-btn.active {
+    color: #ffffff;
+    border-color: #8b5cf6;
+    background: linear-gradient(160deg, #6d28d9 0%, #8b5cf6 100%);
+    box-shadow: 0 0 0 1px rgba(196, 181, 253, 0.28), 0 0 18px rgba(139, 92, 246, 0.36);
+}
+
+.reports-pagination-btn:disabled {
+    opacity: 0.42;
+    cursor: not-allowed;
+}
+
+.reports-pagination-size {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #b6c8e4;
+    font-size: 14px;
+}
+
+.reports-pagination-size select {
+    min-width: 96px;
+    height: 38px;
+    border-radius: 10px;
+    border: 1px solid rgba(148, 163, 184, 0.4);
+    background: #11213b;
+    color: #edf4ff;
+    padding: 0 10px;
+}
+
+@media (max-width: 1366px) {
+    .reports-page-container {
+        width: calc(100% - var(--sidebar-width));
+        max-width: calc(100% - var(--sidebar-width));
+    }
+}
+
+@media (max-width: 992px) {
+    .reports-page-container {
+        width: calc(100% - var(--sidebar-width-collapsed));
+        max-width: calc(100% - var(--sidebar-width-collapsed));
+        margin-left: var(--sidebar-width-collapsed);
+    }
+
+    .reports-page-container .card-header,
+    .reports-page-container .card-body {
+        padding-left: 16px;
+        padding-right: 16px;
+    }
+}
+
+@media (max-width: 768px) {
+    .reports-page-container {
+        width: 100%;
+        max-width: 100%;
+        margin-left: 0;
+        padding-left: 12px;
+        padding-right: 12px;
+    }
+
+    .reports-page-container .card-header {
+        padding: 16px 12px;
+    }
+
+    .reports-page-container .card-body {
+        padding: 12px;
+        overflow-x: auto;
+    }
+
+    .reports-fallback-table,
+    .reports-page-container #reports-container table {
+        width: 100%;
+        display: block;
+        overflow-x: auto;
+        border-collapse: collapse;
+    }
+
+    .reports-fallback-table thead,
+    .reports-page-container #reports-container table thead {
+        display: block;
+        min-width: 800px;
+    }
+
+    .reports-fallback-table tbody,
+    .reports-page-container #reports-container table tbody {
+        display: block;
+        min-width: 800px;
+    }
+
+    .reports-fallback-table tr,
+    .reports-page-container #reports-container table tr {
+        display: table;
+        width: 100%;
+        table-layout: fixed;
+    }
+
+    .reports-fallback-table th,
+    .reports-fallback-table td,
+    .reports-page-container #reports-container table th,
+    .reports-page-container #reports-container table td {
+        padding: 10px 8px;
+        font-size: 13px;
+        word-wrap: break-word;
+    }
+
+    .reports-filters-row {
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .reports-filter-select,
+    .reports-filter-date {
+        max-width: 100%;
+        width: 100%;
+    }
+}
+
+@media (max-width: 640px) {
+    .navbar .navbar-container,
+    .reports-page-container {
+        padding-left: 14px;
+        padding-right: 14px;
+    }
+
+    .reports-pagination {
+        padding: 12px;
+    }
+
+    .reports-pagination-summary,
+    .reports-pagination-size {
+        width: 100%;
+    }
+
+    .reports-pagination-controls {
+        justify-content: flex-start;
+    }
+
+    .reports-filter-select,
+    .reports-filter-date {
+        max-width: 100%;
+        width: 100%;
+    }
+}
+
+@media (max-width: 768px) {
+    .reports-page-container,
+    #sidebar.collapsed ~ main.reports-page-container {
+        margin-left: 0 !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        padding-left: 12px;
+        padding-right: 12px;
+    }
+
+    .reports-page-container .card-header,
+    .reports-page-container .card-body {
+        padding-left: 12px;
+        padding-right: 12px;
+    }
+
+    .reports-header-actions {
+        width: 100%;
+    }
+
+    .reports-page-container .card-header .reports-header-btn {
+        min-width: 0;
+        width: 100%;
+    }
+}
+
+/* MOBILE REPORT CARDS — .reports-table ONLY, ≤640px.
+   ---------------------------------------------------
+   Converts each row of the JS-rendered table into a labelled card instead
+   of the generic horizontally-scrolling table the ≤768px rules above give
+   every other table on this page (the no-JS `.reports-fallback-table` and
+   any other `#reports-container table`). Deliberately scoped to
+   `.reports-table` — which does not carry the shared, app-wide `.table`
+   class — so this does not duplicate or re-trigger the earlier app-wide
+   card-ification attempt that was abandoned as broken (see
+   redesign-2026.css). Selector specificity here — an id plus two classes —
+   beats the ≤768px `#reports-container table` rules (id + one class)
+   regardless of source order, so both blocks can coexist without one
+   silently overriding the other by accident.
+
+   Every <td> already carries a `data-label` attribute (written in
+   reports.php) purely to drive the ::before labels below; no column or data
+   was removed, only re-laid-out for narrow screens. */
+@media (max-width: 640px) {
+    .reports-page-container #reports-container .reports-table,
+    .reports-page-container #reports-container .reports-table thead,
+    .reports-page-container #reports-container .reports-table tbody,
+    .reports-page-container #reports-container .reports-table tr,
+    .reports-page-container #reports-container .reports-table td {
+        display: block;
+        width: 100%;
+        min-width: 0;
+    }
+
+    .reports-page-container #reports-container .reports-table {
+        table-layout: auto;
+    }
+
+    .reports-page-container #reports-container .reports-table thead {
+        position: absolute;
+        left: -9999px;
+        top: -9999px;
+    }
+
+    .reports-page-container #reports-container .reports-table tr {
+        margin-bottom: 14px;
+        padding: 12px 14px;
+        border: 1px solid rgba(148, 163, 184, 0.3);
+        border-radius: 12px;
+        background: rgba(15, 27, 49, 0.5);
+    }
+
+    .reports-page-container #reports-container .reports-table td {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 6px 0;
+        border: none;
+        white-space: normal;
+        text-align: right;
+    }
+
+    .reports-page-container #reports-container .reports-table td::before {
+        content: attr(data-label);
+        font-weight: 600;
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.02em;
+        color: #9ca8bd;
+        text-align: left;
+        flex-shrink: 0;
+        padding-right: 10px;
+    }
+
+    /* Report cell (#id + title) is the card header: full width, no label,
+       left-aligned, with a divider to set it apart from the labelled rows
+       below it. */
+    .reports-page-container #reports-container .reports-table .reports-cell-report {
+        display: block;
+        text-align: left;
+        padding: 0 0 10px;
+        margin-bottom: 8px;
+        border-bottom: 1px solid rgba(148, 163, 184, 0.24);
+    }
+
+    .reports-page-container #reports-container .reports-table .reports-cell-report::before {
+        content: none;
+    }
+
+    .reports-page-container #reports-container .reports-table .reports-location-text {
+        -webkit-line-clamp: unset;
+        text-align: right;
+    }
+
+    /* Actions cell — full-width View/Edit buttons instead of a label row. */
+    .reports-page-container #reports-container .reports-table .reports-cell-actions {
+        display: block;
+        text-align: left;
+        padding-top: 10px;
+    }
+
+    .reports-page-container #reports-container .reports-table .reports-cell-actions::before {
+        content: none;
+    }
+
+    /* The desktop flex row (.reports-actions-buttons, added by the Actions
+       overflow fix) is reset to a plain block here so the full-width,
+       stacked View/Edit buttons below are unaffected — this mobile
+       card layout predates that fix and is preserved as-is. */
+    .reports-page-container #reports-container .reports-table .reports-actions-buttons {
+        display: block;
+    }
+
+    .reports-page-container #reports-container .reports-table .reports-cell-actions a,
+    .reports-page-container #reports-container .reports-table .reports-cell-actions button {
+        width: 100%;
+        margin: 4px 0 0;
+        text-align: center;
+    }
+
+    :root[data-theme-resolved='light'] .reports-page-container #reports-container .reports-table tr {
+        background: #ffffff !important;
+        border-color: var(--purple-border-light, #e5e7eb) !important;
+    }
+
+    :root[data-theme-resolved='light'] .reports-page-container #reports-container .reports-table td::before {
+        color: #6b7280 !important;
+    }
+}
+
+.report-edit-modal {
+    position: fixed;
+    inset: 0;
+    background: rgba(10, 12, 20, 0.72);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 2200;
+    padding: 16px;
+}
+
+.report-edit-modal.show {
+    display: flex;
+}
+
+.report-edit-modal-card {
+    width: min(820px, 100%);
+    max-height: calc(100vh - 32px);
+    overflow: auto;
+    border-radius: 14px;
+    border: 1px solid rgba(168, 139, 250, 0.4);
+    background: #1b1230;
+    color: #f5f0ff;
+}
+
+.report-edit-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 18px;
+    background: linear-gradient(120deg, #0e1a31 0%, #132647 55%, #17355f 100%);
+    border-bottom: 1px solid rgba(148, 163, 184, 0.3);
+}
+
+.report-edit-modal-header h3 {
+    margin: 0;
+    color: #e8effa;
+}
+
+.report-edit-close {
+    border: none;
+    background: transparent;
+    font-size: 24px;
+    line-height: 1;
+    cursor: pointer;
+    color: #e8effa;
+}
+
+.report-edit-modal-body {
+    padding: 16px 18px 18px;
+}
+
+.print-report-modal-card {
+    width: min(520px, 100%);
+}
+
+:root[data-theme-resolved='dark'] .report-edit-modal-card {
+    background: #0f1b31;
+    border-color: rgba(148, 163, 184, 0.34);
+}
+
+:root[data-theme-resolved='dark'] .report-edit-close {
+    color: #e5e7eb;
+}
+
+/* Light mode: professional white cards and black readable text for All Reports.
+
+   These two blocks carry !important at (0,3,0)+, so they — not the shared
+   rules in styles.css — are what actually paints the border on this page.
+   They are pointed at the system tokens rather than duplicated elsewhere,
+   which is why All Reports needs no new page-specific rules to join the
+   purple border system. Old hex kept as the var() fallback. */
+:root[data-theme-resolved='light'] .reports-page-container .card,
+:root[data-theme-resolved='light'] .reports-page-container .reports-pagination,
+:root[data-theme-resolved='light'] .reports-page-container .report-edit-modal-card {
+    background: #ffffff !important;
+    color: #111827 !important;
+    border-color: var(--purple-border, #e5e7eb) !important;
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08) !important;
+}
+
+/* Header/body are INTERIOR dividers inside a card that already has a purple
+   frame, so they take the lighter token — otherwise the same line weight
+   appears twice within a few pixels and reads as a doubled border. */
+:root[data-theme-resolved='light'] .reports-page-container .card-header,
+:root[data-theme-resolved='light'] .reports-page-container .card-body,
+:root[data-theme-resolved='light'] .reports-page-container .report-edit-modal-header,
+:root[data-theme-resolved='light'] .reports-page-container .report-edit-modal-body {
+    background: #ffffff !important;
+    color: #111827 !important;
+    border-color: var(--purple-border-light, #e5e7eb) !important;
+}
+
+:root[data-theme-resolved='light'] .reports-page-container .card :is(h1, h2, h3, h4, h5, h6, p, span, small, strong, label, div, td, th),
+:root[data-theme-resolved='light'] .reports-page-container .reports-pagination :is(span, strong, button, label),
+:root[data-theme-resolved='light'] .reports-page-container .report-edit-modal-card :is(h1, h2, h3, h4, h5, h6, p, span, label, div) {
+    color: #111827 !important;
+}
+
+/* Priority/Status/Resolution badge contrast fix (All Reports, light theme).
+   The blanket rule above catches every <span> inside a .card — including the
+   Priority/Status/Resolution pill badges — and flattens their text to
+   #111827. That's harmless for badges whose own color-scheme.css definition
+   already uses a dark tone on a pale fill (Submitted, Assigned, In Progress,
+   Completed, Cancelled, Closed, Urgent, High, Medium, Low, Resolved all stay
+   readable either way), but badge-critical and badge-unresolved are the two
+   badges defined with WHITE text on a solid dark/saturated fill (dark
+   maroon and solid amber). Forcing black text onto those turns them into
+   near-invisible black-on-dark pills — this is the "CRITICAL text too red
+   or too black" contrast complaint. No background or border color is
+   touched here, only the text color these two badges already declare for
+   themselves in color-scheme.css is restored. */
+:root[data-theme-resolved='light'] .reports-page-container .card :is(.badge-critical, .badge-unresolved) {
+    color: #ffffff !important;
+}
+
+:root[data-theme-resolved='light'] .reports-page-container .text-muted,
+:root[data-theme-resolved='light'] .reports-page-container .reports-pagination-summary,
+:root[data-theme-resolved='light'] .reports-page-container .reports-pagination-size {
+    color: #374151 !important;
+}
+
+:root[data-theme-resolved='light'] .reports-page-container .reports-table,
+:root[data-theme-resolved='light'] .reports-page-container #reports-container table {
+    background: #ffffff !important;
+    color: #111827 !important;
+}
+
+:root[data-theme-resolved='light'] .reports-page-container .reports-table th,
+:root[data-theme-resolved='light'] .reports-page-container #reports-container table th {
+    background: #f9fafb !important;
+    color: #111827 !important;
+    border-color: #e5e7eb !important;
+}
+
+:root[data-theme-resolved='light'] .reports-page-container .reports-table td,
+:root[data-theme-resolved='light'] .reports-page-container #reports-container table td {
+    color: #111827 !important;
+    border-color: #e5e7eb !important;
+}
+
+:root[data-theme-resolved='light'] .reports-page-container .form-control,
+:root[data-theme-resolved='light'] .reports-page-container select,
+:root[data-theme-resolved='light'] .reports-page-container input,
+:root[data-theme-resolved='light'] .reports-page-container textarea {
+    background: #ffffff !important;
+    color: #111827 !important;
+    border-color: #d1d5db !important;
+}
+
+:root[data-theme-resolved='light'] .reports-page-container .reports-pagination-btn {
+    background: #ffffff !important;
+    color: #111827 !important;
+    border-color: #d1d5db !important;
+}
+
+:root[data-theme-resolved='light'] .reports-page-container .reports-pagination-btn:hover:not(:disabled) {
+    background: #f9fafb !important;
+    border-color: #9ca3af !important;
+}
+
+:root[data-theme-resolved='light'] .reports-page-container .reports-header-btn,
+:root[data-theme-resolved='light'] .reports-page-container #clear-date-filters,
+:root[data-theme-resolved='light'] .reports-page-container #clear-filters,
+:root[data-theme-resolved='light'] .reports-page-container .report-edit-modal-card .btn {
+    border-width: 1px !important;
+    border-style: solid !important;
+    font-weight: 700 !important;
+    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
+}
+
+:root[data-theme-resolved='light'] .reports-page-container .reports-header-btn.btn-secondary,
+:root[data-theme-resolved='light'] .reports-page-container #clear-date-filters.btn-secondary,
+:root[data-theme-resolved='light'] .reports-page-container #clear-filters.btn-secondary,
+:root[data-theme-resolved='light'] .reports-page-container .report-edit-modal-card .btn.btn-secondary {
+    background: #ede9fe !important;
+    color: #5b21b6 !important;
+    border-color: #c4b5fd !important;
+}
+
+:root[data-theme-resolved='light'] .reports-page-container .reports-header-btn.btn-secondary:hover,
+:root[data-theme-resolved='light'] .reports-page-container #clear-date-filters.btn-secondary:hover,
+:root[data-theme-resolved='light'] .reports-page-container #clear-filters.btn-secondary:hover,
+:root[data-theme-resolved='light'] .reports-page-container .report-edit-modal-card .btn.btn-secondary:hover {
+    background: #ddd6fe !important;
+    color: #4c1d95 !important;
+    border-color: #a78bfa !important;
+}
+
+:root[data-theme-resolved='light'] .reports-page-container .reports-header-btn.btn-primary,
+:root[data-theme-resolved='light'] .reports-page-container .report-edit-modal-card .btn.btn-primary {
+    background: linear-gradient(135deg, #7c3aed 0%, #8b5cf6 100%) !important;
+    color: #ffffff !important;
+    border-color: #7c3aed !important;
+}
+
+:root[data-theme-resolved='light'] .reports-page-container .reports-header-btn.btn-primary:hover,
+:root[data-theme-resolved='light'] .reports-page-container .report-edit-modal-card .btn.btn-primary:hover {
+    background: linear-gradient(135deg, #6d28d9 0%, #7c3aed 100%) !important;
+    border-color: #6d28d9 !important;
+}
+
+:root[data-theme-resolved='light'] .reports-page-container .reports-filter-date,
+:root[data-theme-resolved='light'] .reports-page-container .reports-filter-select {
+    background: #ffffff !important;
+    color: #111827 !important;
+    /* This light-theme override is what actually painted these two filter
+       controls, so re-pointing the base rule alone left them grey. Now uses
+       the shared control token like every other select/date input. */
+    border-color: var(--purple-control, #cbd5e1) !important;
+    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.04);
+}
+
+:root[data-theme-resolved='light'] .reports-page-container .report-edit-modal-header h3 {
+    color: #111827 !important;
+}
+
+/* TASK 29.1 — dark-mode contrast fix (same pattern as Task 28.1/28.2 on the
+   Report Detail page): the shared color-scheme.css `.alert-warning` rule
+   pairs a fixed light-cream background (--accent-bg, not theme-aware) with
+   --text-primary, which resolves near-white in dark mode — the Need Change
+   locked notice's text was unreadable as a result. Scoped to this one
+   element (not a blanket .alert-warning override, since that class is also
+   used by Components.alert() toasts elsewhere and a broader change is out
+   of this task's scope) and to the shared file being off-limits. Colors
+   reused from styles.css's own dark-mode .alert-warning values. */
+/* Dark-mode base for the Need Change locked notice (unscoped, applies in
+   dark/default theme; the light-mode override is in the block above). */
+#report_edit_need_change_locked.alert-warning {
+    background: rgba(245, 158, 11, 0.16) !important;
+    border-color: rgba(245, 158, 11, 0.42) !important;
+    color: #fde68a !important;
+}
+
+/* ── Edit / Print modal: light-mode overrides ───────────────────────────────
+   The #report-edit-modal and #print-report-modal divs are rendered OUTSIDE
+   <main class="reports-page-container"> in the DOM, so the existing
+   `.reports-page-container .report-edit-modal-card` descendant selectors
+   never match them. These rules target the modal elements directly and are
+   the authoritative light-mode overrides for both modals on this page.
+   ─────────────────────────────────────────────────────────────────────── */
+:root[data-theme-resolved='light'] .report-edit-modal {
+    background: rgba(15, 23, 42, 0.45);
+}
+
+/* Modal shell: purple outer frame, white surface. The background stays
+   white — only the frame carries the accent. */
+:root[data-theme-resolved='light'] .report-edit-modal-card {
+    background: #ffffff !important;
+    color: #111827 !important;
+    border-color: var(--purple-border, #e5e7eb) !important;
+    box-shadow: 0 12px 32px rgba(15, 23, 42, 0.12) !important;
+}
+
+:root[data-theme-resolved='light'] .report-edit-modal-header {
+    background: #f9fafb !important;
+    border-bottom-color: var(--purple-border-light, #e5e7eb) !important;
+}
+
+:root[data-theme-resolved='light'] .report-edit-modal-header h3 {
+    color: #111827 !important;
+}
+
+:root[data-theme-resolved='light'] .report-edit-close {
+    color: #374151 !important;
+}
+
+:root[data-theme-resolved='light'] .report-edit-close:hover {
+    color: #111827 !important;
+}
+
+:root[data-theme-resolved='light'] .report-edit-modal-body {
+    background: #ffffff !important;
+}
+
+/* Form labels */
+:root[data-theme-resolved='light'] .report-edit-modal-card label,
+:root[data-theme-resolved='light'] .report-edit-modal-card .form-group label {
+    color: #374151 !important;
+}
+
+/* All text inputs, selects, textareas inside the modal */
+:root[data-theme-resolved='light'] .report-edit-modal-card input[type="text"],
+:root[data-theme-resolved='light'] .report-edit-modal-card input[type="search"],
+:root[data-theme-resolved='light'] .report-edit-modal-card select,
+:root[data-theme-resolved='light'] .report-edit-modal-card textarea {
+    background: #ffffff !important;
+    color: #111827 !important;
+    border-color: #d1d5db !important;
+}
+
+:root[data-theme-resolved='light'] .report-edit-modal-card input::placeholder,
+:root[data-theme-resolved='light'] .report-edit-modal-card textarea::placeholder {
+    color: #9ca3af !important;
+}
+
+:root[data-theme-resolved='light'] .report-edit-modal-card input:focus,
+:root[data-theme-resolved='light'] .report-edit-modal-card select:focus,
+:root[data-theme-resolved='light'] .report-edit-modal-card textarea:focus {
+    border-color: #8b5cf6 !important;
+    box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.15) !important;
+    outline: none !important;
+}
+
+/* Need Change panel */
+:root[data-theme-resolved='light'] .report-edit-modal-card .need-change-panel {
+    background: #f9fafb !important;
+    border-color: #e5e7eb !important;
+}
+
+:root[data-theme-resolved='light'] .report-edit-modal-card .need-change-toggle-text strong {
+    color: #111827 !important;
+}
+
+:root[data-theme-resolved='light'] .report-edit-modal-card .need-change-toggle-text small,
+:root[data-theme-resolved='light'] .report-edit-modal-card .need-change-note {
+    color: #6b7280 !important;
+}
+
+:root[data-theme-resolved='light'] .report-edit-modal-card .need-change-results {
+    background: #ffffff !important;
+    border-color: #e5e7eb !important;
+}
+
+:root[data-theme-resolved='light'] .report-edit-modal-card .need-change-result-item {
+    color: #111827 !important;
+}
+
+:root[data-theme-resolved='light'] .report-edit-modal-card .need-change-result-item:hover {
+    background: #f3f4f6 !important;
+}
+
+:root[data-theme-resolved='light'] .report-edit-modal-card .need-change-selected {
+    background: #ede9fe !important;
+    color: #5b21b6 !important;
+    border-color: #c4b5fd !important;
+}
+
+/* Buttons inside the modal */
+:root[data-theme-resolved='light'] .report-edit-modal-card .btn.btn-primary {
+    background: linear-gradient(135deg, #7c3aed 0%, #8b5cf6 100%) !important;
+    color: #ffffff !important;
+    border-color: #7c3aed !important;
+}
+
+:root[data-theme-resolved='light'] .report-edit-modal-card .btn.btn-secondary {
+    background: #ede9fe !important;
+    color: #5b21b6 !important;
+    border-color: #c4b5fd !important;
+}
+
+:root[data-theme-resolved='light'] .report-edit-modal-card .btn.btn-secondary:hover {
+    background: #ddd6fe !important;
+    color: #4c1d95 !important;
+    border-color: #a78bfa !important;
+}
+
+/* Need Change locked alert */
+:root[data-theme-resolved='light'] #report_edit_need_change_locked.alert-warning {
+    background: #fef3c7 !important;
+    border-color: #fcd34d !important;
+    color: #78350f !important;
+}

@@ -1,0 +1,3509 @@
+﻿/* Align dashboard content like the reference layout (no centered container drift) */
+.navbar .navbar-container {
+    max-width: none;
+    margin: 0;
+    padding-left: 24px;
+    padding-right: 24px;
+}
+
+main.container {
+    margin-left: var(--sidebar-width);
+    margin-right: 0;
+    max-width: calc(100% - var(--sidebar-width));
+    padding-left: 24px;
+    padding-right: 24px;
+}
+
+#sidebar.collapsed ~ main.container {
+    margin-left: var(--sidebar-width-collapsed);
+    max-width: calc(100% - var(--sidebar-width-collapsed));
+}
+
+/* Modal Styles */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 2000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.7);
+    animation: fadeIn 0.3s ease-in;
+}
+
+.modal.show {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.modal-content {
+    background: var(--card-color, #1a1f2e);
+    border: 1px solid rgba(148, 163, 184, 0.24);
+    border-radius: 12px;
+    width: 90%;
+    max-width: 500px;
+    min-height: 300px;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 20px 50px rgba(2, 8, 23, 0.55);
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 24px;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+
+.modal-header h2 {
+    margin: 0;
+    font-size: 20px;
+    color: var(--text-light, #e6eef8);
+}
+
+.modal-close {
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+    color: var(--muted-text, #9aa3b2);
+    transition: color 0.2s ease;
+}
+
+.modal-close:hover {
+    color: var(--text-light, #e6eef8);
+}
+
+.modal-body {
+    padding: 24px;
+    flex: 1;
+    overflow-y: auto;
+}
+
+.modal-body .form-group {
+    margin-bottom: 18px;
+}
+
+.modal-body label {
+    display: block;
+    margin-bottom: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-light, #e6eef8);
+}
+
+.modal-body .form-control {
+    width: 100%;
+    padding: 10px 12px;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 6px;
+    color: var(--text-light, #e6eef8);
+    font-family: inherit;
+    font-size: 14px;
+    transition: all 0.2s ease;
+}
+
+.modal-body .form-control:focus {
+    outline: none;
+    border-color: var(--primary-color, #4a9eff);
+    background: rgba(255,255,255,0.06);
+    box-shadow: 0 0 0 3px rgba(74, 158, 255, 0.1);
+}
+
+.modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    padding: 24px;
+    border-top: 1px solid rgba(255,255,255,0.05);
+}
+
+.modal-footer .btn {
+    padding: 10px 20px;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+.modal-footer .btn-secondary {
+    background: rgba(255,255,255,0.05);
+    color: var(--muted-text, #9aa3b2);
+}
+
+.modal-footer .btn-secondary:hover {
+    background: rgba(255,255,255,0.1);
+    color: var(--text-light, #e6eef8);
+}
+
+.modal-footer .btn-primary {
+    background: var(--primary-color, #4a9eff);
+    color: white;
+}
+
+.modal-footer .btn-primary:hover {
+    background: var(--primary-dark, #3277e6);
+}
+
+/* TASK 31.1 — Hero header restructure. .card-header already carries the
+   shared d-flex/justify-between/align-center utility classes; this page-
+   scoped rule only swaps vertical alignment to flex-start (so the title and
+   the action cluster align at their tops instead of being vertically
+   centered against each other) and adds a bit of row gap for wrap cases.
+   No shared file touched — .dashboard-hero-header is only referenced here. */
+.dashboard-hero-header {
+    align-items: flex-start;
+    row-gap: var(--space-4, 16px);
+}
+
+/* Groups the Semester Settings button and the Academic Session card into a
+   single right-aligned cluster, closing the dead space that used to sit
+   between the page title and the button when the button lived alone inside
+   .dashboard-page-header's own space-between row. */
+.dashboard-hero-actions {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: var(--space-3, 12px);
+    flex-shrink: 0;
+}
+
+.dashboard-hero-actions .dashboard-page-header-actions {
+    margin: 0;
+}
+
+@media (max-width: 640px) {
+    .dashboard-hero-header {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .dashboard-hero-actions {
+        align-items: stretch;
+        width: 100%;
+    }
+}
+
+/* TASK 31.7 — Hero row. Replaces the Task 31.6 ".dashboard-hero" tinted
+   band (which wrapped only the greeting inside the old single mega-card)
+   now that the greeting + KPI strip live together in their own top-level
+   ".dashboard-hero-panel" card, sitting beside the Academic Session card
+   in this flex row — matching the approved reference's composition. Both
+   children are stretched to equal height; the panel keeps the shared
+   .card chrome (border/radius/shadow) since, unlike the old neutralized
+   mega-card wrapper, this IS meant to read as a real card. */
+.dashboard-hero-row {
+    display: flex;
+    align-items: stretch;
+    gap: var(--space-4, 16px);
+    margin-top: 0;
+    margin-bottom: var(--space-6, 24px);
+}
+
+.dashboard-hero-panel {
+    flex: 1 1 auto;
+    min-width: 0;
+    /* Zero out the shared .card's margin-top/-bottom (20px/24px) — spacing
+       around the whole row is now owned by .dashboard-hero-row instead, so
+       the panel and the Academic Session card share one consistent gap. */
+    margin: 0;
+    /* TASK 31.12 — the reference's greeting area is flat/borderless, not a
+       bordered card wrapping the KPI strip underneath it (the "card-in-
+       card" nesting was the single biggest composition gap flagged in the
+       31.12 checklist). Overrides the shared styles.css base .card
+       border/background/box-shadow back out to nothing; the KPI row below
+       keeps its own real card chrome per .dashboard-hero-kpi-item, so the
+       page still reads as "boxed data cards on a flat surface," matching
+       the reference instead of "card inside a card." */
+    border: none;
+    background: transparent;
+    box-shadow: none;
+}
+
+/* .dashboard-hero-header itself (align-items/row-gap) is unchanged from
+   Task 31.1 — still applies via its own class, independent of nesting.
+   TASK 31.12 — horizontal padding zeroed (was 24px/28px): now that the
+   panel has no visible border, its old card-interior padding indented the
+   greeting text relative to every flush-left card below it (feature cards,
+   charts row, etc.), breaking the page's left-edge alignment. Vertical
+   padding kept so the action button/Academic Session row still has room to
+   breathe above the KPI strip. */
+main.container .dashboard-hero-panel .card-header.dashboard-hero-header {
+    padding: 0 0 18px;
+}
+
+/* TASK 31.12 — divider removed (was border-top: 1px solid var(--border)):
+   that hairline was the last visible trace of the old "one bordered card"
+   look now that the panel itself has no border. Horizontal padding zeroed
+   for the same left-edge alignment reason as the header above; the
+   individual .dashboard-hero-kpi-item cards still carry their own border/
+   background, so the KPI row still reads as clearly-boxed data. */
+.dashboard-hero-kpi-body {
+    padding: 0;
+}
+
+/* TASK 31.9 — 5 KPI stats as individually-boxed cards (own border/radius/
+   shadow/background per item), replacing the Task 31.7 hairline-divided
+   inline strip, per the reference's denser, more clearly-separated KPI
+   presentation. Reuses the existing .summary-card-icon/-content/-title/
+   -value/-desc inner classes and their theme-aware tokens as-is; only the
+   outer .dashboard-hero-kpi-item wrapper's chrome changed below. */
+.dashboard-hero-kpi-row {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.dashboard-hero-kpi-item {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    /* TASK 31.16 — gap 12->14 and padding-bottom 18->20: a touch more
+       breathing room now that the trend caption below renders as two
+       stacked lines (percentage, then "vs {window}") instead of one.
+       TASK 31.17 — bumped again (14->17, padding 16/18/20->18/20/22) per
+       explicit "more vertical spacing / larger breathing room" ask against
+       the new reference.
+       TASK 31.18 — bumped once more (17->20, padding 18/20/22->20/22/26):
+       the 31.17 pass was still read as "trend chip and subtitle too close
+       together" against the latest reference, so this pushes the row gap
+       and bottom padding further still. */
+    gap: 20px;
+    min-width: 0;
+    padding: 20px 22px 26px;
+    /* TASK 31.17 — resting-state border now carries a faint per-card accent
+       tint (see the nth-child rules below) instead of the flat neutral
+       var(--border) every card shared before, matching the reference's
+       "subtle colored accent" per KPI card. var(--border) stays as the
+       fallback for any future item beyond the 5 explicitly colored below. */
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--surface-muted, rgba(148, 163, 184, 0.05));
+    cursor: pointer;
+    overflow: hidden;
+    transition: border-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.dashboard-hero-kpi-item:hover {
+    border-color: var(--card-accent, rgba(148, 163, 184, 0.4));
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-card);
+}
+
+/* TASK 31.10 — icon + title moved onto one shared row (per the reference's
+   denser KPI header), replacing the old icon-above-title stack. Only this
+   wrapper is new; .summary-card-icon/-title/-content/-value/-desc keep their
+   existing classes/ids so nothing the JS queries changed. */
+.dashboard-hero-kpi-item-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+}
+
+.dashboard-hero-kpi-item .summary-card-icon {
+    width: 34px;
+    height: 34px;
+    border-radius: 9px;
+    border: none;
+    box-shadow: none;
+    flex-shrink: 0;
+}
+
+.dashboard-hero-kpi-item .summary-card-icon svg {
+    /* TASK 31.8 — was 18px. The shared enterprise-dashboard.css rule sizes
+       this icon's chip container to 50x50 for every summary-card-icon on
+       the page (hero KPI strip and the Low Stock/Buildings feature cards
+       alike), but this page-scoped rule sized only the hero strip's glyph
+       smaller (18px) than the feature cards' identical chip (20px, see
+       .summary-card-icon svg below) — same box, two different glyph
+       sizes, which reads as inconsistent icon weight across the page.
+       20px matches the feature-card family exactly. TASK 31.10 — icon chip
+       shrank from 36px to 32px to sit comfortably beside the title on the
+       new shared head row, so the glyph inside shrank in proportion. */
+    width: 18px;
+    height: 18px;
+}
+
+/* TASK 31.16 — flex ROW wrapper, originally built to hold
+   .summary-card-content side-by-side with .summary-card-spark.
+   TASK 36 — the spark is gone (replaced by the absolutely-positioned
+   .dashboard-hero-kpi-item-watermark below, which sits behind everything
+   and needs no layout participation), so .summary-card-content is now the
+   wrapper's only child. Left as a flex row rather than collapsed away
+   entirely — it costs nothing empty and keeps this a small, low-risk diff
+   instead of restructuring the card's DOM further. */
+.dashboard-hero-kpi-item-body {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 8px;
+    width: 100%;
+}
+
+.dashboard-hero-kpi-item .summary-card-content {
+    min-width: 0;
+    width: auto;
+    flex: 1 1 auto;
+}
+
+.dashboard-hero-kpi-item .summary-card-title {
+    margin: 0;
+    min-width: 0;
+    font-size: 0.74rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.dashboard-hero-kpi-item .summary-card-value {
+    /* TASK 31.10 — was 1.6rem. A touch larger now that the title no longer
+       sits directly above it (freed a line of vertical space), matching the
+       reference's bigger, more dominant KPI number. TASK 31.11 — bumped
+       again (1.7rem -> 1.85rem) as part of the overall card-density
+       increase to match the reference's heavier, more spacious cards.
+       TASK 36 — bumped again (1.85rem -> 2.5rem) per explicit user feedback
+       that the number was still too small; this is now the single largest
+       text element on the card, clearly dominant over the title/desc.
+       TASK 36.1 — bumped once more (2.5rem -> 3.25rem) per a second round
+       of "still too small" feedback; this is a deliberately large jump
+       (not another small nudge) since the smaller bump wasn't enough the
+       first time. */
+    font-size: 3.25rem;
+    font-weight: 800;
+    line-height: 1;
+    white-space: nowrap;
+    /* TASK 31.18 — explicit margin-bottom added (was inheriting the shared
+       .summary-card-value's 6px). Gives the big number a bit more room
+       before the trend chip beneath it, part of the "increase vertical
+       spacing" fix for the still-cramped chip/subtitle block. */
+    margin-bottom: 10px;
+}
+
+.dashboard-hero-kpi-item .summary-card-desc {
+    font-size: 0.78rem;
+}
+
+/* TASK 31.9 — purely decorative sparkline (see the matching markup
+   comment history in dashboard.php). Static SVG, no data binding of any
+   kind. TASK 36 — retired: replaced by .dashboard-hero-kpi-item-watermark
+   below per explicit user feedback that the sparkline read as a mini
+   stock/trading chart. Rule kept (not deleted) in case any other markup
+   still references the class; dashboard.php's 5 KPI cards no longer do. */
+.summary-card-spark {
+    display: none;
+}
+
+/* TASK 36 — large, faint watermark icon replacing the sparkline above.
+   Same "clearly decorative, not real data" treatment already established
+   for .summary-card-illustration elsewhere on this page: aria-hidden,
+   pointer-events:none, absolutely positioned inside the card's own
+   position:relative/overflow:hidden box (.dashboard-hero-kpi-item already
+   has both), low opacity so it reads as ambient texture behind the real
+   number/label rather than competing with them. Uses the exact same glyph
+   as that card's small icon chip (see matching markup in dashboard.php)
+   just enlarged, so the watermark always matches its own card's icon —
+   no separate icon set to keep in sync. */
+/* TASK 36.1 — repositioned per user feedback that the watermark looked
+   "hindi maayos" (not properly arranged). Root cause: the 5 reused glyphs
+   don't share the same visual weight/bounding box inside their 24x24
+   viewBox (the document/calendar glyphs are large, boxy shapes that fill
+   most of the box, while the checkmark/clock/wrench glyphs are thin
+   strokes sitting off-center) — anchoring by bottom+right corner made
+   each icon crop and sit differently, so the row of 5 cards looked
+   inconsistent card-to-card. Centering vertically on the card's right
+   edge instead (rather than pinning to the bottom-right corner) removes
+   that inconsistency: every glyph now hangs from the same fixed point
+   regardless of its own bounding box, so the row reads as one consistent
+   pattern instead of 5 differently-cropped shapes. */
+.dashboard-hero-kpi-item-watermark {
+    position: absolute;
+    top: 50%;
+    right: -8px;
+    transform: translateY(-50%);
+    width: 96px;
+    height: 96px;
+    opacity: 0.12;
+    pointer-events: none;
+    z-index: 0;
+}
+
+/* TASK 36 — the head/body content must render above the watermark, which
+   shares the same stacking context (.dashboard-hero-kpi-item is
+   position:relative). Neither had an explicit z-index before since there
+   was nothing to layer against. */
+.dashboard-hero-kpi-item-head,
+.dashboard-hero-kpi-item-body {
+    position: relative;
+    z-index: 1;
+}
+
+/* TASK 31.10 — small arrow glyph prefixing a real, computed trend badge
+   (see renderKpiTrend()/computeCountTrend() in dashboard.php). Purely a
+   text/typography treatment — no new color token, reuses the existing
+   .summary-trend-positive/-warning/-danger currentColor. */
+.summary-trend-arrow {
+    margin-right: 2px;
+    font-weight: 700;
+}
+
+/* TASK 31.17 — card 2 ("Reports Today") accent swapped cyan (#06b6d4) ->
+   a brighter, more standard enterprise blue (#3b82f6) across spark/icon/
+   border, matching the reference's more saturated blue icon (was reading
+   as a washed-out teal-cyan next to it). Cards 1/3/4/5 keep their existing
+   purple/orange/teal/green accents — only card 2's hue changed.
+   TASK 36 — .summary-card-spark rules kept (now display:none, harmless);
+   same 5-color scheme re-applied to .dashboard-hero-kpi-item-watermark,
+   the sparkline's replacement, so each card's big background icon still
+   matches that card's own icon-chip accent. */
+.dashboard-hero-kpi-row > .dashboard-hero-kpi-item:nth-child(1) .summary-card-spark,
+.dashboard-hero-kpi-row > .dashboard-hero-kpi-item:nth-child(1) .dashboard-hero-kpi-item-watermark { color: #8b5cf6; }
+.dashboard-hero-kpi-row > .dashboard-hero-kpi-item:nth-child(2) .summary-card-spark,
+.dashboard-hero-kpi-row > .dashboard-hero-kpi-item:nth-child(2) .dashboard-hero-kpi-item-watermark { color: #3b82f6; }
+.dashboard-hero-kpi-row > .dashboard-hero-kpi-item:nth-child(3) .summary-card-spark,
+.dashboard-hero-kpi-row > .dashboard-hero-kpi-item:nth-child(3) .dashboard-hero-kpi-item-watermark { color: #f59e0b; }
+.dashboard-hero-kpi-row > .dashboard-hero-kpi-item:nth-child(4) .summary-card-spark,
+.dashboard-hero-kpi-row > .dashboard-hero-kpi-item:nth-child(4) .dashboard-hero-kpi-item-watermark { color: #14b8a6; }
+.dashboard-hero-kpi-row > .dashboard-hero-kpi-item:nth-child(5) .summary-card-spark,
+.dashboard-hero-kpi-row > .dashboard-hero-kpi-item:nth-child(5) .dashboard-hero-kpi-item-watermark { color: #10b981; }
+
+/* Per-item accent colors on the icon chip — same 5-color scheme the old
+   .summary-cards-grid nth-child rule used (purple/blue/orange/violet/
+   green), re-targeted at the new hero strip since that selector no longer
+   matches (the KPI items' outer class changed and .summary-cards-grid no
+   longer exists in the markup). */
+/* TASK 31.16 — icon-chip background alpha bumped 0.14 -> 0.22 and each
+   given a matching hairline border in the same hue (was borderless) so the
+   chips read as noticeably richer/more saturated per the "increase
+   colorfulness" ask, while the icon glyph color itself (already the brief's
+   token hex) is untouched.
+   TASK 31.17 — alpha bumped again (0.22 -> 0.28 fill, 0.35 -> 0.45 border)
+   per the explicit "still feels muted, increase saturation" follow-up.
+   TASK 31.18 — bumped once more (0.28 -> 0.34 fill, 0.45 -> 0.55 border)
+   per the repeated "still too muted, increase saturation" follow-up. */
+.dashboard-hero-kpi-row > .dashboard-hero-kpi-item:nth-child(1) .summary-card-icon { background: rgba(139, 92, 246, 0.34); color: #8b5cf6; border: 1px solid rgba(139, 92, 246, 0.55); }
+.dashboard-hero-kpi-row > .dashboard-hero-kpi-item:nth-child(2) .summary-card-icon { background: rgba(59, 130, 246, 0.34); color: #3b82f6; border: 1px solid rgba(59, 130, 246, 0.55); }
+.dashboard-hero-kpi-row > .dashboard-hero-kpi-item:nth-child(3) .summary-card-icon { background: rgba(245, 158, 11, 0.34); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.55); }
+.dashboard-hero-kpi-row > .dashboard-hero-kpi-item:nth-child(4) .summary-card-icon { background: rgba(20, 184, 166, 0.34); color: #14b8a6; border: 1px solid rgba(20, 184, 166, 0.55); }
+.dashboard-hero-kpi-row > .dashboard-hero-kpi-item:nth-child(5) .summary-card-icon { background: rgba(16, 185, 129, 0.34); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.55); }
+
+/* TASK 31.17 — new: each KPI card's own resting-state border now carries a
+   faint tint of its icon's accent color (was the flat neutral var(--border)
+   every card shared) so the card itself reads as subtly color-coded, per
+   the reference's "each KPI card has a subtle colored accent" requirement.
+   Kept faint (0.22 alpha) so it stays a hint, not a loud outline — the
+   existing :hover rule above still swaps to the fuller var(--card-accent)
+   border on interaction.
+   TASK 31.18 — alpha bumped 0.28 -> 0.4 so the per-card border tint reads
+   more clearly as "a subtle colored accent" per the repeated follow-up,
+   without going all the way to the full-strength :hover border color. */
+.dashboard-hero-kpi-row > .dashboard-hero-kpi-item:nth-child(1) { border-color: rgba(139, 92, 246, 0.4); }
+.dashboard-hero-kpi-row > .dashboard-hero-kpi-item:nth-child(2) { border-color: rgba(59, 130, 246, 0.4); }
+.dashboard-hero-kpi-row > .dashboard-hero-kpi-item:nth-child(3) { border-color: rgba(245, 158, 11, 0.4); }
+.dashboard-hero-kpi-row > .dashboard-hero-kpi-item:nth-child(4) { border-color: rgba(20, 184, 166, 0.4); }
+.dashboard-hero-kpi-row > .dashboard-hero-kpi-item:nth-child(5) { border-color: rgba(16, 185, 129, 0.4); }
+
+/* Trend captions as small pills, same recipe as the Task 31.6 trend-pill
+   treatment on the feature cards, resized for the compact strip. Needs the
+   .dashboard-hero-kpi-item scope since .summary-cards-grid's version of
+   this rule no longer reaches these items (ancestor class changed). */
+.dashboard-hero-kpi-item .summary-card-desc.summary-trend-positive,
+.dashboard-hero-kpi-item .summary-card-desc.summary-trend-warning,
+.dashboard-hero-kpi-item .summary-card-desc.summary-trend-danger {
+    display: inline-flex;
+    /* align-self is required, not optional: .summary-card-content (this
+       pill's flex parent) is display:flex; flex-direction:column, whose
+       default align-items:stretch otherwise stretches this pill to the
+       item's full column width — turning it into a full-bleed color bar
+       instead of a compact chip hugging its own text. The
+       .summary-cards-grid/.dashboard-feature-cards-grid version of this
+       same trend-pill rule already carries align-self:flex-start for the
+       same reason; this hero-strip copy was missing it. */
+    align-self: flex-start;
+    align-items: center;
+    margin-top: 4px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 0.68rem;
+    font-weight: 700;
+    text-transform: none;
+}
+
+.dashboard-hero-kpi-item .summary-card-desc.summary-trend-positive {
+    background: rgba(16, 185, 129, 0.32);
+    color: #10b981;
+}
+
+.dashboard-hero-kpi-item .summary-card-desc.summary-trend-warning {
+    background: rgba(245, 158, 11, 0.32);
+    color: #f59e0b;
+}
+
+.dashboard-hero-kpi-item .summary-card-desc.summary-trend-danger {
+    background: rgba(239, 68, 68, 0.32);
+    color: #ef4444;
+}
+
+/* TASK 31.11 — reference shows only the arrow+percentage pilled, with
+   "vs {window}" as separate plain muted text beside it. renderKpiTrend()
+   now adds this layout-only row class to .summary-card-desc instead of the
+   pill color class directly, and nests a .summary-trend-chip span (which
+   takes the pill color class) plus a plain .summary-trend-window span.
+   The .summary-trend-positive/-warning/-danger rules above are untouched
+   and keep applying full-pill styling to the static default captions that
+   don't go through renderKpiTrend(). */
+/* TASK 31.16 — was display:inline-flex (row): the percentage chip and
+   "vs {window}" text sat on one line, side by side. Per the reference,
+   each now gets its own line — the percentage chip on top, the muted
+   "vs {window}" caption directly beneath it — which also gives the card
+   more vertical rhythm ("should breathe more") and removes any risk of
+   the row's width crowding the sparkline beside it. Same two child
+   spans/markup from renderKpiTrend(), only the stacking direction
+   changed. */
+/* TASK 31.17 — margin-top 6px->10px (more air between the big value and
+   the trend chip beneath it) and inter-row gap 3px->5px (chip to "vs
+   {window}" caption), directly answering "the subtitle still sits too
+   close" / "more vertical spacing" against the new reference. Still the
+   same two-line stack from Task 31.16 — spacing only.
+   TASK 31.18 — pushed further still (margin-top 10px->16px, gap 5px->7px):
+   the 31.17 spacing read as improved but still "too close together" per
+   the latest side-by-side, so this is a second, larger jump on top of the
+   new .summary-card-value margin-bottom above — subtitle now sits clearly
+   below the chip with real air on both sides. */
+.dashboard-hero-kpi-item .summary-card-desc.summary-trend-row {
+    display: flex;
+    flex-direction: column;
+    align-self: flex-start;
+    align-items: flex-start;
+    gap: 7px;
+    margin-top: 16px;
+    padding: 0;
+    background: none;
+    font-size: 0.78rem;
+    font-weight: 400;
+    text-transform: none;
+}
+
+.summary-trend-chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 0.68rem;
+    font-weight: 700;
+    line-height: 1.4;
+}
+
+/* TASK 31.16 — chip alpha bumped 0.14 -> 0.20 so the trend pills "pop more"
+   against the card surface, matching the icon-chip richness bump above.
+   TASK 31.17 — bumped again, 0.20 -> 0.26, per the explicit "increase
+   saturation" follow-up on trend chips.
+   TASK 31.18 — bumped once more, 0.26 -> 0.32, per the repeated "increase
+   saturation" follow-up on trend chips. */
+.summary-trend-chip.summary-trend-positive {
+    background: rgba(16, 185, 129, 0.32);
+    color: #10b981;
+}
+
+.summary-trend-chip.summary-trend-danger {
+    background: rgba(239, 68, 68, 0.32);
+    color: #ef4444;
+}
+
+.summary-trend-window {
+    color: var(--muted-text);
+    font-size: 0.72rem;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+/* TASK 25.3/31.7 — Academic Session card is a direct flex sibling of the
+   hero panel now (see .dashboard-hero-row above) instead of being nested
+   inside the hero header's action cluster. It's already fully
+   self-contained (.academic-period-card has its own border/radius/shadow/
+   background/width — see further down this file) so it needs no chrome
+   changes here, only sizing within the row. */
+/* TASK 31.14 — widened again (was 380px, ~40% of the KPI row's width) per
+   a fresh side-by-side against the newest reference image: measuring the
+   reference's Academic Session card against its 5-card KPI row puts it at
+   roughly 46-47% of the KPI row's width, noticeably wider than 380px
+   produces at this page's actual content width. .academic-period-card's
+   own `width` (further down this file) is updated to match. */
+.dashboard-hero-session-card {
+    flex: 0 0 420px;
+    margin: 0;
+}
+
+@media (max-width: 1024px) {
+    .dashboard-hero-row {
+        flex-wrap: wrap;
+    }
+
+    .dashboard-hero-session-card {
+        flex: 1 1 100%;
+    }
+
+    .dashboard-hero-kpi-row {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        row-gap: 12px;
+    }
+}
+
+@media (max-width: 640px) {
+    .dashboard-hero-kpi-row {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Dashboard polish */
+.dashboard-kicker {
+    display: block;
+    margin: 0 0 6px;
+    color: var(--text-secondary) !important;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+}
+
+.priority-chart-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-card);
+    overflow: hidden;
+}
+
+.priority-chart-card .card-header {
+    border-bottom: 1px solid var(--border);
+}
+
+.priority-chart-card .card-header h2 {
+    color: var(--text-light);
+}
+
+.priority-chart-card .card-header .text-muted {
+    color: var(--muted-text) !important;
+}
+
+.priority-chart-card .card-body {
+    padding: 18px 16px 14px;
+}
+
+.summary-cards-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    /* TASK 31.6 — gap/margin brought in line with the feature-card and
+       chart-row grids below (both use --space-4/--space-8) so the whole
+       page shares one consistent grid rhythm instead of the KPI row using
+       a tighter, one-off 12px/16px pairing. */
+    gap: var(--space-4, 16px);
+    margin-bottom: var(--space-8, 32px);
+}
+
+/* Low Stock + Buildings Overview: moved out of .summary-cards-grid in Task 31.2
+   so the 5 performance KPIs and the 2 quick-action cards read as distinct groups
+   instead of one uneven 7-up row. Reuses .summary-card chrome. */
+/* TASK 31.14 — was an equal 1fr/1fr split. The reference gives the
+   Buildings card noticeably more width than Low Stock (its larger "Open"
+   headline and bigger building illustration read as intentionally wider,
+   roughly a 43/57 split rather than 50/50). Both cards keep identical
+   internal padding/typography — only the grid track ratio changed. */
+.dashboard-feature-cards-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 3fr) minmax(0, 4fr);
+    gap: var(--space-4, 16px);
+    /* TASK 31.8 — was var(--space-8, 32px). Every other section gap on this
+    page (.dashboard-hero-row and .dashboard-charts-row.dashboard-bottom)
+    uses the same
+       var(--space-6, 24px) margin-bottom, giving the page one consistent
+       24px vertical rhythm between sections. This grid was the one
+       leftover 32px gap, making the space above the charts row visibly
+       larger than every other section gap on the page. */
+    margin-bottom: var(--space-6, 24px);
+}
+
+/* TASK 31.9 — Low Stock / Buildings: larger content area, stronger
+   hierarchy, bigger icon "illustration", more prominent CTA — matching
+   the reference's richer feature-card treatment. Scoped to
+   .dashboard-feature-cards-grid only so the KPI strip above (which no
+   longer uses .summary-card at all) and nothing else is affected. */
+.dashboard-feature-cards-grid .summary-card {
+    min-height: 172px;
+    padding: 26px 26px 24px;
+}
+
+.dashboard-feature-cards-grid .summary-card .summary-card-icon {
+    width: 56px;
+    height: 56px;
+    border-radius: 14px;
+}
+
+.dashboard-feature-cards-grid .summary-card .summary-card-icon svg {
+    width: 26px;
+    height: 26px;
+}
+
+.dashboard-feature-cards-grid .summary-card .summary-card-title {
+    font-size: 0.86rem;
+}
+
+.dashboard-feature-cards-grid .summary-card .summary-card-value {
+    margin: 6px 0 4px;
+    font-size: 2.1rem;
+}
+
+.summary-card-cta {
+    display: inline-flex;
+    align-items: center;
+    margin-top: 10px;
+    color: var(--card-accent, var(--primary-color));
+    font-size: 0.82rem;
+    font-weight: 600;
+}
+
+/* TASK 31.9 — promote the feature cards' CTA from a plain text link to a
+   small pill/button (per the reference's clearer "button placement"),
+   using the same --card-accent-bg token the icon chip and trend pills
+   already rely on so it stays theme-correct without new colors. */
+.dashboard-feature-cards-grid .summary-card-cta {
+    /* align-self is required: .summary-card-content (this pill's flex
+       parent) is display:flex; flex-direction:column with the default
+       align-items:stretch, which would otherwise stretch this inline-flex
+       pill to the card's full width instead of hugging its own text —
+       same fix already applied to the KPI trend pills above. */
+    align-self: flex-start;
+    margin-top: 14px;
+    padding: 7px 14px;
+    /* TASK 31.10 — was border-radius: 999px (full pill). The reference's
+       feature-card CTA reads as an actual small button, not a chip/tag, so
+       this switches to the same 8px corner the rest of the app's real
+       <button>/.btn elements use (shared token, not a new radius value). */
+    border-radius: var(--radius-sm, 8px);
+    /* TASK 31.12 — was a tinted/bordered pill (transparent-ish
+       --card-accent-bg fill + matching border). The reference's CTA reads
+       as a solid, filled button, not a subtle tag, so this switches to a
+       solid --card-accent fill with light text — same accent-color custom
+       property already driving the icon chip/border-top on this card, no
+       new color token. */
+    border: 1px solid transparent;
+    background: var(--card-accent, #8b5cf6);
+    color: #f8fafc;
+    /* TASK 31.17 — subtle colored glow (matching the button's own
+       --card-accent fill) per the "Buttons — use stronger enterprise
+       colors" ask, so the CTA reads as a more prominent, higher-contrast
+       button instead of a flat filled tag. Kept soft/short-radius so it
+       stays a glow, not a heavy drop shadow.
+       TASK 31.18 — glow strengthened further (alpha 0.45 -> 0.55) and a
+       slight saturate() bump added to the fill itself, per the repeated
+       "stronger enterprise colors" follow-up on buttons. */
+    box-shadow: 0 3px 12px -2px var(--card-accent-shadow, rgba(139, 92, 246, 0.55));
+    filter: saturate(1.12);
+    transition: background 0.15s ease, transform 0.15s ease, filter 0.15s ease, box-shadow 0.15s ease;
+}
+
+.dashboard-feature-cards-grid .summary-card:hover .summary-card-cta {
+    filter: saturate(1.12) brightness(1.08);
+    transform: translateX(2px);
+    box-shadow: 0 5px 16px -2px var(--card-accent-shadow, rgba(139, 92, 246, 0.7));
+}
+
+/* TASK 31.10 — large, faint watermark icon (same glyph as the real icon
+   chip, just bigger/low-opacity/aria-hidden), replacing the plain radial
+   glow with something closer to the reference's "decorative illustration"
+   treatment while staying obviously non-interactive/non-data-bound — same
+   pattern as .summary-card-spark on the KPI cards above. Sits behind the
+   real content (z-index left at auto/0, content already stacks above via
+   normal flow) and is clipped by .summary-card's own overflow:hidden. */
+.summary-card-illustration {
+    position: absolute;
+    bottom: -18px;
+    right: -14px;
+    width: 108px;
+    height: 108px;
+    color: var(--card-accent, #8b5cf6);
+    opacity: 0.1;
+    pointer-events: none;
+}
+
+/* TASK 31.15 — the Low Stock (red isometric box-stack) and Buildings (blue
+   isometric building) illustrations are more detailed multi-shape scenes
+   than the single-glyph watermark above, so they get a bit more room and
+   visibility to stay legible per the reference image. Layered on top of
+   the shared .summary-card-illustration rule above (still position:
+   absolute/pointer-events:none/aria-hidden — only size/color/opacity
+   differ). Colors are explicit rather than var(--card-accent) so they
+   match the reference's red/blue exactly regardless of each card's own
+   border-accent token. */
+/* TASK 31.16 — opacity nudged up (boxes 0.5 -> 0.6, building 0.45 -> 0.55)
+   as part of the "increase card illustration visibility slightly, still
+   subtle" ask; still well clear of interfering with the real text content
+   stacked above (unchanged z-order/pointer-events:none).
+   TASK 31.17 — opacity nudged again (boxes 0.6 -> 0.68, building
+   0.55 -> 0.62), same "increase opacity slightly, still subtle" ask
+   restated in the 31.17 brief; size/position/color untouched.
+   TASK 31.18 — opacity nudged once more (boxes 0.68 -> 0.76, building
+   0.62 -> 0.7), same ask restated again; still well clear of the real
+   text content above (unchanged z-order/pointer-events:none).
+   TASK 31.19 — both illustrations were rebuilt in dashboard.php (real
+   5-box pyramid / building+door+ground-platform, wider viewBox to fit the
+   new detail + sparkles). Opacity walked back down to the reference's
+   explicit "around 55-60%" ask (was 0.76, now 0.58) rather than continuing
+   to climb, and a soft CSS drop-shadow glow replaces the old flat look —
+   cheaper and safer than an inline SVG <filter>, same visual result ("soft
+   inner glow"). Width/height/position bumped to match the new viewBox
+   (140x130 vs the old 120x108 / 130x120) so the extra detail doesn't get
+   squashed.
+   TASK 31.19.1 — Low Stock only: the 31.19 rebuild still bled off the
+   card's bottom-right corner (bottom/right negative offsets, clipped by
+   .summary-card's overflow:hidden), which the follow-up brief explicitly
+   called out ("never touches the border", "vertically centered", "proper
+   padding", "occupies roughly the right third"). Switched from a corner-
+   bleed anchor to a true vertical-center anchor (top:50% + translateY,
+   bottom set to auto so it isn't over-constrained) with a positive right
+   inset instead of a negative one, sized up again (now 178px, tracking the
+   new 200x190 viewBox) to actually fill the right third of the card at
+   this larger min-height. Opacity nudged to 0.62 (mid of the requested
+   55-65% range) and the glow is now two stacked drop-shadows (a tighter
+   "outer glow" + a wider/fainter one to read as ambient light), on top of
+   the SVG's own internal blurred ambient circle. Buildings/Academic Session
+   illustrations were NOT touched by this follow-up — only Low Stock was
+   in scope. */
+.summary-card-illustration-boxes {
+    width: 178px;
+    height: 169px;
+    top: 50%;
+    bottom: auto;
+    right: 22px;
+    transform: translateY(-50%);
+    color: #ef4444;
+    opacity: 0.62;
+    filter: drop-shadow(0 0 7px rgba(239, 68, 68, 0.55)) drop-shadow(0 0 20px rgba(239, 68, 68, 0.28));
+}
+
+/* TASK 31.19.9 — dedicated rule for the new raster Low Stock illustration
+   (<img>, replacing the SVG that used .summary-card-illustration-boxes
+   above). Narrowly scoped to this one element only — the SVG-era rule
+   above is left completely untouched. Unlike the old currentColor SVG,
+   this PNG already contains its own baked-in red/orange glow, sparkles
+   and shading, so: no `color`, no `filter`/drop-shadow (would stack a
+   second glow on top of the image's own), and no opacity fade (the brief
+   asked for the same visual weight/prominence as the reference image, not
+   a faint watermark). object-fit: contain preserves the source's native
+   3:2 aspect ratio inside the box below so it's never stretched/distorted,
+   regardless of the fixed box's own aspect ratio. Right/vertical-center
+   positioning mirrors the old rule's anchor approach (top:50% +
+   translateY) so the image sits in the same right-side/vertically-centered
+   spot the reference shows, comfortably inside the card's own 26px right
+   padding and never touching the card border (.summary-card keeps
+   overflow:hidden as an extra safety clip).
+   TASK 31.19.10 — sizing-only follow-up: the 170x140 box rendered the
+   170x113 (3:2) baked-in image far smaller than the reference's "prominent,
+   occupies most of the right third" treatment — it read as a small icon.
+   Box enlarged to 300x200 (same 3:2 ratio as the source PNG, so
+   object-fit: contain fills the entire box with no unused letterbox
+   space — displayed size is now the full 300x200, roughly 1.77x the old
+   170x113 render). `right` pulled in from 20px to 10px to give the larger
+   box room inside the card without shrinking the safety margin from the
+   border (.summary-card's overflow:hidden still clips anything that
+   overshoots). Only geometry changed — no color/opacity/filter/object-fit
+   values touched. */
+.summary-card-illustration-boxes-img {
+    width: 300px;
+    height: 200px;
+    top: 50%;
+    bottom: auto;
+    right: 10px;
+    transform: translateY(-50%);
+    opacity: 1;
+    object-fit: contain;
+    object-position: center;
+}
+
+/* TASK 31.19.3 — Buildings illustration rebuilt to a 3-building scene on a
+   real isometric platform slab (was a flat ground line), so it needs the
+   larger footprint spelled out in the brief (was 140x130 bled off the
+   corner; now 210x190 with a real bottom/right inset so it never touches
+   the card border). Opacity/filter values are the brief's explicit
+   baseline. */
+.summary-card-illustration-building {
+    /* TASK 31.19.4 — was 210x190 / bottom:20 / right:28. Reference occupies
+       roughly the right THIRD of the card, noticeably more visual weight
+       than the previous size gave it, so enlarged (kept the same 220:200
+       viewBox aspect ratio) and pulled in slightly on both edges to stay
+       clear of the card border (.summary-card has overflow:hidden, so any
+       size increase was verified live to confirm nothing gets clipped).
+       Glow softened at the same time per "very soft, blue, do NOT make it
+       neon, do NOT overdo it" — both blur radius and opacity reduced on
+       each drop-shadow layer. */
+    width: 236px;
+    height: 214px;
+    top: auto;
+    bottom: 12px;
+    right: 20px;
+    color: #3b82f6;
+    opacity: 0.62;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    filter: drop-shadow(0 0 5px rgba(59, 130, 246, 0.22)) drop-shadow(0 0 14px rgba(59, 130, 246, 0.13));
+}
+
+/* TASK 31.19.11 — dedicated rule for the new raster Buildings Overview
+   illustration (<img>, replacing the SVG that used
+   .summary-card-illustration-building above). Narrowly scoped to this one
+   element only — the SVG-era rule above is left completely untouched.
+   Same reasoning as the Low Stock PNG rule
+   (.summary-card-illustration-boxes-img): the PNG already contains its own
+   baked-in blue glow/sparkles/shading, so no `color`, no `filter`/
+   drop-shadow (would stack a second glow on top of the image's own), and
+   no opacity fade. object-fit: contain preserves the source's native 3:2
+   aspect ratio inside the box below so it's never stretched/distorted.
+   Sized/positioned to match the same prominent scale as the Low Stock
+   image (300x200, matching the PNG's native 1536x1024 = 3:2 ratio so
+   object-fit: contain fills the whole box with no unused letterbox
+   space), vertically centered via top:50%/translateY like the Low Stock
+   rule (rather than the old SVG rule's bottom-anchored positioning) so it
+   sits centered in the illustration area with comfortable padding from
+   every edge; `right` matches the Low Stock rule's 10px inset. Card is
+   taller here than the Low Stock card so the enlarged box was verified
+   live to confirm no clipping against .summary-card's overflow:hidden. */
+.summary-card-illustration-buildings-img {
+    width: 300px;
+    height: 200px;
+    top: 50%;
+    bottom: auto;
+    right: 10px;
+    transform: translateY(-50%);
+    opacity: 1;
+    object-fit: contain;
+    object-position: center;
+}
+
+/* TASK 31.9 — soft ambient glow behind the icon, purely decorative (no
+   layout impact, doesn't touch .summary-card::before which already owns
+   the top accent bar). Gives the icon a bit more visual weight/"larger
+   illustration" feel without changing its actual glyph or hit area. */
+.dashboard-feature-cards-grid .summary-card::after {
+    content: '';
+    position: absolute;
+    top: -30px;
+    right: -30px;
+    width: 130px;
+    height: 130px;
+    border-radius: 50%;
+    background: radial-gradient(circle, var(--card-accent-bg, rgba(139, 92, 246, 0.14)) 0%, transparent 72%);
+    pointer-events: none;
+}
+
+/* TASK 31.12 — .summary-card is now only used by the Low Stock / Buildings
+   feature cards (the 5 KPI cards moved to their own .dashboard-hero-kpi-item
+   wrapper back in Task 31.9), so this base layout can safely change from a
+   row (icon | content, space-between) to a column: a .summary-card-head row
+   (icon + title, same pattern as .dashboard-hero-kpi-item-head) stacked
+   above .summary-card-content (value/desc/CTA). This is what actually moves
+   the icon from the card's right edge to its top-left corner, matching the
+   reference — the old space-between layout combined with icon-last DOM
+   order was the root cause of the right-side placement. */
+.summary-card {
+    position: relative;
+    overflow: hidden;
+    width: 100%;
+    min-width: 0;
+    height: auto;
+    min-height: 128px;
+    /* TASK 31.6 — a touch more breathing room (was 18/18/16) so the value
+       has room to read as the dominant element per goal 4 (KPI presentation). */
+    padding: 20px 20px 18px;
+    border-radius: 16px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    box-shadow: var(--shadow-card);
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    border-top: 3px solid var(--card-accent, #8b5cf6);
+    transition: border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease, border-top-color 0.2s ease;
+}
+
+.summary-card-head {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 4px;
+}
+
+.summary-card-head .summary-card-title {
+    margin: 0;
+}
+
+.summary-card::before {
+    content: '';
+    position: absolute;
+    inset: 0 0 auto 0;
+    height: 4px;
+    background: var(--card-accent, #8b5cf6);
+    border-radius: 16px 16px 0 0;
+    pointer-events: none;
+}
+
+/* Enforce dark-accent cards even if legacy/global styles load later.
+   Also covers .dashboard-feature-cards-grid (Low Stock / Buildings), which
+   moved out of .summary-cards-grid in Task 31.2 — without this, those two
+   cards would fall through to the shared enterprise-dashboard.css chrome. */
+.summary-cards-grid .summary-card,
+.summary-cards-grid .summary-card.summary-card-action,
+.summary-cards-grid .summary-card.summary-card-alert,
+.dashboard-feature-cards-grid .summary-card,
+.dashboard-feature-cards-grid .summary-card.summary-card-action,
+.dashboard-feature-cards-grid .summary-card.summary-card-alert {
+    background: var(--surface) !important;
+    border: 1px solid var(--border) !important;
+    border-top-width: 3px !important;
+}
+
+/* TASK 31.10 — the reference's Low Stock / Buildings Overview cards have a
+   plain, even 1px border on every edge — no colored top accent bar. Same
+   selector list/specificity as the "Enforce dark-accent cards" block just
+   above (which sets border-top-width: 3px !important for this same grid),
+   placed after it so it wins by source order; also kills the accent-color
+   ::before strip those cards inherit from the shared .summary-card recipe.
+   Scoped to .dashboard-feature-cards-grid only — the 5 KPI cards above
+   don't use .summary-card at all anymore, so they're unaffected. */
+.dashboard-feature-cards-grid .summary-card,
+.dashboard-feature-cards-grid .summary-card.summary-card-action,
+.dashboard-feature-cards-grid .summary-card.summary-card-alert {
+    border-top-width: 1px !important;
+}
+
+.dashboard-feature-cards-grid .summary-card::before {
+    content: none;
+}
+
+.summary-cards-grid .summary-card:hover,
+.summary-cards-grid .summary-card.summary-card-action:hover,
+.summary-cards-grid .summary-card.summary-card-alert:hover,
+.dashboard-feature-cards-grid .summary-card:hover,
+.dashboard-feature-cards-grid .summary-card.summary-card-action:hover,
+.dashboard-feature-cards-grid .summary-card.summary-card-alert:hover {
+    background: var(--surface) !important;
+    border-color: var(--border) !important;
+}
+
+.summary-cards-grid .summary-card .summary-card-icon,
+.dashboard-feature-cards-grid .summary-card .summary-card-icon {
+    background: var(--card-accent-bg, var(--surface-muted)) !important;
+    border: 1px solid var(--border) !important;
+    color: var(--card-accent, var(--primary-color)) !important;
+}
+
+.summary-cards-grid .summary-card .summary-card-title,
+.summary-cards-grid .summary-card .summary-card-value,
+.summary-cards-grid .summary-card .summary-card-desc,
+.dashboard-feature-cards-grid .summary-card .summary-card-title,
+.dashboard-feature-cards-grid .summary-card .summary-card-value,
+.dashboard-feature-cards-grid .summary-card .summary-card-desc {
+    color: var(--text-light) !important;
+}
+
+.summary-card:hover {
+    border-color: rgba(148, 163, 184, 0.24);
+    box-shadow: 0 20px 44px rgba(2, 6, 23, 0.42);
+}
+
+.summary-card:hover .summary-card-icon {
+    filter: brightness(1.06);
+}
+
+.summary-card-title {
+    margin: 0 0 8px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-transform: none;
+    letter-spacing: normal;
+    color: var(--text-secondary);
+}
+
+.summary-card-value {
+    color: var(--text-light);
+    font-size: 2rem;
+    line-height: 1;
+    font-weight: 700;
+}
+
+.summary-card-desc {
+    color: var(--muted-text);
+    font-size: 0.88rem;
+    text-transform: lowercase;
+}
+
+/* TASK 31.6 — trend captions render as small colored pills instead of bare
+   colored text — same caption strings already in the markup (no new
+   information, no new data source), just presented as a status chip like
+   the .status-badge/.priority-* pattern already used elsewhere on this
+   page. Needs both extra selector specificity and !important to beat the
+   blanket ".summary-card-desc { color: var(--text-light) !important }"
+   rule a few lines above (which otherwise neutralizes .summary-trend-*
+   entirely inside these two grids — that rule predates this task and was
+   already silently overriding the trend colors before this change). */
+.summary-cards-grid .summary-card .summary-card-desc.summary-trend-positive,
+.dashboard-feature-cards-grid .summary-card .summary-card-desc.summary-trend-positive,
+.summary-cards-grid .summary-card .summary-card-desc.summary-trend-warning,
+.dashboard-feature-cards-grid .summary-card .summary-card-desc.summary-trend-warning,
+.summary-cards-grid .summary-card .summary-card-desc.summary-trend-danger,
+.dashboard-feature-cards-grid .summary-card .summary-card-desc.summary-trend-danger {
+    display: inline-flex;
+    align-items: center;
+    align-self: flex-start;
+    margin-top: 8px;
+    padding: 3px 9px;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: none;
+    letter-spacing: 0.01em;
+}
+
+/* TASK 31.16 — alpha 0.14 -> 0.20 across all three trend-pill states, same
+   colorfulness pass as the hero-strip trend chips above. */
+.summary-cards-grid .summary-card .summary-card-desc.summary-trend-positive,
+.dashboard-feature-cards-grid .summary-card .summary-card-desc.summary-trend-positive {
+    background: rgba(16, 185, 129, 0.20) !important;
+    color: #10b981 !important;
+}
+
+.summary-cards-grid .summary-card .summary-card-desc.summary-trend-warning,
+.dashboard-feature-cards-grid .summary-card .summary-card-desc.summary-trend-warning {
+    background: rgba(245, 158, 11, 0.20) !important;
+    color: #f59e0b !important;
+}
+
+.summary-cards-grid .summary-card .summary-card-desc.summary-trend-danger,
+.dashboard-feature-cards-grid .summary-card .summary-card-desc.summary-trend-danger {
+    background: rgba(239, 68, 68, 0.20) !important;
+    color: #ef4444 !important;
+}
+
+.summary-card-icon {
+    width: 42px;
+    height: 42px;
+    border-radius: 12px;
+    display: grid;
+    place-items: center;
+    background: var(--surface-muted);
+    border: 1px solid var(--border);
+    color: var(--primary-color);
+    box-shadow: 0 8px 18px rgba(2, 6, 23, 0.12);
+}
+
+.summary-card-icon svg {
+    width: 20px;
+    height: 20px;
+    stroke: currentColor !important;
+    fill: none !important;
+}
+
+.summary-card-icon svg * {
+    stroke: currentColor !important;
+    fill: none !important;
+}
+
+.summary-card-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.summary-card-total {
+    --card-accent: #8b5cf6;
+}
+
+.summary-card-today {
+    --card-accent: #06b6d4;
+}
+
+.summary-card-pending {
+    --card-accent: #f59e0b;
+}
+
+.summary-card-progress {
+    --card-accent: #a855f7;
+}
+
+.summary-card-completed {
+    --card-accent: #10b981;
+}
+
+.summary-card-low-stock {
+    --card-accent: #ef4444;
+    /* TASK 31.17 — feeds the new .summary-card-cta box-shadow glow (see
+       below) with this card's own red accent instead of the generic
+       purple fallback, so the "View Inventory" button glows red to match
+       its icon/border, not a mismatched color.
+       TASK 31.18 — alpha bumped 0.45 -> 0.55 to match the strengthened
+       default glow alpha on .summary-card-cta. */
+    --card-accent-shadow: rgba(239, 68, 68, 0.55);
+}
+
+.summary-card-buildings {
+    --card-accent: #3b82f6;
+    /* TASK 31.16 — alpha 0.14 -> 0.22, same colorfulness pass as the KPI
+       icon chips (feeds this card's icon-chip background + illustration
+       radial-gradient tint via the shared --card-accent-bg token). */
+    --card-accent-bg: rgba(59, 130, 246, 0.22);
+    /* TASK 31.17 — same reasoning as .summary-card-low-stock above, blue
+       variant for the "View Buildings" CTA.
+       TASK 31.18 — alpha bumped 0.45 -> 0.55, same as low-stock above. */
+    --card-accent-shadow: rgba(59, 130, 246, 0.55);
+}
+
+/* TASK 31.19.3 — the brief asks for a specific top-right ambient glow behind
+   the Buildings illustration (18/18 inset, 90x90, faint blue). The shared
+   .dashboard-feature-cards-grid .summary-card::after rule above already
+   gives every card in this grid (including Low Stock) a generic top-right
+   glow using --card-accent-bg, so instead of touching that shared rule
+   (which would also change Low Stock, explicitly out of scope), this adds a
+   same-specificity override scoped to .summary-card-buildings only —
+   later in source order, so it wins for this card without altering any
+   other card's glow. */
+.dashboard-feature-cards-grid .summary-card-buildings::after {
+    top: 18px;
+    right: 18px;
+    width: 90px;
+    height: 90px;
+    background: radial-gradient(circle, rgba(59, 130, 246, 0.08) 0%, transparent 70%);
+}
+
+.summary-card-alert {
+    --card-accent: #fb7185;
+    --card-accent-bg: rgba(251, 113, 133, 0.22);
+}
+
+.summary-card-alert .summary-card-title,
+.summary-card-alert .summary-card-value,
+.summary-card-alert .summary-card-desc,
+.summary-card-alert .summary-card-icon {
+    color: inherit;
+}
+
+.summary-card-alert .summary-card-icon {
+    background: var(--surface-muted);
+    border-color: var(--border);
+}
+
+.summary-card-action {
+    cursor: pointer;
+}
+
+.summary-cards-grid > .summary-card:nth-child(1) { --card-accent: #8b5cf6; --card-accent-bg: rgba(139, 92, 246, 0.14); }
+.summary-cards-grid > .summary-card:nth-child(2) { --card-accent: #06b6d4; --card-accent-bg: rgba(6, 182, 212, 0.14); }
+.summary-cards-grid > .summary-card:nth-child(3) { --card-accent: #f59e0b; --card-accent-bg: rgba(245, 158, 11, 0.14); }
+.summary-cards-grid > .summary-card:nth-child(4) { --card-accent: #a855f7; --card-accent-bg: rgba(168, 85, 247, 0.14); }
+.summary-cards-grid > .summary-card:nth-child(5) { --card-accent: #10b981; --card-accent-bg: rgba(16, 185, 129, 0.14); }
+
+.dashboard-bottom {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    /* TASK 31.6.5 — tokenized to match the same --space-4 gap used by
+       .summary-cards-grid and .dashboard-feature-cards-grid above (was a
+       one-off hardcoded 16px — same value, now on the shared token so all
+       3 grids read as one consistent rhythm). margin-bottom gives the last
+       row the same breathing room below it as the two grids above have
+       between them, instead of ending flush against the card's padding. */
+    gap: var(--space-4, 16px);
+    margin-bottom: var(--space-4, 16px);
+}
+
+/* TASK 31.7 — the two new top-level rows both keep .dashboard-bottom as a
+   second class purely to reuse its card chrome/header/body CSS and its
+   existing 1024/900/768/640/480 responsive breakpoints (all of which
+   already force .dashboard-bottom to a single column below 1024px)
+   without duplicating any of it. Only the desktop column count differs
+   per row, so that's all that's overridden here.
+   !important is required on both: the shared styles.css (off-limits,
+   read-only) already carries its own generic ".dashboard-bottom"
+   grid-template-columns default with !important (1 column base, 2 columns
+   at min-width:1025px) which otherwise wins over any non-!important
+   page-scoped rule regardless of specificity. Every other .dashboard-bottom
+   override already in this file (the 1024/900/768/640/480 breakpoints
+   below) follows the same existing !important convention for the same
+   reason — this isn't a new pattern. */
+.dashboard-charts-row.dashboard-bottom {
+    /* TASK 35.1 — was repeat(3, 1fr), which capped every card (including
+       Reports by Priority) at an equal 1/3 of the row. Reports by Priority
+       now needs roughly double the width of its siblings to fit its
+       chart+summary two-column layout without stacking, so this row moved
+       to 4 equal tracks with Reports by Priority spanning 2 of them (see
+       .dashboard-charts-row .priority-chart-card below) — i.e. a 1:2:1
+       split. Reports by Status and Recent Reports each go from ~33% to
+       ~25% of the row; both still have ample room for their existing
+       content (donut+legend / report list) at that width. Only applies
+       above the existing 1024px breakpoint below, which already collapses
+       this row to a single column — so tablet/mobile are unaffected. */
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    margin-bottom: var(--space-6, 24px);
+}
+
+/* TASK 35.1 — explicit spans for the 1:2:1 split above. Scoped to
+   .dashboard-charts-row so this can't affect .status-chart-card /
+   .recent-reports-card if those classes are ever reused in a different
+   grid elsewhere in this file. .recent-reports-card already carries a
+   global "grid-column: span 1" (see rule below in this file) which is
+   correct here too, but the explicit rule keeps this 1:2:1 intent visible
+   in one place without depending on that unrelated rule not changing. */
+.dashboard-charts-row .status-chart-card,
+.dashboard-charts-row .recent-reports-card {
+    grid-column: span 1;
+}
+
+.dashboard-charts-row .priority-chart-card {
+    grid-column: span 2;
+}
+
+/* TASK 31.7 fix — the chart row uses 2 classes
+    (.dashboard-charts-row.dashboard-bottom),
+   which is HIGHER specificity than the plain ".dashboard-bottom" selector the
+   1024/900/768/640/480 responsive breakpoints further down this file use to
+   collapse everything to a single column. Since both sides are !important,
+   specificity — not source order or media-query nesting — decides the
+   winner, so without this override the 3-column charts row would have kept
+   forcing 3 columns straight through tablet and mobile widths instead of
+   stacking. This block matches those same selectors' specificity so it
+   correctly wins by source order at and below 1024px. */
+@media (max-width: 1024px) {
+    .dashboard-charts-row.dashboard-bottom {
+        grid-template-columns: 1fr !important;
+    }
+}
+
+.dashboard-bottom .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    box-shadow: var(--shadow-card);
+    overflow: hidden;
+}
+
+/* ============================================================
+   TASK 31.9 — Maintenance Activity Timeline (new, presentational).
+   Not a .dashboard-bottom grid child (it's a single full-width row), so
+   it gets its own copy of the same card chrome (.dashboard-bottom .card
+   above) plus header/body conventions already used by every other
+   dashboard-bottom card, kept visually consistent with the rest of the
+   page. Content is populated by renderActivityTimeline() in dashboard.php
+   using real, all-time report-status counts already fetched elsewhere on
+   this page — see that function's own comment for the data-source note.
+   ============================================================ */
+.dashboard-timeline-row {
+    margin-bottom: var(--space-6, 24px);
+}
+
+.dashboard-timeline-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    box-shadow: var(--shadow-card);
+    overflow: hidden;
+}
+
+.dashboard-timeline-card .card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 18px 20px;
+    border-bottom: 1px solid var(--border);
+}
+
+.dashboard-timeline-card .card-header h2 {
+    margin: 0;
+    color: var(--text-light);
+    font-size: 1.05rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+}
+
+.dashboard-timeline-card .card-header .text-muted {
+    color: var(--muted-text) !important;
+    font-size: 0.82rem;
+}
+
+.dashboard-timeline-card .card-body {
+    padding: 22px 20px 20px;
+}
+
+.activity-timeline {
+    display: flex;
+    align-items: flex-start;
+    gap: 0;
+}
+
+.activity-timeline-step {
+    position: relative;
+    flex: 1 1 0;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 0 8px;
+}
+
+.activity-timeline-node {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: var(--surface-muted);
+    border: 1px solid var(--border);
+    color: var(--primary-color);
+    margin-bottom: 12px;
+}
+
+.activity-timeline-node svg {
+    width: 20px;
+    height: 20px;
+    stroke: currentColor;
+    fill: none;
+}
+
+/* TASK 31.13 — top offset recalibrated from 22px (node-first order) to
+   ~46px: the new .activity-timeline-time caption above the node (0.7rem
+   line ~14px + 10px margin-bottom, see .activity-timeline-time) pushes the
+   node down by roughly that amount before its own 22px center-height
+   applies. Still targets the node's vertical center so the connector line
+   passes through the middle of each circular icon, not its edge. */
+.activity-timeline-connector {
+    position: absolute;
+    top: 46px;
+    left: calc(50% + 34px);
+    right: calc(-50% + 34px);
+    height: 2px;
+    background: var(--border);
+    z-index: 0;
+}
+
+.activity-timeline-label {
+    margin-top: 2px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text-light);
+}
+
+.activity-timeline-desc {
+    margin-top: 2px;
+    font-size: 0.74rem;
+    color: var(--muted-text);
+    max-width: 100%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* TASK 31.10 — each event's real report title can be long, so it's
+   ellipsis-truncated (title="" attribute in the markup carries the full
+   text for a native tooltip on hover). */
+/* TASK 31.13 — reference shows the relative time ABOVE the icon node
+   (small caption, then the circular icon, then the label/desc below),
+   whereas this page's DOM order (renderActivityTimeline() in
+   dashboard.php) is node -> connector -> label -> desc -> time. Reordered
+   visually with flex `order` only — no JS/template-literal change, so the
+   underlying DOM order (and anything that might depend on it) is
+   untouched. .activity-timeline-node keeps its default order:0, so
+   putting time at order:-1 moves it above the node without renumbering
+   every sibling. */
+.activity-timeline-time {
+    order: -1;
+    margin-top: 0;
+    margin-bottom: 10px;
+    font-size: 0.7rem;
+    color: var(--muted-text);
+    opacity: 0.8;
+}
+
+/* TASK 31.10 — node color now reflects that event's real status, reusing
+   the exact .status-submitted/-assigned/-in-progress/-completed/-cancelled
+   classes already defined above (same ones used as the Recent Reports
+   icon-chip tint and the status badges) — no new colors, and the tint is
+   no longer just "whichever stage this column happens to be." */
+.activity-timeline-node.status-submitted,
+.activity-timeline-node.status-assigned,
+.activity-timeline-node.status-in-progress,
+.activity-timeline-node.status-completed,
+.activity-timeline-node.status-cancelled,
+.activity-timeline-node.status-closed {
+    border-color: transparent;
+}
+
+.activity-timeline-empty {
+    width: 100%;
+    padding: 20px 8px;
+    text-align: center;
+    color: var(--muted-text);
+    font-size: 0.85rem;
+}
+
+@media (max-width: 900px) {
+    .activity-timeline {
+        flex-wrap: wrap;
+        row-gap: 20px;
+    }
+
+    .activity-timeline-step {
+        flex: 1 1 33%;
+    }
+
+    .activity-timeline-connector {
+        display: none;
+    }
+}
+
+@media (max-width: 480px) {
+    .activity-timeline-step {
+        flex: 1 1 50%;
+    }
+}
+
+/* TASK 31.8 — the shared styles.css ".chart-card { padding: 20px; }" rule
+   adds a uniform 20px inset on the CARD element itself, on all 4 sides,
+   for any card carrying that class. Only .status-chart-card and
+   .priority-chart-card carry it — .recent-reports-card, the third column
+   in this same row, does not. Combined with .card-header/.card-body below
+   already owning their own 18px/14-20px padding, this gave the two chart
+   cards an extra, unwanted 20px inset the Recent Reports card never had,
+   which is why their headers/bodies/canvases sat noticeably lower than
+   Recent Reports' at the same row position (the min-height rule further
+   down only equalizes header height — it can't fix this separate
+   card-level padding). Resetting it to 0 restores the intended
+   "header/body own all padding, .card is a plain frame" pattern every
+   other card on this page already follows. */
+.status-chart-card,
+.priority-chart-card {
+    padding: 0;
+}
+
+.dashboard-bottom .card .card-header {
+    padding: 18px 20px 0;
+    border-bottom: 0;
+}
+
+/* TASK 31.8 — normalize header height across the 3-column charts row
+   (Reports by Status / Reports by Priority / Recent Reports). At this
+   row's card width, the Status card's "Updated Xm ago" freshness badge
+   (#status-chart-updated, real JS-driven content — untouched here) wraps
+   onto its own line next to the h2, making that header ~79px tall vs
+   ~64px (Priority, no badge) and ~48px (Recent Reports, no subtitle) —
+   so the three card bodies/chart canvases started at three different
+   Y-offsets in the same row. min-height floors all three headers to the
+   tallest one's natural height so every card body starts on the same
+   baseline. Scoped to the 3-column desktop breakpoint only: below
+   1024px the row already collapses to 1 column (see the max-width:1024px
+   rule above), where each header gets full-width room and doesn't need
+   this floor — forcing it there would just add unwanted empty space. */
+@media (min-width: 1025px) {
+    .dashboard-charts-row .card-header {
+        min-height: 80px;
+    }
+}
+
+/* TASK 31.6.4 — unify all 4 .dashboard-bottom card header titles to one
+   consistent scale. Previously .recent-reports-header h2 (Recent Reports /
+   Inventory Status) used its own larger 1.45rem/800 sizing while the two
+   chart cards left h2 at the browser default — a visible mismatch across
+   the row. This rule's selector (.dashboard-bottom .card .card-header h2 —
+   4 classes) is deliberately more specific than .recent-reports-header h2
+   (2 classes) so it wins without !important, giving every card the same
+   title typography. */
+.dashboard-bottom .card .card-header h2 {
+    margin: 0;
+    color: var(--text-light);
+    font-size: 1.05rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+}
+
+/* TASK 31.6.3/31.6.4 — shared icon-chip + title identity for every
+   .dashboard-bottom card header (Reports by Status, Reports by Priority,
+   Recent Reports, Inventory Status). .dashboard-card-head-icon reuses the
+   exact .academic-period-card-icon recipe (30x30 chip, --radius-md,
+   --surface-muted bg, --border, --primary-color icon) so the whole page
+   shares one icon-chip visual language. Markup-only addition — no ids
+   touched, no JS hooks affected. */
+.dashboard-card-head-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+}
+
+.dashboard-card-head-title h2 {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.dashboard-card-head-icon {
+    width: 30px;
+    height: 30px;
+    flex-shrink: 0;
+    border-radius: var(--radius-md, 10px);
+    display: grid;
+    place-items: center;
+    background: var(--surface-muted);
+    border: 1px solid var(--border);
+    color: var(--primary-color);
+}
+
+.dashboard-card-head-icon svg {
+    width: 16px;
+    height: 16px;
+    stroke: currentColor;
+    fill: none;
+}
+
+.dashboard-bottom .card .card-header .text-muted,
+.dashboard-bottom .card .card-header p {
+    color: var(--muted-text) !important;
+}
+
+.dashboard-bottom .card .card-body {
+    padding: 14px 20px 20px;
+}
+
+.status-chart-card .status-chart-head-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    /* TASK 31.10 — the freshness badge moved out of this row (now below the
+       chart, see .status-chart-freshness-row) to match the reference
+       composition. flex-wrap kept as a harmless no-op for now in case a
+       future header addition needs it; this row currently only holds the h2. */
+    flex-wrap: wrap;
+}
+
+/* TASK 31.12 — custom HTML legend for the Reports by Status donut (real
+   counts + percentages), replacing the chart engine's own canvas-drawn
+   legend which is now disabled via options.plugins.legend.position:'none'
+   in dashboard.php. Populated by renderStatusLegendHtml(); colors match the
+   dataset's backgroundColor array exactly. */
+.status-chart-legend {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 6px 16px;
+    margin-top: 12px;
+}
+
+.status-chart-legend-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+}
+
+.status-chart-legend-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.status-chart-legend-count {
+    font-weight: 700;
+    color: var(--text-light);
+}
+
+/* TASK 31.13 — reference composition puts the donut/bar chart on the left
+   and a vertical "dot + label ......... count" legend list on the right,
+   instead of the previous full-width chart with a centered legend row
+   underneath. Scoped to .status-chart-card/.priority-chart-card only (the
+   base .status-chart-legend rules above stay untouched so nothing else
+   that might reuse the class is affected). .status-chart-legend-left is a
+   new markup wrapper (dashboard.php, renderStatusLegendHtml() /
+   renderPriorityLegendHtml()) grouping the dot+label so
+   justify-content:space-between can push the count to the row's right
+   edge. */
+.status-chart-card .status-chart-legend,
+.priority-chart-card .status-chart-legend {
+    flex: 1 1 140px;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: center;
+    gap: 12px;
+    margin-top: 0;
+}
+
+.status-chart-card .status-chart-legend-item,
+.priority-chart-card .status-chart-legend-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    gap: 10px;
+}
+
+.status-chart-legend-left {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+}
+
+/* TASK 31.10 — freshness row now lives under the chart, next to a small
+   decorative refresh icon, matching the reference composition. */
+.status-chart-freshness-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    margin-top: 10px;
+    /* TASK 31.13 — .status-chart-body is now a row flex container (chart +
+       legend side by side, see below); without an explicit basis this row
+       would try to sit beside the legend instead of spanning under both. */
+    flex-basis: 100%;
+}
+
+.status-chart-refresh-icon {
+    width: 13px;
+    height: 13px;
+    color: var(--muted-text);
+    opacity: 0.8;
+    flex-shrink: 0;
+}
+
+.status-chart-card .status-live-badge {
+    display: inline-flex;
+    align-items: center;
+    flex-shrink: 0;
+    justify-content: center;
+    padding: 4px 10px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: var(--surface-muted);
+    color: var(--text-secondary);
+    font-size: 11px;
+    line-height: 1;
+    font-weight: 700;
+}
+
+/* TASK 31.5 — token cleanup. Consolidates two byte-for-byte identical
+   inline style="" attributes (#status-chart-month, #priority-chart-month)
+   into one page-scoped class. Colors are kept as the exact literal values
+   the inline styles already used (rgba(139,92,246,.15) bg / #a78bfa text)
+   rather than swapped to var(--primary-color) — that token resolves to
+   #6d28d9 on this page, which is too dark to stay legible as text on this
+   pill's translucent background, so mapping to it would be a visual
+   regression disguised as a token cleanup. No visual change vs. before. */
+.chart-month-pill {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 20px;
+    white-space: nowrap;
+    background: rgba(139, 92, 246, 0.15);
+    color: #a78bfa;
+}
+
+/* TASK 31.13 — reference composition places the donut/legend (and the
+   bar-chart/legend) side by side in a row rather than stacked. Scoped to
+   these two chart cards only; .status-chart-canvas-wrap is a new class on
+   the existing canvas-wrapping div in dashboard.php (no id/JS hook
+   changed) so the canvas has a fixed-ish flex-basis and doesn't get
+   crushed by the legend column. */
+.status-chart-card .status-chart-body {
+    min-height: 260px;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px 24px;
+}
+
+.status-chart-canvas-wrap {
+    flex: 1 1 220px;
+    max-width: 100%;
+}
+
+/* TASK 35 — Reports by Priority body is now a genuine two-column layout:
+   chart+insight (.priority-chart-left) and priority summary+Total Reports
+   (.priority-chart-right), replacing the old single flex-wrap row that put
+   the chart beside a horizontal legend. Scoped to .priority-chart-layout
+   (new class added alongside .card-body in dashboard.php) so nothing else
+   reusing .card-body elsewhere is affected. */
+.priority-chart-card .card-body.priority-chart-layout {
+    display: flex;
+    align-items: stretch;
+    flex-wrap: wrap;
+    gap: 20px;
+}
+
+.priority-chart-left {
+    /* TASK 35.1 — grow:2 (was 1) so, now that the card itself has real
+       desktop width (see .dashboard-charts-row grid above), any slack
+       space is biased toward the chart rather than split evenly, landing
+       close to the requested ~65/35 chart/summary split instead of ~50/50.
+       min-width dropped from 0 to 200px so the chart can't get crushed to
+       nothing before the right column starts giving up space; it still
+       shrinks below its 340px basis at tablet-ish card widths instead of
+       forcing a wrap. */
+    flex: 2 1 340px;
+    min-width: 200px;
+    display: flex;
+    flex-direction: column;
+}
+
+.priority-chart-right {
+    /* TASK 35.1 — basis/min-width trimmed slightly (280/240 -> 260/210) to
+       match the ~30-35% target now that the card has enough width to keep
+       both columns on one row; still a hard floor so the summary cards
+       never get too narrow to read. */
+    flex: 1 1 260px;
+    min-width: 210px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+/* TASK 35 — small static axis-style caption under the chart (matches the
+   reference's "Priority Distribution" label). Presentational only, not
+   data. */
+.priority-chart-caption {
+    margin: 10px 0 0;
+    text-align: center;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--muted-text);
+}
+
+/* TASK 31.15 — was ".priority-chart-card .card-body > div[style*='height:280px']"
+   targeting the old inline-styled canvas-wrapper div. That div is gone
+   (replaced by #reportsPriorityFlowChart / .priority-flow-chart-wrap, filled
+   with an inline SVG by renderPriorityFlowChart() in dashboard.php — see
+   that function's comment for why); this rule now targets the new
+   container directly by class instead of an inline-style attribute
+   selector. TASK 35 — flex-basis sizing (flex: 1 1 220px) replaced with a
+   plain width:100% since the wrap now sits inside a column-flex parent
+   (.priority-chart-left) instead of directly in a row-flex .card-body;
+   height/border-radius/overflow are unchanged. */
+.priority-flow-chart-wrap {
+    position: relative;
+    width: 100%;
+    height: 240px;
+    /* TASK 31.18 — rounded + clipped so the waves read as sitting inside a
+       proper chart "card" (matching the reference's rounded chart panel)
+       and so the new ::before sheen below stays contained to the chart
+       area instead of bleeding into the rest of the card. */
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+/* TASK 31.18 — soft diagonal glass "sheen" laid over the waves, purely
+   decorative (pointer-events:none, no content, sits above the SVG via
+   z-index but below nothing else interactive lives in this wrap) for the
+   "more premium depth" ask. Same trick used on premium chart libraries —
+   a faint light-to-transparent gradient across the top-left corner reads
+   as a glossy highlight without touching any chart geometry or color. */
+.priority-flow-chart-wrap::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.16) 0%, rgba(255, 255, 255, 0.05) 22%, transparent 46%);
+    pointer-events: none;
+}
+
+.priority-flow-svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+    position: relative;
+    /* TASK 31.16 — soft drop-shadow under the top wave edge adds a touch of
+       depth/"glassy" lift to the gradient-filled bands (rendering polish
+       only; renderPriorityFlowChart() in dashboard.php still drives every
+       path/color/gradient from real data, this just shades the result). */
+    /* TASK 31.18 — drop-shadow deepened slightly (10px blur/0.22 alpha ->
+       14px blur/0.3 alpha) to match the richer gradient/contrast pass in
+       renderPriorityFlowChart(), same "more premium depth" ask. */
+    filter: drop-shadow(0 8px 14px rgba(15, 23, 42, 0.3));
+}
+
+/* TASK 35 — vertical priority summary card list (right column). Replaces
+   the old horizontal .status-chart-legend row for this card only — the
+   Reports by Status card's legend (.status-chart-legend / .status-chart-card)
+   is untouched. */
+.priority-summary-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.priority-summary-card {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    border-radius: var(--radius-md, 10px);
+    border: 1px solid var(--border);
+    background: var(--surface-muted);
+}
+
+.priority-summary-icon {
+    width: 34px;
+    height: 34px;
+    flex-shrink: 0;
+    border-radius: var(--radius-md, 10px);
+    display: grid;
+    place-items: center;
+    /* --priority-color/-bg/-border/-glow set inline per row by
+       renderPriorityLegendHtml() via hexToRgba() (dashboard.php), from the
+       same PRIORITY_FLOW_COLORS used by the chart above. */
+    background: var(--priority-bg);
+    border: 1px solid var(--priority-border);
+}
+
+.priority-summary-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--priority-color);
+    box-shadow: 0 0 8px var(--priority-glow);
+}
+
+.priority-summary-body {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    flex: 1 1 auto;
+}
+
+.priority-summary-name {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-light);
+    line-height: 1.3;
+}
+
+.priority-summary-desc {
+    font-size: 11px;
+    color: var(--muted-text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.priority-summary-figures {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    flex-shrink: 0;
+}
+
+.priority-summary-count {
+    font-size: 17px;
+    font-weight: 700;
+    color: var(--text-light);
+    line-height: 1.2;
+}
+
+.priority-summary-pct {
+    font-size: 11px;
+    font-weight: 700;
+}
+
+/* TASK 35 — compact Total Reports card, sits below the priority list in
+   the right column. Reuses the same purple-pill token values as
+   .chart-month-pill (rgba(139,92,246,.15) bg / #a78bfa text) for the icon
+   chip so it visually matches the rest of this card's accent color. */
+.priority-total-card {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    border-radius: var(--radius-md, 10px);
+    border: 1px solid var(--border);
+    background: var(--surface-muted);
+    margin-top: 2px;
+}
+
+.priority-total-icon {
+    width: 34px;
+    height: 34px;
+    flex-shrink: 0;
+    border-radius: var(--radius-md, 10px);
+    display: grid;
+    place-items: center;
+    background: rgba(139, 92, 246, 0.15);
+    color: #a78bfa;
+}
+
+.priority-total-icon svg {
+    width: 17px;
+    height: 17px;
+    stroke: currentColor;
+    fill: none;
+}
+
+.priority-total-body {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.priority-total-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--muted-text);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.priority-total-value {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text-light);
+}
+
+.priority-total-unit {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--muted-text);
+}
+
+/* TASK 35 — dynamic insight panel under the chart (left column). Same
+   purple accent as .priority-total-icon / .chart-month-pill. */
+.priority-insight-card {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    margin-top: 12px;
+    padding: 12px;
+    border-radius: var(--radius-md, 10px);
+    border: 1px solid var(--border);
+    background: var(--surface-muted);
+}
+
+.priority-insight-icon {
+    width: 28px;
+    height: 28px;
+    flex-shrink: 0;
+    border-radius: var(--radius-md, 10px);
+    display: grid;
+    place-items: center;
+    background: rgba(139, 92, 246, 0.15);
+    color: #a78bfa;
+}
+
+.priority-insight-icon svg {
+    width: 15px;
+    height: 15px;
+    stroke: currentColor;
+    fill: none;
+}
+
+.priority-insight-body {
+    min-width: 0;
+}
+
+.priority-insight-line {
+    margin: 0 0 2px;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--text-light);
+}
+
+.priority-insight-pct {
+    color: #a78bfa;
+}
+
+.priority-insight-sub {
+    margin: 0;
+    font-size: 11.5px;
+    color: var(--muted-text);
+}
+
+.chart-canvas {
+    cursor: pointer;
+}
+
+/* TASK 27 — Recent Reports previously spanned the full width of this grid
+   (grid-column: 1 / -1) since it was the only card on its row. It now shares
+   that row with the new Inventory Status card (dashboard.php), so both take
+   one column each of .dashboard-bottom's existing 2-column grid — no new
+   grid container was added, and the grid's existing 1024/900/640/480
+   breakpoints (below) already collapse both cards to a single column on
+   tablet/mobile exactly as they already do for the two chart cards above. */
+.recent-reports-card {
+    grid-column: span 1;
+}
+
+.recent-reports-card .card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.recent-reports-header h2 {
+    margin: 0;
+    color: var(--text-light);
+    font-size: 1.45rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+}
+
+.recent-reports-body {
+    padding-top: 10px;
+}
+
+/* TASK 27 — supports the Inventory Status card's subtitle paragraph
+   ("Items needing attention — low stock and out of stock."), reused as-is
+   from staff-dashboard.php. Not previously defined here because Recent
+   Reports on this page doesn't use a subtitle; values match the identical
+   rule in staff-dashboard.inline.css so spacing/color stay consistent with
+   the source card. */
+.recent-reports-subtitle {
+    margin: 0 0 12px;
+    color: #94a3b8 !important;
+}
+
+.summary-trend-positive {
+    color: #059669;
+}
+
+.summary-trend-warning {
+    color: #d97706;
+}
+
+.summary-trend-danger {
+    color: #dc2626;
+}
+
+.recent-reports-card .card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+/* TASK 31.13 — reference renders these header links (Recent Reports "View
+   All", Timeline "View Full Timeline", Inventory Status "View all") as a
+   small solid filled pill button rather than plain underline-free link
+   text. Reuses var(--primary-color) — already the page's one accent color
+   (see .activity-timeline-node, .dashboard-card-head-icon) — instead of
+   introducing a new color value. Same href targets, same class, no JS
+   hook changed. */
+.recent-reports-link {
+    display: inline-flex;
+    align-items: center;
+    color: #ffffff;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 0.78rem;
+    padding: 6px 14px;
+    border-radius: 999px;
+    background: var(--primary-color);
+    white-space: nowrap;
+    transition: filter 0.15s ease;
+}
+
+.recent-reports-link:hover {
+    color: #ffffff;
+    filter: brightness(1.08);
+}
+
+/* TASK 31.13 — .recent-reports-header is the shared card-header class on
+   Recent Reports / Timeline / Inventory Status (dashboard.php). The
+   default shared .card-header rule (styles.css) is
+   align-items:flex-start; that reads fine for plain link text but leaves
+   the new solid pill button sitting noticeably higher than the title's
+   vertical center. Centering it here matches the reference. */
+.recent-reports-header {
+    align-items: center;
+}
+
+.recent-reports-table-wrap {
+    border: 1px solid rgba(99, 102, 241, 0.16);
+    border-radius: 20px;
+    overflow: hidden;
+    background:
+        linear-gradient(180deg, rgba(30, 27, 46, 0.98) 0%, rgba(20, 19, 34, 0.98) 100%);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.03),
+        0 18px 40px rgba(2, 6, 23, 0.34);
+}
+
+.recent-reports-table-head,
+.recent-report-table-row {
+    display: grid;
+    grid-template-columns: minmax(0, 2.1fr) 0.95fr 1.05fr 0.9fr 0.9fr;
+    align-items: center;
+    gap: 18px;
+}
+
+.recent-reports-table-head {
+    padding: 14px 20px;
+    background: rgba(99, 102, 241, 0.08);
+    border-bottom: 1px solid rgba(148, 163, 184, 0.14);
+}
+
+.recent-reports-table-head > div {
+    color: #7c86b4;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+}
+
+.recent-reports-table-body {
+    display: grid;
+}
+
+.recent-report-table-row {
+    padding: 14px 20px;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.12);
+}
+
+.recent-reports-table-body .recent-report-table-row:last-child {
+    border-bottom: none;
+}
+
+.recent-report-cell {
+    min-width: 0;
+}
+
+.recent-report-main {
+    display: grid;
+    gap: 4px;
+}
+
+.recent-report-title {
+    color: #f8fafc;
+    font-weight: 700;
+    font-size: 1.04rem;
+    line-height: 1.2;
+}
+
+.recent-report-meta {
+    color: #8c91b7;
+    font-size: 0.88rem;
+    line-height: 1.25;
+}
+
+.recent-report-date,
+.recent-report-comment {
+    color: #a5add3;
+    font-size: 0.93rem;
+}
+
+.recent-report-comment {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.recent-report-pill-cell {
+    display: flex;
+    justify-content: flex-start;
+}
+
+.status-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    min-height: 28px;
+    padding: 5px 12px;
+    border: 1px solid transparent;
+    font-size: 11px;
+    font-weight: 800;
+    text-transform: none;
+    letter-spacing: 0.02em;
+    line-height: 1;
+    white-space: nowrap;
+}
+
+.priority-low { background: rgba(100, 116, 139, 0.22); border-color: rgba(148, 163, 184, 0.3); color: #dbe4f0; }
+.priority-medium { background: rgba(59, 130, 246, 0.18); border-color: rgba(96, 165, 250, 0.34); color: #93c5fd; }
+.priority-high { background: rgba(245, 158, 11, 0.16); border-color: rgba(245, 158, 11, 0.34); color: #fbbf24; }
+.priority-urgent { background: rgba(249, 115, 22, 0.16); border-color: rgba(249, 115, 22, 0.34); color: #fdba74; }
+.priority-critical { background: rgba(239, 68, 68, 0.16); border-color: rgba(239, 68, 68, 0.34); color: #f87171; }
+
+.status-submitted { background: rgba(99, 102, 241, 0.16); border-color: rgba(129, 140, 248, 0.34); color: #c7d2fe; }
+.status-assigned { background: rgba(168, 85, 247, 0.16); border-color: rgba(192, 132, 252, 0.34); color: #e9d5ff; }
+.status-in-progress { background: rgba(59, 130, 246, 0.16); border-color: rgba(96, 165, 250, 0.34); color: #93c5fd; }
+.status-completed { background: rgba(34, 197, 94, 0.16); border-color: rgba(74, 222, 128, 0.34); color: #86efac; }
+.status-cancelled { background: rgba(248, 113, 113, 0.16); border-color: rgba(248, 113, 113, 0.34); color: #fca5a5; }
+
+/* ==========================================================================
+   TASK 31.3 — Recent Reports icon-chip list
+   New, page-scoped classes only (.recent-report-list / -item / -item-*).
+   Deliberately NOT reusing .recent-reports-table-wrap/-head or
+   .recent-report-table-row/-cell — those stay untouched because the
+   Inventory Status widget (loadDashboardInventoryWidget(), further down
+   this file's companion .php) still renders with them. Renders one row per
+   report: a status-tinted icon chip, title + location + relative time, and
+   a single status pill (the separate priority pill was dropped — two pills
+   per row read as noisy in a compact list; priority is still visible on the
+   report's own detail page via "View all").
+   Icon-chip tint reuses the exact .status-submitted/-assigned/-in-progress/
+   -completed/-cancelled classes already defined above (and already themed
+   for light mode further down) — no new colors. ========================== */
+.recent-report-list {
+    display: flex;
+    flex-direction: column;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    overflow: hidden;
+    background: var(--surface);
+}
+
+.recent-report-item {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 13px 16px;
+    border-bottom: 1px solid var(--border);
+}
+
+.recent-report-list .recent-report-item:last-child {
+    border-bottom: none;
+}
+
+.recent-report-item-icon {
+    flex-shrink: 0;
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    display: grid;
+    place-items: center;
+    border: 1px solid transparent;
+}
+
+.recent-report-item-icon svg {
+    width: 18px;
+    height: 18px;
+    stroke: currentColor;
+    fill: none;
+}
+
+.recent-report-item-body {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.recent-report-item-title {
+    color: var(--text-light);
+    font-weight: 600;
+    font-size: 0.94rem;
+    line-height: 1.25;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.recent-report-item-meta {
+    color: var(--muted-text);
+    font-size: 0.8rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.recent-report-item .status-badge {
+    flex-shrink: 0;
+}
+
+/* TASK 31.10 — two-line right-aligned time/status column (reference
+   composition). .recent-report-item-side wraps the relative-time text and
+   the existing .status-badge so they stack, right-aligned, instead of the
+   badge sitting alone on the row's baseline. */
+.recent-report-item-side {
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 4px;
+}
+
+.recent-report-item-time {
+    color: var(--muted-text);
+    font-size: 0.74rem;
+    white-space: nowrap;
+}
+
+@media (max-width: 640px) {
+    .recent-report-item {
+        padding: 11px 12px;
+        gap: 10px;
+    }
+
+    .recent-report-item-icon {
+        width: 32px;
+        height: 32px;
+    }
+
+    .recent-report-item-icon svg {
+        width: 16px;
+        height: 16px;
+    }
+
+    .recent-report-item-time {
+        font-size: 0.7rem;
+    }
+}
+
+/* ==========================================================================
+   TASK 25.3 — Enterprise Academic Period Status Card
+   Pure presentation for the read-only semester widget on the Administrator
+   Dashboard (super_admin only). No new colors are introduced: the 5 badge
+   variants below reuse the exact rgba() values already defined above for
+   .status-completed / .status-in-progress / .priority-urgent / .priority-low
+   / .status-cancelled, and the light-theme overrides mirror the equivalent
+   light-theme blocks further down this file. The card container reuses the
+   same surface/border/shadow tokens as .summary-card / .priority-chart-card.
+   ========================================================================== */
+
+.academic-period-card {
+    /* TASK 31.10 — position:relative + overflow:hidden added so the new
+       .academic-period-illustration (absolutely positioned, see below) is
+       anchored to and clipped by this card instead of the page. */
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    /* TASK 31.14 — was 380px; see the matching comment on
+       .dashboard-hero-session-card above. */
+    width: 420px;
+    max-width: 100%;
+    padding: 18px 22px;
+    /* TASK 25.5 — was a literal 16px; now the same --radius-lg token
+       .summary-card uses (via enterprise-dashboard.css), so the two card
+       families share one exact corner radius. */
+    border-radius: var(--radius-lg, 16px);
+    border: 1px solid var(--border);
+    background: var(--surface);
+    box-shadow: var(--shadow-card);
+    text-align: left;
+}
+
+.academic-period-card-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    /* TASK 31.10 — was implicit (title just followed the icon). Needed so
+       the new .academic-period-card-menu glyph pins to the header's far
+       right edge instead of sitting immediately after the title text. */
+    justify-content: space-between;
+    position: relative;
+    z-index: 1;
+}
+
+.academic-period-card-title {
+    /* TASK 31.10 — allow the title to shrink/wrap if the card is ever
+       narrower than title + menu glyph combined (mobile breakpoint already
+       sets width:100% above); the menu glyph itself never shrinks. */
+    min-width: 0;
+}
+
+.academic-period-card-menu {
+    flex-shrink: 0;
+    display: grid;
+    place-items: center;
+    width: 22px;
+    height: 22px;
+    color: var(--muted-text);
+    opacity: 0.75;
+}
+
+.academic-period-card-menu svg {
+    width: 16px;
+    height: 16px;
+}
+
+/* TASK 31.10 — large, faint calendar+clock illustration anchored to the
+   card's bottom-right corner, behind the real content (z-index:0, while the
+   header above and body below sit in normal flow on top of it). Purely
+   decorative — aria-hidden, no data bound, same treatment already used for
+   .summary-card-spark/.summary-card-illustration elsewhere on this page.
+   TASK 31.15 — opacity nudged 0.07 -> 0.15 so the rebuilt illustration's
+   extra detail (day-grid dots, clock badge, sparkles) actually reads,
+   matching the reference's more visible purple illustration; width/height/
+   position unchanged.
+   TASK 31.16 — opacity nudged again, 0.15 -> 0.2, same "increase card
+   illustration visibility slightly, still subtle" colorfulness ask applied
+   to the other two illustrated cards above.
+   TASK 31.17 — opacity nudged once more, 0.2 -> 0.26, per the 31.17 brief
+   restating "increase opacity slightly, still subtle" for card
+   illustrations; size/position/color unchanged.
+   TASK 31.18 — opacity nudged again, 0.26 -> 0.32, same restated ask.
+   TASK 31.19 — full rebuild in dashboard.php from a single-currentColor
+   line-art calendar into a real multi-color illustration (purple header,
+   white body, pink clock, ring binders) — every shape now carries its own
+   explicit fill, so `color`/a single low opacity no longer make sense as
+   the way to keep it "subtle": a 0.32 opacity would wash out the pink
+   clock and white body the reference clearly shows as solid, legible
+   color. Opacity raised to 0.92 (matching "premium dashboard illustration,
+   not a flat icon") and a soft purple CSS drop-shadow glow added in place
+   of the old flat treatment; `color` left set (now unused by the SVG's own
+   shapes, harmless) and width/height enlarged slightly for the new 100x100
+   viewBox's extra detail (rings, grid, clock, sparkles). Still
+   position:absolute/z-index:0 behind the real card content/pointer-events:
+   none — no layout impact. */
+.academic-period-illustration {
+    position: absolute;
+    z-index: 0;
+    /* TASK 31.20 — positioning fix only: raised via `bottom` (80px, was
+       -18px) so the illustration clears the semester-progress bar below
+       it, and trimmed 148px -> 128px (both dimensions, aspect ratio
+       preserved) which was the minimum reduction needed for the same
+       vertical move to also clear the divider above it. `right` is
+       unchanged; no markup, colors, or other cards were touched. */
+    bottom: 80px;
+    right: -14px;
+    width: 128px;
+    height: 128px;
+    color: var(--primary-color);
+    opacity: 0.92;
+    filter: drop-shadow(0 0 14px rgba(139, 92, 246, 0.4));
+    pointer-events: none;
+}
+
+.academic-period-card-body {
+    position: relative;
+    z-index: 1;
+}
+
+.academic-period-card-icon {
+    width: 30px;
+    height: 30px;
+    flex-shrink: 0;
+    border-radius: var(--radius-md, 10px);
+    display: grid;
+    place-items: center;
+    background: var(--surface-muted);
+    border: 1px solid var(--border);
+    color: var(--primary-color);
+}
+
+.academic-period-card-icon svg {
+    width: 16px;
+    height: 16px;
+    stroke: currentColor;
+    fill: none;
+}
+
+.academic-period-card-title {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-secondary);
+}
+
+.academic-period-card-body {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+}
+
+/* TASK 25.6 — single subtle divider separating the status badge ("Status")
+   from the rest of the card ("Session Information"), per the enterprise
+   hierarchy pass. Reuses the exact same 1px/--border recipe already used
+   throughout this card (was previously only on .academic-period-dates,
+   which is now folded into this one shared divider so the card never shows
+   more than one horizontal rule at a time). No new color/border token. */
+.academic-period-divider {
+    width: 100%;
+    border-top: 1px solid var(--border);
+    margin: 2px 0;
+}
+
+.academic-period-semester-name {
+    font-size: 1.02rem;
+    font-weight: 700;
+    color: var(--text-light);
+}
+
+.academic-period-desc {
+    margin: 0;
+    font-size: 0.85rem;
+    line-height: 1.45;
+    color: var(--muted-text);
+}
+
+.academic-period-countdown {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--primary-color);
+}
+
+/* TASK 25.6 — was a horizontal 2-up row (Start Date / End Date, then
+   Academic Calendar / School Year); now a vertical stack so every metadata
+   label (Academic Calendar, Academic Year, and — via the same
+   .academic-period-date-item markup — Semester Progress) reads top-to-
+   bottom with consistent left alignment, matching the requested enterprise
+   hierarchy. The divider that used to live here moved up to the single
+   shared .academic-period-divider under the badge, so this block no longer
+   draws its own border-top. */
+.academic-period-dates {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2, 8px);
+    width: 100%;
+}
+
+.academic-period-date-item {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1, 4px);
+}
+
+.academic-period-date-label {
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-secondary);
+}
+
+.academic-period-date-value {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-light);
+}
+
+.academic-period-skeleton {
+    font-size: 0.85rem;
+    color: var(--muted-text);
+}
+
+/* TASK 25.4 — subtle hint line under the "Not Configured" description,
+   pointing the Administrator to the relocated Semester Settings action. */
+.academic-period-hint {
+    margin: 0;
+    font-size: 0.78rem;
+    line-height: 1.4;
+    color: var(--text-secondary);
+}
+
+/* TASK 25.4/25.5/25.6 — optional Running-state progress indicator. Thin,
+   static (no animation/transition/glow/gradient), enterprise-appropriate —
+   derived purely from the semester start/end dates the backend already
+   returns (see computeSemesterProgress() in dashboard.php). Uses only
+   existing color/radius/spacing tokens (--primary-color fill, --border
+   track, --radius-full ends), no new palette. TASK 25.5 — track thinned
+   from 5px to 4px and the hardcoded 999px radius swapped for the shared
+   --radius-full token. TASK 25.6 — was a horizontal row with the "19%
+   Complete" text floating beside the bar; now the bar sits on its own line
+   above a "Semester Progress" / "19% Complete" caption that reuses the
+   exact same .academic-period-date-item/-label/-value markup as the
+   Academic Calendar / Academic Year rows above it, so all three metadata
+   labels align on one left edge (same parent, same classes). No new
+   caption class was introduced — the old, now-unused
+   .academic-period-progress-label rule was removed rather than kept
+   alongside a duplicate. */
+.academic-period-progress {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2, 8px);
+    width: 100%;
+    margin-top: 2px;
+}
+
+.academic-period-progress-track {
+    width: 100%;
+    height: 4px;
+    border-radius: var(--radius-full, 9999px);
+    background: var(--border);
+    overflow: hidden;
+}
+
+.academic-period-progress-fill {
+    height: 100%;
+    border-radius: var(--radius-full, 9999px);
+    background: var(--primary-color);
+}
+
+/* TASK 25.4/25.5 — icon sizing + alignment for the relocated Semester
+   Settings button, living in the Dashboard Header's existing
+   .dashboard-page-header-actions slot (enterprise-dashboard.css) instead of
+   inside the Academic Session card. Reuses the standard .btn/.btn-sm/
+   .btn-secondary component as-is (the closest existing "outline" style in
+   this design system — no new button variant introduced). `gap` (via the
+   token used elsewhere for compact control spacing) replaces the old
+   margin-right hack so the icon and label share one flex baseline. */
+/* TASK 31.16 — layers a subtle purple accent (border + hover tint) on top
+   of the shared .btn-secondary look, page-scoped to this one button via the
+   .academic-period-settings-btn class only (styles.css/.btn-secondary
+   itself untouched) so it "pops" a bit more per the colorfulness ask
+   instead of reading as a flat gray outline button. !important is required
+   here (not just style preference): this page's stylesheet is linked
+   *before* color-scheme.css (see header.php's <link> order), so at equal
+   0,1,0 specificity the shared .btn-secondary rule loads later and would
+   otherwise win the cascade tie and silently erase this override. */
+.academic-period-settings-btn {
+    gap: var(--space-2, 8px);
+    background: rgba(139, 92, 246, 0.08) !important;
+    border-color: rgba(139, 92, 246, 0.4) !important;
+    color: #8b5cf6 !important;
+}
+
+.academic-period-settings-btn:hover {
+    background: rgba(139, 92, 246, 0.16) !important;
+    border-color: rgba(139, 92, 246, 0.65) !important;
+    color: #8b5cf6 !important;
+}
+
+.academic-period-settings-btn svg {
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
+}
+
+/* Small color dot inside the badge, in addition to the tinted pill itself —
+   gives the badge a quick-scan status indicator without adding emoji or a
+   second icon library. */
+.semester-badge-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: currentColor;
+    flex-shrink: 0;
+}
+
+.semester-badge-running        { background: rgba(34, 197, 94, 0.16);   border-color: rgba(74, 222, 128, 0.34);  color: #86efac; gap: 6px; }
+.semester-badge-upcoming       { background: rgba(59, 130, 246, 0.16);  border-color: rgba(96, 165, 250, 0.34);  color: #93c5fd; gap: 6px; }
+.semester-badge-break          { background: rgba(249, 115, 22, 0.16);  border-color: rgba(249, 115, 22, 0.34);  color: #fdba74; gap: 6px; }
+.semester-badge-completed      { background: rgba(100, 116, 139, 0.22); border-color: rgba(148, 163, 184, 0.3);  color: #dbe4f0; gap: 6px; }
+.semester-badge-not-configured { background: rgba(248, 113, 113, 0.16); border-color: rgba(248, 113, 113, 0.34); color: #fca5a5; gap: 6px; }
+
+@media (max-width: 1024px) {
+    main.container > .card > .card-header {
+        flex-wrap: wrap;
+    }
+
+    .academic-period-card {
+        width: 100%;
+    }
+}
+
+/* TASK 31.6.3 — empty-state polish. .recent-reports-empty is a class only
+   (no id), rendered by the existing renderRecentActivity()/inventory-widget
+   JS exactly as before — this only styles the container the JS already
+   places its "no data" text into, no JS/markup-generation logic touched. */
+.recent-reports-empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    min-height: 96px;
+    margin: 4px 0 6px;
+    padding: 22px 20px;
+    border: 1px dashed var(--border);
+    border-radius: var(--radius-md, 12px);
+    background: var(--surface-muted);
+    color: #a5add3;
+    font-size: 0.94rem;
+}
+
+@media (max-width: 1280px) {
+    .summary-cards-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 1024px) {
+    .dashboard-bottom {
+        grid-template-columns: 1fr !important;
+        display: grid !important;
+    }
+}
+
+@media (max-width: 900px) {
+    .summary-cards-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .dashboard-bottom {
+        grid-template-columns: 1fr !important;
+        display: grid !important;
+    }
+
+    .chart-card {
+        height: auto !important;
+    }
+
+    .chart-card .card-body {
+        min-height: 300px !important;
+        height: auto !important;
+    }
+
+    .status-chart-body {
+        min-height: 300px !important;
+        height: auto !important;
+        flex-direction: column !important;
+        align-items: stretch !important;
+    }
+
+    /* TASK 31.13/35 — matching column-stack teardown for the Reports by
+       Priority card's two-column layout (see .priority-chart-layout /
+       .priority-chart-left / .priority-chart-right, base rules above):
+       without this the chart and the right-column priority summary would
+       stay side-by-side and get crushed at tablet width. */
+    .priority-chart-card .card-body {
+        flex-direction: column !important;
+        align-items: stretch !important;
+    }
+
+    .priority-chart-right {
+        flex: 1 1 auto !important;
+        min-width: 0 !important;
+    }
+
+    .chart-canvas {
+        position: relative !important;
+        height: 300px !important;
+        min-height: 300px !important;
+    }
+
+    /* TASK 31.15 — matching tablet-width height bump for the new SVG stream
+       chart container (see .priority-flow-chart-wrap base rule above),
+       mirroring the .chart-canvas treatment the old <canvas> got at this
+       breakpoint so the chart doesn't look cramped once it's stacked above
+       the legend by the .priority-chart-card .card-body column rule above. */
+    .priority-flow-chart-wrap {
+        height: 260px !important;
+    }
+
+    .recent-reports-table-head {
+        display: none;
+    }
+
+    .recent-report-table-row {
+        grid-template-columns: 1fr;
+        gap: 10px;
+    }
+
+    .recent-report-pill-cell {
+        justify-content: flex-start;
+    }
+}
+
+@media (max-width: 768px) {
+    main.container,
+    #sidebar.collapsed ~ main.container {
+        margin-left: 0 !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        padding-left: 12px;
+        padding-right: 12px;
+    }
+
+    .summary-cards-grid {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+
+    .dashboard-feature-cards-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .dashboard-bottom {
+        grid-template-columns: 1fr !important;
+        display: grid !important;
+        gap: 14px;
+    }
+
+    .chart-card {
+        height: auto !important;
+        min-height: auto !important;
+    }
+
+    .chart-card .card-body {
+        min-height: 280px !important;
+        height: auto !important;
+        padding: 14px 12px !important;
+    }
+
+    .status-chart-body {
+        min-height: 280px !important;
+        height: auto !important;
+    }
+
+    .chart-canvas {
+        position: relative !important;
+        height: 280px !important;
+        min-height: 280px !important;
+        width: 100% !important;
+    }
+
+    /* Match the old canvas breakpoint sizing for the new SVG flow-chart wrap. */
+    .priority-flow-chart-wrap {
+        height: 280px !important;
+    }
+
+    .summary-card {
+        min-height: 118px;
+    }
+}
+
+@media (max-width: 640px) {
+    main.container {
+        margin-left: 0;
+        max-width: 100%;
+        width: 100%;
+    }
+
+    .summary-cards-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .dashboard-bottom {
+        grid-template-columns: 1fr !important;
+        display: grid !important;
+        gap: 12px;
+    }
+
+    .chart-card {
+        height: auto !important;
+        min-height: auto !important;
+        overflow: visible !important;
+    }
+
+    .chart-card .card-body {
+        min-height: 260px !important;
+        height: auto !important;
+        padding: 12px 10px !important;
+        overflow: visible !important;
+    }
+
+    .status-chart-body {
+        min-height: 260px !important;
+        height: auto !important;
+        overflow: visible !important;
+    }
+
+    .chart-canvas {
+        position: relative !important;
+        height: 260px !important;
+        min-height: 260px !important;
+        width: 100% !important;
+        display: block !important;
+    }
+
+    /* Match the old canvas breakpoint sizing for the new SVG flow-chart wrap. */
+    .priority-flow-chart-wrap {
+        height: 260px !important;
+    }
+
+    /* TASK 35 — tighter padding/type scale for the priority summary + total
+       reports cards once the right column is full width (stacked below the
+       chart via the 900px breakpoint above). Same tokens, smaller scale —
+       no layout/behavior change. */
+    .priority-summary-card,
+    .priority-total-card {
+        padding: 8px 10px;
+        gap: 10px;
+    }
+
+    .priority-summary-icon,
+    .priority-total-icon {
+        width: 30px;
+        height: 30px;
+    }
+
+    .priority-summary-count {
+        font-size: 15px;
+    }
+
+    .navbar .navbar-container,
+    main.container {
+        padding-left: 14px;
+        padding-right: 14px;
+    }
+
+    .summary-card {
+        min-height: 124px;
+        padding: 14px;
+    }
+
+    .summary-card-value {
+        font-size: 28px;
+    }
+
+    .summary-card-desc {
+        font-size: 0.84rem;
+    }
+
+    .summary-card-icon {
+        width: 36px;
+        height: 36px;
+    }
+
+    .recent-report-row {
+        grid-template-columns: 1fr;
+        gap: 8px;
+    }
+}
+
+@media (max-width: 480px) {
+    .dashboard-bottom {
+        grid-template-columns: 1fr !important;
+        display: grid !important;
+    }
+
+    main.container {
+        padding-left: 0;
+        padding-right: 0;
+    }
+
+    .summary-card,
+    .dashboard-bottom .card {
+        border-radius: 14px;
+    }
+
+    .summary-card {
+        min-height: 112px;
+        padding: 14px;
+    }
+
+    .summary-card-value {
+        font-size: 26px;
+    }
+
+    .dashboard-bottom .card .card-header,
+    .dashboard-bottom .card .card-body {
+        padding-left: 14px;
+        padding-right: 14px;
+    }
+}
+
+/* Light mode: super admin dashboard cards should be white with black text.
+   Also covers .dashboard-feature-cards-grid (Low Stock / Buildings), which
+   moved out of .summary-cards-grid in Task 31.2. */
+:root[data-theme-resolved='light'] .summary-cards-grid .summary-card,
+:root[data-theme-resolved='light'] .summary-cards-grid .summary-card.summary-card-action,
+:root[data-theme-resolved='light'] .summary-cards-grid .summary-card.summary-card-alert,
+:root[data-theme-resolved='light'] .dashboard-feature-cards-grid .summary-card,
+:root[data-theme-resolved='light'] .dashboard-feature-cards-grid .summary-card.summary-card-action,
+:root[data-theme-resolved='light'] .dashboard-feature-cards-grid .summary-card.summary-card-alert,
+:root[data-theme-resolved='light'] .dashboard-bottom .card,
+:root[data-theme-resolved='light'] .priority-chart-card,
+:root[data-theme-resolved='light'] .recent-reports-card,
+:root[data-theme-resolved='light'] .dashboard-timeline-card,
+:root[data-theme-resolved='light'] .dashboard-hero-kpi-item,
+:root[data-theme-resolved='light'] .modal-content {
+    background: var(--surface) !important;
+    /* App-wide purple border sprint: this block is what dashboard-card-accent.css
+       had to out-specify to turn the cards purple. Pointing it at the same system
+       token instead means the two now agree rather than compete, and it extends
+       the accent to the members this list has that the accent sheet does not —
+       .priority-chart-card, .recent-reports-card and the modal shell. */
+    border-color: var(--purple-border, var(--border)) !important;
+    box-shadow: var(--shadow-card) !important;
+}
+
+:root[data-theme-resolved='light'] .summary-cards-grid .summary-card:hover,
+:root[data-theme-resolved='light'] .summary-cards-grid .summary-card.summary-card-action:hover,
+:root[data-theme-resolved='light'] .summary-cards-grid .summary-card.summary-card-alert:hover,
+:root[data-theme-resolved='light'] .dashboard-feature-cards-grid .summary-card:hover,
+:root[data-theme-resolved='light'] .dashboard-feature-cards-grid .summary-card.summary-card-action:hover,
+:root[data-theme-resolved='light'] .dashboard-feature-cards-grid .summary-card.summary-card-alert:hover {
+    background: var(--surface) !important;
+    /* Same colour at rest and on hover — see dashboard-card-accent.css. */
+    border-color: var(--purple-border, var(--border)) !important;
+}
+
+:root[data-theme-resolved='light'] .summary-cards-grid .summary-card .summary-card-title,
+:root[data-theme-resolved='light'] .summary-cards-grid .summary-card .summary-card-value,
+:root[data-theme-resolved='light'] .summary-cards-grid .summary-card .summary-card-desc,
+:root[data-theme-resolved='light'] .dashboard-feature-cards-grid .summary-card .summary-card-title,
+:root[data-theme-resolved='light'] .dashboard-feature-cards-grid .summary-card .summary-card-value,
+:root[data-theme-resolved='light'] .dashboard-feature-cards-grid .summary-card .summary-card-desc,
+:root[data-theme-resolved='light'] .dashboard-bottom .card .card-header h2,
+:root[data-theme-resolved='light'] .dashboard-bottom .card .card-header .text-muted,
+:root[data-theme-resolved='light'] .dashboard-bottom .card .card-header p,
+:root[data-theme-resolved='light'] .recent-report-title,
+:root[data-theme-resolved='light'] .recent-report-date,
+:root[data-theme-resolved='light'] .modal-content :is(h1, h2, h3, h4, h5, h6, p, span, label, div) {
+    color: var(--text-light) !important;
+}
+
+:root[data-theme-resolved='light'] .summary-cards-grid .summary-card .summary-card-icon,
+:root[data-theme-resolved='light'] .dashboard-feature-cards-grid .summary-card .summary-card-icon {
+    background: var(--card-accent-bg, var(--surface-muted)) !important;
+    border-color: var(--border) !important;
+    color: var(--card-accent, var(--primary-color)) !important;
+}
+
+:root[data-theme-resolved='light'] .status-chart-card .status-live-badge {
+    background: var(--surface-muted);
+    color: var(--text-secondary);
+    border-color: var(--border);
+}
+
+:root[data-theme-resolved='light'] .status-legend-item,
+:root[data-theme-resolved='light'] .status-legend-item .legend-label {
+    color: #111827 !important;
+}
+
+:root[data-theme-resolved='light'] .status-legend-item .legend-count {
+    color: #1f2937 !important;
+}
+
+/* TASK 31.13 — was `color: var(--text-light)`, correct for the old
+   plain-text link but wrong now that .recent-reports-link is a solid
+   var(--primary-color) pill button (see the base rule above): text needs
+   to stay white for contrast against that filled background in light
+   theme too, not switch to the light theme's dark body-text color. */
+:root[data-theme-resolved='light'] .recent-reports-link {
+    color: #ffffff;
+}
+
+/* TASK 27 — without this, .recent-reports-subtitle's own !important color
+   (dark-mode value, matches staff-dashboard.inline.css) would win over the
+   global .text-muted light-mode override further up the cascade, since both
+   rules share the same specificity and this stylesheet loads later. Value
+   matches the identical light-mode rule in staff-dashboard.inline.css. */
+:root[data-theme-resolved='light'] .recent-reports-subtitle {
+    color: #6b7280 !important;
+}
+
+:root[data-theme-resolved='light'] .recent-reports-table-wrap {
+    border-color: var(--border);
+    background: var(--surface);
+    box-shadow: var(--shadow-card);
+}
+
+:root[data-theme-resolved='light'] .recent-reports-table-head {
+    background: var(--surface-muted);
+    border-bottom-color: var(--border);
+}
+
+:root[data-theme-resolved='light'] .recent-reports-table-head > div {
+    color: var(--text-secondary);
+}
+
+:root[data-theme-resolved='light'] .recent-report-table-row {
+    border-bottom-color: var(--border);
+}
+
+:root[data-theme-resolved='light'] .recent-report-title {
+    color: var(--text-light) !important;
+}
+
+:root[data-theme-resolved='light'] .recent-report-meta,
+:root[data-theme-resolved='light'] .recent-report-date,
+:root[data-theme-resolved='light'] .recent-report-comment,
+:root[data-theme-resolved='light'] .recent-reports-empty {
+    color: var(--muted-text) !important;
+}
+
+:root[data-theme-resolved='light'] .status-submitted {
+    background: #eef2ff;
+    border-color: #a5b4fc;
+    color: #4338ca;
+}
+
+:root[data-theme-resolved='light'] .status-assigned {
+    background: #f3e8ff;
+    border-color: #d8b4fe;
+    color: #7e22ce;
+}
+
+:root[data-theme-resolved='light'] .status-in-progress {
+    background: #fef3c7;
+    border-color: #fde68a;
+    color: #b45309;
+}
+
+:root[data-theme-resolved='light'] .status-completed {
+    background: #dcfce7;
+    border-color: #86efac;
+    color: #166534;
+}
+
+:root[data-theme-resolved='light'] .status-cancelled {
+    background: #fee2e2;
+    border-color: #fca5a5;
+    color: #b91c1c;
+}
+
+/* IT-expert status-color correction (Resolved/Unresolved sprint follow-up):
+   "Closed" previously had no dedicated class here and silently reused
+   .status-completed's green, making it indistinguishable from "Completed" in
+   the Recent Reports timeline. Given its own neutral gray so it reads as
+   "archived/final" rather than "successfully done". */
+:root[data-theme-resolved='light'] .status-closed {
+    background: #f3f4f6;
+    border-color: #e5e7eb;
+    color: #4b5563;
+}
+
+/* IT-expert priority-color correction: Critical=Red, High=Orange,
+   Medium=Yellow, Low=Blue. Was previously Low=gray/Medium=blue/High=amber/
+   Urgent=orange, off the intended ramp and colliding with the new High. */
+:root[data-theme-resolved='light'] .priority-low {
+    background: #dbeafe;
+    border-color: #93c5fd;
+    color: #1d4ed8;
+}
+
+:root[data-theme-resolved='light'] .priority-medium {
+    background: #fef9c3;
+    border-color: #fde047;
+    color: #a16207;
+}
+
+:root[data-theme-resolved='light'] .priority-high {
+    background: #ffedd5;
+    border-color: #fdba74;
+    color: #c2410c;
+}
+
+:root[data-theme-resolved='light'] .priority-urgent {
+    background: #fee2e2;
+    border-color: #fca5a5;
+    color: #b91c1c;
+}
+
+:root[data-theme-resolved='light'] .priority-critical {
+    background: #fee2e2;
+    border-color: #fca5a5;
+    color: #b91c1c;
+}
+
+/* TASK 25.3 — Academic Period badge light-theme overrides. Values mirror
+   the light-theme blocks above 1:1 (.status-completed / .status-in-progress
+   / .priority-urgent / .priority-low / .status-cancelled) — no new palette. */
+:root[data-theme-resolved='light'] .academic-period-card {
+    background: var(--surface);
+    border-color: var(--border);
+}
+
+:root[data-theme-resolved='light'] .semester-badge-running {
+    background: #dcfce7;
+    border-color: #86efac;
+    color: #166534;
+}
+
+:root[data-theme-resolved='light'] .semester-badge-upcoming {
+    background: #dbeafe;
+    border-color: #93c5fd;
+    color: #1d4ed8;
+}
+
+:root[data-theme-resolved='light'] .semester-badge-break {
+    background: #ffedd5;
+    border-color: #fdba74;
+    color: #c2410c;
+}
+
+:root[data-theme-resolved='light'] .semester-badge-completed {
+    background: #e2e8f0;
+    border-color: #cbd5e1;
+    color: #334155;
+}
+
+:root[data-theme-resolved='light'] .semester-badge-not-configured {
+    background: #fee2e2;
+    border-color: #fca5a5;
+    color: #b91c1c;
+}
+
+:root[data-theme-resolved='light'] .modal-header,
+:root[data-theme-resolved='light'] .modal-body,
+:root[data-theme-resolved='light'] .modal-footer {
+    background: var(--surface);
+    border-color: var(--border);
+}
+
+:root[data-theme-resolved='light'] .modal-body .form-control {
+    background: var(--surface);
+    color: var(--text-light);
+    /* (0,4,0) — beat the shared .form-control rule in styles.css, so the
+       dashboard's in-modal inputs were the last ones still painting grey. */
+    border-color: var(--purple-control, var(--border));
+}
+
+/* Administrator dashboard layout refinement. The existing PHP wrappers stay
+   intact so all data hooks and role checks remain unchanged; only their
+   visual contribution to the page grid changes here. */
+main.maintenance-admin-dashboard-page {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: var(--space-4, 16px);
+    row-gap: var(--space-6, 24px);
+    align-items: stretch;
+}
+
+main.maintenance-admin-dashboard-page > .dashboard-hero-row,
+main.maintenance-admin-dashboard-page > .dashboard-feature-cards-grid {
+    display: contents;
+}
+
+main.maintenance-admin-dashboard-page > .dashboard-hero-row > .dashboard-hero-panel,
+main.maintenance-admin-dashboard-page > .dashboard-charts-row,
+main.maintenance-admin-dashboard-page > .dashboard-timeline-row {
+    grid-column: 1 / -1;
+}
+
+main.maintenance-admin-dashboard-page > .dashboard-hero-row > .dashboard-hero-session-card {
+    grid-column: 1;
+    grid-row: 2;
+    width: auto;
+    min-width: 0;
+    margin: 0;
+}
+
+main.maintenance-admin-dashboard-page > .dashboard-feature-cards-grid > .summary-card-alert {
+    grid-column: 2;
+    grid-row: 2;
+    align-self: stretch;
+    min-width: 0;
+    width: auto;
+    margin: 0;
+}
+
+main.maintenance-admin-dashboard-page > .dashboard-hero-row > .dashboard-hero-session-card {
+    align-self: stretch;
+}
+
+main.maintenance-admin-dashboard-page .dashboard-hero-panel,
+main.maintenance-admin-dashboard-page .dashboard-feature-cards-grid,
+main.maintenance-admin-dashboard-page .dashboard-charts-row,
+main.maintenance-admin-dashboard-page .dashboard-timeline-row {
+    margin-bottom: 0;
+}
+
+main.maintenance-admin-dashboard-page .dashboard-scope-notice {
+    margin-top: 14px;
+}
+
+main.maintenance-admin-dashboard-page .dashboard-charts-row,
+main.maintenance-admin-dashboard-page .dashboard-timeline-row {
+    min-width: 0;
+    width: 100%;
+}
+
+main.maintenance-admin-dashboard-page .dashboard-charts-row .card,
+main.maintenance-admin-dashboard-page .dashboard-timeline-card {
+    min-width: 0;
+}
+
+main.maintenance-admin-dashboard-page .recent-reports-table-wrap,
+main.maintenance-admin-dashboard-page .recent-reports-table-wrap {
+    max-width: 100%;
+    overflow-x: auto;
+}
+
+main.maintenance-admin-dashboard-page .dashboard-card-head-title h2 {
+    letter-spacing: 0;
+}
+
+main.maintenance-admin-dashboard-page .dashboard-hero-session-card {
+    min-height: 0;
+}
+
+main.maintenance-admin-dashboard-page .dashboard-hero-session-card {
+    position: relative;
+    padding: 16px 20px 18px;
+}
+
+main.maintenance-admin-dashboard-page .dashboard-hero-session-card .academic-period-card-header {
+    justify-content: flex-start;
+    padding-right: 178px;
+}
+
+main.maintenance-admin-dashboard-page .dashboard-hero-session-card .academic-period-card-menu {
+    display: none;
+}
+
+main.maintenance-admin-dashboard-page .academic-period-settings-btn {
+    display: inline-flex;
+    align-items: center;
+    align-self: flex-start;
+    position: absolute;
+    top: 16px;
+    right: 20px;
+    z-index: 2;
+    min-height: 36px;
+    margin-top: 0;
+    padding: 8px 14px;
+    border-radius: var(--radius-sm, 8px);
+    text-decoration: none;
+}
+
+main.maintenance-admin-dashboard-page .dashboard-hero-session-card .academic-period-illustration {
+    bottom: 54px;
+}
+
+main.maintenance-admin-dashboard-page .academic-period-settings-btn:focus-visible {
+    outline: 3px solid color-mix(in srgb, var(--primary-color) 42%, transparent);
+    outline-offset: 2px;
+}
+
+@media (max-width: 600px) {
+    main.maintenance-admin-dashboard-page .academic-period-settings-btn {
+        width: 100%;
+        justify-content: center;
+    }
+
+    main.maintenance-admin-dashboard-page .dashboard-hero-session-card .academic-period-card-header {
+        padding-right: 0;
+    }
+
+    main.maintenance-admin-dashboard-page .dashboard-hero-session-card .academic-period-settings-btn {
+        position: static;
+        margin-top: 14px;
+    }
+}
+
+@media (max-width: 900px) {
+    main.maintenance-admin-dashboard-page {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    main.maintenance-admin-dashboard-page > .dashboard-hero-row > .dashboard-hero-session-card,
+    main.maintenance-admin-dashboard-page > .dashboard-feature-cards-grid > .summary-card-alert {
+        grid-column: 1;
+        grid-row: auto;
+    }
+}
+
+@media (max-width: 600px) {
+    main.maintenance-admin-dashboard-page {
+        row-gap: 16px;
+    }
+
+    main.maintenance-admin-dashboard-page .dashboard-card-head-title {
+        min-width: 0;
+    }
+
+    main.maintenance-admin-dashboard-page .dashboard-card-head-title h2 {
+        font-size: 0.95rem;
+    }
+
+}

@@ -1,0 +1,1257 @@
+/* ==========================================================================
+   Preventive Maintenance — page-scoped styles.
+   Follows the .dispatches-page convention: CSS custom properties scoped to
+   .pm-page, overridden under :root[data-theme-resolved='dark'] .pm-page.
+   Do NOT move any of this into a shared stylesheet (styles.css /
+   color-scheme.css) — page-scoped CSS is a standing constraint for this app.
+   ========================================================================== */
+
+.pm-page {
+    --pm-bg: var(--app-bg);
+    --pm-surface: #ffffff;
+    --pm-surface-muted: #f8fafc;
+    --pm-surface-header: #f8fafc;
+    --pm-border: #dbe3f0;
+    --pm-border-strong: #cbd5e1;
+    --pm-text: #0f172a;
+    --pm-text-muted: #64748b;
+    /* Readability fix (2026-09-22): was #94a3b8 (~2.5:1 on the white
+       --pm-surface, fails WCAG AA even for "faint" placeholder text — used
+       for empty-cell em dashes and the PM History modal's empty-state
+       message). Brought up to the same muted-but-readable floor used
+       elsewhere in the app (~4.6:1). */
+    --pm-text-faint: #6b7280;
+    --pm-row-odd: #ffffff;
+    --pm-row-even: #f8fafc;
+    --pm-row-hover: #f5f3ff;
+    --pm-shadow: 0 18px 40px rgba(15, 23, 42, 0.06);
+    --pm-accent: #7c3aed;
+    --pm-accent-soft: rgba(124, 58, 237, 0.1);
+
+    /* Status accent colors — text always paired with color, never color-only */
+    --pm-unscheduled: #6b7280;
+    --pm-unscheduled-bg: rgba(107, 114, 128, 0.12);
+    --pm-unscheduled-border: rgba(107, 114, 128, 0.22);
+
+    --pm-upcoming: #7c3aed;
+    --pm-upcoming-bg: rgba(124, 58, 237, 0.1);
+    --pm-upcoming-border: rgba(124, 58, 237, 0.2);
+
+    --pm-due-soon: #b45309;
+    --pm-due-soon-bg: rgba(245, 158, 11, 0.14);
+    --pm-due-soon-border: rgba(245, 158, 11, 0.26);
+
+    --pm-due: #c2410c;
+    --pm-due-bg: rgba(249, 115, 22, 0.14);
+    --pm-due-border: rgba(249, 115, 22, 0.26);
+
+    --pm-overdue: #dc2626;
+    --pm-overdue-bg: rgba(239, 68, 68, 0.12);
+    --pm-overdue-border: rgba(239, 68, 68, 0.24);
+
+    --pm-completed: #059669;
+    --pm-completed-bg: rgba(16, 185, 129, 0.14);
+    --pm-completed-border: rgba(16, 185, 129, 0.26);
+
+    color: var(--pm-text);
+}
+
+:root[data-theme-resolved='dark'] .pm-page {
+    --pm-surface: #0f172a;
+    --pm-surface-muted: #111c31;
+    --pm-surface-header: #13203a;
+    --pm-border: #23314b;
+    --pm-border-strong: #31415d;
+    --pm-text: #e2e8f0;
+    --pm-text-muted: #94a3b8;
+    --pm-text-faint: #64748b;
+    --pm-row-odd: #0f172a;
+    --pm-row-even: #111c31;
+    --pm-row-hover: #16233d;
+    --pm-shadow: 0 22px 48px rgba(2, 8, 23, 0.28);
+    --pm-accent: #a78bfa;
+    --pm-accent-soft: rgba(139, 92, 246, 0.16);
+
+    --pm-unscheduled: #9ca3af;
+    --pm-unscheduled-bg: rgba(156, 163, 175, 0.16);
+    --pm-unscheduled-border: rgba(156, 163, 175, 0.26);
+
+    --pm-upcoming: #a78bfa;
+    --pm-upcoming-bg: rgba(139, 92, 246, 0.18);
+    --pm-upcoming-border: rgba(139, 92, 246, 0.28);
+
+    --pm-due-soon: #fbbf24;
+    --pm-due-soon-bg: rgba(245, 158, 11, 0.18);
+    --pm-due-soon-border: rgba(245, 158, 11, 0.3);
+
+    --pm-due: #fb923c;
+    --pm-due-bg: rgba(249, 115, 22, 0.18);
+    --pm-due-border: rgba(249, 115, 22, 0.3);
+
+    --pm-overdue: #f87171;
+    --pm-overdue-bg: rgba(239, 68, 68, 0.18);
+    --pm-overdue-border: rgba(239, 68, 68, 0.3);
+
+    --pm-completed: #34d399;
+    --pm-completed-bg: rgba(16, 185, 129, 0.18);
+    --pm-completed-border: rgba(16, 185, 129, 0.3);
+}
+
+/* --------------------------------------------------------------------
+   Header
+   -------------------------------------------------------------------- */
+
+.pm-page__header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 20px;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+}
+
+.pm-page__title-group { max-width: 640px; }
+
+.pm-page__eyebrow {
+    margin: 0 0 4px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--pm-accent);
+}
+
+.pm-page__title {
+    margin: 0 0 6px;
+    font-size: 26px;
+    font-weight: 800;
+    color: var(--pm-text);
+}
+
+.pm-page__description {
+    margin: 0;
+    font-size: 14px;
+    line-height: 1.5;
+    color: var(--pm-text-muted);
+}
+
+.pm-page__actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.pm-page__primary-action {
+    background: var(--pm-accent);
+    border: 1px solid var(--pm-accent);
+    color: #ffffff;
+    font-weight: 600;
+}
+
+.pm-page__primary-action:hover { filter: brightness(1.06); }
+
+.pm-page__secondary-action,
+.pm-page__ghost-action {
+    background: var(--pm-surface);
+    border: 1px solid var(--pm-border-strong);
+    color: var(--pm-text);
+}
+
+.pm-page__secondary-action:hover,
+.pm-page__ghost-action:hover {
+    background: var(--pm-surface-muted);
+}
+
+/* --------------------------------------------------------------------
+   Summary cards
+   -------------------------------------------------------------------- */
+
+.pm-summary-cards {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 14px;
+    margin-bottom: 20px;
+}
+
+.pm-summary-card {
+    background: var(--pm-surface);
+    border: 1px solid var(--pm-border);
+    border-left: 4px solid var(--pm-border-strong);
+    border-radius: 12px;
+    padding: 16px 18px;
+    box-shadow: var(--pm-shadow);
+}
+
+.pm-summary-card--loading { grid-column: 1 / -1; border-left-color: var(--pm-border-strong); }
+
+.pm-summary-card--active { border-left-color: var(--pm-accent); }
+.pm-summary-card--due-soon { border-left-color: var(--pm-due-soon); }
+.pm-summary-card--due { border-left-color: var(--pm-due); }
+.pm-summary-card--overdue { border-left-color: var(--pm-overdue); }
+.pm-summary-card--completed { border-left-color: var(--pm-completed); }
+
+.pm-summary-card__value {
+    font-size: 26px;
+    font-weight: 800;
+    color: var(--pm-text);
+    line-height: 1.1;
+}
+
+.pm-summary-card__label {
+    margin-top: 4px;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--pm-text-muted);
+}
+
+/* --------------------------------------------------------------------
+   Panel / toolbar
+   -------------------------------------------------------------------- */
+
+.pm-panel {
+    background: var(--pm-surface);
+    border: 1px solid var(--pm-border);
+    border-radius: 14px;
+    box-shadow: var(--pm-shadow);
+    overflow: hidden;
+}
+
+/* --------------------------------------------------------------------
+   Tabs — Annual Schedule / Monthly Checklist
+   -------------------------------------------------------------------- */
+
+.pm-tabs {
+    display: flex;
+    gap: 4px;
+    padding: 10px 18px 0;
+    border-bottom: 1px solid var(--pm-border);
+    background: color-mix(in srgb, var(--pm-surface) 86%, var(--pm-surface-muted));
+}
+
+.pm-tab {
+    appearance: none;
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid transparent;
+    padding: 10px 14px;
+    font-size: 13.5px;
+    font-weight: 700;
+    color: var(--pm-text-muted);
+    cursor: pointer;
+}
+
+.pm-tab:hover { color: var(--pm-text); }
+
+.pm-tab--active {
+    color: var(--pm-accent);
+    border-bottom-color: var(--pm-accent);
+}
+
+.pm-toolbar {
+    display: flex;
+    align-items: flex-end;
+    gap: 14px;
+    flex-wrap: wrap;
+    padding: 16px 18px;
+    border-bottom: 1px solid var(--pm-border);
+    background: color-mix(in srgb, var(--pm-surface) 86%, var(--pm-surface-muted));
+}
+
+.pm-toolbar__search { flex: 1 1 220px; min-width: 200px; }
+
+.pm-toolbar__filter { min-width: 150px; }
+
+.pm-toolbar__label {
+    display: block;
+    margin-bottom: 4px;
+    font-size: 11.5px;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    color: var(--pm-text-muted);
+}
+
+.pm-toolbar__control {
+    width: 100%;
+    background: var(--pm-surface);
+    color: var(--pm-text);
+    border: 1px solid var(--pm-border-strong);
+}
+
+.pm-toolbar__action { margin-left: auto; }
+
+/* --------------------------------------------------------------------
+   Table panel
+   -------------------------------------------------------------------- */
+
+.pm-table-panel { padding: 18px; }
+
+.pm-table-panel__header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 14px;
+}
+
+.pm-table-panel__title {
+    margin: 0 0 4px;
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--pm-text);
+}
+
+.pm-table-panel__description {
+    margin: 0;
+    font-size: 13px;
+    color: var(--pm-text-muted);
+}
+
+.pm-table-shell {
+    border: 1px solid var(--pm-border);
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.pm-table-shell--scroll {
+    overflow-x: auto;
+    max-height: 70vh;
+    overflow-y: auto;
+}
+
+/* --------------------------------------------------------------------
+   Annual Schedule grid — Jan-Dec X-mark columns, sticky first column
+   -------------------------------------------------------------------- */
+
+.pm-schedule-table { min-width: 1100px; }
+
+.pm-schedule-table thead th { position: sticky; top: 0; z-index: 2; }
+
+/* Frequency, Equipment, and Location stay pinned while the Jan-Dec grid
+   scrolls horizontally (spec: "first columns ... should remain readable
+   while scrolling if practical"). Each column has a fixed width so the
+   next one's `left` offset is predictable. */
+.pm-sticky-col {
+    position: sticky;
+    z-index: 1;
+    background: inherit;
+}
+
+.pm-sticky-col--freq { left: 0; width: 100px; min-width: 100px; }
+.pm-sticky-col--equip { left: 100px; width: 200px; min-width: 200px; }
+.pm-sticky-col--loc { left: 300px; width: 160px; min-width: 160px; box-shadow: 2px 0 0 var(--pm-border); }
+
+.pm-schedule-table thead th.pm-sticky-col { z-index: 3; background: var(--pm-surface-header); }
+
+.pm-month-col {
+    text-align: center;
+    width: 34px;
+    min-width: 34px;
+}
+
+.pm-month-col--marked { background: var(--pm-accent-soft); }
+
+.pm-x-mark {
+    display: inline-block;
+    font-weight: 800;
+    color: var(--pm-accent);
+}
+
+/* --------------------------------------------------------------------
+   Month picker — scheduled_months checkbox grid (Create/Edit modal)
+   -------------------------------------------------------------------- */
+
+.pm-month-picker {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 8px;
+    margin-bottom: 4px;
+}
+
+.pm-month-picker__item {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 6px 4px;
+    border: 1px solid var(--pm-border-strong);
+    border-radius: 8px;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--pm-text);
+    cursor: pointer;
+}
+
+.pm-month-picker__item:has(input:checked) {
+    background: var(--pm-accent-soft);
+    border-color: var(--pm-accent);
+    color: var(--pm-accent);
+}
+
+/* --------------------------------------------------------------------
+   Year navigation (Monthly Checklist tab)
+   -------------------------------------------------------------------- */
+
+.pm-year-nav {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.pm-year-nav .form-control { text-align: center; }
+
+.pm-table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+
+.pm-table thead th {
+    background: var(--pm-surface-header);
+    color: var(--pm-text-muted);
+    font-size: 11.5px;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    text-align: left;
+    padding: 11px 14px;
+    border-bottom: 1px solid var(--pm-border);
+    white-space: nowrap;
+}
+
+.pm-table tbody td {
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--pm-border);
+    color: var(--pm-text);
+    vertical-align: top;
+}
+
+.pm-table tbody tr:nth-child(odd) { background: var(--pm-row-odd); }
+.pm-table tbody tr:nth-child(even) { background: var(--pm-row-even); }
+.pm-table tbody tr:hover { background: var(--pm-row-hover); }
+.pm-table tbody tr:last-child td { border-bottom: none; }
+
+.pm-table__title-cell { min-width: 190px; }
+.pm-table__action-head { text-align: right; }
+.pm-table__action-cell { text-align: right; white-space: nowrap; }
+
+.pm-cell-primary { font-weight: 600; color: var(--pm-text); }
+
+.pm-cell-secondary {
+    margin-top: 2px;
+    font-size: 12px;
+    color: var(--pm-text-muted);
+}
+
+.pm-muted-cell { color: var(--pm-text-faint); }
+
+/* --------------------------------------------------------------------
+   Status badges — color + text label always together, never color-only
+   -------------------------------------------------------------------- */
+
+.pm-status-badge {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 700;
+    white-space: nowrap;
+    border: 1px solid transparent;
+}
+
+.pm-badge-unscheduled {
+    background: var(--pm-unscheduled-bg);
+    color: var(--pm-unscheduled);
+    border-color: var(--pm-unscheduled-border);
+}
+
+.pm-badge-upcoming {
+    background: var(--pm-upcoming-bg);
+    color: var(--pm-upcoming);
+    border-color: var(--pm-upcoming-border);
+}
+
+.pm-badge-due-soon {
+    background: var(--pm-due-soon-bg);
+    color: var(--pm-due-soon);
+    border-color: var(--pm-due-soon-border);
+}
+
+.pm-badge-due {
+    background: var(--pm-due-bg);
+    color: var(--pm-due);
+    border-color: var(--pm-due-border);
+}
+
+.pm-badge-overdue {
+    background: var(--pm-overdue-bg);
+    color: var(--pm-overdue);
+    border-color: var(--pm-overdue-border);
+}
+
+/* --------------------------------------------------------------------
+   Row action buttons
+   -------------------------------------------------------------------- */
+
+.pm-actions-cell {
+    display: inline-flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+
+.pm-action-btn {
+    font-size: 12px;
+    font-weight: 600;
+    padding: 5px 10px;
+    border-radius: 7px;
+    border: 1px solid var(--pm-border-strong);
+    background: var(--pm-surface);
+    color: var(--pm-text);
+    cursor: pointer;
+    transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.pm-action-btn:hover { background: var(--pm-surface-muted); }
+
+.pm-action-btn--view { color: var(--pm-text-muted); }
+
+.pm-action-btn--edit {
+    color: var(--pm-accent);
+    border-color: var(--pm-accent-soft);
+}
+
+.pm-action-btn--complete {
+    color: #ffffff;
+    background: var(--pm-completed);
+    border-color: var(--pm-completed);
+}
+
+.pm-action-btn--complete:hover { filter: brightness(1.06); }
+
+.pm-action-btn--archive { color: var(--pm-overdue); }
+
+.pm-action-btn--activate { color: var(--pm-completed); }
+
+/* --------------------------------------------------------------------
+   Pagination
+   -------------------------------------------------------------------- */
+
+.pm-pagination {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    margin-top: 14px;
+}
+
+.pm-pagination__info {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--pm-text-muted);
+}
+
+/* --------------------------------------------------------------------
+   Modals — form grid / history layout
+   -------------------------------------------------------------------- */
+
+.pm-form-modal,
+.pm-complete-modal,
+.pm-history-modal {
+    /* layout.css's shared .modal-content has no max-height/overflow-y, so
+       content taller than the viewport overflows symmetrically above and
+       below a fixed, non-scrolling overlay — the header becomes unreachable.
+       users.inline.css already established this same calc(100vh - Npx) +
+       overflow-y:auto pattern for its own tall modal, so this mirrors an
+       existing app convention rather than inventing a new one. */
+    max-height: calc(100vh - 48px);
+    overflow-y: auto;
+}
+
+.pm-form-modal,
+.pm-complete-modal { max-width: 640px; width: 100%; }
+
+.pm-history-modal { max-width: 680px; width: 100%; }
+
+.pm-form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px 16px;
+}
+
+.pm-form-section-label {
+    margin: 18px 0 10px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    color: var(--pm-text-muted);
+    border-top: 1px solid var(--pm-border);
+    padding-top: 14px;
+}
+
+.pm-form-grid:first-of-type + .pm-form-section-label { border-top: none; padding-top: 0; }
+
+.pm-history-task-summary {
+    background: var(--pm-surface-muted);
+    border: 1px solid var(--pm-border);
+    border-radius: 10px;
+    padding: 14px 16px;
+    margin-bottom: 16px;
+}
+
+.pm-history-task-summary__grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px 16px;
+}
+
+.pm-history-section-title {
+    margin: 0 0 10px;
+    font-size: 13.5px;
+    font-weight: 700;
+    color: var(--pm-text);
+}
+
+.pm-history-row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--pm-border);
+}
+
+.pm-history-row:last-child { border-bottom: none; }
+
+.pm-history-row__main { flex: 1; min-width: 0; }
+
+.pm-history-row__notes {
+    margin-top: 6px;
+    font-size: 12.5px;
+    color: var(--pm-text-muted);
+    line-height: 1.45;
+}
+
+.pm-history-row__proof img {
+    width: 64px;
+    height: 64px;
+    object-fit: cover;
+    border-radius: 8px;
+    border: 1px solid var(--pm-border-strong);
+    display: block;
+}
+
+/* --------------------------------------------------------------------
+   Overview tab — calendar + Due This Week + Maintenance Plans list.
+   Pure presentation: every value rendered inside these classes comes from
+   the same /schedule-grid rows and status vocabulary already used by the
+   Annual Schedule tab and the summary cards above. No new color tokens —
+   reuses the existing --pm-{status} tokens so a dot, a badge and a table
+   row for the same task always agree.
+   -------------------------------------------------------------------- */
+
+.pm-overview-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 16px;
+    align-items: start;
+    margin-bottom: 16px;
+}
+
+.pm-overview-card {
+    background: var(--pm-surface);
+    border: 1px solid var(--pm-border);
+    border-radius: 12px;
+    padding: 16px;
+    box-shadow: var(--pm-shadow);
+}
+
+.pm-overview-plans { margin-top: 0; }
+
+.pm-overview-card__header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 4px;
+}
+
+.pm-overview-calendar__nav {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.pm-overview-period-label {
+    min-width: 116px;
+    text-align: center;
+    font-weight: 700;
+    font-size: 13px;
+    color: var(--pm-text);
+}
+
+.pm-calendar-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px;
+    margin: 10px 0 6px;
+    font-size: 12px;
+    color: var(--pm-text-muted);
+}
+
+.pm-calendar-legend__item { display: inline-flex; align-items: center; gap: 6px; }
+
+.pm-cal-dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--pm-upcoming);
+    flex-shrink: 0;
+}
+
+.pm-cal-dot--unscheduled { background: var(--pm-unscheduled); }
+.pm-cal-dot--upcoming { background: var(--pm-upcoming); }
+.pm-cal-dot--due-soon { background: var(--pm-due-soon); }
+.pm-cal-dot--due { background: var(--pm-due); }
+.pm-cal-dot--overdue { background: var(--pm-overdue); }
+.pm-cal-dot--completed { background: var(--pm-completed); }
+
+.pm-calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 4px;
+    margin-top: 4px;
+}
+
+.pm-cal-weekday {
+    text-align: center;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    color: var(--pm-text-muted);
+    padding-bottom: 4px;
+}
+
+.pm-cal-cell {
+    min-height: 64px;
+    border: 1px solid var(--pm-border);
+    border-radius: 8px;
+    padding: 6px;
+    background: var(--pm-surface);
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.pm-cal-cell--empty { background: transparent; border-color: transparent; }
+.pm-cal-cell--today { border-color: var(--pm-accent); box-shadow: 0 0 0 1px var(--pm-accent) inset; }
+.pm-cal-cell--has-tasks { background: var(--pm-surface-muted); }
+
+.pm-cal-daynum { font-size: 12px; font-weight: 700; color: var(--pm-text); }
+
+.pm-cal-dots { display: flex; flex-wrap: wrap; gap: 3px; align-items: center; }
+
+.pm-cal-more { font-size: 10px; font-weight: 700; color: var(--pm-text-muted); }
+
+.pm-overview-card__subheader { margin-top: 14px; }
+
+.pm-overview-card__subheader h3 {
+    margin: 0 0 8px;
+    font-size: 12.5px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--pm-text-muted);
+}
+
+.pm-cal-activity-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: 220px;
+    overflow-y: auto;
+}
+
+.pm-cal-activity {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    border: 1px solid var(--pm-border);
+    border-radius: 8px;
+    background: var(--pm-surface-muted);
+    font-size: 13px;
+}
+
+.pm-cal-activity__name { font-weight: 600; color: var(--pm-text); }
+
+.pm-cal-activity__meta {
+    color: var(--pm-text-muted);
+    font-size: 12px;
+    margin-left: auto;
+    text-align: right;
+}
+
+.pm-dueweek-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-height: 560px;
+    overflow-y: auto;
+}
+
+.pm-dueweek-item {
+    border: 1px solid var(--pm-border);
+    border-radius: 10px;
+    padding: 10px 12px;
+    background: var(--pm-surface-muted);
+}
+
+.pm-dueweek-item__top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.pm-dueweek-item__name { font-weight: 700; font-size: 13.5px; color: var(--pm-text); }
+
+.pm-dueweek-item__title { margin-top: 2px; font-size: 12.5px; color: var(--pm-text-muted); }
+
+.pm-dueweek-item__meta {
+    margin-top: 6px;
+    font-size: 12px;
+    color: var(--pm-text-muted);
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+}
+
+.pm-dueweek-item__due { margin-top: 6px; font-size: 12.5px; font-weight: 600; color: var(--pm-text); }
+
+.pm-dueweek-item__hint { font-weight: 500; color: var(--pm-text-muted); }
+
+.pm-plans-table { min-width: 900px; }
+
+/* --------------------------------------------------------------------
+   Responsive — mirrors dispatches.php breakpoints (980 / 768 / 540)
+   -------------------------------------------------------------------- */
+
+@media (max-width: 980px) {
+    .pm-summary-cards { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .pm-form-grid { grid-template-columns: 1fr; }
+    .pm-history-task-summary__grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .pm-overview-grid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 768px) {
+    .pm-page__header { flex-direction: column; align-items: stretch; }
+    .pm-page__actions { justify-content: flex-start; }
+    .pm-summary-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .pm-toolbar { flex-direction: column; align-items: stretch; }
+    .pm-toolbar__filter { min-width: 0; }
+    .pm-toolbar__action { margin-left: 0; }
+    .pm-table-panel__header { flex-direction: column; }
+    .pm-table__action-cell { text-align: left; }
+    .pm-actions-cell { justify-content: flex-start; }
+    .pm-overview-card__header { flex-direction: column; align-items: stretch; }
+    .pm-overview-calendar__nav { justify-content: space-between; }
+    .pm-cal-cell { min-height: 52px; }
+}
+
+@media (max-width: 540px) {
+    .pm-summary-cards { grid-template-columns: 1fr; }
+    .pm-history-task-summary__grid { grid-template-columns: 1fr; }
+    .pm-page__title { font-size: 22px; }
+    .pm-table thead th,
+    .pm-table tbody td { padding: 9px 10px; font-size: 12.5px; }
+    .pm-cal-weekday { font-size: 9.5px; }
+    .pm-cal-cell { min-height: 40px; padding: 4px; border-radius: 6px; }
+    .pm-cal-daynum { font-size: 10.5px; }
+    .pm-cal-activity__meta { margin-left: 0; text-align: left; width: 100%; }
+    .pm-cal-activity { flex-wrap: wrap; }
+}
+
+/* --------------------------------------------------------------------
+   Print view — manual-style Jan-Dec schedule grid.
+   #pm-print-container is populated on demand (pmBuildPrintView()) and is
+   hidden outside of printing; body.pm-printing hides everything else in
+   .pm-page during window.print() so only the manual-style table appears.
+   -------------------------------------------------------------------- */
+
+.pm-print-only { display: none; }
+
+.pm-print-header { text-align: center; margin-bottom: 16px; }
+.pm-print-header h1 { margin: 0; font-size: 16px; }
+.pm-print-header h2 { margin: 4px 0 0; font-size: 13px; font-weight: 600; }
+
+.pm-print-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 11px;
+}
+
+.pm-print-table th,
+.pm-print-table td {
+    border: 1px solid #000;
+    padding: 4px 6px;
+    text-align: center;
+}
+
+.pm-print-table th:nth-child(1),
+.pm-print-table th:nth-child(2),
+.pm-print-table th:nth-child(3),
+.pm-print-table td:nth-child(1),
+.pm-print-table td:nth-child(2),
+.pm-print-table td:nth-child(3) { text-align: left; }
+
+@media print {
+    body.pm-printing .pm-page > *:not(.pm-print-only) { display: none !important; }
+    body.pm-printing .pm-print-only { display: block !important; }
+    body.pm-printing { background: #fff; }
+}
+
+/* ==========================================================================
+   Annual Schedule redesign (2026-09-27) — manual-style grouped grid.
+   Rows of one equipment share a merged Frequency + Equipment block (like the
+   printed Preventive Maintenance Table), frequency uses the manual's legend
+   codes (M / Q / SA / A), and the current month column is highlighted.
+   ========================================================================== */
+
+.pm-page {
+    --pm-freq-m: #7c3aed;       --pm-freq-m-bg: rgba(124, 58, 237, 0.12);
+    --pm-freq-q: #0369a1;       --pm-freq-q-bg: rgba(3, 105, 161, 0.12);
+    --pm-freq-sa: #b45309;      --pm-freq-sa-bg: rgba(217, 119, 6, 0.14);
+    --pm-freq-a: #047857;       --pm-freq-a-bg: rgba(4, 120, 87, 0.12);
+    --pm-now-bg: rgba(124, 58, 237, 0.06);
+    --pm-now-line: rgba(124, 58, 237, 0.45);
+    --pm-group-alt: #fbfaff;
+}
+
+:root[data-theme-resolved='dark'] .pm-page {
+    --pm-freq-m: #c4b5fd;       --pm-freq-m-bg: rgba(167, 139, 250, 0.18);
+    --pm-freq-q: #7dd3fc;       --pm-freq-q-bg: rgba(56, 189, 248, 0.16);
+    --pm-freq-sa: #fcd34d;      --pm-freq-sa-bg: rgba(251, 191, 36, 0.16);
+    --pm-freq-a: #6ee7b7;       --pm-freq-a-bg: rgba(52, 211, 153, 0.16);
+    --pm-now-bg: rgba(167, 139, 250, 0.08);
+    --pm-now-line: rgba(167, 139, 250, 0.5);
+    --pm-group-alt: #111a2e;
+}
+
+/* The summary/legend sits above the grid, so only the grid itself scrolls. */
+#pm-schedule-container.pm-table-shell--scroll {
+    overflow: visible;
+    max-height: none;
+    border: 0;
+    border-radius: 0;
+}
+
+.pm-schedule-summary {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px 20px;
+    padding: 12px 16px;
+    margin-bottom: 14px;
+    border: 1px solid var(--pm-border);
+    border-radius: 12px;
+    background: var(--pm-surface-muted);
+}
+
+.pm-schedule-summary__stats {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 18px;
+    font-size: 13px;
+    color: var(--pm-text-muted);
+}
+
+.pm-schedule-summary__stats strong { color: var(--pm-text); font-size: 15px; margin-right: 2px; }
+
+.pm-schedule-summary__now { display: inline-flex; align-items: center; gap: 6px; }
+
+.pm-now-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 3px;
+    background: var(--pm-now-bg);
+    border: 2px solid var(--pm-now-line);
+}
+
+.pm-legend { display: flex; flex-wrap: wrap; gap: 8px 14px; font-size: 12.5px; color: var(--pm-text-muted); }
+.pm-legend__item { display: inline-flex; align-items: center; gap: 6px; }
+
+.pm-freq-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 30px;
+    height: 24px;
+    padding: 0 7px;
+    border-radius: 7px;
+    font-size: 11.5px;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    color: var(--pm-freq-m);
+    background: var(--pm-freq-m-bg);
+}
+.pm-freq-badge--quarterly { color: var(--pm-freq-q); background: var(--pm-freq-q-bg); }
+.pm-freq-badge--semi_annually { color: var(--pm-freq-sa); background: var(--pm-freq-sa-bg); }
+.pm-freq-badge--annually { color: var(--pm-freq-a); background: var(--pm-freq-a-bg); }
+
+.pm-freq-label { display: block; margin-top: 6px; font-size: 11.5px; color: var(--pm-text-muted); }
+
+.pm-schedule-scroll {
+    overflow: auto;
+    max-height: 72vh;
+    border: 1px solid var(--pm-border);
+    border-radius: 12px;
+    background: var(--pm-surface);
+}
+
+.pm-schedule-table { border-collapse: separate; border-spacing: 0; }
+
+/* Each equipment is its own <tbody>: alternate groups, not rows, and keep a
+   stronger rule between groups (the base table drops the last row border). */
+.pm-schedule-table tbody.pm-schedule-group tr,
+.pm-schedule-table tbody.pm-schedule-group tr:nth-child(odd),
+.pm-schedule-table tbody.pm-schedule-group tr:nth-child(even) { background: var(--pm-surface); }
+.pm-schedule-table tbody.pm-schedule-group--alt tr,
+.pm-schedule-table tbody.pm-schedule-group--alt tr:nth-child(odd),
+.pm-schedule-table tbody.pm-schedule-group--alt tr:nth-child(even) { background: var(--pm-group-alt); }
+.pm-schedule-table tbody.pm-schedule-group tr:hover { background: var(--pm-row-hover); }
+
+.pm-schedule-table tbody.pm-schedule-group td { vertical-align: middle; }
+.pm-schedule-table tbody.pm-schedule-group tr:last-child td { border-bottom: 1px solid var(--pm-border-strong); }
+.pm-schedule-table tbody.pm-schedule-group:last-child tr:last-child td { border-bottom: none; }
+
+/* Merged cells keep their own background (they span rows, so `inherit`
+   from a single <tr> would flash on hover of the first row only). */
+.pm-schedule-table .pm-group-cell {
+    vertical-align: top !important;
+    background: var(--pm-surface);
+    border-bottom: 1px solid var(--pm-border-strong) !important;
+}
+.pm-schedule-table tbody.pm-schedule-group--alt .pm-group-cell { background: var(--pm-group-alt); }
+
+.pm-schedule-table .pm-sticky-col--loc { font-weight: 500; }
+
+.pm-equip-name { font-weight: 700; line-height: 1.3; white-space: normal; }
+.pm-equip-count { margin-top: 6px; font-size: 11.5px; color: var(--pm-text-muted); }
+
+/* Month grid */
+.pm-schedule-table th.pm-month-col { text-align: center; padding-left: 4px; padding-right: 4px; }
+.pm-schedule-table .pm-month-col { width: 44px; min-width: 44px; padding-left: 4px !important; padding-right: 4px !important; }
+.pm-schedule-table .pm-month-col--marked { background: transparent; }
+.pm-schedule-table .pm-month-col--now { background: var(--pm-now-bg); box-shadow: inset 2px 0 0 var(--pm-now-line), inset -2px 0 0 var(--pm-now-line); }
+.pm-schedule-table th.pm-month-col--now { color: var(--pm-accent); }
+
+.pm-month-now-tag {
+    display: block;
+    margin-top: 2px;
+    font-size: 9px;
+    letter-spacing: 0.08em;
+    color: var(--pm-accent);
+}
+
+.pm-schedule-table .pm-x-mark {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    font-size: 12px;
+    font-weight: 800;
+    color: #fff;
+    background: linear-gradient(135deg, #7c3aed 0%, #a855f7 100%);
+    box-shadow: 0 2px 6px rgba(124, 58, 237, 0.3);
+}
+
+@media (max-width: 768px) {
+    /* Three pinned columns (460px) would cover a phone screen; pin only the
+       location so each row stays identifiable while the months scroll. */
+    .pm-schedule-table .pm-sticky-col--freq,
+    .pm-schedule-table .pm-sticky-col--equip { position: static; }
+    .pm-schedule-table .pm-sticky-col--loc { left: 0; width: 130px; min-width: 130px; }
+    .pm-schedule-table .pm-sticky-col--freq { width: 84px; min-width: 84px; }
+    .pm-schedule-table .pm-sticky-col--equip { width: 150px; min-width: 150px; }
+    .pm-schedule-summary { padding: 10px 12px; }
+}
+
+/* Compact icon actions — Annual Schedule only, so rows stay one line tall. */
+.pm-actions-cell--compact { flex-wrap: nowrap; gap: 5px; }
+
+.pm-action-btn--icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    border-radius: 8px;
+}
+
+.pm-schedule-table .pm-sticky-col--loc { white-space: normal; line-height: 1.35; }
+.pm-schedule-table tbody.pm-schedule-group td { padding-top: 9px; padding-bottom: 9px; }
+
+/* styles.css forces a dark text color on spans in light theme; the legend
+   codes and schedule checks carry their own colors, so pin them. */
+.pm-page .pm-freq-badge { color: var(--pm-freq-m) !important; }
+.pm-page .pm-freq-badge--quarterly { color: var(--pm-freq-q) !important; }
+.pm-page .pm-freq-badge--semi_annually { color: var(--pm-freq-sa) !important; }
+.pm-page .pm-freq-badge--annually { color: var(--pm-freq-a) !important; }
+.pm-page .pm-schedule-table .pm-x-mark { color: #fff !important; }
+.pm-page .pm-freq-label,
+.pm-page .pm-equip-count,
+.pm-page .pm-legend__item,
+.pm-page .pm-schedule-summary__stats span { color: var(--pm-text-muted) !important; }
+.pm-page .pm-month-now-tag { color: var(--pm-accent) !important; }
+
+/* ==========================================================================
+   Roles + inspection result (2026-09-27)
+   ========================================================================== */
+
+.pm-page {
+    --pm-ok: #047857;        --pm-ok-bg: rgba(16, 185, 129, 0.12);   --pm-ok-border: rgba(16, 185, 129, 0.35);
+    --pm-repair: #b91c1c;    --pm-repair-bg: rgba(239, 68, 68, 0.1); --pm-repair-border: rgba(239, 68, 68, 0.35);
+    --pm-warn: #b45309;
+}
+:root[data-theme-resolved='dark'] .pm-page {
+    --pm-ok: #6ee7b7;        --pm-ok-bg: rgba(16, 185, 129, 0.16);   --pm-ok-border: rgba(52, 211, 153, 0.4);
+    --pm-repair: #fca5a5;    --pm-repair-bg: rgba(239, 68, 68, 0.16);--pm-repair-border: rgba(248, 113, 113, 0.4);
+    --pm-warn: #fcd34d;
+}
+
+/* Role note under the page header */
+.pm-role-note {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    margin: 0 0 16px;
+    padding: 12px 14px;
+    border: 1px solid var(--pm-upcoming-border, rgba(124, 58, 237, 0.2));
+    border-radius: 12px;
+    background: var(--pm-accent-soft);
+    color: var(--pm-text);
+    font-size: 13.5px;
+    line-height: 1.45;
+}
+.pm-role-note svg { flex: 0 0 auto; margin-top: 1px; color: var(--pm-accent); }
+
+/* Assignee under the location in the Annual Schedule */
+.pm-page .pm-assignee {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 4px;
+    font-size: 11.5px;
+    font-weight: 500;
+    color: var(--pm-text-muted) !important;
+}
+.pm-assignee__dot { width: 7px; height: 7px; border-radius: 50%; background: var(--pm-ok); flex: 0 0 auto; }
+.pm-page .pm-assignee--none { color: var(--pm-warn) !important; font-weight: 600; }
+
+.pm-assign-all-btn {
+    margin-top: 8px;
+    padding: 4px 10px;
+    border: 1px dashed var(--pm-accent);
+    border-radius: 999px;
+    background: transparent;
+    color: var(--pm-accent);
+    font-size: 11.5px;
+    font-weight: 700;
+    cursor: pointer;
+}
+.pm-assign-all-btn:hover { background: var(--pm-accent-soft); }
+
+/* Assign modal */
+.pm-assign-modal { max-width: 480px; width: 100%; }
+.pm-assign-modal__intro { margin: 0 0 10px; font-weight: 600; color: var(--pm-text); }
+.pm-assign-modal__tasks { list-style: none; margin: 0 0 14px; padding: 0; border: 1px solid var(--pm-border); border-radius: 10px; max-height: 200px; overflow: auto; }
+.pm-assign-modal__tasks:empty { display: none; }
+.pm-assign-modal__tasks li { display: flex; justify-content: space-between; gap: 10px; padding: 8px 12px; border-bottom: 1px solid var(--pm-border); font-size: 13px; }
+.pm-assign-modal__tasks li:last-child { border-bottom: 0; }
+
+/* Inspection result chooser (Complete modal) */
+.pm-result-group { border: 0; padding: 0; margin: 0 0 16px; }
+.pm-result-group legend { font-weight: 600; font-size: 14px; margin-bottom: 8px; padding: 0; }
+.pm-result-options { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.pm-result-option {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px;
+    border: 1.5px solid var(--pm-border-strong);
+    border-radius: 12px;
+    cursor: pointer;
+    transition: border-color 0.15s ease, background 0.15s ease;
+}
+.pm-result-option input { position: absolute; opacity: 0; pointer-events: none; }
+.pm-result-option strong { display: block; font-size: 14px; }
+.pm-page .pm-result-option small { display: block; font-size: 11.5px; color: var(--pm-text-muted) !important; }
+.pm-result-option__icon {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    font-weight: 800;
+    background: var(--pm-surface-muted);
+    border: 1.5px solid var(--pm-border-strong);
+}
+.pm-result-option input:focus-visible ~ .pm-result-option__icon { outline: 2px solid var(--pm-accent); outline-offset: 2px; }
+.pm-result-option--working:has(input:checked) { border-color: var(--pm-ok); background: var(--pm-ok-bg); }
+.pm-page .pm-result-option--working:has(input:checked) .pm-result-option__icon { background: var(--pm-ok); border-color: var(--pm-ok); color: #fff !important; }
+.pm-result-option--repair:has(input:checked) { border-color: var(--pm-repair); background: var(--pm-repair-bg); }
+.pm-page .pm-result-option--repair:has(input:checked) .pm-result-option__icon { background: var(--pm-repair); border-color: var(--pm-repair); color: #fff !important; }
+
+.pm-repair-box {
+    margin: 0 0 16px;
+    padding: 12px 14px;
+    border: 1px solid var(--pm-repair-border);
+    border-radius: 12px;
+    background: var(--pm-repair-bg);
+}
+.pm-repair-box[hidden], .pm-repair-box__fields[hidden] { display: none !important; }
+.pm-repair-box__toggle { display: flex; align-items: flex-start; gap: 10px; cursor: pointer; }
+.pm-repair-box__toggle input { margin-top: 3px; width: 16px; height: 16px; accent-color: var(--pm-repair); }
+.pm-repair-box__toggle strong { display: block; font-size: 13.5px; }
+.pm-page .pm-repair-box__toggle small { display: block; font-size: 12px; color: var(--pm-text-muted) !important; }
+.pm-repair-box__fields { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
+.pm-repair-box__fields .form-group { margin-bottom: 0; }
+
+/* Result badges + report link (history, checklist) */
+.pm-result-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 9px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    border: 1px solid transparent;
+}
+.pm-page .pm-result-badge--working { color: var(--pm-ok) !important; background: var(--pm-ok-bg); border-color: var(--pm-ok-border); }
+.pm-page .pm-result-badge--repair { color: var(--pm-repair) !important; background: var(--pm-repair-bg); border-color: var(--pm-repair-border); }
+
+.pm-history-row__head { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.pm-history-row__report { margin: 6px 0 4px; }
+.pm-checklist-result { margin-top: 4px; }
+.pm-page .pm-report-link { font-size: 12.5px; font-weight: 700; color: var(--pm-accent) !important; text-decoration: none; }
+.pm-report-link:hover { text-decoration: underline; }
+
+@media (max-width: 540px) {
+    .pm-result-options, .pm-repair-box__fields { grid-template-columns: 1fr; }
+}
+
+/* Global form styles set labels to block; keep the result cards side-by-side. */
+.pm-page .pm-result-option,
+.pm-page .pm-repair-box__toggle { display: flex !important; flex-direction: row !important; margin-bottom: 0; font-weight: 400; }

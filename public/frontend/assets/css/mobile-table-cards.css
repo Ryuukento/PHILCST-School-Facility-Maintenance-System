@@ -1,0 +1,161 @@
+/* ============================================================================
+   Mobile table cards (phones, <= 640px)
+   ----------------------------------------------------------------------------
+   Tables with class .m-cards (added by assets/js/mobile-table-cards.js, which
+   also fills td[data-label] from the column headers) become one card per row:
+   the column name on the left, the value on the right. Replaces sideways
+   scrolling on phones for the system's wide data tables. Desktop and tablet
+   layouts are untouched (everything here is inside the media query).
+
+   !important is used on layout properties only, because several page
+   stylesheets force table/table-row display and large min-widths on these
+   same tables with !important of their own.
+   ========================================================================= */
+@media (max-width: 640px) {
+    table.m-cards,
+    table.m-cards > tbody,
+    table.m-cards > tbody > tr,
+    table.m-cards > tbody > tr > td {
+        display: block !important;
+        width: 100% !important;
+        min-width: 0 !important;
+        max-width: 100% !important;
+    }
+
+    table.m-cards {
+        border: 0 !important;
+        border-radius: 0 !important;
+        background: transparent !important;
+        box-shadow: none !important;
+        overflow: visible !important;
+    }
+
+    table.m-cards > thead {
+        display: none !important;
+    }
+
+    /* A card per row. */
+    table.m-cards > tbody > tr {
+        margin: 0 0 12px !important;
+        padding: 4px 14px !important;
+        border: 1px solid rgba(139, 92, 246, 0.22) !important;
+        border-radius: 14px !important;
+        background: var(--card-bg, var(--surface-card, rgba(255, 255, 255, 0.04))) !important;
+        box-shadow: 0 4px 14px rgba(15, 23, 42, 0.06);
+    }
+
+    table.m-cards > tbody > tr:last-child {
+        margin-bottom: 0 !important;
+    }
+
+    /* Label left (column 1), value right (column 2). A grid rather than flex
+       so a cell holding several lines (e.g. dispatch code + linked report)
+       stacks them in the value column instead of laying them side by side. */
+    table.m-cards > tbody > tr > td {
+        display: grid !important;
+        grid-template-columns: minmax(0, 38%) minmax(0, 1fr);
+        align-items: start;
+        column-gap: 12px;
+        row-gap: 2px;
+        padding: 9px 0 !important;
+        border: 0 !important;
+        border-bottom: 1px dashed rgba(148, 163, 184, 0.3) !important;
+        background: transparent !important;
+        text-align: right !important;
+        white-space: normal !important;
+        overflow-wrap: anywhere;
+    }
+
+    table.m-cards > tbody > tr > td:last-child {
+        border-bottom: 0 !important;
+    }
+
+    /* !important: color-scheme.css hides ::before on every table cell with
+       `.table tbody td:before { content: none !important }`. This selector is
+       more specific, so with !important it wins for card tables only. */
+    table.m-cards > tbody > tr > td::before {
+        content: attr(data-label) !important;
+        display: block !important;
+        /* color-scheme.css's generic <=768px table rule absolutely positions
+           this label (left: 6px) once a data-label exists; keep it in the
+           grid instead. */
+        position: static !important;
+        left: auto !important;
+        grid-column: 1;
+        grid-row: 1 / span 12;
+        text-align: left;
+        font-size: 11px;
+        font-weight: 800;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+        color: #7c6fa6;
+        padding-top: 2px;
+    }
+
+    /* The value side: every child stacks in column 2, right-aligned. */
+    table.m-cards > tbody > tr > td > * {
+        grid-column: 2;
+        justify-self: end;
+        max-width: 100%;
+        margin-left: 0 !important;
+        text-align: right;
+    }
+
+    /* Identifiers that are nowrap on desktop may wrap inside a card. */
+    table.m-cards .dispatches-code-primary,
+    table.m-cards .dispatches-code-secondary {
+        white-space: normal !important;
+        overflow-wrap: anywhere;
+        max-width: 100% !important;
+    }
+
+    /* Badges/pills may wrap in a card instead of being clipped (long action
+       names such as "UPDATE_REPORT_STATUS"). */
+    table.m-cards .badge,
+    table.m-cards .pill,
+    table.m-cards [class*="badge"] {
+        white-space: normal !important;
+        overflow-wrap: anywhere;
+        max-width: 100%;
+        text-align: center;
+        overflow: visible !important;
+    }
+
+    table.m-cards > tbody > tr > td > .dispatches-assignee,
+    table.m-cards > tbody > tr > td > .dispatches-cell-icon-row {
+        justify-content: flex-end;
+    }
+
+    /* The first cell reads as the card's title. */
+    table.m-cards > tbody > tr > td:first-child {
+        font-size: 15px;
+        font-weight: 700;
+    }
+
+    /* Cells with no label (e.g. a full-width "No records" row) and action
+       cells take the whole row. */
+    table.m-cards > tbody > tr > td[data-label=""] {
+        display: block !important;
+        text-align: center !important;
+    }
+
+    table.m-cards > tbody > tr > td[data-label=""]::before {
+        display: none !important;
+    }
+
+    table.m-cards > tbody > tr > td[data-label=""] > * {
+        max-width: 100%;
+        margin-left: 0;
+    }
+
+    /* The table's scroll wrapper no longer needs to scroll. */
+    .table-responsive:has(> table.m-cards) {
+        overflow-x: visible !important;
+        padding-top: 8px;
+    }
+
+    :root[data-theme-resolved='dark'] table.m-cards > tbody > tr > td::before,
+    :root:not([data-theme-resolved='light']) body.theme-dark table.m-cards > tbody > tr > td::before {
+        color: #a8a0c8;
+    }
+}

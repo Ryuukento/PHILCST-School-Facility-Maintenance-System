@@ -1,0 +1,268 @@
+/* ===================================================================
+   Problem Type card selector.
+
+   ONE stylesheet, TWO consumers — the Create Report form
+   (create-report.php) and the Edit Report modal (reports.php). The
+   same grid is rendered in both places from the same config list, so
+   the styling is written once here rather than copied into
+   create-report.inline.css and reports.inline1.css, where the two
+   copies would drift the first time either is retuned.
+
+   No shared stylesheet is modified, per the standing design brief.
+   Every rule below is scoped to .problem-type-* classes that exist
+   only inside this component, so nothing else on either page can be
+   reached.
+
+   Colours come from the DESIGN_SYSTEM.md §21 token scale already
+   declared in styles.css (--color-primary-*). Each var() carries the
+   literal it resolves to as a fallback, so the component still renders
+   correctly if it is ever mounted on a page that does not load the
+   token sheet.
+   =================================================================== */
+
+/* ---- The fieldset ---------------------------------------------------
+   <fieldset>/<legend> is used for the accessible grouping, but both
+   carry heavy UA defaults (a 2px groove border, asymmetric padding, and
+   a legend that interrupts the border box). Those are stripped here so
+   the group is indistinguishable from the plain .form-group divs
+   around it — the semantics are the reason for the elements, not the
+   default appearance.
+
+   The legend is styled to match the page's existing <label> text so
+   "What kind of problem? *" reads as a peer of "Report Title *"
+   directly beneath it.
+   -------------------------------------------------------------------- */
+.problem-type-fieldset {
+    min-width: 0; /* UA default is min-content; without this the grid cannot shrink. */
+    margin: 0 0 1rem;
+    padding: 0;
+    border: 0;
+}
+
+.problem-type-legend {
+    display: block;
+    width: 100%;
+    padding: 0;
+    margin-bottom: 2px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text-primary, #111827);
+}
+
+/* ---- The grid -------------------------------------------------------
+   auto-fit + minmax is deliberate, and is what satisfies "responsive,
+   no horizontal overflow" WITHOUT a single media query: the track count
+   is derived from the available width rather than asserted per
+   breakpoint, so there is no viewport in between two breakpoints where
+   a fixed column count is too wide for its container.
+
+   The 8 options land as 4x2 on a desktop form column, 3x3 / 2x4 as the
+   container narrows, and 1 column on a small phone. minmax()'s floor is
+   what guarantees the cards never get squeezed below a legible width;
+   because the floor is paired with 1fr, a card also never exceeds its
+   track, so the grid cannot push its parent wider than the form.
+   -------------------------------------------------------------------- */
+.problem-type-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(136px, 1fr));
+    gap: 10px;
+    margin-top: 8px;
+    /* Containing block for the clipped, absolutely-positioned radios below.
+       Without it they would resolve against the nearest positioned ancestor
+       (or the viewport) and could scroll the page when focused. */
+    position: relative;
+}
+
+/* ---- The radio ------------------------------------------------------
+   The cards are real <input type="radio"> + <label> pairs, not divs
+   with click handlers. That buys native keyboard support (arrow keys
+   move between options, Space selects), native form semantics, and a
+   real accessible name per option — none of which a div would have.
+
+   The input is CLIPPED, never `display:none` or `visibility:hidden`.
+   A hidden input cannot receive focus, so the focus ring below would
+   never appear and keyboard users would have no idea where they are.
+   This is the standard clip-rect technique: removed from view, still
+   focusable, still announced by screen readers.
+   -------------------------------------------------------------------- */
+.problem-type-input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+/* ---- The card -------------------------------------------------------
+   Matches the existing form-control language on both pages: same 1px
+   border, same --border grey, same rounded corners, same motion
+   tokens. It reads as a member of the form, not as a new widget.
+   -------------------------------------------------------------------- */
+.problem-type-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    /* Equal height regardless of whether a label wraps to two lines, so
+       a narrow container cannot produce a ragged grid. */
+    min-height: 92px;
+    padding: 14px 10px;
+    border: 1px solid var(--border, #e5e7eb);
+    border-radius: 10px;
+    background: var(--surface, #ffffff);
+    color: var(--text-secondary, #6b7280);
+    cursor: pointer;
+    text-align: center;
+    transition: border-color var(--motion-fast, 180ms) var(--motion-ease, ease),
+                background-color var(--motion-fast, 180ms) var(--motion-ease, ease),
+                color var(--motion-fast, 180ms) var(--motion-ease, ease);
+    /* The label is the click target for its radio; stop a drag from
+       selecting the text instead of toggling the option. */
+    user-select: none;
+}
+
+.problem-type-card .ui-icon {
+    /* Inherits the card's colour, so the icon changes state with the
+       card and needs no rule of its own per state. */
+    flex-shrink: 0;
+}
+
+.problem-type-card-label {
+    font-size: 0.82rem;
+    font-weight: 600;
+    line-height: 1.25;
+    /* "HVAC / Aircon" is the longest option; allow it to wrap rather
+       than widening the track and forcing a narrower grid. */
+    overflow-wrap: anywhere;
+}
+
+/* ---- Hover ---------------------------------------------------------
+   A hint that the card is interactive, deliberately weaker than the
+   selected state below so the two are never confused at a glance.
+   -------------------------------------------------------------------- */
+.problem-type-card:hover {
+    border-color: var(--color-primary-300, #c4b5fd);
+    color: var(--text-primary, #111827);
+}
+
+/* ---- Focus ----------------------------------------------------------
+   Driven by :focus-visible on the clipped input, so the ring appears
+   for keyboard navigation but not on a mouse click. Drawn with
+   outline + offset rather than a border change: outline does not
+   participate in layout, so showing it cannot resize the card or
+   reflow the grid.
+   -------------------------------------------------------------------- */
+.problem-type-input:focus-visible + .problem-type-card {
+    outline: 2px solid var(--color-primary-600, #7c3aed);
+    outline-offset: 2px;
+}
+
+/* ---- Selected -------------------------------------------------------
+   Three signals at once — border, background, and text/icon colour —
+   because any one alone is weak: border alone is easy to miss in a
+   grid of 8 bordered cards, and colour alone fails for a colour-blind
+   user. The border is 2px and the resting border is 1px, so the change
+   is a real weight change, not just a hue change.
+
+   THE 1px INSET COMPENSATES FOR THE 2px BORDER. Going from a 1px to a
+   2px border would add 1px per side to the card's border box and nudge
+   every other card in the row; the negative inset shadow paints the
+   second pixel INSIDE the existing 1px border instead, so the border
+   box is unchanged and selecting a card cannot reflow the grid.
+   -------------------------------------------------------------------- */
+.problem-type-input:checked + .problem-type-card {
+    border-color: var(--color-primary-600, #7c3aed);
+    box-shadow: inset 0 0 0 1px var(--color-primary-600, #7c3aed);
+    background: var(--color-primary-50, #f5f3ff);
+    color: var(--color-primary-700, #6d28d9);
+}
+
+.problem-type-input:checked + .problem-type-card .problem-type-card-label {
+    font-weight: 700;
+}
+
+/* Keep the selected treatment while hovering a card that is already
+   chosen — without this, the weaker :hover rule above would partially
+   override it and the card would appear to deselect under the cursor. */
+.problem-type-input:checked + .problem-type-card:hover {
+    border-color: var(--color-primary-700, #6d28d9);
+    color: var(--color-primary-700, #6d28d9);
+}
+
+/* ---- The "Other" free-text field ------------------------------------
+   Revealed only when Other is the selected category. Hidden via the
+   [hidden] attribute from JS rather than a class, so the field is
+   removed from the accessibility tree and from tab order while it is
+   irrelevant — a class that only sets display:none would do the same
+   visually but is easier to get wrong.
+
+   display:none is set explicitly because this component's own
+   `display` declarations would otherwise beat the browser default
+   [hidden] rule.
+   -------------------------------------------------------------------- */
+.problem-type-other-group[hidden] {
+    display: none;
+}
+
+.problem-type-other-group {
+    display: block;
+    margin-top: 12px;
+}
+
+/* ---- Validation message ---------------------------------------------
+   Reuses the danger colour token rather than introducing a new red, and
+   sits directly under the control it describes so the association is
+   obvious without relying on colour alone.
+   -------------------------------------------------------------------- */
+.problem-type-error {
+    display: block;
+    margin-top: 8px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--danger-color, #ef4444);
+}
+
+.problem-type-error[hidden] {
+    display: none;
+}
+
+/* styles.css has a broad, higher-specificity light-theme rule
+   (:root[data-theme-resolved='light'] h1,h2,h3,p,label,span { color:#1e293b })
+   that otherwise overrides the rule above — both messages are <span>s, so the
+   validation text rendered in body navy instead of the danger colour and did
+   not read as an error at all. Re-assert it at matching specificity, the same
+   pattern buildings-redesign.css already uses, rather than editing the shared
+   stylesheet. */
+:root[data-theme-resolved='light'] .problem-type-error {
+    color: var(--danger-color, #ef4444);
+}
+
+/* Marks the grid itself when the user submits without choosing, so the
+   error message is not the only signal. */
+.problem-type-grid.is-invalid .problem-type-card {
+    border-color: var(--danger-color, #ef4444);
+}
+
+/* ---- Read-only display (report detail) ------------------------------
+   The same category rendered as a static chip in the report detail
+   view, so the icon/label pairing a reporter chose is what maintenance
+   personnel see. Not interactive, so it carries no hover, focus or
+   selected treatment.
+   -------------------------------------------------------------------- */
+.problem-type-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 10px;
+    border: 1px solid var(--color-primary-200, #ddd6fe);
+    border-radius: 999px;
+    background: var(--color-primary-50, #f5f3ff);
+    color: var(--color-primary-700, #6d28d9);
+    font-size: 0.82rem;
+    font-weight: 600;
+}

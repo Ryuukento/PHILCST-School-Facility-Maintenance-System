@@ -1,0 +1,1293 @@
+﻿.maintenance-admin-dashboard-page {
+    width: calc(100% - var(--sidebar-width));
+    max-width: calc(100% - var(--sidebar-width));
+    margin-left: var(--sidebar-width);
+    margin-right: 0;
+    margin-top: 20px;
+    padding-left: 24px;
+    padding-right: 24px;
+}
+
+.navbar .navbar-container {
+    max-width: none;
+    margin: 0;
+    padding-left: 24px;
+    padding-right: 24px;
+}
+
+#sidebar.collapsed ~ main.maintenance-admin-dashboard-page {
+    width: calc(100% - var(--sidebar-width-collapsed));
+    max-width: calc(100% - var(--sidebar-width-collapsed));
+    margin-left: var(--sidebar-width-collapsed);
+}
+
+@media (max-width: 992px) {
+    .maintenance-admin-dashboard-page {
+        width: calc(100% - var(--sidebar-width-collapsed));
+        max-width: calc(100% - var(--sidebar-width-collapsed));
+        margin-left: var(--sidebar-width-collapsed);
+    }
+}
+
+@media (max-width: 640px) {
+    .navbar .navbar-container,
+    .maintenance-admin-dashboard-page {
+        padding-left: 14px;
+        padding-right: 14px;
+    }
+}
+
+@media (max-width: 768px) {
+    .maintenance-admin-dashboard-page,
+    #sidebar.collapsed ~ main.maintenance-admin-dashboard-page {
+        margin-left: 0 !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        padding-left: 12px;
+        padding-right: 12px;
+    }
+}
+
+/* Colored accent cards to match the reference dashboard */
+main.maintenance-admin-dashboard-page .summary-cards-grid {
+    display: grid;
+    grid-template-columns: repeat(10, minmax(0, 1fr));
+    gap: 12px;
+    margin-top: 18px;
+}
+
+main.maintenance-admin-dashboard-page .summary-cards-grid > .summary-card {
+    grid-column: span 2;
+}
+
+main.maintenance-admin-dashboard-page .summary-cards-grid > .summary-card:nth-child(6),
+main.maintenance-admin-dashboard-page .summary-cards-grid > .summary-card:nth-child(7) {
+    grid-column: span 5;
+}
+
+main.maintenance-admin-dashboard-page .summary-card {
+    position: relative;
+    overflow: hidden;
+    width: 100%;
+    background: linear-gradient(180deg, #111827 0%, #0f172a 100%);
+    border: 1px solid rgba(148, 163, 184, 0.14);
+    border-top: 3px solid var(--card-accent, #8b5cf6);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.03),
+        0 12px 28px rgba(2, 6, 23, 0.38);
+    transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
+}
+
+main.maintenance-admin-dashboard-page .summary-card::before {
+    content: '';
+    position: absolute;
+    inset: 0 0 auto 0;
+    height: 4px;
+    background: var(--card-accent, #8b5cf6);
+    border-radius: 16px 16px 0 0;
+    pointer-events: none;
+}
+
+main.maintenance-admin-dashboard-page .summary-card:hover {
+    border-color: rgba(148, 163, 184, 0.24);
+    background: linear-gradient(180deg, #121c2d 0%, #101726 100%);
+    box-shadow: 0 16px 36px rgba(2, 6, 23, 0.45);
+}
+
+main.maintenance-admin-dashboard-page .summary-card .summary-card-title,
+main.maintenance-admin-dashboard-page .summary-card .summary-card-value,
+main.maintenance-admin-dashboard-page .summary-card .summary-card-desc {
+    color: #dbe7fb;
+}
+
+main.maintenance-admin-dashboard-page .summary-card .summary-card-icon {
+    width: 48px;
+    height: 48px;
+    display: grid;
+    place-items: center;
+    border-radius: 12px;
+    background: var(--card-icon-bg, rgba(15, 23, 42, 0.82));
+    border: 1px solid var(--card-icon-border, rgba(148, 163, 184, 0.12));
+    color: var(--card-icon-color, #ffffff);
+    box-shadow: 0 10px 18px rgba(2, 6, 23, 0.22);
+    opacity: 1;
+     stroke: currentColor !important;
+     fill: none !important;
+}
+
+main.maintenance-admin-dashboard-page .summary-card:hover .summary-card-icon {
+    filter: brightness(1.06);
+}
+
+main.maintenance-admin-dashboard-page .summary-card-total {
+    --card-accent: #8b5cf6;
+    --card-icon-bg: rgba(15, 23, 42, 0.86);
+    --card-icon-border: rgba(139, 92, 246, 0.18);
+    --card-icon-color: #a78bfa;
+}
+
+main.maintenance-admin-dashboard-page .summary-card-today {
+    --card-accent: #06b6d4;
+    --card-icon-bg: rgba(15, 23, 42, 0.86);
+    --card-icon-border: rgba(6, 182, 212, 0.18);
+    --card-icon-color: #22d3ee;
+}
+
+main.maintenance-admin-dashboard-page .summary-card-pending {
+    --card-accent: #f59e0b;
+    --card-icon-bg: rgba(15, 23, 42, 0.86);
+    --card-icon-border: rgba(245, 158, 11, 0.18);
+    --card-icon-color: #fbbf24;
+}
+
+main.maintenance-admin-dashboard-page .summary-card-progress {
+    --card-accent: #a855f7;
+    --card-icon-bg: rgba(15, 23, 42, 0.86);
+    --card-icon-border: rgba(168, 85, 247, 0.18);
+    --card-icon-color: #c084fc;
+}
+
+main.maintenance-admin-dashboard-page .summary-card-completed {
+    --card-accent: #10b981;
+    --card-icon-bg: rgba(15, 23, 42, 0.86);
+    --card-icon-border: rgba(16, 185, 129, 0.18);
+    --card-icon-color: #34d399;
+}
+
+main.maintenance-admin-dashboard-page .summary-card-low-stock {
+    --card-accent: #ef4444;
+    --card-icon-bg: rgba(15, 23, 42, 0.86);
+    --card-icon-border: rgba(239, 68, 68, 0.18);
+    --card-icon-color: #fb7185;
+}
+
+main.maintenance-admin-dashboard-page .summary-card-buildings {
+    --card-accent: #3b82f6;
+    --card-icon-bg: rgba(15, 23, 42, 0.86);
+    --card-icon-border: rgba(59, 130, 246, 0.18);
+    --card-icon-color: #60a5fa;
+}
+
+main.maintenance-admin-dashboard-page .summary-card-icon svg * {
+     stroke: currentColor !important;
+     fill: none !important;
+}
+
+main.maintenance-admin-dashboard-page .charts-section {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: stretch;
+    gap: 14px;
+}
+
+main.maintenance-admin-dashboard-page .chart-card {
+    background: linear-gradient(180deg, #111827 0%, #0f172a 100%);
+    border: 1px solid rgba(148, 163, 184, 0.14);
+    border-radius: 14px;
+    box-shadow: 0 14px 28px rgba(2, 6, 23, 0.35);
+    overflow: hidden;
+}
+
+main.maintenance-admin-dashboard-page .chart-card .card-header {
+    border-bottom: 1px solid rgba(148, 163, 184, 0.14);
+    padding: 16px 18px;
+}
+
+main.maintenance-admin-dashboard-page .chart-card .card-header h2 {
+    margin: 0;
+    color: #f8fafc;
+    font-size: 1rem;
+}
+
+main.maintenance-admin-dashboard-page .chart-card .card-header .text-muted,
+main.maintenance-admin-dashboard-page .chart-card .card-header p {
+    margin: 8px 0 0;
+    color: #94a3b8 !important;
+}
+
+main.maintenance-admin-dashboard-page .chart-card .card-body {
+    padding: 16px;
+}
+
+main.maintenance-admin-dashboard-page .status-chart-head-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+main.maintenance-admin-dashboard-page .status-live-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 4px 10px;
+    border-radius: 999px;
+    border: 1px solid rgba(148, 163, 184, 0.2);
+    background: rgba(15, 23, 42, 0.55);
+    color: #64748b;
+    font-size: 11px;
+    line-height: 1;
+    font-weight: 700;
+}
+
+main.maintenance-admin-dashboard-page .status-chart-body {
+    min-height: 260px;
+}
+
+main.maintenance-admin-dashboard-page canvas.chart-canvas {
+    display: block;
+    width: 100% !important;
+    height: 300px !important;
+    margin: 0;
+}
+
+main.maintenance-admin-dashboard-page .priority-chart-card .card-body {
+    padding: 18px 16px 14px;
+}
+
+main.maintenance-admin-dashboard-page .recent-reports-card {
+    margin-top: 22px;
+    margin-bottom: 32px;
+    background: linear-gradient(180deg, #111827 0%, #0f172a 100%);
+    border: 1px solid rgba(148, 163, 184, 0.14);
+    border-radius: 14px;
+    box-shadow: 0 14px 28px rgba(2, 6, 23, 0.35);
+    overflow: hidden;
+}
+
+main.maintenance-admin-dashboard-page .recent-reports-header {
+    border-bottom: 1px solid rgba(148, 163, 184, 0.14);
+    padding: 16px 18px;
+}
+
+main.maintenance-admin-dashboard-page .recent-reports-header h3 {
+    color: #f8fafc;
+    font-size: 1rem;
+}
+
+main.maintenance-admin-dashboard-page .recent-reports-link {
+    color: #c084fc;
+    font-weight: 700;
+    text-decoration: none;
+}
+
+main.maintenance-admin-dashboard-page .recent-reports-link:hover,
+main.maintenance-admin-dashboard-page .recent-reports-link:focus-visible {
+    color: #d8b4fe;
+    text-decoration: underline;
+    outline: none;
+}
+
+main.maintenance-admin-dashboard-page .recent-reports-body {
+    padding: 16px 18px 18px;
+}
+
+main.maintenance-admin-dashboard-page .recent-reports-subtitle {
+    margin: 0 0 12px;
+    color: #94a3b8 !important;
+}
+
+main.maintenance-admin-dashboard-page .recent-reports-table-wrap {
+    border: 1px solid rgba(99, 102, 241, 0.16);
+    border-radius: 18px;
+    overflow: hidden;
+    background: linear-gradient(180deg, rgba(30, 27, 46, 0.98) 0%, rgba(20, 19, 34, 0.98) 100%);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03), 0 18px 40px rgba(2, 6, 23, 0.34);
+}
+
+main.maintenance-admin-dashboard-page .recent-reports-table-head,
+main.maintenance-admin-dashboard-page .recent-report-table-row {
+    display: grid;
+    grid-template-columns: minmax(0, 2fr) 0.95fr 1.05fr 0.9fr 0.9fr;
+    align-items: center;
+    gap: 18px;
+}
+
+main.maintenance-admin-dashboard-page .recent-reports-table-head {
+    padding: 12px 18px;
+    background: rgba(99, 102, 241, 0.08);
+    border-bottom: 1px solid rgba(148, 163, 184, 0.14);
+}
+
+main.maintenance-admin-dashboard-page .recent-reports-table-head > div {
+    color: #7c86b4;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+}
+
+main.maintenance-admin-dashboard-page .recent-reports-table-body {
+    display: grid;
+}
+
+main.maintenance-admin-dashboard-page .recent-report-table-row {
+    padding: 14px 18px;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.12);
+}
+
+main.maintenance-admin-dashboard-page .recent-reports-table-body .recent-report-table-row:last-child {
+    border-bottom: none;
+}
+
+main.maintenance-admin-dashboard-page .recent-report-cell {
+    min-width: 0;
+}
+
+main.maintenance-admin-dashboard-page .recent-report-main {
+    display: grid;
+    gap: 4px;
+}
+
+main.maintenance-admin-dashboard-page .recent-report-main strong {
+    color: #f8fafc;
+    font-size: 1.04rem;
+    line-height: 1.2;
+}
+
+main.maintenance-admin-dashboard-page .recent-report-main span {
+    color: #8c91b7;
+    font-size: 0.88rem;
+    line-height: 1.25;
+}
+
+main.maintenance-admin-dashboard-page .recent-report-date,
+main.maintenance-admin-dashboard-page .recent-report-assigned {
+    color: #a5add3;
+    font-size: 0.93rem;
+}
+
+main.maintenance-admin-dashboard-page .recent-report-pill-cell {
+    display: flex;
+    justify-content: flex-start;
+}
+
+main.maintenance-admin-dashboard-page .recent-report-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 28px;
+    padding: 5px 12px;
+    border-radius: 999px;
+    border: 1px solid transparent;
+    font-size: 11px;
+    font-weight: 800;
+    line-height: 1;
+    white-space: nowrap;
+}
+
+main.maintenance-admin-dashboard-page .priority-low { background: rgba(100, 116, 139, 0.22); border-color: rgba(148, 163, 184, 0.3); color: #dbe4f0; }
+main.maintenance-admin-dashboard-page .priority-medium { background: rgba(59, 130, 246, 0.18); border-color: rgba(96, 165, 250, 0.34); color: #93c5fd; }
+main.maintenance-admin-dashboard-page .priority-high { background: rgba(245, 158, 11, 0.16); border-color: rgba(245, 158, 11, 0.34); color: #fbbf24; }
+main.maintenance-admin-dashboard-page .priority-urgent { background: rgba(249, 115, 22, 0.16); border-color: rgba(249, 115, 22, 0.34); color: #fdba74; }
+main.maintenance-admin-dashboard-page .priority-critical { background: rgba(239, 68, 68, 0.16); border-color: rgba(239, 68, 68, 0.34); color: #f87171; }
+
+main.maintenance-admin-dashboard-page .status-submitted { background: rgba(99, 102, 241, 0.16); border-color: rgba(129, 140, 248, 0.34); color: #c7d2fe; }
+main.maintenance-admin-dashboard-page .status-assigned { background: rgba(168, 85, 247, 0.16); border-color: rgba(192, 132, 252, 0.34); color: #e9d5ff; }
+main.maintenance-admin-dashboard-page .status-in-progress { background: rgba(59, 130, 246, 0.16); border-color: rgba(96, 165, 250, 0.34); color: #93c5fd; }
+main.maintenance-admin-dashboard-page .status-completed { background: rgba(34, 197, 94, 0.16); border-color: rgba(74, 222, 128, 0.34); color: #86efac; }
+main.maintenance-admin-dashboard-page .status-cancelled { background: rgba(248, 113, 113, 0.16); border-color: rgba(248, 113, 113, 0.34); color: #fca5a5; }
+
+main.maintenance-admin-dashboard-page .recent-reports-empty {
+    margin: 0;
+    color: #cbd5e1;
+}
+
+@media (max-width: 992px) {
+    main.maintenance-admin-dashboard-page .summary-cards-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    main.maintenance-admin-dashboard-page .summary-cards-grid > .summary-card,
+    main.maintenance-admin-dashboard-page .summary-cards-grid > .summary-card:nth-child(6),
+    main.maintenance-admin-dashboard-page .summary-cards-grid > .summary-card:nth-child(7) {
+        grid-column: auto;
+    }
+
+    main.maintenance-admin-dashboard-page .charts-section {
+        grid-template-columns: 1fr;
+    }
+
+    main.maintenance-admin-dashboard-page .recent-reports-table-head {
+        display: none;
+    }
+
+    main.maintenance-admin-dashboard-page .recent-report-table-row {
+        grid-template-columns: 1fr;
+        gap: 10px;
+    }
+}
+
+@media (max-width: 640px) {
+    .maintenance-admin-dashboard-page {
+        width: 100%;
+        max-width: 100%;
+        margin-left: 0;
+        padding-left: 0;
+        padding-right: 0;
+    }
+
+    main.maintenance-admin-dashboard-page .summary-cards-grid {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+
+    main.maintenance-admin-dashboard-page .summary-cards-grid > .summary-card,
+    main.maintenance-admin-dashboard-page .summary-cards-grid > .summary-card:nth-child(6),
+    main.maintenance-admin-dashboard-page .summary-cards-grid > .summary-card:nth-child(7) {
+        grid-column: auto;
+    }
+
+    main.maintenance-admin-dashboard-page .charts-section {
+        grid-template-columns: 1fr;
+        gap: 10px;
+    }
+
+    main.maintenance-admin-dashboard-page .chart-card .card-header,
+    main.maintenance-admin-dashboard-page .chart-card .card-body,
+    main.maintenance-admin-dashboard-page .card .card-header,
+    main.maintenance-admin-dashboard-page .card .card-body {
+        padding-left: 14px;
+        padding-right: 14px;
+    }
+
+    main.maintenance-admin-dashboard-page canvas.chart-canvas {
+        height: 240px !important;
+    }
+
+    main.maintenance-admin-dashboard-page .status-chart-body {
+        min-height: 220px;
+    }
+
+    .last-month-filters {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Light mode: force white dashboard cards and readable black text. */
+:root[data-theme-resolved='light'] main.maintenance-admin-dashboard-page .summary-card,
+:root[data-theme-resolved='light'] main.maintenance-admin-dashboard-page .chart-card,
+:root[data-theme-resolved='light'] main.maintenance-admin-dashboard-page .card {
+    background: #ffffff !important;
+    border-color: var(--purple-border, #e5e7eb) !important;
+    box-shadow: 0 12px 24px rgba(15, 23, 42, 0.08) !important;
+}
+
+:root[data-theme-resolved='light'] main.maintenance-admin-dashboard-page .summary-card:hover,
+:root[data-theme-resolved='light'] main.maintenance-admin-dashboard-page .chart-card:hover,
+:root[data-theme-resolved='light'] main.maintenance-admin-dashboard-page .card:hover {
+    background: #ffffff !important;
+    /* Hover keeps the SAME edge colour as rest. Brightening it would make the
+       card read as selected/active, which the brief rules out. */
+    border-color: var(--purple-border, #d1d5db) !important;
+}
+
+:root[data-theme-resolved='light'] main.maintenance-admin-dashboard-page .summary-card .summary-card-title,
+:root[data-theme-resolved='light'] main.maintenance-admin-dashboard-page .summary-card .summary-card-value,
+:root[data-theme-resolved='light'] main.maintenance-admin-dashboard-page .summary-card .summary-card-desc,
+:root[data-theme-resolved='light'] main.maintenance-admin-dashboard-page .chart-card .card-header h2,
+:root[data-theme-resolved='light'] main.maintenance-admin-dashboard-page .chart-card .card-header p,
+:root[data-theme-resolved='light'] main.maintenance-admin-dashboard-page .card .text-muted,
+:root[data-theme-resolved='light'] main.maintenance-admin-dashboard-page .card h1,
+:root[data-theme-resolved='light'] main.maintenance-admin-dashboard-page .card h2,
+:root[data-theme-resolved='light'] main.maintenance-admin-dashboard-page .card h3,
+:root[data-theme-resolved='light'] main.maintenance-admin-dashboard-page .card h4,
+:root[data-theme-resolved='light'] main.maintenance-admin-dashboard-page .card p,
+:root[data-theme-resolved='light'] main.maintenance-admin-dashboard-page .card td,
+:root[data-theme-resolved='light'] main.maintenance-admin-dashboard-page .card th,
+:root[data-theme-resolved='light'] main.maintenance-admin-dashboard-page .card span {
+    color: #111827 !important;
+}
+
+:root[data-theme-resolved='light'] main.maintenance-admin-dashboard-page .chart-card .card-header,
+:root[data-theme-resolved='light'] main.maintenance-admin-dashboard-page .card-header {
+    background: #ffffff !important;
+    border-bottom-color: var(--purple-border-light, #e5e7eb) !important;
+}
+
+/* Outer frame of the recent-reports table = container tier. The row rule
+   further down stays neutral grey — separators are not container edges. */
+:root[data-theme-resolved='light'] main.maintenance-admin-dashboard-page .recent-reports-table-wrap {
+    border-color: var(--purple-border, #e5e7eb);
+    background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+    box-shadow: 0 16px 30px rgba(15, 23, 42, 0.08);
+}
+
+:root[data-theme-resolved='light'] main.maintenance-admin-dashboard-page .recent-reports-table-head {
+    background: #f3f4f6;
+    border-bottom-color: var(--purple-border-light, #e5e7eb);
+}
+
+:root[data-theme-resolved='light'] main.maintenance-admin-dashboard-page .recent-reports-table-head > div {
+    color: #6b7280;
+}
+
+:root[data-theme-resolved='light'] main.maintenance-admin-dashboard-page .recent-report-table-row {
+    border-bottom-color: #e5e7eb;
+}
+
+:root[data-theme-resolved='light'] main.maintenance-admin-dashboard-page .recent-report-main strong {
+    color: #111827 !important;
+}
+
+:root[data-theme-resolved='light'] main.maintenance-admin-dashboard-page .recent-reports-subtitle,
+:root[data-theme-resolved='light'] main.maintenance-admin-dashboard-page .recent-report-main span,
+:root[data-theme-resolved='light'] main.maintenance-admin-dashboard-page .recent-report-date,
+:root[data-theme-resolved='light'] main.maintenance-admin-dashboard-page .recent-report-assigned,
+:root[data-theme-resolved='light'] main.maintenance-admin-dashboard-page .recent-reports-empty {
+    color: #6b7280 !important;
+}
+
+:root[data-theme-resolved='light'] main.maintenance-admin-dashboard-page .summary-card .summary-card-icon {
+    background: #f8fafc !important;
+    border-color: #d1d5db !important;
+}
+
+:root[data-theme-resolved='light'] main.maintenance-admin-dashboard-page .status-submitted { background: #eef2ff; border-color: #a5b4fc; color: #4338ca !important; }
+:root[data-theme-resolved='light'] main.maintenance-admin-dashboard-page .status-assigned { background: #f3e8ff; border-color: #d8b4fe; color: #7e22ce !important; }
+:root[data-theme-resolved='light'] main.maintenance-admin-dashboard-page .status-in-progress { background: #dbeafe; border-color: #93c5fd; color: #1d4ed8 !important; }
+:root[data-theme-resolved='light'] main.maintenance-admin-dashboard-page .status-completed { background: #dcfce7; border-color: #86efac; color: #166534 !important; }
+:root[data-theme-resolved='light'] main.maintenance-admin-dashboard-page .status-cancelled { background: #fee2e2; border-color: #fca5a5; color: #b91c1c !important; }
+
+/* IT-expert priority-color correction: Critical=Red, High=Orange,
+   Medium=Yellow, Low=Blue (see dashboard.inline.css for the same fix). */
+:root[data-theme-resolved='light'] main.maintenance-admin-dashboard-page .priority-low { background: #dbeafe; border-color: #93c5fd; color: #1d4ed8 !important; }
+:root[data-theme-resolved='light'] main.maintenance-admin-dashboard-page .priority-medium { background: #fef9c3; border-color: #fde047; color: #a16207 !important; }
+:root[data-theme-resolved='light'] main.maintenance-admin-dashboard-page .priority-high { background: #ffedd5; border-color: #fdba74; color: #c2410c !important; }
+:root[data-theme-resolved='light'] main.maintenance-admin-dashboard-page .priority-urgent { background: #fee2e2; border-color: #fca5a5; color: #b91c1c !important; }
+:root[data-theme-resolved='light'] main.maintenance-admin-dashboard-page .priority-critical { background: #fee2e2; border-color: #fca5a5; color: #b91c1c !important; }
+
+/* ── Head Dashboard UI refinement (Today's Work Summary) ──────────────────
+   Additive only: a 4-up variant of the existing .summary-cards-grid sizing
+   language (same gap/margin/breakpoint values already used above) so the
+   new top row sits flush at 4 equal columns instead of inheriting the
+   7-card/10-column span scheme used by Department Statistics. No existing
+   selector below this point is modified. */
+main.maintenance-admin-dashboard-page .today-summary-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 16px;
+    margin-top: 18px;
+    margin-bottom: 22px;
+}
+
+@media (max-width: 992px) {
+    main.maintenance-admin-dashboard-page .today-summary-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 640px) {
+    main.maintenance-admin-dashboard-page .today-summary-grid {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+}
+
+/* "Reports by Priority" summary card accent — reuses the exact same
+   --card-accent / icon token values already defined for
+   .summary-card-low-stock above (#ef4444 / #fb7185), just aliased under a
+   semantic name. No new colors introduced. */
+main.maintenance-admin-dashboard-page .summary-card-priority {
+    --card-accent: #ef4444;
+    --card-icon-bg: rgba(15, 23, 42, 0.86);
+    --card-icon-border: rgba(239, 68, 68, 0.18);
+    --card-icon-color: #fb7185;
+}
+
+/* ── Head Dashboard Enterprise Redesign (Part 3) ───────────────────────────
+   Additive only, following the same convention as the block above: every
+   rule below targets brand-new class names introduced by the redesigned
+   5-section layout (Greeting / Today's Work Summary / My Assigned Reports +
+   Priority Overview / Maintenance Activity Timeline / Low Stock + Pending
+   Dispatch + Quick Actions). No existing selector above this point is
+   modified or removed in this pass — this stylesheet is also loaded by
+   replacement-tracking.php and inventory.php, so any now-unused legacy
+   selectors (e.g. .summary-cards-grid, .recent-reports-table-*) are left in
+   place rather than deleted; see the "Future Dashboard Enhancements" section
+   of HEAD_DASHBOARD_ENTERPRISE_REDESIGN.md. Colors reused below are the
+   exact same hex values already used elsewhere in this file/page (no new
+   palette introduced). */
+
+/* UI Polish Sprint — Task 7 (Spacing Review). .charts-section carries its
+   own 40px margin-bottom from the shared maintenance-dashboard.css rule,
+   and every section below it also carries the generic 30px .mt-lg
+   top-margin utility — the two were stacking to a ~70px gap between
+   sections, well beyond the "large spacing" the mockup calls for. This
+   loads after maintenance-dashboard.css (see <link> order in the page) so
+   it wins at equal specificity without needing !important. Compound
+   class selectors below override just the inter-section rhythm on THIS
+   page to a single consistent 22px, without touching the shared .mt-lg
+   utility class (still used verbatim by other pages/components). */
+main.maintenance-admin-dashboard-page .charts-section {
+    margin-bottom: 0;
+}
+
+main.maintenance-admin-dashboard-page .charts-section.mt-lg,
+main.maintenance-admin-dashboard-page .card.mt-lg,
+main.maintenance-admin-dashboard-page .ops-panels-grid.mt-lg {
+    margin-top: 22px;
+}
+
+/* Section 1 — Greeting */
+main.maintenance-admin-dashboard-page .dashboard-greeting-section {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    margin-top: 4px;
+    margin-bottom: 22px;
+    flex-wrap: wrap;
+}
+
+main.maintenance-admin-dashboard-page .dashboard-greeting-title {
+    margin: 0 0 4px;
+    font-size: 1.6rem;
+    font-weight: 800;
+    color: #f8fafc;
+    letter-spacing: -0.01em;
+}
+
+main.maintenance-admin-dashboard-page .dashboard-greeting-subtitle {
+    margin: 0;
+    color: #94a3b8;
+    font-size: 0.95rem;
+}
+
+main.maintenance-admin-dashboard-page .dashboard-greeting-date {
+    color: #cbd5e1;
+    font-weight: 600;
+    font-size: 0.95rem;
+    padding: 8px 16px;
+    border-radius: 999px;
+    border: 1px solid rgba(148, 163, 184, 0.18);
+    background: rgba(15, 23, 42, 0.55);
+    white-space: nowrap;
+}
+
+/* UI Polish Sprint — Task 3. Shared "context" line used by all four
+   Today's Work Summary cards to add a short description under the big
+   number (e.g. "Reports assigned to you") without adding a new visual
+   language — same muted-text treatment as the existing .summary-card-desc,
+   just without the trend-color classes. This fills the empty space the
+   grid was already reserving (the 4 cards stretch to match the tallest —
+   the High Priority card — so the extra line does not grow the row). */
+main.maintenance-admin-dashboard-page .summary-card-context {
+    margin: 4px 0 0;
+    color: #94a3b8;
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+
+/* Section 2 — Card 3 (High Priority Reports) badge row */
+main.maintenance-admin-dashboard-page .summary-card-badge-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 10px;
+}
+
+main.maintenance-admin-dashboard-page .summary-card-badge-row .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+
+/* Section 3 — LEFT: My Assigned Reports cards */
+main.maintenance-admin-dashboard-page .assigned-reports-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+main.maintenance-admin-dashboard-page .assigned-report-card {
+    padding: 14px 16px;
+    border: 1px solid rgba(148, 163, 184, 0.16);
+    border-radius: 14px;
+    background: rgba(15, 23, 42, 0.45);
+    transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+main.maintenance-admin-dashboard-page .assigned-report-card:hover {
+    border-color: rgba(148, 163, 184, 0.3);
+    background: rgba(15, 23, 42, 0.65);
+}
+
+/* UI Polish Sprint — Task 1. Cards are now click-through to the existing
+   report-detail page; give them an obvious interactive affordance (pointer
+   cursor + focus ring for keyboard users) without changing the card shell
+   itself. */
+main.maintenance-admin-dashboard-page .assigned-report-card-clickable {
+    cursor: pointer;
+}
+
+main.maintenance-admin-dashboard-page .assigned-report-card-clickable:hover {
+    border-color: rgba(192, 132, 252, 0.4);
+}
+
+main.maintenance-admin-dashboard-page .assigned-report-card-clickable:focus-visible {
+    outline: 2px solid rgba(192, 132, 252, 0.6);
+    outline-offset: 2px;
+}
+
+main.maintenance-admin-dashboard-page .assigned-report-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 6px;
+}
+
+main.maintenance-admin-dashboard-page .assigned-report-room {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: #7c86b4;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+/* UI Polish Sprint — Task 1 "small category icon", derived client-side from
+   the report's own title/location text (see getReportCategoryIcon in the
+   page script) — decorative only, no new backend field. */
+main.maintenance-admin-dashboard-page .assigned-report-category-icon {
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
+    color: #a78bfa;
+    stroke: #a78bfa;
+}
+
+main.maintenance-admin-dashboard-page .assigned-report-time {
+    color: #8c91b7;
+    font-size: 0.8rem;
+    white-space: nowrap;
+}
+
+main.maintenance-admin-dashboard-page .assigned-report-title {
+    color: #f8fafc;
+    font-size: 1rem;
+    font-weight: 700;
+    margin-bottom: 10px;
+    line-height: 1.3;
+}
+
+main.maintenance-admin-dashboard-page .assigned-report-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+/* Section 3 — RIGHT: Priority Overview legend + recommendation panel */
+main.maintenance-admin-dashboard-page .priority-overview-legend {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 18px;
+    margin-top: 10px;
+}
+
+/* UI Polish Sprint — Task 2. The donut's own box was reserving 300px of
+   height (the generic .chart-canvas default used elsewhere on this page)
+   which left a visibly empty gap above/below the ring once the legend and
+   recommendation panel were added underneath it. Scoped to this card only
+   (id selector beats the shared canvas.chart-canvas rule) so no other
+   chart on this page is affected. */
+main.maintenance-admin-dashboard-page #priority-overview-card canvas.chart-canvas {
+    height: 220px !important;
+}
+
+main.maintenance-admin-dashboard-page .priority-legend-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: #cbd5e1;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+main.maintenance-admin-dashboard-page .priority-legend-item strong {
+    color: #f8fafc;
+}
+
+main.maintenance-admin-dashboard-page .legend-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+/* HEAD DASHBOARD FINAL POLISH — PART 2 (Issue 2). Reuses the exact same red
+   already established for .badge-priority-critical in maintenance-dashboard.css
+   (rgba(153,27,27,...) = #991b1b) — no new palette introduced. */
+main.maintenance-admin-dashboard-page .legend-dot-critical { background: #991b1b; }
+main.maintenance-admin-dashboard-page .legend-dot-high { background: #f59e0b; }
+main.maintenance-admin-dashboard-page .legend-dot-medium { background: #3b82f6; }
+main.maintenance-admin-dashboard-page .legend-dot-low { background: #94a3b8; }
+
+main.maintenance-admin-dashboard-page .priority-recommendation-panel {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    margin-top: 16px;
+    padding: 12px 14px;
+    border-radius: 12px;
+    border: 1px solid rgba(239, 68, 68, 0.22);
+    background: rgba(239, 68, 68, 0.08);
+}
+
+main.maintenance-admin-dashboard-page .priority-recommendation-panel svg {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+    color: #fb7185;
+    stroke: #fb7185;
+    margin-top: 1px;
+}
+
+/* UI Polish Sprint — Task 2. Heading + body copy (was a single <p>), giving
+   the panel the "⚠ Attention Required / N High Priority Reports need
+   inspection today." two-line hierarchy from the approved mockup. */
+main.maintenance-admin-dashboard-page .priority-recommendation-body {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+main.maintenance-admin-dashboard-page .priority-recommendation-heading {
+    margin: 0;
+    color: #fca5a5;
+    font-size: 0.78rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+main.maintenance-admin-dashboard-page .priority-recommendation-panel p {
+    margin: 0;
+    color: #dbe7fb;
+    font-size: 0.88rem;
+    line-height: 1.4;
+}
+
+/* "Clear" tone — reuses the exact same green already used by the Completed
+   Today summary card (#34d399 / rgba(16,185,129,*)); no new palette. Applied
+   when there are zero high priority reports so the panel reads as
+   reassuring rather than a muted repeat of the warning state. */
+main.maintenance-admin-dashboard-page .priority-recommendation-panel.priority-recommendation-panel-clear {
+    border-color: rgba(16, 185, 129, 0.22);
+    background: rgba(16, 185, 129, 0.08);
+}
+
+main.maintenance-admin-dashboard-page .priority-recommendation-panel-clear svg {
+    color: #34d399;
+    stroke: #34d399;
+}
+
+main.maintenance-admin-dashboard-page .priority-recommendation-panel-clear .priority-recommendation-heading {
+    color: #6ee7b7;
+}
+
+/* Section 4 — Maintenance Activity Timeline (horizontal) */
+main.maintenance-admin-dashboard-page .activity-timeline-wrap {
+    overflow-x: auto;
+    padding-bottom: 6px;
+}
+
+main.maintenance-admin-dashboard-page .activity-timeline {
+    display: flex;
+    align-items: flex-start;
+    gap: 0;
+    min-width: min-content;
+}
+
+/* UI Polish Sprint — Task 5. Tightened from 190/220px + 18px trailing
+   padding: the wide fixed-width columns left a large empty gap under each
+   short description, exaggerated by the horizontal scroll giving the whole
+   row an unfinished, sparse look. Icon/connector geometry below is
+   adjusted to match the same reduced width. */
+main.maintenance-admin-dashboard-page .activity-timeline-item {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 5px;
+    min-width: 162px;
+    max-width: 184px;
+    padding: 0 14px 4px 0;
+}
+
+main.maintenance-admin-dashboard-page .activity-timeline-item:not(:last-child)::after {
+    content: '';
+    position: absolute;
+    top: 17px;
+    left: 34px;
+    right: 0;
+    height: 2px;
+    background: rgba(148, 163, 184, 0.18);
+}
+
+main.maintenance-admin-dashboard-page .activity-timeline-icon {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    background: rgba(15, 23, 42, 0.82);
+    border: 1px solid rgba(148, 163, 184, 0.16);
+    position: relative;
+    z-index: 1;
+}
+
+main.maintenance-admin-dashboard-page .activity-timeline-icon svg {
+    width: 16px;
+    height: 16px;
+    stroke: currentColor;
+    fill: none;
+}
+
+main.maintenance-admin-dashboard-page .activity-color-blue { color: #60a5fa; border-color: rgba(59, 130, 246, 0.3) !important; }
+main.maintenance-admin-dashboard-page .activity-color-green { color: #34d399; border-color: rgba(16, 185, 129, 0.3) !important; }
+main.maintenance-admin-dashboard-page .activity-color-purple { color: #c084fc; border-color: rgba(168, 85, 247, 0.3) !important; }
+main.maintenance-admin-dashboard-page .activity-color-orange { color: #fbbf24; border-color: rgba(245, 158, 11, 0.3) !important; }
+main.maintenance-admin-dashboard-page .activity-color-red { color: #fb7185; border-color: rgba(239, 68, 68, 0.3) !important; }
+main.maintenance-admin-dashboard-page .activity-color-gray { color: #94a3b8; border-color: rgba(148, 163, 184, 0.3) !important; }
+
+main.maintenance-admin-dashboard-page .activity-timeline-title {
+    color: #f8fafc;
+    font-size: 0.92rem;
+    font-weight: 700;
+}
+
+main.maintenance-admin-dashboard-page .activity-timeline-desc {
+    color: #94a3b8;
+    font-size: 0.8rem;
+    line-height: 1.35;
+}
+
+main.maintenance-admin-dashboard-page .activity-timeline-time {
+    color: #7c86b4;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+/* Section 5 — Low Stock / Pending Dispatch / Quick Actions */
+main.maintenance-admin-dashboard-page .ops-panels-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 16px;
+}
+
+main.maintenance-admin-dashboard-page .ops-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+main.maintenance-admin-dashboard-page .ops-list-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 10px 12px;
+    border: 1px solid rgba(148, 163, 184, 0.14);
+    border-radius: 12px;
+    background: rgba(15, 23, 42, 0.4);
+}
+
+main.maintenance-admin-dashboard-page .ops-list-item-main {
+    min-width: 0;
+    display: grid;
+    gap: 2px;
+}
+
+main.maintenance-admin-dashboard-page .ops-list-item-title {
+    color: #f8fafc;
+    font-size: 0.9rem;
+    font-weight: 700;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+main.maintenance-admin-dashboard-page .ops-list-item-meta {
+    color: #8c91b7;
+    font-size: 0.78rem;
+}
+
+main.maintenance-admin-dashboard-page .ops-list-item-value {
+    flex-shrink: 0;
+    text-align: right;
+    display: grid;
+    gap: 4px;
+    justify-items: end;
+}
+
+main.maintenance-admin-dashboard-page .ops-qty-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 800;
+}
+
+main.maintenance-admin-dashboard-page .ops-qty-badge-out {
+    background: rgba(239, 68, 68, 0.16);
+    border: 1px solid rgba(239, 68, 68, 0.34);
+    color: #f87171;
+}
+
+main.maintenance-admin-dashboard-page .ops-qty-badge-low {
+    background: rgba(245, 158, 11, 0.16);
+    border: 1px solid rgba(245, 158, 11, 0.34);
+    color: #fbbf24;
+}
+
+main.maintenance-admin-dashboard-page .quick-actions-compact-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+}
+
+main.maintenance-admin-dashboard-page .quick-action-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 14px 8px;
+    border-radius: 12px;
+    border: 1px solid rgba(148, 163, 184, 0.16);
+    background: rgba(15, 23, 42, 0.45);
+    color: #dbe7fb;
+    text-decoration: none;
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-align: center;
+    transition: border-color 0.2s ease, background 0.2s ease, transform 0.2s ease;
+}
+
+main.maintenance-admin-dashboard-page .quick-action-btn:hover {
+    border-color: rgba(168, 85, 247, 0.4);
+    background: rgba(168, 85, 247, 0.12);
+    transform: translateY(-1px);
+    color: #f8fafc;
+}
+
+main.maintenance-admin-dashboard-page .quick-action-btn svg {
+    width: 20px;
+    height: 20px;
+    stroke: currentColor;
+    fill: none;
+}
+
+/* UI Polish Sprint — shared "professional empty state" (icon + one line of
+   copy), used by every dynamic list container on this page via the single
+   buildEmptyState() JS helper, replacing four separate hand-rolled
+   .recent-reports-empty <p> fallbacks. */
+main.maintenance-admin-dashboard-page .dashboard-empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 28px 12px;
+    text-align: center;
+    color: #94a3b8;
+}
+
+main.maintenance-admin-dashboard-page .dashboard-empty-state svg {
+    width: 28px;
+    height: 28px;
+    color: #64748b;
+    stroke: #64748b;
+    opacity: 0.8;
+}
+
+main.maintenance-admin-dashboard-page .dashboard-empty-state p {
+    margin: 0;
+    font-size: 0.86rem;
+    font-weight: 500;
+}
+
+/* UI Polish Sprint — shared shimmer skeleton, shown for the brief window
+   before each dynamic list's first fetch resolves, so the page never shows
+   raw "Loading reports..." text (avoids the "feels unfinished" complaint).
+   One keyframe, three thin layout variants (card / row / timeline-item)
+   reusing the same shimmer so no JS or CSS is duplicated per widget. */
+@keyframes dashboardSkeletonShimmer {
+    0% { background-position: -180px 0; }
+    100% { background-position: 180px 0; }
+}
+
+main.maintenance-admin-dashboard-page .dashboard-skeleton-rows {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+main.maintenance-admin-dashboard-page .dashboard-skeleton-card,
+main.maintenance-admin-dashboard-page .dashboard-skeleton-row,
+main.maintenance-admin-dashboard-page .dashboard-skeleton-timeline-item {
+    border-radius: 12px;
+    background: linear-gradient(90deg, rgba(148, 163, 184, 0.08) 25%, rgba(148, 163, 184, 0.16) 37%, rgba(148, 163, 184, 0.08) 63%);
+    background-size: 360px 100%;
+    animation: dashboardSkeletonShimmer 1.4s ease-in-out infinite;
+}
+
+main.maintenance-admin-dashboard-page .dashboard-skeleton-card {
+    height: 78px;
+}
+
+main.maintenance-admin-dashboard-page .dashboard-skeleton-row {
+    height: 46px;
+}
+
+main.maintenance-admin-dashboard-page .dashboard-skeleton-timeline {
+    display: flex;
+    gap: 14px;
+}
+
+main.maintenance-admin-dashboard-page .dashboard-skeleton-timeline-item {
+    width: 162px;
+    height: 72px;
+    flex-shrink: 0;
+}
+
+/* Responsive: Sections 3/4/5 collapse in step with the existing breakpoints */
+@media (max-width: 992px) {
+    main.maintenance-admin-dashboard-page .ops-panels-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 640px) {
+    main.maintenance-admin-dashboard-page .dashboard-greeting-section {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+
+    main.maintenance-admin-dashboard-page .dashboard-greeting-title {
+        font-size: 1.3rem;
+    }
+
+    main.maintenance-admin-dashboard-page .activity-timeline-item {
+        min-width: 140px;
+    }
+}
+
+/* Light theme overrides for Part 3 additions (mirrors the existing light-mode
+   block below: same selectors, same override pattern, no new tokens). */
+:root[data-theme-resolved='light'] main.maintenance-admin-dashboard-page .dashboard-greeting-title {
+    color: #111827 !important;
+}
+
+:root[data-theme-resolved='light'] main.maintenance-admin-dashboard-page .dashboard-greeting-subtitle,
+:root[data-theme-resolved='light'] main.maintenance-admin-dashboard-page .assigned-report-time,
+:root[data-theme-resolved='light'] main.maintenance-admin-dashboard-page .assigned-report-room,
+:root[data-theme-resolved='light'] main.maintenance-admin-dashboard-page .ops-list-item-meta,
+:root[data-theme-resolved='light'] main.maintenance-admin-dashboard-page .activity-timeline-desc,
+:root[data-theme-resolved='light'] main.maintenance-admin-dashboard-page .activity-timeline-time,
+:root[data-theme-resolved='light'] main.maintenance-admin-dashboard-page .priority-legend-item {
+    color: #6b7280 !important;
+}
+
+:root[data-theme-resolved='light'] main.maintenance-admin-dashboard-page .dashboard-greeting-date {
+    background: #f3f4f6 !important;
+    border-color: #e5e7eb !important;
+    color: #374151 !important;
+}
+
+:root[data-theme-resolved='light'] main.maintenance-admin-dashboard-page .assigned-report-card,
+:root[data-theme-resolved='light'] main.maintenance-admin-dashboard-page .ops-list-item,
+:root[data-theme-resolved='light'] main.maintenance-admin-dashboard-page .quick-action-btn {
+    background: #f9fafb !important;
+    border-color: #e5e7eb !important;
+}
+
+:root[data-theme-resolved='light'] main.maintenance-admin-dashboard-page .assigned-report-title,
+:root[data-theme-resolved='light'] main.maintenance-admin-dashboard-page .ops-list-item-title,
+:root[data-theme-resolved='light'] main.maintenance-admin-dashboard-page .activity-timeline-title,
+:root[data-theme-resolved='light'] main.maintenance-admin-dashboard-page .priority-legend-item strong {
+    color: #111827 !important;
+}
+
+:root[data-theme-resolved='light'] main.maintenance-admin-dashboard-page .quick-action-btn {
+    color: #111827 !important;
+}
+
+:root[data-theme-resolved='light'] main.maintenance-admin-dashboard-page .quick-action-btn:hover {
+    background: #f3e8ff !important;
+    border-color: #d8b4fe !important;
+    color: #7e22ce !important;
+}
+
+:root[data-theme-resolved='light'] main.maintenance-admin-dashboard-page .activity-timeline-icon {
+    background: #f8fafc !important;
+    border-color: #e5e7eb !important;
+}
+
+:root[data-theme-resolved='light'] main.maintenance-admin-dashboard-page .priority-recommendation-panel {
+    background: rgba(239, 68, 68, 0.06) !important;
+    border-color: rgba(239, 68, 68, 0.22) !important;
+}
+
+:root[data-theme-resolved='light'] main.maintenance-admin-dashboard-page .priority-recommendation-panel p {
+    color: #111827 !important;
+}
+
+/* UI Polish Sprint — light-theme overrides for the polish-pass additions,
+   following the exact same pattern as every block above (same selectors
+   scoped to this page's <main>, same override list, no new tokens). */
+:root[data-theme-resolved='light'] main.maintenance-admin-dashboard-page .summary-card-context {
+    color: #6b7280 !important;
+}
+
+:root[data-theme-resolved='light'] main.maintenance-admin-dashboard-page .assigned-report-category-icon {
+    color: #7c3aed !important;
+    stroke: #7c3aed !important;
+}
+
+:root[data-theme-resolved='light'] main.maintenance-admin-dashboard-page .assigned-report-card-clickable:hover {
+    border-color: #d8b4fe !important;
+}
+
+:root[data-theme-resolved='light'] main.maintenance-admin-dashboard-page .priority-recommendation-heading {
+    color: #b91c1c !important;
+}
+
+:root[data-theme-resolved='light'] main.maintenance-admin-dashboard-page .priority-recommendation-panel-clear {
+    background: rgba(16, 185, 129, 0.06) !important;
+    border-color: rgba(16, 185, 129, 0.24) !important;
+}
+
+:root[data-theme-resolved='light'] main.maintenance-admin-dashboard-page .priority-recommendation-panel-clear svg {
+    color: #059669 !important;
+    stroke: #059669 !important;
+}
+
+:root[data-theme-resolved='light'] main.maintenance-admin-dashboard-page .priority-recommendation-panel-clear .priority-recommendation-heading {
+    color: #047857 !important;
+}
+
+:root[data-theme-resolved='light'] main.maintenance-admin-dashboard-page .dashboard-empty-state {
+    color: #6b7280 !important;
+}
+
+:root[data-theme-resolved='light'] main.maintenance-admin-dashboard-page .dashboard-empty-state svg {
+    color: #9ca3af !important;
+    stroke: #9ca3af !important;
+}
+
+:root[data-theme-resolved='light'] main.maintenance-admin-dashboard-page .dashboard-skeleton-card,
+:root[data-theme-resolved='light'] main.maintenance-admin-dashboard-page .dashboard-skeleton-row,
+:root[data-theme-resolved='light'] main.maintenance-admin-dashboard-page .dashboard-skeleton-timeline-item {
+    background: linear-gradient(90deg, rgba(203, 213, 225, 0.4) 25%, rgba(203, 213, 225, 0.7) 37%, rgba(203, 213, 225, 0.4) 63%) !important;
+    background-size: 360px 100% !important;
+}

@@ -1,0 +1,1050 @@
+
+   WARN  Metadata found in doc-comment for method Tests\Feature\NeedChangeAuthorizationTest::test_only_super_admin_satisfies_the_need_change_approval_rule(). Metadata in doc-comments is deprecated and will no longer be supported in PHPUnit 12. Update your test code to use attributes instead.
+
+   WARN  Metadata found in doc-comment for method Tests\Feature\ReportLocationValidationTest::test_a_partial_location_triple_is_rejected(). Metadata in doc-comments is deprecated and will no longer be supported in PHPUnit 12. Update your test code to use attributes instead.
+
+   WARN  Metadata found in doc-comment for method Tests\Feature\UserManagementAuthorizationTest::test_role_aliases_cannot_bypass_the_department_requirement(). Metadata in doc-comments is deprecated and will no longer be supported in PHPUnit 12. Update your test code to use attributes instead.
+
+   PASS  Tests\Unit\DashboardControllerHelpersTest
+  ✓ month date bounds include the entire last day of the month                                                   0.01s  
+  ✓ month date bounds handles leap february
+  ✓ month date bounds handles a 31 day month
+  ✓ due date cutoff is time less and excludes reports due on the last day
+  ✓ critical priority label resolves to a distinct non fallback color
+  ✓ closed status label resolves to a distinct non fallback color
+  ✓ color maps cover every canonical status and priority value
+  ✓ unrecognized label still falls back to gray
+
+   PASS  Tests\Unit\DevGuardIntegrityTest
+  ✓ the guard file exists                                                                                        0.02s  
+  ✓ the guard is fail closed
+  ✓ the expected dependents are all present                                                                      0.01s  
+  ✓ the guard is the first executable statement in every dependent                                               0.01s  
+  ✓ no guarded script emits output before the guard runs                                                         0.01s  
+  ✓ the guard is deployable from a clean checkout                                                                1.60s  
+  ✓ every destructive backend script is guarded                                                                  0.01s  
+
+   PASS  Tests\Unit\ExampleTest
+  ✓ that true is true                                                                                            0.01s  
+
+   PASS  Tests\Unit\LegacyFacilityServiceDuplicateValidationTest
+  ✓ creating a room with a name already used on another floor of the same building is rejected cleanly           0.01s  
+  ✓ creating a room with the same name in a different building still succeeds
+  ✓ updating a room to a name used on another floor of the same building is rejected cleanly
+  ✓ creating an inventory category with a code already used by another category is rejected cleanly
+  ✓ updating an inventory category to a code used by another category is rejected cleanly
+  ✓ updating an inventory category without changing its own code still succeeds
+
+   PASS  Tests\Unit\LegacyLogDirectoryHttpExposureTest
+  ✓ the deny rule matcher recognises the existing protections                                                    0.01s  
+  ✓ the legacy logger writes inside the document root
+  ✓ legacy log files are denied over http
+  ✓ the bare logs url is denied as well
+  ✓ laravel own log file is denied over http
+  ✓ the deny rule does not block legitimate application urls
+
+   PASS  Tests\Unit\LegacyNotificationModelOwnershipTest
+  ✓ mark as read does not affect another users notification                                                      0.01s  
+  ✓ mark as read affects own notification
+  ✓ delete does not affect another users notification
+  ✓ delete affects own notification
+
+   PASS  Tests\Unit\LegacyNotificationsEndpointErrorDisclosureTest
+  ✓ database errors are not echoed to the client
+  ✓ database errors are still logged server side
+  ✓ pdo exception is caught before the generic exception handler
+  ✓ deliberate validation messages still reach the client
+
+   PASS  Tests\Unit\LegacyPublicRequireResolutionTest
+  ✓ every literal require in the legacy public surface resolves                                                  0.06s  
+  ✓ the frontend landing page boots
+
+   PASS  Tests\Feature\ActivityLogDetailsModalTest
+  ✓ activity logs list still loads for both authorized roles                                                     0.39s  
+  ✓ list row already carries every field the details modal renders                                               0.04s  
+  ✓ list and detail endpoints agree on the detail fields                                                         0.05s  
+  ✓ maintenance staff still cannot list activity logs                                                            0.04s  
+  ✓ maintenance staff still cannot read a single activity log                                                    0.04s  
+  ✓ guests cannot reach activity logs                                                                            0.04s  
+  ✓ detail endpoint remains available to both authorized roles                                                   0.05s  
+  ✓ details view control no longer navigates away                                                                0.03s  
+  ✓ details modal reuses the shared modal mechanism                                                              0.03s  
+  ✓ details modal declares dialog semantics                                                                      0.03s  
+  ✓ details modal surface is theme aware rather than hardcoded dark                                              0.03s  
+  ✓ no activity log text is styled below twelve pixels                                                           0.03s  
+  ✓ standalone detail page and its route remain intact                                                           0.03s  
+
+   PASS  Tests\Feature\AllReportsPaginationVisibilityTest
+  ✓ pagination is hidden by a single parent condition                                                            0.05s  
+  ✓ the old hide only when empty guard is gone                                                                   0.05s  
+  ✓ the guard reuses the existing page state                                                                     0.03s  
+  ✓ page count formula is unchanged                                                                              0.03s  
+  ✓ thresholds at a page size of five                                                                            0.03s  
+  ✓ the boundary is exactly at one full page                                                                     0.03s  
+  ✓ thresholds at the shipped default page size                                                                  0.03s  
+  ✓ the pagination markup is unchanged when it renders                                                           0.03s  
+  ✓ every page still gets a button                                                                               0.03s  
+  ✓ pagination handlers are delegated to the container                                                           0.03s  
+  ✓ an empty pagination container is not painted                                                                 0.03s  
+  ✓ the stylesheet cache token was bumped                                                                        0.03s  
+  ✓ the rest of the all reports page is intact                                                                   0.03s  
+  ✓ the week filter control was not touched                                                                      0.03s  
+
+   PASS  Tests\Feature\AnalyticsIntegrationTest
+  ✓ overview returns expected structure                                                                          0.06s  
+  ✓ top requested endpoint                                                                                       0.03s  
+  ✓ the top repaired endpoint is retired                                                                         0.03s  
+  ✓ the repair report is retired but its neighbours remain                                                       0.03s  
+  ✓ low stock filters and empty handling                                                                         0.03s  
+  ✓ cache endpoints return consistent data on repeats                                                            0.03s  
+  ✓ routes registered and no conflicts                                                                           0.03s  
+
+   PASS  Tests\Feature\AnalyticsMySqlExecutionTest
+  ✓ overview buckets by month and honours the twelve month window                                                0.22s  
+  ✓ semester year comparison splits on calendar halves                                                           0.18s  
+  ✓ department usage attributes movement through dispatches                                                      0.52s  
+  ✓ monthly inventory comparison applies distinct windows                                                        0.24s  
+  ✓ semester detail attributes counts to the right semester and department                                       0.25s  
+  ✓ semester detail reports unconfigured rather than guessing                                                    0.21s  
+  ✓ laravel and legacy connections disagree on bad enum values                                                   0.19s  
+
+   PASS  Tests\Feature\AnalyticsRbacTest
+  ✓ unauthenticated request is denied                                                                            0.06s  
+  ✓ unapproved pending user role is denied                                                                       0.04s  
+  ✓ super admin can access analytics                                                                             0.06s  
+  ✓ maintenance admin can access analytics                                                                       0.05s  
+  ✓ maintenance staff can access analytics                                                                       0.04s  
+  ✓ existing low stock analytics behavior is unaffected by the rbac fix                                          0.04s  
+
+   PASS  Tests\Feature\AuthUsernameLoginTest
+  ✓ valid username and password logs in successfully                                                             0.07s  
+  ✓ invalid username fails to authenticate                                                                       0.04s  
+  ✓ email used as username does not authenticate                                                                 0.05s  
+  ✓ pending user cannot authenticate                                                                             0.04s  
+  ✓ inactive user cannot authenticate                                                                            0.04s  
+  ✓ wrong password fails to authenticate                                                                         0.04s  
+  ✓ login matches username case insensitively                                                                    0.04s  
+  ✓ register requires a unique username                                                                          0.05s  
+  ✓ register rejects a missing username                                                                          0.04s  
+  ✓ register creates a pending user with username and email and new username can log in                          0.05s  
+
+   PASS  Tests\Feature\BrowseByMonthDropdownScrollTest
+  ✓ the month options are wrapped in a scroll container                                                          0.04s  
+  ✓ the month list is bounded and scrolls on its own                                                             0.03s  
+  ✓ the reports card no longer clips the dropdown                                                                0.03s  
+  ✓ the scrollbar is visible and themed                                                                          0.03s  
+  ✓ the stylesheet cache token was bumped                                                                        0.03s  
+  ✓ the month options are still focusable controls                                                               0.04s  
+  ✓ future months are still not offered                                                                          0.03s  
+  ✓ selecting a month still sets the existing date filters                                                       0.03s  
+  ✓ the removed all reports ui was not reintroduced                                                              0.04s  
+
+   PASS  Tests\Feature\BuildingUpdateNotificationTest
+  ✓ no op update does not notify                                                                                 0.05s  
+  ✓ genuine name change still notifies admins                                                                    0.04s  
+  ✓ genuine description only change still notifies admins                                                        0.04s  
+
+   PASS  Tests\Feature\BuildingsOverviewNavigationAndHierarchicalSearchTest
+  ✓ the sidebar offers buildings overview as its own module                                                      0.04s  
+  ✓ the sidebar link points at the existing buildings overview route                                             0.03s  
+  ✓ the dashboard no longer presents the buildings overview navigation shortcut                                  0.03s  
+  ✓ the dashboards that show a real building count keep their stat cards                                         0.03s  
+  ✓ no duplicate buildings overview navigation entry exists                                                      0.03s  
+  ✓ the building search exists and searches only buildings                                                       0.05s  
+  ✓ the building search endpoint matches only building names                                                     0.04s  
+  ✓ all three search controls are available on the outer view                                                    0.03s  
+  ✓ the drill down only floor search no longer exists                                                            0.03s  
+  ✓ using the filters never navigates into another level                                                         0.03s  
+  ✓ the child filters read their parent from the filter not the drill down                                       0.03s  
+  ✓ the floor filter exists and filters the building scoped cache                                                0.03s  
+  ✓ selecting a building limits floors to that building                                                          0.04s  
+  ✓ floors of another building cannot appear in the scoped result                                                0.04s  
+  ✓ changing the building resets the floor and the room                                                          0.03s  
+  ✓ the drill down floor level still resets its own state                                                        0.03s  
+  ✓ the room request is scoped by both building and floor                                                        0.03s  
+  ✓ selecting a floor limits rooms to that floor and building                                                    0.04s  
+  ✓ changing the floor resets the room                                                                           0.04s  
+  ✓ the drill down room level still resets its own state                                                         0.05s  
+  ✓ child filters cannot operate without their parent                                                            0.03s  
+  ✓ a mismatched building and floor pair returns no rooms                                                        0.04s  
+  ✓ inactive rooms stay excluded from the scoped result                                                          0.04s  
+  ✓ buildings overview view access is unchanged for every role                                                   0.07s  
+  ✓ building modification remains restricted to super admin                                                      0.04s  
+
+   PASS  Tests\Feature\BuildingsRbacTest
+  ✓ super admin can view buildings                                                                               0.07s  
+  ✓ head maintenance can view buildings                                                                          0.04s  
+  ✓ maintenance staff can view buildings                                                                         0.04s  
+  ✓ head maintenance can view floors                                                                             0.06s  
+  ✓ maintenance staff can view rooms                                                                             0.05s  
+  ✓ super admin can view deployed items                                                                          0.04s  
+  ✓ head maintenance can view deployed items                                                                     0.04s  
+  ✓ maintenance staff can view deployed items                                                                    0.04s  
+  ✓ unauthenticated request cannot view deployed items                                                           0.04s  
+  ✓ deployed items excludes dispatches that are not released                                                     0.05s  
+  ✓ deployed items does not expose procurement data                                                              0.04s  
+  ✓ super admin can create building                                                                              0.04s  
+  ✓ super admin can update building                                                                              0.05s  
+  ✓ super admin can delete building                                                                              0.06s  
+  ✓ super admin can create floor                                                                                 0.05s  
+  ✓ super admin can delete floor                                                                                 0.06s  
+  ✓ super admin can create room                                                                                  0.04s  
+  ✓ super admin can update room                                                                                  0.05s  
+  ✓ super admin can delete room                                                                                  0.05s  
+  ✓ head maintenance cannot create building                                                                      0.04s  
+  ✓ head maintenance cannot update building                                                                      0.04s  
+  ✓ head maintenance cannot delete building                                                                      0.04s  
+  ✓ head maintenance cannot create floor                                                                         0.04s  
+  ✓ head maintenance cannot delete floor                                                                         0.04s  
+  ✓ head maintenance cannot create room                                                                          0.04s  
+  ✓ head maintenance cannot update room                                                                          0.04s  
+  ✓ head maintenance cannot delete room                                                                          0.04s  
+  ✓ maintenance staff cannot create building                                                                     0.04s  
+  ✓ maintenance staff cannot update building                                                                     0.04s  
+  ✓ maintenance staff cannot delete building                                                                     0.06s  
+  ✓ maintenance staff cannot create floor                                                                        0.04s  
+  ✓ maintenance staff cannot delete floor                                                                        0.04s  
+  ✓ maintenance staff cannot create room                                                                         0.04s  
+  ✓ maintenance staff cannot update room                                                                         0.04s  
+  ✓ maintenance staff cannot delete room                                                                         0.04s  
+  ✓ unauthenticated request to create building is denied                                                         0.04s  
+
+   PASS  Tests\Feature\CreateReportNavigationConsolidationTest
+  ✓ all reports header offers the create report action                                                           0.06s  
+  ✓ the create report action uses link semantics and the existing design system                                  0.03s  
+  ✓ the create report action points at the existing create report page                                           0.03s  
+  ✓ the create report form was not duplicated into all reports                                                   0.03s  
+  ✓ the create report page still exists and keeps its own role guard                                             0.03s  
+  ✓ the create report routes remain registered                                                                   0.04s  
+  ✓ report creation remains restricted by backend middleware                                                     0.03s  
+  ✓ the dashboard quick actions still reach create report                                                        0.03s  
+  ✓ all reports keeps its export and task 99 classification controls                                             0.03s  
+
+   PASS  Tests\Feature\CrossDepartmentAssignmentWarningTest
+  ✓ same department assignment still succeeds                                                                    0.06s  
+  ✓ same department assignment is not flagged and needs no confirmation                                          0.05s  
+  ✓ cross department assignment is allowed                                                                       0.05s  
+  ✓ cross department assignment is detected and flagged                                                          0.05s  
+  ✓ audit record stores the report department                                                                    0.04s  
+  ✓ audit record stores the personnel department                                                                 0.04s  
+  ✓ warning message contains the required content                                                                0.03s  
+  ✓ cancelling the warning assigns nothing                                                                       0.03s  
+  ✓ assign anyway produces exactly one assignment                                                                0.06s  
+  ✓ assign anyway produces an audit record                                                                       0.04s  
+  ✓ users who were unauthorized before are still unauthorized                                                    0.04s  
+  ✓ department mismatch alone never causes a 403 or 422                                                          0.04s  
+  ✓ existing assignment validation is unchanged                                                                  0.04s  
+  ✓ existing assignment notification is unchanged                                                                0.05s  
+  ✓ repeated submissions do not produce a duplicate assignment                                                   0.04s  
+
+   PASS  Tests\Feature\DamageReportControllerTest
+  ✓ maintenance staff can create a damage report for a room asset                                                0.07s  
+  ✓ store rejects missing required fields                                                                        0.04s  
+  ✓ store rejects an item not deployed to the selected room                                                      0.04s  
+  ✓ store rejects an inventory stock item never deployed anywhere                                                0.06s  
+  ✓ store allows a deployed inventory stock item                                                                 0.05s  
+  ✓ store rejects a role outside the allowed posting roles                                                       0.04s  
+  ✓ store rejects super admin as a creator                                                                       0.04s  
+  ✓ store blocks a duplicate report unless overridden                                                            0.06s  
+  ✓ store does not treat a closed report as a duplicate                                                          0.05s  
+  ✓ check duplicate reports an existing active match                                                             0.04s  
+  ✓ check duplicate returns none for a fresh combination                                                         0.05s  
+  ✓ index filters by status severity and search text                                                             0.07s  
+  ✓ index returns reports for privileged roles regardless of reporter                                            0.05s  
+  ✓ show returns report with relationships loaded                                                                0.05s  
+  ✓ show of a missing report currently returns 500 not 404 known app wide issue                                  0.06s  
+  ✓ history lists entries in descending created at order                                                         0.05s  
+  ✓ valid status transition succeeds and syncs linked report                                                     0.05s  
+  ✓ invalid status transition is rejected                                                                        0.04s  
+  ✓ closed status is terminal and cannot be reopened                                                             0.04s  
+  ✓ marking replaced requires a replacement item                                                                 0.04s  
+  ✓ marking replaced creates an inventory deploy transaction and stamps fields                                   0.05s  
+  ✓ replaced report can then be closed                                                                           0.05s  
+  ✓ update status requires the posting role middleware                                                           0.04s  
+  ✓ update status rejects an invalid status value                                                                0.04s  
+  ✓ super admin retains status update supervisory access                                                         0.05s  
+  ✓ creating a report notifies active admins but not other staff                                                 0.06s  
+  ✓ marking replaced notifies the original reporter                                                              0.05s  
+  ✓ marking closed notifies the original reporter                                                                0.05s  
+  ✓ store accepts a valid image and persists its path                                                            0.07s  
+  ✓ store rejects a disallowed file extension for the image                                                      0.05s  
+  ✓ unauthenticated requests are rejected                                                                        0.04s  
+
+   PASS  Tests\Feature\DamageReportReplacementLowStockNotificationTest
+  ✓ marking replaced across the reorder level notifies admins                                                    0.09s  
+  ✓ marking replaced that stays below reorder level does not renotify                                            0.06s  
+
+   PASS  Tests\Feature\DamageReportRoleRedesignTest
+  ✓ asset related maintenance report still creates the damage relationship                                       0.07s  
+  ✓ non asset maintenance report remains valid and creates no damage row                                         0.05s  
+  ✓ damage list returns only asset damage records                                                                0.05s  
+  ✓ damage detail exposes the linked maintenance report and assignment                                           0.05s  
+  ✓ damage detail tolerates a legacy record with no linked report                                                0.04s  
+  ✓ creating one asset report does not produce duplicate maintenance reports                                     0.05s  
+  ✓ creating one asset report does not produce duplicate damage reports                                          0.05s  
+  ✓ the damage view never writes a second damage row for the same report                                         0.05s  
+  ✓ damage reports page offers no assignment control                                                             0.04s  
+  ✓ damage report pages link to the existing maintenance report workflow                                         0.03s  
+  ✓ task 44 cross department warning remains intact                                                              0.03s  
+  ✓ existing damage report authorization is unchanged                                                            0.06s  
+  ✓ unauthenticated access to the damage list is still rejected                                                  0.04s  
+  ✓ damage list returns an empty set when no asset damage exists                                                 0.04s  
+  ✓ empty state explains the feature and offers no creation action                                               0.04s  
+  ✓ damage reports page presents itself as an asset damage view                                                  0.03s  
+  ✓ repair request module is retired                                                                             0.03s  
+  ✓ damage report repair vocabulary survives the repair retirement                                               0.03s  
+  ✓ damage report backend is left in place                                                                       0.03s  
+  ✓ damage reports have no standalone sidebar destination                                                        0.03s  
+
+   PASS  Tests\Feature\DanglingNotificationEntityTest
+  ✓ notification list returns a dangling entity reference intact                                                 0.06s  
+  ✓ unread endpoint counts a dangling notification normally                                                      0.06s  
+  ✓ deep link preflight for a missing damage report degrades without a fatal                                     0.03s  
+  ✓ owner can still delete a dangling notification                                                               0.04s  
+
+   PASS  Tests\Feature\DashboardScopeTruthfulnessTest
+  ✓ reports predating the semester yield zero kpis but a stated boundary                                         0.23s  
+  ✓ reports inside the semester are counted normally                                                             0.18s  
+  ✓ no active semester reports a null boundary alongside null kpis                                               0.15s  
+  ✓ dashboard page renders and wires the scope reconciliation notice                                             0.03s  
+
+   PASS  Tests\Feature\DefaultLightThemeTest
+  ✓ the legacy boot script defaults to light                                                                     0.03s  
+  ✓ the legacy boot script runs before any stylesheet                                                            0.03s  
+  ✓ theme manager defaults to light without persisting it                                                        0.03s  
+  ✓ the blade shell defaults to light                                                                            0.03s  
+  ✓ the main js cache buster was bumped                                                                          0.03s  
+  ✓ dark mode is still fully available                                                                           0.06s  
+  ✓ a saved preference is still honoured                                                                         0.10s  
+
+   PASS  Tests\Feature\DeploymentTrackingControllerTest
+  ✓ index requires authentication                                                                                0.06s  
+  ✓ index forbidden for maintenance staff                                                                        0.05s  
+  ✓ index allowed for super admin                                                                                0.04s  
+  ✓ index allowed for maintenance admin                                                                          0.05s  
+  ✓ search requires authentication                                                                               0.04s  
+  ✓ search forbidden for maintenance staff                                                                       0.04s  
+  ✓ search allowed for super admin                                                                               0.07s  
+  ✓ index defaults to released status only                                                                       0.05s  
+  ✓ index status param overrides default                                                                         0.05s  
+  ✓ index rejects invalid status and falls back to released                                                      0.05s  
+  ✓ index filters by q matching item name                                                                        0.05s  
+  ✓ index filters by q matching source or number                                                                 0.05s  
+  ✓ index filters by room id                                                                                     0.05s  
+  ✓ index filters by department id                                                                               0.05s  
+  ✓ index filter options only include rooms and departments with released dispatches                             0.05s  
+  ✓ index source or uses direct purchase receipt link when present                                               0.05s  
+  ✓ index source or falls back to oldest receipt item when no direct link                                        0.07s  
+  ✓ index includes dispatch sourced deployment                                                                   0.06s  
+  ✓ index includes direct room deployment                                                                        0.05s  
+  ✓ index direct deployment has asset code and no fabricated dispatch code                                       0.05s  
+  ✓ index dispatch deployment retains real dispatch code alongside direct rows                                   0.05s  
+  ✓ index q filter matches direct deployment by asset code                                                       0.05s  
+  ✓ index room filter applies to direct deployment                                                               0.05s  
+  ✓ index direct deployment excluded when status filter is not released                                          0.05s  
+  ✓ index direct deployment excluded when department filter applied                                              0.05s  
+  ✓ index filter options include room with only direct deployment                                                0.05s  
+  ✓ index forbidden for maintenance staff even with direct deployments present                                   0.07s  
+  ✓ search returns empty when no receipt matches                                                                 0.05s  
+  ✓ search returns null dispatch columns when item not yet deployed                                              0.05s  
+  ✓ search returns one row per dispatch for deployed items                                                       0.05s  
+  ✓ search matches or number partially                                                                           0.05s  
+
+   PASS  Tests\Feature\DispatchAdministratorNoApprovalWorkflowTest
+  ✓ scenario 01 administrator can reach the create dispatch support endpoint                                     0.08s  
+  ✓ scenario 02 administrator can create a dispatch                                                              0.06s  
+  ✓ scenario 03 administrator assigns release personnel at creation                                              0.08s  
+  ✓ scenario 04 administrator created dispatch requires no approval                                              0.05s  
+  ✓ scenario 05 administrator created dispatch is immediately releasable                                         0.10s  
+  ✓ scenario 06 creating as administrator does not deduct inventory                                              0.07s  
+  ✓ scenario 07 only the assigned personnel may release an administrator dispatch                                0.08s  
+  ✓ scenario 08 release creates the normal inventory transaction                                                 0.06s  
+  ✓ scenario 09 release deducts stock normally                                                                   0.06s  
+  ✓ scenario 10 released administrator dispatch appears in deployment tracking                                   0.08s  
+  ✓ scenario 11 administrator created dispatch sends no approval notification                                    0.07s  
+  ✓ scenario 12 head maintenance can still create a dispatch                                                     0.05s  
+  ✓ scenario 13 head created dispatch still requires approval                                                    0.06s  
+  ✓ scenario 14 head created dispatch cannot be released before approval                                         0.11s  
+  ✓ scenario 15 existing release personnel rules remain intact                                                   0.05s  
+  ✓ scenario 16 maintenance staff cannot create a dispatch                                                       0.05s  
+  ✓ scenario 17 maintenance staff cannot obtain an approval free dispatch                                        0.06s  
+  ✓ scenario 18 a crafted body cannot impersonate an administrator                                               0.05s  
+  ✓ scenario 19 only super admin triggers the no approval path                                                   0.06s  
+  ✓ scenario 20 invalid or inactive release personnel are rejected for administrators                            0.06s  
+  ✓ scenario 20b administrator personnel must match the chosen destination department                            0.06s  
+
+   PASS  Tests\Feature\DispatchApprovalInventoryTest
+  ✓ pending dispatch leaves inventory unchanged                                                                  0.06s  
+  ✓ approval alone does not deduct inventory                                                                     0.07s  
+  ✓ releasing dispatch deducts inventory creates transaction and updates status                                  0.06s  
+  ✓ insufficient inventory blocks release                                                                        0.05s  
+  ✓ releasing same dispatch twice does not duplicate deduction                                                   0.06s  
+  ✓ dispatch without assigned personnel cannot be approved                                                       0.04s  
+  ✓ duplicate item rows are aggregated and rejected cleanly                                                      0.05s  
+
+   PASS  Tests\Feature\DispatchApproveReleaseWorkflowTest
+  ✓ full workflow runs create assign approve release in order                                                    0.08s  
+  ✓ release remarks are persisted when supplied at release                                                       0.06s  
+  ✓ release remarks remain optional                                                                              0.06s  
+  ✓ approval ignores any released by supplied by the administrator                                               0.05s  
+  ✓ release attributes the release to the session user not the request body                                      0.08s  
+  ✓ dispatch detail endpoint exposes release remarks and released by name                                        0.07s  
+  ✓ administrator can reject a pending dispatch                                                                  0.05s  
+  ✓ a rejected dispatch cannot then be approved                                                                  0.05s  
+
+   PASS  Tests\Feature\DispatchCreateValidationTest
+  ✓ authorized create succeeds with no destination specified                                                     0.06s  
+  ✓ duplicate item id is rejected                                                                                0.04s  
+  ✓ nonexistent item id is rejected                                                                              0.04s  
+  ✓ zero quantity is rejected                                                                                    0.04s  
+  ✓ missing release assigned to is rejected                                                                      0.04s  
+  ✓ maintenance staff cannot create a dispatch                                                                   0.04s  
+
+   PASS  Tests\Feature\DispatchPersonnelAuditTrailTest
+  ✓ creating a dispatch records the creator and the chosen release personnel                                     0.08s  
+  ✓ administrator approval sets approved by and leaves requester and assignment unchanged                        0.05s  
+  ✓ approved by is always the authenticated actor and cannot be spoofed via request input                        0.05s  
+  ✓ released by reflects the assigned personnel never the approving administrator                                0.06s  
+  ✓ dispatch history displays every responsible party distinctly                                                 0.07s  
+  ✓ regression dispatch inventory deduction still works end to end                                               0.06s  
+
+   PASS  Tests\Feature\DispatchReleaseAssignmentAuthorizationTest
+  ✓ head can assign staff from their own department at creation                                                  0.06s  
+  ✓ head cannot assign staff from another department at creation                                                 0.04s  
+  ✓ head cannot assign staff from another department when reassigning                                            0.04s  
+  ✓ head cannot reassign a dispatch belonging to another department                                              0.07s  
+  ✓ release personnel cannot be an administrator or another head                                                 0.05s  
+  ✓ release personnel cannot be an inactive user                                                                 0.05s  
+  ✓ release personnel endpoint only returns same department staff                                                0.04s  
+  ✓ release personnel endpoint ignores a client supplied department                                              0.04s  
+  ✓ the assigned staff member can release                                                                        0.06s  
+  ✓ a different staff member cannot release someone elses dispatch                                               0.05s  
+  ✓ a maintenance staff member cannot release an unassigned dispatch                                             0.05s  
+  ✓ head maintenance cannot approve a dispatch                                                                   0.05s  
+  ✓ administrator cannot assign release personnel                                                                0.04s  
+  ✓ administrator can create a dispatch that needs no approval                                                   0.05s  
+  ✓ head may reassign while pending and while approved                                                           0.06s  
+  ✓ assignment becomes read only once released                                                                   0.08s  
+  ✓ maintenance staff only see dispatches assigned to them                                                       0.05s  
+  ✓ maintenance staff cannot read a dispatch not assigned to them                                                0.04s  
+  ✓ head and administrator still see every dispatch                                                              0.06s  
+
+   PASS  Tests\Feature\DispatchReleaseLowStockNotificationTest
+  ✓ releasing dispatch across the reorder level notifies admins                                                  0.08s  
+  ✓ release that stays below reorder level does not renotify                                                     0.06s  
+  ✓ release only notifies for the item that crosses its own threshold                                            0.06s  
+
+   PASS  Tests\Feature\DispatchRepairServiceDecouplingTest
+  ✓ dispatch controller does not depend on repair service                                                        0.03s  
+  ✓ personnel directory service has no repair domain dependencies                                                0.03s  
+  ✓ the repair service is retired                                                                                0.05s  
+
+   PASS  Tests\Feature\ExampleTest
+  ✓ the application returns a successful response                                                                0.04s  
+
+   PASS  Tests\Feature\ForgotPasswordRequestTest
+  ✓ login page does not short circuit the shared api object                                                      0.03s  
+  ✓ login page merges its own methods into the shared api object                                                 0.03s  
+  ✓ every window api method the login page calls is actually defined                                             0.03s  
+  ✓ api js still publishes the shared window api object                                                          0.03s  
+  ✓ login page register method survives the merge                                                                0.03s  
+  ✓ username is required                                                                                         0.03s  
+  ✓ username shorter than the minimum is rejected                                                                0.04s  
+  ✓ unknown username returns a non committal success                                                             0.04s  
+  ✓ a repeated request for the same username is throttled                                                        0.04s  
+  ✓ changing the username casing does not bypass the throttle                                                    0.06s  
+  ✓ the endpoint is reachable without authentication                                                             0.04s  
+
+   PASS  Tests\Feature\InventoryAdjustmentLowStockNotificationTest
+  ✓ decreasing stock across the reorder level notifies admins                                                    0.06s  
+  ✓ further decrease that stays below reorder level does not renotify                                            0.05s  
+  ✓ increase back above reorder level clears state without notifying                                             0.05s  
+  ✓ dropping below reorder level again after clearing notifies again                                             0.06s  
+
+   PASS  Tests\Feature\InventoryAdjustmentTest
+  ✓ maintenance admin can increase stock                                                                         0.05s  
+  ✓ maintenance admin can decrease stock                                                                         0.04s  
+  ✓ decrease larger than available stock is rejected                                                             0.04s  
+  ✓ decrease larger than available after reservation is rejected                                                 0.04s  
+  ✓ zero quantity is rejected                                                                                    0.06s  
+  ✓ negative quantity is rejected                                                                                0.04s  
+  ✓ missing reason is rejected                                                                                   0.04s  
+  ✓ invalid direction is rejected                                                                                0.04s  
+  ✓ super admin can adjust stock                                                                                 0.04s  
+  ✓ staff role is forbidden from adjusting stock                                                                 0.04s  
+  ✓ decrease never drives quantity negative and recomputes status                                                0.05s  
+
+   PASS  Tests\Feature\InventoryBackfillStatusCommandTest
+  ✓ stale row with zero quantity becomes out of stock                                                            0.13s  
+  ✓ stale row with positive quantity at or below reorder becomes low stock                                       0.04s  
+  ✓ stale row with quantity above reorder becomes available                                                      0.03s  
+  ✓ already correct rows are not unnecessarily touched                                                           0.03s  
+  ✓ only stale rows are changed others are left alone                                                            0.06s  
+  ✓ quantity and reorder level remain unchanged                                                                  0.03s  
+  ✓ command is idempotent                                                                                        0.04s  
+  ✓ dry run does not modify the database                                                                         0.04s  
+  ✓ command produces the same classification as inventory status service across boundaries                       0.04s  
+  ✓ room asset rows are not affected                                                                             0.04s  
+  ✓ handles zero stale rows cleanly                                                                              0.04s  
+
+   PASS  Tests\Feature\InventoryCategoryRoomManagementTest
+  ✓ maintenance staff is forbidden from creating items                                                           0.05s  
+  ✓ maintenance admin can create items                                                                           0.05s  
+  ✓ maintenance staff is forbidden from updating or deleting items                                               0.04s  
+  ✓ maintenance staff is forbidden from creating categories                                                      0.06s  
+  ✓ maintenance admin can create categories                                                                      0.04s  
+  ✓ creating category with duplicate name is rejected                                                            0.04s  
+  ✓ creating category with duplicate code is rejected                                                            0.04s  
+  ✓ creating category with duplicate code in different case is rejected                                          0.04s  
+  ✓ updating category to another categorys code is rejected                                                      0.04s  
+  ✓ updating category without changing its own code succeeds                                                     0.04s  
+  ✓ creating and updating a category with a unique code succeeds                                                 0.04s  
+  ✓ multiple categories without a code are still allowed                                                         0.04s  
+  ✓ deleting category referenced by an item is blocked                                                           0.04s  
+  ✓ deleting category with no items succeeds                                                                     0.04s  
+  ✓ maintenance staff is forbidden from creating inventory rooms                                                 0.04s  
+  ✓ maintenance admin can create inventory rooms                                                                 0.04s  
+  ✓ creating inventory room with duplicate name is rejected                                                      0.06s  
+  ✓ deleting inventory room referenced by an item is blocked                                                     0.04s  
+  ✓ deleting inventory room with no items succeeds                                                               0.04s  
+
+   PASS  Tests\Feature\InventoryLowStockThresholdStandardizationTest
+  ✓ quantity above reorder level is available                                                                    0.05s  
+  ✓ quantity equal to reorder level is low stock                                                                 0.03s  
+  ✓ quantity below reorder level but positive is low stock                                                       0.03s  
+  ✓ quantity zero is out of stock                                                                                0.03s  
+  ✓ negative quantity is out of stock                                                                            0.03s  
+  ✓ different reorder levels yield different boundaries for the same quantity                                    0.03s  
+  ✓ category default threshold does not affect item classification                                               0.03s  
+  ✓ item level override does not affect item classification                                                      0.03s  
+  ✓ analytics inventory summary matches item status                                                              0.03s  
+  ✓ analytics low stock matches item status                                                                      0.03s  
+  ✓ analytics inventory health indicators matches item status counts                                             0.06s  
+  ✓ stock controller summary matches item status                                                                 0.04s  
+  ✓ inventory page listing matches item status                                                                   0.04s  
+  ✓ same items produce identical low stock classification across all consumers                                   0.05s  
+
+   PASS  Tests\Feature\InventoryNavigationSubmenuTest
+  ✓ inventory parent exists and is an expander                                                                   0.04s  
+  ✓ inventory parent cannot navigate on click                                                                    0.03s  
+  ✓ all five destinations live inside the inventory submenu                                                      0.03s  
+  ✓ submenu items appear in the requested order                                                                  0.03s  
+  ✓ inventory reports is the final submenu item                                                                  0.03s  
+  ✓ deployment tracking sits between dispatches and inventory reports                                            0.03s  
+  ✓ submenu items keep their original destination urls                                                           0.03s  
+  ✓ submenu items reuse the shared nav link classes                                                              0.05s  
+  ✓ the relocated modules no longer render as top level items                                                    0.03s  
+  ✓ every underlying route remains registered                                                                    0.03s  
+  ✓ every underlying page still exists                                                                           0.03s  
+  ✓ each submenu item highlights on its own page                                                                 0.03s  
+  ✓ the parent opens for any visible child page                                                                  0.03s  
+  ✓ the parent does not compete with the child for the active class                                              0.03s  
+  ✓ role gates are preserved exactly                                                                             0.03s  
+  ✓ deployment tracking remains hidden from maintenance staff                                                    0.03s  
+  ✓ the parent section keeps the pre existing inventory gate                                                     0.03s  
+  ✓ submenu stylesheet is loaded by the sidebar                                                                  0.03s  
+  ✓ submenu styling is theme variable driven                                                                     0.03s  
+  ✓ collapsed and mobile sidebars keep the submenu reachable                                                     0.03s  
+  ✓ submenu text uses the twelve pixel ui size                                                                   0.03s  
+  ✓ unrelated sidebar sections are untouched                                                                     0.03s  
+  ✓ the submenu has exactly five children                                                                        0.03s  
+  ✓ dispatches keeps its original url icon and active pages                                                      0.05s  
+  ✓ dispatches keeps its original role gate                                                                      0.03s  
+  ✓ exactly one dispatches navigation destination exists                                                         0.03s  
+  ✓ the dispatch backend is untouched by the navigation move                                                     0.03s  
+  ✓ deploy to room was not restored                                                                              0.03s  
+
+   PASS  Tests\Feature\InventoryReportsDateFilterTest
+  ✓ purchase receipts index filters by date range                                                                0.07s  
+  ✓ purchase receipts index without date filters returns all receipts                                            0.04s  
+  ✓ purchase receipts index respects semester and year boundaries                                                0.05s  
+  ✓ dispatches index filters by date range                                                                       0.05s  
+  ✓ dispatches index date filter combines with existing status filter                                            0.07s  
+  ✓ dispatches index without date filters returns all dispatches                                                 0.05s  
+  ✓ dispatches index respects day boundary including end of day timestamps                                       0.05s  
+  ✓ damage reports index filters by date range                                                                   0.05s  
+  ✓ damage reports index date filter combines with existing severity filter                                      0.05s  
+  ✓ damage reports index without date filters returns all reports                                                0.05s  
+
+   PASS  Tests\Feature\InventoryStockUpdateQuantityBypassTest
+  ✓ editing metadata still works                                                                                 0.05s  
+  ✓ update endpoint ignores a quantity field in the request body                                                 0.04s  
+
+   PASS  Tests\Feature\InventoryTransactionObserverDeployDedupeTest
+  ✓ a single deploy transaction succeeds                                                                         0.04s  
+  ✓ second deploy with identical signature within window is rejected                                             0.06s  
+  ✓ duplicate exception carries the conflicting transaction summary                                              0.04s  
+  ✓ same signature outside the dedupe window is allowed                                                          0.04s  
+  ✓ different room within window is allowed                                                                      0.04s  
+  ✓ different quantity within window is allowed                                                                  0.04s  
+  ✓ different performer within window is allowed                                                                 0.04s  
+  ✓ different item within window is allowed                                                                      0.04s  
+  ✓ dispose transactions are not subject to the deploy dedupe guard                                              0.04s  
+  ✓ deploy and dispose with same signature do not cross match                                                    0.04s  
+  ✓ concurrency guarantee is documented as a known test infrastructure limitation                                0.03s  
+
+   PASS  Tests\Feature\InventoryTransactionObserverRollbackTest
+  ✓ deleting deploy transaction after prior reserve restores quantity and reserved                               0.05s  
+  ✓ deleting deploy transaction never drives quantity negative                                                   0.04s  
+  ✓ deleting adjustment transaction reverses stock increase                                                      0.04s  
+  ✓ deleting release transaction restores reserved quantity                                                      0.07s  
+  ✓ deploy transaction rederives status when it crosses the reorder level                                        0.04s  
+  ✓ deleting deploy transaction rederives status back above the reorder level                                    0.04s  
+
+   PASS  Tests\Feature\InventoryWorkflowApiRetirementTest
+  ✓ inventory workflow api shim does not exist                                                                   0.03s  
+  ✓ deleted legacy workflow api target is not recreated                                                          0.03s  
+  ✓ htaccess does not route the retired inventory workflow api url                                               0.03s  
+  ✓ no application code calls the retired inventory workflow endpoint                                            0.07s  
+
+   PASS  Tests\Feature\ItemControllerInventoryTest
+  ✓ creating item with initial quantity applies it through ledger                                                0.05s  
+  ✓ creating item with zero quantity creates no transaction                                                      0.04s  
+  ✓ updating item ignores quantity in payload but updates metadata                                               0.04s  
+  ✓ updating item ignores status in payload                                                                      0.04s  
+  ✓ metadata only update persists normally                                                                       0.04s  
+
+   PASS  Tests\Feature\ItemDeletionReferentialIntegrityTest
+  ✓ deleting item referenced by a pending dispatch returns a clean error not a server error                      0.07s  
+  ✓ deleting room asset item referenced by a damage report returns a clean error not a server error              0.04s  
+  ✓ deleting unreferenced item still succeeds                                                                    0.04s  
+
+   PASS  Tests\Feature\LegacyMigrationRehearsalTest
+  ✓ the rehearsal runs on a migrated scratch database holding the task 67 fixture                                8.83s  
+  ✓ the target schema is what the mapping assumes                                                                7.95s  
+  ✓ every damage report and repair request receives an explicit decision                                         7.82s  
+  ✓ damage reports map exactly as specified                                                                      8.10s  
+  ✓ created target reports carry the expected values                                                             8.39s  
+  ✓ existing reports are reconciled and never overwritten                                                        8.18s  
+  ✓ repair requests follow their damage report                                                                   7.86s  
+  ✓ failure reason and technician have no target and are recorded as lost                                        8.05s  
+  ✓ every repair status is classified as safe or blocked                                                         7.77s  
+  ✓ every damage status maps and two of them need a resolution column                                            7.40s  
+  ✓ the status maps match the live services                                                                      9.13s  
+  ✓ the technician is never written into assigned to                                                             7.72s  
+  ✓ the three assignment fields stay independent                                                                 7.96s  
+  ✓ structured room becomes unstructured text and the loss is recorded                                           7.62s  
+  ✓ history is carried only for records that were transformed                                                    8.00s  
+  ✓ no transformed report exercises the two table history merge                                                  7.44s  
+  ✓ same second history events exist so timestamp ordering is insufficient                                       8.36s  
+  ✓ replacement chains are traced without being executed                                                         7.94s  
+  ✓ the rehearsal performs no inventory mutation                                                                 7.95s  
+  ✓ every source record is conserved                                                                             7.64s  
+  ✓ no loss is silent                                                                                            7.50s  
+  ✓ a second transform cannot silently duplicate the target                                                      7.33s  
+  ✓ rollback after a controlled failure leaves no trace                                                          7.49s  
+  ✓ the rehearsal is repeatable against a clean database                                                        16.03s  
+  ✓ the rehearsal is structurally unable to touch the application database                                       8.55s  
+  ✓ the scratch database is actually dropped                                                                    15.23s  
+
+   PASS  Tests\Feature\LegacyNonStrictSqlModeAsymmetryTest
+  ✓ laravel connection pins strict mode                                                                          0.15s  
+  ✓ legacy style connection inherits the server global                                                           0.11s  
+  ✓ non strict session silently coerces an out of range enum                                                     0.11s  
+  ✓ strict session rejects the same write                                                                        0.09s  
+
+   PASS  Tests\Feature\LegacyRehearsalFixtureTest
+  ✓ dataset is built on a migrated scratch database                                                              7.99s  
+  ✓ dataset has the expected counts                                                                              7.50s  
+  ✓ identifiers and codes are deterministic                                                                      7.77s  
+  ✓ every damage status is valid in the real engine                                                              7.43s  
+  ✓ every repair status is valid in the real engine                                                              8.93s  
+  ✓ a damage report can hold only one repair request                                                             8.20s  
+  ✓ every legacy relationship resolves                                                                           8.14s  
+  ✓ dataset contains both linked and unlinked legacy rows                                                        7.56s  
+  ✓ the three independent assignment fields are all represented                                                  7.12s  
+  ✓ replacement scenarios are represented                                                                        7.48s  
+  ✓ seeding the fixture performed no inventory mutation                                                          8.17s  
+  ✓ history is represented and resolves                                                                          7.36s  
+  ✓ history status columns are looser than their parents                                                         7.98s  
+  ✓ seeded notifications reference live legacy entities                                                          7.70s  
+  ✓ repair status collapse is visible in the dataset                                                             7.52s  
+  ✓ room reference has no structured destination                                                                 8.68s  
+
+   PASS  Tests\Feature\MigrationChainReproducibilityTest
+  ✓ migration chain completes against an empty database                                                          8.92s  
+  ✓ migration ledger is coherent                                                                                 9.27s  
+  ✓ columns the application depends on are created                                                              13.14s  
+  ✓ need change status stores every value the application writes                                                 9.07s  
+  ✓ need change quantity accepts null                                                                           12.88s  
+  ✓ users email is nullable                                                                                     11.19s  
+
+   PASS  Tests\Feature\NavigationConsistencyTest
+  ✓ create report action is not hardcoded to false                                                               0.04s  
+  ✓ create report action is visible to every role that can submit reports                                        0.03s  
+  ✓ create report action is hidden from super admin                                                              0.03s  
+  ✓ sidebar has no standalone create report navigation item                                                      0.03s  
+  ✓ all reports link highlights active from its own detail page                                                  0.03s  
+  ✓ components file no longer defines dead duplicate sidebar                                                     0.03s  
+  ✓ dashboard no buildings notice does not link to a nonexistent setup page                                      0.03s  
+
+   PASS  Tests\Feature\NeedChangeApprovalLowStockNotificationTest
+  ✓ approving need change across the reorder level notifies admins                                               0.06s  
+  ✓ approving second need change that stays below reorder level does not renotify                                0.05s  
+
+   PASS  Tests\Feature\NeedChangeApprovalTest
+  ✓ approving valid need change request deducts inventory through ledger                                         0.05s  
+  ✓ approving same request twice deducts inventory only once                                                     0.05s  
+  ✓ approving request with no need change item fails validation                                                  0.04s  
+  ✓ approving request with insufficient stock fails cleanly                                                      0.04s  
+  ✓ approving request with stock reserved elsewhere fails cleanly                                                0.04s  
+  ✓ pending need change leaves inventory unchanged until approved                                                0.03s  
+  ✓ approving a rejected need change is blocked                                                                  0.04s  
+  ✓ existing deploy transaction blocks second deduction even if deducted at is null                              0.08s  
+  ✓ rollback leaves no partial inventory update                                                                  0.05s  
+
+   PASS  Tests\Feature\NeedChangeAuthorizationTest
+  ✓ maintenance staff assigned to the report still cannot approve need change                                    0.05s  
+  ✓ unrelated maintenance staff is refused by the report gate before the need change rule                        0.04s  
+  ✓ maintenance staff assigned to the report cannot reject need change                                           0.04s  
+  ✓ head maintenance cannot approve need change                                                                  0.04s  
+  ✓ need change service itself refuses a maintenance staff actor                                                 0.04s  
+  ✓ refused service call does not touch the report row at all                                                    0.04s  
+  ✓ administrator can still approve need change with all effects intact                                          0.05s  
+  ✓ recorded approver is the authorized session user                                                             0.05s  
+  ✓ only super admin satisfies the need change approval rule with data set "administrator"                       0.03s  
+  ✓ only super admin satisfies the need change approval rule with data set "head maintenance"                    0.03s  
+  ✓ only super admin satisfies the need change approval rule with data set "head maintenance legacy alias"       0.03s  
+  ✓ only super admin satisfies the need change approval rule with data set "maintenance staff"                   0.06s  
+  ✓ only super admin satisfies the need change approval rule with data set "maintenance staff legacy alias"      0.04s  
+  ✓ only super admin satisfies the need change approval rule with data set "eelab staff legacy alias"            0.03s  
+  ✓ only super admin satisfies the need change approval rule with data set "blank role"                          0.03s  
+  ✓ only super admin satisfies the need change approval rule with data set "whitespace role"                     0.03s  
+  ✓ only super admin satisfies the need change approval rule with data set "absent role key"                     0.03s  
+  ✓ only super admin satisfies the need change approval rule with data set "unknown role"                        0.03s  
+  ✓ role normalizer behaviour relied on by the rule is unchanged                                                 0.03s  
+  ✓ authorized role without a user id is refused                                                                 0.03s  
+
+   PASS  Tests\Feature\NeedChangeStatusSchemaDriftTest
+  ✓ migration declared enum cannot store the rejected status                                                     0.13s  
+  ✓ live column type is what currently prevents the defect                                                       0.09s  
+
+   PASS  Tests\Feature\NotificationControllerOwnershipTest
+  ✓ user cannot mark another users notification as read                                                          0.07s  
+  ✓ user cannot delete another users notification                                                                0.04s  
+  ✓ user cannot see another users notification in index or unread                                                0.04s  
+  ✓ owner can mark own notification as read and delete it                                                        0.04s  
+  ✓ mark all read does not touch another users notifications                                                     0.04s  
+
+   PASS  Tests\Feature\PreventiveMaintenanceControllerTest
+  ✓ unauthenticated request cannot list tasks                                                                    0.05s  
+  ✓ unauthenticated request cannot create a task                                                                 0.04s  
+  ✓ store rejects maintenance staff role                                                                         0.04s  
+  ✓ store rejects missing required fields                                                                        0.04s  
+  ✓ super admin can create a task                                                                                0.05s  
+  ✓ store derives next due date from frequency when only last completed date given                               0.07s  
+  ✓ store with explicit next due date does not recompute it                                                      0.05s  
+  ✓ store rejects an invalid frequency                                                                           0.04s  
+  ✓ store with an assignee notifies that user                                                                    0.05s  
+  ✓ store assigning to self does not notify self                                                                 0.05s  
+  ✓ show returns task with relationships                                                                         0.05s  
+  ✓ maintenance staff can view any task not just own                                                             0.05s  
+  ✓ update rejects a role outside the allowed roles                                                              0.04s  
+  ✓ maintenance staff can update their own assigned task                                                         0.05s  
+  ✓ maintenance staff cannot update a task assigned to someone else                                              0.04s  
+  ✓ maintenance staff cannot update an unassigned task                                                           0.04s  
+  ✓ maintenance admin can update any task regardless of assignee                                                 0.09s  
+  ✓ update can clear a nullable field by explicit null                                                           0.05s  
+  ✓ update reassignment notifies the new assignee                                                                0.05s  
+  ✓ archive rejects maintenance staff role                                                                       0.04s  
+  ✓ admin can archive and reactivate a task without deleting it                                                  0.05s  
+  ✓ complete rejects a maintenance staff not assigned to the task                                                0.04s  
+  ✓ assigned maintenance staff can complete their own task                                                       0.05s  
+  ✓ complete rolls forward a month end date without overflowing                                                  0.05s  
+  ✓ complete notifies the task creator when someone else completes it                                            0.05s  
+  ✓ complete does not notify when the actor is also the creator                                                  0.06s  
+  ✓ complete rejects a missing completed date                                                                    0.05s  
+  ✓ complete can be recorded multiple times appending history                                                    0.10s  
+  ✓ history returns rows ordered newest first                                                                    0.05s  
+  ✓ history empty state returns empty array                                                                      0.05s  
+  ✓ index empty state returns empty list                                                                         0.05s  
+  ✓ index defaults to active only hiding archived tasks                                                          0.05s  
+  ✓ index is active all includes archived tasks                                                                  0.06s  
+  ✓ index filters by frequency                                                                                   0.05s  
+  ✓ index filters by assigned user id                                                                            0.05s  
+  ✓ index search matches title or category                                                                       0.05s  
+  ✓ index status filter overdue matches a past due date                                                          0.08s  
+  ✓ index status filter unscheduled matches a null due date                                                      0.05s  
+  ✓ index status filter due soon respects configured threshold                                                   0.05s  
+  ✓ index status filter paginates the computed result                                                            0.05s  
+  ✓ summary counts active tasks by computed status                                                               0.04s  
+  ✓ options returns configured categories and frequencies                                                        0.04s  
+
+   PASS  Tests\Feature\PreventiveMaintenanceRepairDecouplingTest
+  ✓ preventive maintenance does not call the repair technicians endpoint                                         0.07s  
+  ✓ preventive maintenance does not call any repair api                                                          0.03s  
+  ✓ both personnel selectors use the neutral preventive maintenance endpoint                                     0.06s  
+  ✓ the user id onselect override survived the repoint                                                           0.03s  
+  ✓ the controller depends on the neutral directory not the repair service                                       0.03s  
+  ✓ personnel endpoint returns the same shape the selector parses                                                0.04s  
+  ✓ personnel endpoint does not broaden the audience                                                             0.04s  
+  ✓ personnel endpoint supports the search term the selector sends                                               0.04s  
+  ✓ maintenance staff can read the personnel endpoint                                                            0.04s  
+  ✓ unauthenticated request cannot read the personnel endpoint                                                   0.04s  
+  ✓ the repair technicians endpoint is retired                                                                   0.04s  
+
+   PASS  Tests\Feature\PurchaseReceiptPostingTest
+  ✓ posting draft receipt updates existing item exactly once                                                     0.11s  
+  ✓ posting multi item receipt creates ledger entry per line                                                     0.09s  
+  ✓ posting can create new inventory item without doubling quantity                                              0.04s  
+  ✓ reposting posted receipt is rejected without duplicate stock                                                 0.04s  
+  ✓ posting rolls back all stock changes when exception occurs                                                   0.06s  
+  ✓ posting receipt with no items is rejected                                                                    0.04s  
+  ✓ inventory transaction observer adjustment increases quantity once                                            0.04s  
+
+   PASS  Tests\Feature\RepairRequestFrontendRetirementTest
+  ✓ every repair only page is deleted                                                                            0.04s  
+  ✓ the similarly named inventory page was not collateral damage                                                 0.03s  
+  ✓ the sidebar renders no repair requests nav item                                                              0.03s  
+  ✓ the sidebar keeps no active state entry for a retired page                                                   0.03s  
+  ✓ the primary workflow navigation survives                                                                     0.06s  
+  ✓ no surviving frontend file links to a retired page                                                           0.06s  
+  ✓ the maintenance report detail keeps its damage and dispatch information                                      0.03s  
+  ✓ the damage report detail keeps repair notes and loses only the repair link                                   0.03s  
+  ✓ notifications no longer deep link to the repair detail page                                                  0.03s  
+  ✓ the repair backend is retired                                                                                0.03s  
+  ✓ the repair api routes are retired                                                                            0.03s  
+  ✓ the neighbouring analytics routes were not collateral damage                                                 0.03s  
+  ✓ the neutral personnel directory is untouched                                                                 0.03s  
+
+   PASS  Tests\Feature\ReportAssignmentDisplayTest
+  ✓ index exposes assigned name for an assigned report                                                           0.05s  
+  ✓ index returns null assigned name when report is unassigned                                                   0.04s  
+
+   PASS  Tests\Feature\ReportAssignmentNotificationTest
+  ✓ assigning a report notifies only the assigned user                                                           0.08s  
+  ✓ reassigning a report notifies only the new assignee                                                          0.04s  
+  ✓ resubmitting the same assignee does not duplicate the notification                                           0.05s  
+  ✓ new report submission still notifies all admins unaffected by assignment scoping                             0.05s  
+
+   PASS  Tests\Feature\ReportAuthorizationBypassAuditTest
+  ✓ head maintenance cannot delete a report from another department                                              0.05s  
+  ✓ staff cannot delete a report from another department                                                         0.04s  
+  ✓ administrator can still delete any report                                                                    0.05s  
+  ✓ head maintenance can still delete own department report                                                      0.04s  
+  ✓ head maintenance cannot change another departments report status via damage report sync                      0.04s  
+  ✓ unassigned staff cannot drive report status via damage report sync                                           0.04s  
+  ✓ head maintenance can still update own department damage report                                               0.05s  
+  ✓ administrator can update any departments damage report                                                       0.08s  
+  ✓ damage report without linked maintenance report is unaffected by the gate                                    0.05s  
+  ✓ staff cannot assign personnel through report creation                                                        0.05s  
+  ✓ staff cannot plant a precompleted report                                                                     0.05s  
+  ✓ administrator does not submit reports at all                                                                 0.04s  
+  ✓ head maintenance can still assign at creation time                                                           0.05s  
+  ✓ the repair request write path no longer exists                                                               0.04s  
+  ✓ the centralized authorization gate survived the repair retirement                                            0.03s  
+
+   PASS  Tests\Feature\ReportCompletionNotificationTest
+  ✓ completing a report notifies the owner exactly once                                                          0.06s  
+  ✓ closing a report notifies the owner exactly once                                                             0.04s  
+  ✓ repeated completion update does not duplicate the notification                                               0.05s  
+  ✓ non terminal status transition does not notify                                                               0.08s  
+  ✓ new report submission notification flow is unaffected                                                        0.04s  
+
+   PASS  Tests\Feature\ReportCreateAssetSeverityImageTest
+  ✓ general report creation without asset fields still works                                                     0.05s  
+  ✓ asset linked report accepts a valid severity level                                                           0.05s  
+  ✓ asset linked report rejects an invalid severity level                                                        0.04s  
+  ✓ asset linked report accepts a valid image and persists its path                                              0.06s  
+  ✓ asset linked report rejects a disallowed file extension for the image                                        0.05s  
+  ✓ asset linked report accepts repair notes and persists it                                                     0.05s  
+  ✓ asset linked report without repair notes stores null matching legacy optional behavior                       0.05s  
+  ✓ need change report creation is unaffected by the new fields                                                  0.05s  
+  ✓ super admin cannot create an asset linked report                                                             0.04s  
+  ✓ maintenance admin can create an asset linked report                                                          0.09s  
+
+   PASS  Tests\Feature\ReportDepartmentAuthorizationTest
+  ✓ administrator can modify a report in any department                                                          0.05s  
+  ✓ head maintenance can modify a report in their own department                                                 0.04s  
+  ✓ head maintenance cannot modify a report in another department                                                0.04s  
+  ✓ head maintenance cannot assign personnel for another department                                              0.04s  
+  ✓ head maintenance cannot edit report fields for another department                                            0.04s  
+  ✓ head maintenance can still view a report from another department                                             0.04s  
+  ✓ maintenance staff can update status of a report assigned to them in their department                         0.04s  
+  ✓ maintenance staff cannot update a report assigned to them but outside their department                       0.04s  
+  ✓ maintenance staff cannot update a report in their department not assigned to them                            0.04s  
+  ✓ maintenance staff can create reports regardless of department authorization                                  0.04s  
+  ✓ no department can modify another departments report via status update                                        0.07s  
+  ✓ editing a report to a nonexistent department id is rejected                                                  0.04s  
+  ✓ editing a report to a different but valid department is still allowed                                        0.05s  
+  ✓ editing a report into an inactive department is rejected                                                     0.05s  
+  ✓ editing a report to a valid active department id still succeeds                                              0.05s  
+  ✓ editing a report to an invalid priority value is rejected                                                    0.05s  
+  ✓ editing a report status to assigned with a nonexistent assigned to is rejected                               0.05s  
+  ✓ editing a report status to assigned with a valid assigned to still succeeds                                  0.05s  
+  ✓ editing a report with an invalid due date is rejected                                                        0.04s  
+  ✓ editing a report to completed with an invalid completed date is rejected                                     0.05s  
+
+   PASS  Tests\Feature\ReportLocationValidationTest
+  ✓ a room registered under the selected building and floor is accepted                                          0.08s  
+  ✓ a client supplied location string is replaced by the derived one                                             0.10s  
+  ✓ a room id that does not exist is rejected                                                                    0.05s  
+  ✓ a deactivated room is rejected                                                                               0.05s  
+  ✓ a real room claimed under the wrong building is rejected                                                     0.05s  
+  ✓ a real room claimed on the wrong floor is rejected                                                           0.05s  
+  ✓ a floor belonging to another building is rejected                                                            0.05s  
+  ✓ a building id that does not exist is rejected                                                                0.05s  
+  ✓ a partial location triple is rejected with data set "room only"                                              0.05s  
+  ✓ a partial location triple is rejected with data set "building only"                                          0.05s  
+  ✓ a partial location triple is rejected with data set "building and floor without a room"                      0.05s  
+  ✓ an asset linked report also stores the derived location                                                      0.05s  
+  ✓ an asset linked report with an invalid location is rejected before any damage row is written                 0.05s  
+  ✓ updating a report with an invalid location triple is rejected                                                0.05s  
+  ✓ updating a report with a valid location triple stores the derived string                                     0.10s  
+  ✓ a report with a plain location string and no triple is still accepted                                        0.05s  
+  ✓ a report with no location at all is still accepted                                                           0.06s  
+  ✓ the other report fields are unaffected by location validation                                                0.05s  
+  ✓ role permissions for report creation are unchanged                                                           0.06s  
+  ✓ the create report page uses dependent selects instead of a free text location                                0.04s  
+  ✓ the create report page reuses the existing buildings overview endpoints                                      0.04s  
+  ✓ the create report page does not use a browser alert for location errors                                      0.04s  
+
+   PASS  Tests\Feature\ReportNotificationFailureIsolationTest
+  ✓ report creation succeeds even when the notification write fails                                              0.07s  
+  ✓ report completion succeeds even when the notification write fails                                            0.04s  
+
+   PASS  Tests\Feature\ReportRbacPolicyTest
+  ✓ super admin cannot create a report                                                                           0.05s  
+  ✓ head maintenance can create a report                                                                         0.09s  
+  ✓ maintenance staff can create a report                                                                        0.05s  
+  ✓ head maintenance can assign personnel                                                                        0.05s  
+  ✓ maintenance staff cannot assign personnel                                                                    0.04s  
+  ✓ maintenance staff can update status of a report assigned to them                                             0.04s  
+  ✓ maintenance staff cannot update status of a report not assigned to them                                      0.04s  
+
+   PASS  Tests\Feature\ReportServiceExtractionParityTest
+  ✓ create report activity log still records the request metadata                                                0.05s  
+  ✓ assignment activity log still records the request metadata                                                   0.04s  
+  ✓ delete report activity log still records the request metadata                                                0.04s  
+  ✓ one update request still writes exactly one activity log                                                     0.05s  
+  ✓ one create request still writes exactly one activity log                                                     0.04s  
+  ✓ one assignment request still sends exactly one notification                                                  0.04s  
+  ✓ report service opens no database transaction                                                                 0.07s  
+  ✓ report service makes no authorization decision                                                               0.03s  
+
+   PASS  Tests\Feature\ReportTypeClassificationFilterTest
+  ✓ no report type filter returns both classifications                                                           0.05s  
+  ✓ report type damage returns only replacement outcome reports                                                  0.05s  
+  ✓ report type maintenance excludes replacement outcome reports                                                 0.05s  
+  ✓ maintenance and damage partition the unfiltered result set                                                   0.06s  
+  ✓ unrecognised report type values do not filter                                                                0.06s  
+  ✓ every row carries its computed classification                                                                0.04s  
+  ✓ wording and asset linkage alone do not classify a report as damage                                           0.05s  
+  ✓ report type filter cannot widen role scoped access                                                           0.05s  
+  ✓ export ui drives the authorized report type filter                                                           0.03s  
+  ✓ filtering is read only and leaves damage cases intact                                                        0.09s  
+  ✓ damage cases survive the module removal and repair rows are left untouched                                   0.05s  
+
+   PASS  Tests\Feature\ReportUnifiedReadSurfaceTest
+  ✓ index exposes report category and damage lifecycle fields                                                    0.06s  
+  ✓ index still returns the full primary workflow row                                                            0.04s  
+  ✓ show exposes damage fields and no longer exposes repair fields                                               0.04s  
+  ✓ index does not fan out when unrelated dispatches share report id                                             0.04s  
+  ✓ index and show return null lifecycle fields when no linked records exist                                     0.05s  
+  ✓ seed helper defaults are values production mysql can store                                                   0.03s  
+
+   PASS  Tests\Feature\ReportsApiNeedChangeTest
+  ✓ reports list exposes need change fields after approval                                                       0.06s  
+  ✓ report detail endpoint matches list endpoint need change values                                              0.10s  
+  ✓ existing filters return same rows regardless of need change fields                                           0.07s  
+  ✓ head maintenance with department sees all departments by default                                             0.04s  
+  ✓ head maintenance can filter by a department that is not their own                                            0.04s  
+  ✓ super admin still sees all departments by default                                                            0.04s  
+  ✓ assigned to me filter is unaffected by need change fields                                                    0.04s  
+  ✓ role visibility unchanged regular user sees only own or assigned reports                                     0.04s  
+  ✓ role visibility unchanged privileged roles see all reports including deducted                                0.04s  
+
+   PASS  Tests\Feature\ReportsDefaultDateScopeTest
+  ✓ an unfiltered request returns every report regardless of age                                                 0.05s  
+  ✓ explicit date ranges still filter correctly                                                                  0.09s  
+  ✓ a plain load scopes to the current month                                                                     0.03s  
+  ✓ the date range summary is gone but the date filter is not                                                    0.03s  
+  ✓ the lifecycle column is removed from the all reports table                                                   0.03s  
+  ✓ the column width rules were reindexed for the removed column                                                 0.03s  
+  ✓ explicit url scopes are preserved                                                                            0.03s  
+  ✓ clear date resets to the current month                                                                       0.03s  
+
+   PASS  Tests\Feature\RoomItemTypeInvariantTest
+  ✓ item created with a room is typed as a room asset                                                            0.05s  
+  ✓ item created without a room is typed as inventory stock                                                      0.04s  
+  ✓ client cannot override item type to break the invariant                                                      0.05s  
+  ✓ room item creation still applies quantity through the ledger                                                 0.04s  
+  ✓ adding a room item does not change existing warehouse stock                                                  0.05s  
+  ✓ room asset is excluded from the replacement item query                                                       0.09s  
+  ✓ room asset is still listed as the contents of its room                                                       0.05s  
+  ✓ moving an item into a room retypes it as a room asset                                                        0.04s  
+  ✓ removing an item from a room retypes it as inventory stock                                                   0.04s  
+  ✓ updating an unrelated field leaves item type alone                                                           0.04s  
+  ✓ assigning the same item to the same room twice is rejected                                                   0.05s  
+  ✓ the same item name may exist in two different rooms                                                          0.05s  
+  ✓ need change approval rejects a room asset as the replacement item                                            0.04s  
+  ✓ need change approval still accepts inventory stock                                                           0.05s  
+
+   PASS  Tests\Feature\UiEmojiIconReplacementTest
+  ✓ the icon registry exists and is populated                                                                    0.04s  
+  ✓ both renderers exist                                                                                         0.03s  
+  ✓ the js renderer does not carry its own copy of the geometry                                                  0.06s  
+  ✓ every icon renders in the projects existing svg style                                                        0.03s  
+  ✓ no icon hardcodes a colour                                                                                   0.03s  
+  ✓ the icon stylesheet is loaded and sizes icons for twelve pixel text                                          0.03s  
+  ✓ icons are decorative by default                                                                              0.03s  
+  ✓ an icon that carries meaning can take an accessible name                                                     0.03s  
+  ✓ the analytics trend arrow is labelled not hidden                                                             0.03s  
+  ✓ icon only controls kept an accessible name                                                                   0.03s  
+  ✓ the notification bell is still named                                                                         0.03s  
+  ✓ no retired emoji remain in rendered ui markup                                                                0.04s  
+  ✓ no entity encoded emoji are used as interface icons                                                          0.04s  
+  ✓ no mojibake double encoded emoji remain                                                                      0.03s  
+  ✓ icon containers are filled by a renderer not a text glyph                                                    0.03s  
+  ✓ developer console logging was left alone                                                                     0.03s  
+  ✓ the never displayed validation emoji prefix was removed cleanly                                              0.03s  
+  ✓ navigation and action labels are unchanged                                                                   0.03s  
+  ✓ status text is retained beside every status icon                                                             0.06s  
+  ✓ the inventory submenu structure survived                                                                     0.03s  
+  ✓ role gates were not touched by a presentation change                                                         0.03s  
+  ✓ deploy to room was not restored                                                                              0.03s  
+  ✓ the icon system is confined to the frontend                                                                  0.03s  
+  ✓ no external icon dependency was introduced                                                                   0.40s  
+
+   PASS  Tests\Feature\UserManagementAuthorizationTest
+  ✓ super admin can list users                                                                                   0.06s  
+  ✓ maintenance admin cannot list users                                                                          0.04s  
+  ✓ maintenance staff cannot list users                                                                          0.04s  
+  ✓ unauthenticated request cannot list users                                                                    0.04s  
+  ✓ super admin can approve a pending user                                                                       0.09s  
+  ✓ maintenance admin cannot approve a pending user                                                              0.04s  
+  ✓ maintenance staff cannot delete a pending user                                                               0.04s  
+  ✓ maintenance admin cannot edit a privileged user                                                              0.04s  
+  ✓ approve endpoint rejects a super admin role assignment                                                       0.04s  
+  ✓ frontend approve modal only offers backend accepted roles                                                    0.03s  
+  ✓ administrator can be created without a department                                                            0.04s  
+  ✓ head maintenance cannot be created without a department                                                      0.04s  
+  ✓ maintenance staff cannot be created without a department                                                     0.05s  
+  ✓ an explicit null department is rejected for a department scoped role                                         0.06s  
+  ✓ head maintenance can be created with a valid department                                                      0.04s  
+  ✓ maintenance staff can be created with a valid department                                                     0.05s  
+  ✓ role aliases cannot bypass the department requirement with data set "admin maintenance => maintenance admin… 0.04s  
+  ✓ role aliases cannot bypass the department requirement with data set "eelab staff => maintenance staff"       0.08s  
+  ✓ role aliases cannot bypass the department requirement with data set "maintenance personnel => maintenance s… 0.04s  
+  ✓ a nonexistent department is rejected                                                                         0.04s  
+  ✓ creating a user leaves existing accounts untouched                                                           0.04s  
+  ✓ register modal department field is wrapped in a toggleable group                                             0.03s  
+  ✓ register modal hides and requires department by role                                                         0.03s  
+  ✓ register modal never submits a department for a role that has none                                           0.03s  
+  ✓ deactivated users existing session is rejected                                                               0.04s  
+  ✓ index flags a user with a pending password reset request                                                     0.04s  
+  ✓ store rejects an unrecognized role string                                                                    0.04s  
+  ✓ approve endpoint only operates on pending users                                                              0.04s  
+  ✓ approve endpoint rejects a super admin target                                                                0.04s  
+  ✓ reset password clears pending password reset notification                                                    0.04s  
+  ✓ updating profile password with whitespace still logs in                                                      0.08s  
+  ✓ updating profile via post with method override allows immediate login with new password                      0.05s  
+  ✓ role filters do not offer a super admin option                                                               0.03s  
+  ✓ light theme active role filter pill sets a visible background                                                0.03s  
+  ✓ activate rejects a never approved pending signup                                                             0.04s  
+  ✓ activate still reactivates a previously approved inactive user                                               0.04s  
+  ✓ an active account is admitted by the auth middleware regardless of role                                      0.04s  
+
+  Tests:    878 passed (4413 assertions)
+  Duration: 454.38s
+

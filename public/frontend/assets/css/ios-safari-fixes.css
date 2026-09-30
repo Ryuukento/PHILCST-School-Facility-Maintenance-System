@@ -1,0 +1,57 @@
+/* ============================================================================
+   iPhone / iPad (Safari) fixes
+   ----------------------------------------------------------------------------
+   The phone layout itself (widths 320-430px) works the same on iPhone and
+   Android. These rules cover the few behaviours that are specific to Safari
+   on iOS. Android Chrome and desktop browsers are unaffected.
+   ========================================================================= */
+
+/* 1. No zoom-in when tapping a form field.
+   iOS Safari zooms the whole page in when a focused input/select/textarea has
+   a font size under 16px (most fields here are 14px), and the user then has
+   to pinch back out. `-webkit-touch-callout` is supported only by iOS Safari,
+   so this @supports block applies to iPhone/iPad and nothing else. */
+@supports (-webkit-touch-callout: none) {
+    input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="color"]),
+    select,
+    textarea {
+        font-size: 16px !important;
+    }
+}
+
+/* 2. Full-height elements fit the VISIBLE screen.
+   On iOS Safari `100vh` is taller than what is visible (the address bar and
+   bottom toolbar overlap it), so the bottom of the sidebar (the user card and
+   Log Out) and the bottom buttons of pop-up forms could sit behind Safari's
+   toolbar. `100dvh` is the visible height (iOS 15.4+); browsers without it
+   skip this block and keep the existing 100vh rules. */
+@supports (height: 100dvh) {
+    .sidebar,
+    body[data-user-role] .sidebar {
+        height: 100dvh !important;
+    }
+
+    #global-logout-modal .logout-modal-content {
+        max-height: calc(100dvh - 32px) !important;
+    }
+
+    .report-edit-modal-card {
+        max-height: calc(100dvh - 32px) !important;
+    }
+
+    .users-modal-card,
+    .pm-history-modal {
+        max-height: calc(100dvh - 48px) !important;
+    }
+
+    .utility-bar .notification-dropdown {
+        max-height: min(420px, calc(100dvh - var(--utility-bar-height, 64px) - 24px)) !important;
+    }
+}
+
+/* 3. Keep text at the designed size when the phone is turned sideways
+   (iOS otherwise enlarges text in landscape). */
+html {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+}
