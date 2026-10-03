@@ -1940,10 +1940,8 @@ async function pmToggleActive(row, activate) {
 // Print view — manual-style Jan–Dec schedule grid
 // ---------------------------------------------------------------------
 
-function pmGetPrintNotes() {
-    const notesField = document.getElementById('pm-print-notes');
-    const notes = notesField ? notesField.value.trim() : '';
-    if (!notes) return '';
+function pmGetPrintNotes(notes) {
+    if (!notes || !notes.trim()) return '';
 
     return `
         <div class="pm-print-notes">
@@ -1953,7 +1951,7 @@ function pmGetPrintNotes() {
     `;
 }
 
-function pmBuildPrintView() {
+function pmBuildPrintView(notes = '') {
     const year = new Date().getFullYear();
     const monthHeaders = PM_MONTH_NAMES.map((name) => `<th>${name}</th>`).join('');
 
@@ -1982,7 +1980,7 @@ function pmBuildPrintView() {
         <div class="pm-print-title-block">
             <h1>PREVENTIVE MAINTENANCE SCHEDULE — ${year}</h1>
         </div>
-        ${pmGetPrintNotes()}
+        ${pmGetPrintNotes(notes)}
         <table class="pm-print-table">
             <thead>
                 <tr><th>Frequency</th><th>Equipment Nomenclature</th><th>Location</th>${monthHeaders}</tr>
@@ -1997,7 +1995,9 @@ function pmPrintSchedule() {
         pmNotify('There is no schedule data loaded to print yet.', 'warning');
         return;
     }
-    document.getElementById('pm-print-container').innerHTML = pmBuildPrintView();
+    const notesField = document.getElementById('pm-print-notes');
+    const notes = notesField ? notesField.value.trim() : '';
+    document.getElementById('pm-print-container').innerHTML = pmBuildPrintView(notes);
     document.body.classList.add('pm-printing');
     window.print();
 }
