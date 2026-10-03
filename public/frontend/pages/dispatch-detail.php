@@ -458,20 +458,21 @@ include __DIR__ . '/../includes/header.php';
                 Change Release Personnel
             </button>
             <?php endif; ?>
+            <?php if ($canAssign): ?>
+            <button type="button" id="dd-add-personnel-btn"
+                    class="btn btn-secondary"
+                    style="display:none;">
+                Add Personnel
+            </button>
+            <?php endif; ?>
             <?php if ($canRelease): ?>
-            <button type="button" id="dd-release-btn"
+            <button type="button" id="dd-dispatch-item-btn"
                     class="btn btn-primary"
                     style="display:none;background:#2563eb;border-color:#2563eb;">
-                Release / Deploy Items
+                Dispatch Item
             </button>
             <?php endif; ?>
-            <?php if ($canCancel): ?>
-            <button type="button" id="dd-cancel-btn"
-                    class="btn btn-danger"
-                    style="display:none;background:#dc2626;border-color:#dc2626;">
-                Cancel Dispatch
-            </button>
-            <?php endif; ?>
+            <!-- Cancel button removed - dispatch workflow no longer supports cancellation -->
             <!-- TASK 13 — the shared inline error slot that used to live here
                  was only ever written to by the old modal-less Release action.
                  Every action now runs through its own dialog and reports
@@ -481,27 +482,7 @@ include __DIR__ . '/../includes/header.php';
     </div>
     <?php endif; ?>
 
-    <?php if ($canCancel): ?>
-    <!-- Cancel Dispatch Modal -->
-    <div id="dd-cancel-modal" class="modal" style="display:none;" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="dd-cancel-modal-title">
-        <div class="modal-content" style="max-width:480px;">
-            <div class="modal-header">
-                <h3 class="modal-title" id="dd-cancel-modal-title">Cancel Dispatch</h3>
-                <button type="button" class="modal-close" id="dd-cancel-modal-close" aria-label="Close">&times;</button>
-            </div>
-            <div class="modal-body">
-                <p style="margin-bottom:12px;color:#374151;">Please provide a reason for cancelling this dispatch. This action cannot be undone.</p>
-                <label for="dd-cancel-reason" style="font-weight:600;display:block;margin-bottom:6px;">Reason <span style="color:#ef4444;">*</span></label>
-                <textarea id="dd-cancel-reason" rows="3" class="form-control" placeholder="Enter cancellation reason..." style="width:100%;resize:vertical;"></textarea>
-                <p id="dd-cancel-error" style="color:#ef4444;font-size:13px;margin-top:6px;display:none;"></p>
-            </div>
-            <div class="modal-footer" style="display:flex;gap:8px;justify-content:flex-end;">
-                <button type="button" class="btn btn-secondary" id="dd-cancel-modal-dismiss">Keep Dispatch</button>
-                <button type="button" class="btn btn-danger" id="dd-cancel-confirm-btn" style="background:#dc2626;border-color:#dc2626;">Confirm Cancel</button>
-            </div>
-        </div>
-    </div>
-    <?php endif; ?>
+    <!-- Cancel button and modal removed - no longer part of dispatch workflow -->
 
     <?php if ($canApprove): ?>
     <!-- TASK 13 — Approval Review Dialog.
@@ -585,12 +566,55 @@ include __DIR__ . '/../includes/header.php';
     </div>
     <?php endif; ?>
 
+    <?php if ($canAssign): ?>
+    <!-- Multi-Personnel Dispatch: Add Personnel Modal -->
+    <div id="dd-add-personnel-modal" class="modal" style="display:none;" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="dd-add-personnel-modal-title">
+        <div class="modal-content" style="max-width:520px;">
+            <div class="modal-header">
+                <h3 class="modal-title" id="dd-add-personnel-modal-title">Add Personnel to Dispatch</h3>
+                <button type="button" class="modal-close" id="dd-add-personnel-modal-close" aria-label="Close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <label for="dd-add-personnel-search" style="font-weight:600;display:block;margin-bottom:6px;">Select Personnel <span style="color:#ef4444;">*</span></label>
+                <input type="text" id="dd-add-personnel-search" class="form-control" placeholder="Search maintenance staff..." style="width:100%;margin-bottom:4px;" autocomplete="off">
+                <input type="hidden" id="dd-add-personnel-id">
+                <p style="font-size:12px;color:#6b7280;margin:0;">Add maintenance staff from different departments to dispatch different types of items.</p>
+                <p id="dd-add-personnel-error" style="color:#ef4444;font-size:13px;margin-top:10px;display:none;"></p>
+            </div>
+            <div class="modal-footer" style="display:flex;gap:8px;justify-content:flex-end;">
+                <button type="button" class="btn btn-secondary" id="dd-add-personnel-modal-dismiss">Cancel</button>
+                <button type="button" class="btn btn-primary" id="dd-add-personnel-confirm-btn">Add Personnel</button>
+            </div>
+        </div>
+    </div>
+    <?php endif; ?>
+
     <?php if ($canRelease): ?>
-    <!-- TASK 13 — Release Confirmation (assigned Maintenance Staff).
-         Replaces the previous UI.systemConfirm() prompt so the releasing staff
-         member can attach remarks about the physical hand-off — the remarks
-         field TASK 4 placed in the Administrator's approve dialog now lives
-         here, where the person who was actually present fills it in. -->
+    <!-- Multi-Personnel Dispatch: Dispatch Item Modal -->
+    <div id="dd-dispatch-item-modal" class="modal" style="display:none;" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="dd-dispatch-item-modal-title">
+        <div class="modal-content" style="max-width:520px;">
+            <div class="modal-header">
+                <h3 class="modal-title" id="dd-dispatch-item-modal-title">Dispatch Item</h3>
+                <button type="button" class="modal-close" id="dd-dispatch-item-modal-close" aria-label="Close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p style="margin-bottom:12px;color:#374151;">Mark this item as dispatched by you.</p>
+                <div id="dd-dispatch-item-detail" style="background:#f9fafb;padding:12px;border-radius:8px;margin-bottom:12px;border:1px solid #e5e7eb;">
+                    <p style="margin:0;font-weight:600;" id="dd-dispatch-item-name">Item Name</p>
+                    <p style="margin:4px 0 0;color:#6b7280;font-size:13px;" id="dd-dispatch-item-quantity">Quantity: 0</p>
+                </div>
+                <p id="dd-dispatch-item-error" style="color:#ef4444;font-size:13px;margin-top:10px;display:none;"></p>
+            </div>
+            <div class="modal-footer" style="display:flex;gap:8px;justify-content:flex-end;">
+                <button type="button" class="btn btn-secondary" id="dd-dispatch-item-modal-dismiss">Cancel</button>
+                <button type="button" class="btn btn-primary" id="dd-dispatch-item-confirm-btn" style="background:#2563eb;border-color:#2563eb;">Confirm Dispatch</button>
+            </div>
+        </div>
+    </div>
+    <?php endif; ?>
+
+    <?php if ($canRelease): ?>
+    <!-- TASK 13 — Legacy Release Modal (kept for backward compatibility, hidden by default) -->
     <div id="dd-release-modal" class="modal" style="display:none;" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="dd-release-modal-title">
         <div class="modal-content" style="max-width:520px;">
             <div class="modal-header">
