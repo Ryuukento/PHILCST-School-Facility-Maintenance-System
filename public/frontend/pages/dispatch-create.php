@@ -119,10 +119,19 @@ include __DIR__ . '/../includes/header.php';
                              removed (see DispatchAuthorizationService) — the
                              helper text below is now the same for every role. -->
                         <div class="form-group">
-                            <label for="dc-release-personnel-search">Release Personnel <span style="color:#ef4444;">*</span></label>
+                            <label for="dc-release-personnel-search">Primary Release Personnel <span style="color:#ef4444;">*</span></label>
                             <input type="text" id="dc-release-personnel-search" class="form-control" placeholder="Search maintenance staff…" autocomplete="off">
                             <input type="hidden" id="dc-release-personnel-id">
-                            <small class="text-muted">The Maintenance Staff member who will hand off these items. Any active Maintenance Staff member may be selected, regardless of department.</small>
+                            <small class="text-muted">The primary Maintenance Staff member responsible for the dispatch. Any active Maintenance Staff member may be selected, regardless of department.</small>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="dc-additional-personnel-search">Additional Personnel (Optional)</label>
+                            <p style="font-size:13px;color:#6b7280;margin-bottom:8px;">Assign personnel from different departments to dispatch relevant items. For example, IT staff for computers, Electrical staff for aircon/electrical items.</p>
+                            <input type="text" id="dc-additional-personnel-search" class="form-control" placeholder="Search and add maintenance staff from different departments…" autocomplete="off" style="margin-bottom:8px;">
+                            <input type="hidden" id="dc-additional-personnel-id">
+                            <div id="dc-additional-personnel-list" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;"></div>
+                            <small class="text-muted">Personnel added here can dispatch items relevant to their department. Multiple personnel can work on the same dispatch.</small>
                         </div>
 
                         <?php if ($_dcIsAdmin): ?>
@@ -428,6 +437,63 @@ function dcBuildPersonnelSelect() {
 }
 
 // ---------------------------------------------------------------------------
+// Multi-Personnel Dispatch Support — Additional Personnel Selection
+// ---------------------------------------------------------------------------
+
+let dcAdditionalPersonnelSelect = null;
+const dcSelectedAdditionalPersonnel = new Set();
+
+function dcBuildAdditionalPersonnelSelect() {
+    if (!(window.Components && typeof Components.SearchableSelect === 'function')) return;
+
+    if (dcAdditionalPersonnelSelect && typeof dcAdditionalPersonnelSelect.destroy === 'function') {
+        dcAdditionalPersonnelSelect.destroy();
+        dcAdditionalPersonnelSelect = null;
+    }
+
+    dcAdditionalPersonnelSelect = new Components.SearchableSelect({
+        inputId:    'dc-additional-personnel-search',
+        hiddenId:   'dc-additional-personnel-id',
+        endpoint:   '/api/dispatches/support/release-personnel',
+        displayKey: 'full_name',
+        onSelect: (personnel) => {
+            const userId = personnel.user_id || 0;
+            if (userId && !dcSelectedAdditionalPersonnel.has(userId)) {
+                dcSelectedAdditionalPersonnel.add(userId);
+                dcUpdateAdditionalPersonnelList(personnel);
+                // Clear the input after selection
+                document.getElementById('dc-additional-personnel-search').value = '';
+                document.getElementById('dc-additional-personnel-id').value = '';
+                if (dcAdditionalPersonnelSelect) {
+                    dcAdditionalPersonnelSelect.clearSelection();
+                }
+            }
+        },
+    });
+}
+
+function dcUpdateAdditionalPersonnelList(personnel) {
+    const container = document.getElementById('dc-additional-personnel-list');
+    const badge = document.createElement('div');
+    badge.style.cssText = 'display:flex;align-items:center;gap:6px;padding:6px 10px;background:#f0e7ff;border:1px solid #ddd6fe;border-radius:6px;font-size:13px;font-weight:500;';
+    badge.id = 'dc-personnel-' + personnel.user_id;
+    badge.innerHTML = `
+        <span>${personnel.full_name}</span>
+        <button type="button" style="background:none;border:none;color:#6b7280;cursor:pointer;padding:0;font-size:16px;line-height:1;"
+                onclick="dcRemoveAdditionalPersonnel(${personnel.user_id}, event)">×</button>
+    `;
+    container.appendChild(badge);
+}
+
+function dcRemoveAdditionalPersonnel(userId, event) {
+    event.preventDefault();
+    event.stopPropagation();
+    dcSelectedAdditionalPersonnel.delete(userId);
+    const badge = document.getElementById('dc-personnel-' + userId);
+    if (badge) badge.remove();
+}
+
+// ---------------------------------------------------------------------------
 // Form submit
 // ---------------------------------------------------------------------------
 
@@ -520,6 +586,28 @@ document.getElementById('dc-form').addEventListener('submit', async (e) => {
         }
 
         const newId = payload.data?.dispatch_id;
+
+        // Assign additional personnel if any were selected
+        if (newId && dcSelectedAdditionalPersonnel.size > 0) {
+            try {
+                for (const personelUserId of dcSelectedAdditionalPersonnel) {
+                    await dcFetch(
+                        `/api/dispatches/${newId}/add-personnel`,
+                        {
+                            method:      'POST',
+                            credentials: 'same-origin',
+                            headers:     { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+                            body: JSON.stringify({
+                                personnel_user_id: personelUserId,
+                            }),
+                        }
+                    );
+                }
+            } catch (personnelErr) {
+                console.warn('Some personnel assignments failed, but dispatch was created:', personnelErr);
+            }
+        }
+
         window.location.href = newId ? `${DC_BASE}/${newId}` : DC_BASE;
     } catch (err) {
         dcShowError(err.message || 'An error occurred. Please try again.');
@@ -556,6 +644,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         // changes, since the list it loads no longer depends on Department
         // for either role (see DispatchAuthorizationService class comment).
         dcBuildPersonnelSelect();
+
+        // Multi-Personnel Dispatch: Additional Personnel selector for assigning
+        // multiple staff from different departments to dispatch relevant items.
+        dcBuildAdditionalPersonnelSelect();
     }
 
     // Items must load before the first row is added so the select is populated
