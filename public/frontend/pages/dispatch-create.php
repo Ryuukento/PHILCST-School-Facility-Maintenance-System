@@ -118,14 +118,15 @@ include __DIR__ . '/../includes/header.php';
                              Department-based restriction on this list was
                              removed (see DispatchAuthorizationService) — the
                              helper text below is now the same for every role. -->
-                        <div class="form-group">
+                        <!-- Multi-Personnel Dispatch: Hidden for now - to be enabled later -->
+                        <div class="form-group" style="display:none;">
                             <label for="dc-release-personnel-search">Primary Release Personnel <span style="color:#ef4444;">*</span></label>
                             <input type="text" id="dc-release-personnel-search" class="form-control" placeholder="Search maintenance staff…" autocomplete="off">
                             <input type="hidden" id="dc-release-personnel-id">
                             <small class="text-muted">The primary Maintenance Staff member responsible for the dispatch. Any active Maintenance Staff member may be selected, regardless of department.</small>
                         </div>
 
-                        <div class="form-group">
+                        <div class="form-group" style="display:none;">
                             <label for="dc-additional-personnel-search">Additional Personnel (Optional)</label>
                             <p style="font-size:13px;color:#6b7280;margin-bottom:8px;">Assign personnel from different departments to dispatch relevant items. For example, IT staff for computers, Electrical staff for aircon/electrical items.</p>
                             <input type="text" id="dc-additional-personnel-search" class="form-control" placeholder="Search and add maintenance staff from different departments…" autocomplete="off" style="margin-bottom:8px;">
@@ -582,14 +583,14 @@ document.getElementById('dc-form').addEventListener('submit', async (e) => {
 
     const orId = parseInt(document.getElementById('dc-or-id').value || '0', 10) || null;
 
-    // TASK 13 — Release Personnel is required. This is a UX guard only; the
-    // authoritative role/department check runs server-side in
-    // DispatchAuthorizationService::assertAssignableReleasePersonnel().
+    // TASK 13 — Release Personnel validation temporarily disabled since the fields are hidden
+    // (Multi-Personnel Dispatch feature pending UI completion)
+    // TODO: Re-enable when Primary Release Personnel fields are shown
     const releaseAssignedTo = parseInt(document.getElementById('dc-release-personnel-id').value || '0', 10) || null;
-    if (!releaseAssignedTo) {
-        dcShowError('Please select the Release Personnel for this dispatch.');
-        return;
-    }
+    // if (!releaseAssignedTo) {
+    //     dcShowError('Please select the Release Personnel for this dispatch.');
+    //     return;
+    // }
 
     const submitBtn  = document.getElementById('dc-submit-btn');
     const origText   = submitBtn.textContent;
