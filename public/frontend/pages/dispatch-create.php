@@ -70,16 +70,16 @@ include __DIR__ . '/../includes/header.php';
 
                         <div class="form-row-2">
                             <div class="form-group">
-                                <label for="dc-dept">Department <span class="text-muted" style="font-weight:400;">(reporting only)</span></label>
-                                <select id="dc-dept" class="form-control">
-                                    <option value="">— Loading departments… —</option>
-                                </select>
+                                <label for="dc-dept-search">Department <span class="text-muted" style="font-weight:400;">(reporting only)</span></label>
+                                <input type="text" id="dc-dept-search" class="form-control" placeholder="Search and add departments…" autocomplete="off" style="margin-bottom:8px;">
+                                <input type="hidden" id="dc-dept-id">
+                                <div id="dc-dept-list" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;"></div>
                                 <!-- Attribution tag for Analytics' department-usage
                                      report only — a dispatch's items are not
                                      restricted to one department, and this
                                      selection no longer affects who can be
                                      picked as Release Personnel below. -->
-                                <small class="text-muted">Used for department usage reports. Does not restrict who can release this dispatch.</small>
+                                <small class="text-muted">Add multiple departments for reporting. Used for department usage reports only.</small>
                             </div>
                             <div class="form-group">
                                 <label for="dc-room-search">Room / Lab <span style="color:#ef4444;">*</span></label>
@@ -252,32 +252,70 @@ function dcHideError() {
 // Load dropdowns
 // ---------------------------------------------------------------------------
 
-async function loadDepartments() {
-    try {
-        const { response, data: payload } = await dcFetch(
-            `/api/departments`,
-            { credentials: 'same-origin', headers: { 'Accept': 'application/json' } }
-        );
-        const sel = document.getElementById('dc-dept');
-        if (!response.ok || !payload.success) {
-            sel.innerHTML = '<option value="">— No departments available —</option>';
-            return;
-        }
+// Multi-Department Selection for reporting
+let dcDepartmentSelect = null;
+const dcSelectedDepartments = new Set();
 
-        const list = Array.isArray(payload.data?.departments)
-            ? payload.data.departments
-            : (Array.isArray(payload.data) ? payload.data : []);
+function dcBuildDepartmentSelect() {
+    if (!(window.Components && typeof Components.SearchableSelect === 'function')) return;
 
-        sel.innerHTML = '<option value="">— None / Not specified —</option>';
-        list.forEach((d) => {
-            const opt = document.createElement('option');
-            opt.value       = d.department_id;
-            opt.textContent = d.name;
-            sel.appendChild(opt);
-        });
-    } catch (_) {
-        document.getElementById('dc-dept').innerHTML = '<option value="">— Could not load —</option>';
+    if (dcDepartmentSelect && typeof dcDepartmentSelect.destroy === 'function') {
+        dcDepartmentSelect.destroy();
+        dcDepartmentSelect = null;
     }
+
+    dcDepartmentSelect = new Components.SearchableSelect({
+        inputId:    'dc-dept-search',
+        hiddenId:   'dc-dept-id',
+        endpoint:   '/api/departments',
+        displayKey: 'name',
+        onSelect: (dept) => {
+            const deptId = dept.department_id || 0;
+
+            if (!deptId) return;
+
+            // Prevent adding same department twice
+            if (dcSelectedDepartments.has(deptId)) {
+                alert(dept.name + ' is already added.');
+                document.getElementById('dc-dept-search').value = '';
+                document.getElementById('dc-dept-id').value = '';
+                if (dcDepartmentSelect) {
+                    dcDepartmentSelect.clearSelection();
+                }
+                return;
+            }
+
+            dcSelectedDepartments.add(deptId);
+            dcUpdateDepartmentList(dept);
+            // Clear the input after selection
+            document.getElementById('dc-dept-search').value = '';
+            document.getElementById('dc-dept-id').value = '';
+            if (dcDepartmentSelect) {
+                dcDepartmentSelect.clearSelection();
+            }
+        },
+    });
+}
+
+function dcUpdateDepartmentList(dept) {
+    const container = document.getElementById('dc-dept-list');
+    const badge = document.createElement('div');
+    badge.style.cssText = 'display:flex;align-items:center;gap:6px;padding:6px 10px;background:#dbeafe;border:1px solid #bfdbfe;border-radius:6px;font-size:13px;font-weight:500;color:#1e40af;';
+    badge.id = 'dc-dept-' + dept.department_id;
+    badge.innerHTML = `
+        <span>${dept.name}</span>
+        <button type="button" style="background:none;border:none;color:#1e40af;cursor:pointer;padding:0;font-size:16px;line-height:1;"
+                onclick="dcRemoveDepartment(${dept.department_id}, event)">×</button>
+    `;
+    container.appendChild(badge);
+}
+
+function dcRemoveDepartment(deptId, event) {
+    event.preventDefault();
+    event.stopPropagation();
+    dcSelectedDepartments.delete(deptId);
+    const badge = document.getElementById('dc-dept-' + deptId);
+    if (badge) badge.remove();
 }
 
 // TASK 76 — Room / Lab search select. Mirrors dcBuildPersonnelSelect() below:
@@ -525,7 +563,8 @@ document.getElementById('dc-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     dcHideError();
 
-    const deptId   = document.getElementById('dc-dept').value;
+    // Multi-Department Selection: convert Set to array of department IDs
+    const departmentIds = Array.from(dcSelectedDepartments);
     const roomId   = document.getElementById('dc-room-id').value;
     const notes    = document.getElementById('dc-notes').value.trim();
 
@@ -598,7 +637,7 @@ document.getElementById('dc-form').addEventListener('submit', async (e) => {
                 credentials: 'same-origin',
                 headers:     { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
                 body: JSON.stringify({
-                    department_id:       deptId ? parseInt(deptId, 10) : null,
+                    department_ids:      departmentIds.length > 0 ? departmentIds : [],
                     room_id:             parseInt(roomId, 10),
                     purchase_receipt_id: orId,
                     notes:               notes  || null,
@@ -648,10 +687,7 @@ document.getElementById('dc-form').addEventListener('submit', async (e) => {
 // ---------------------------------------------------------------------------
 
 document.addEventListener('DOMContentLoaded', async () => {
-    // Departments load independently of the rest of the form
-    loadDepartments();
-
-    // OR number / Room / Release Personnel are all Components.SearchableSelect
+    // OR number / Room / Release Personnel / Departments are all Components.SearchableSelect
     // instances — raw path, resolveAppUrl adds base prefix
     if (window.Components && typeof Components.SearchableSelect === 'function') {
         new Components.SearchableSelect({
@@ -660,6 +696,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             endpoint:   '/api/purchase-receipts/search',
             displayKey: 'name',   // name = or_number, code = supplier_name (shown as "OR — Supplier")
         });
+
+        // Multi-Department Selection for reporting purposes. Allows selecting
+        // multiple departments for dispatch when personnel from different
+        // departments are assigned.
+        dcBuildDepartmentSelect();
 
         // TASK 76 — Room / Lab selector. Built by dcBuildRoomSelect() above;
         // type-to-search against /api/rooms instead of a flat <select> so

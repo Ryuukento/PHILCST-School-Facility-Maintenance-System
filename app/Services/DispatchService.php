@@ -81,9 +81,20 @@ class DispatchService
         $dispatchCode = 'DSP-' . strtoupper(uniqid());
 
         return DB::transaction(function () use ($data, $dispatchCode, $actorUserId, $requiresApproval): Dispatch {
+            // Multi-Department Selection: if multiple departments are provided,
+            // store the first one. The dispatch table has a single department_id
+            // column for reporting; full multi-department tracking could use a
+            // junction table in a future migration if needed.
+            $primaryDepartmentId = null;
+            if (!empty($data['department_ids']) && is_array($data['department_ids'])) {
+                $primaryDepartmentId = (int) $data['department_ids'][0];
+            } elseif (!empty($data['department_id'])) {
+                $primaryDepartmentId = (int) $data['department_id'];
+            }
+
             $dispatch = Dispatch::query()->create([
                 'dispatch_code'       => $dispatchCode,
-                'department_id'       => $data['department_id']       ?? null,
+                'department_id'       => $primaryDepartmentId,
                 // TASK 3 — Dispatch Personnel Audit Trail: records who
                 // actually requested this dispatch, distinct from
                 // approved_by/released_by. A caller that knows the true

@@ -127,6 +127,11 @@ class DispatchController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
+            // Multi-Department Selection: accepts department_ids as array for
+            // reporting when multiple departments are involved. Maintains
+            // backward compatibility with single department_id.
+            'department_ids'      => ['nullable', 'array'],
+            'department_ids.*'    => ['integer', 'exists:departments,department_id'],
             'department_id'       => ['nullable', 'integer', 'exists:departments,department_id'],
             // TASK 60 — Dispatch Create simplified to a single location
             // source. room_id (the "Room / Lab" dropdown) is now REQUIRED and
