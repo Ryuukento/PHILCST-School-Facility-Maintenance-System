@@ -432,7 +432,16 @@ function dcBuildPersonnelSelect() {
         hiddenId:   'dc-release-personnel-id',
         endpoint:   '/api/dispatches/support/release-personnel',
         displayKey: 'full_name',
-        onSelect: (it) => { document.getElementById('dc-release-personnel-id').value = it.user_id || ''; },
+        onSelect: (personnel) => {
+            const userId = personnel.user_id || 0;
+            document.getElementById('dc-release-personnel-id').value = userId;
+
+            // Validation: if this person is already in additional personnel, remove them
+            if (userId && dcSelectedAdditionalPersonnel.has(userId)) {
+                dcRemoveAdditionalPersonnel(userId, new Event('click'));
+                alert(personnel.full_name + ' was removed from Additional Personnel since they are now the Primary Release Personnel.');
+            }
+        },
     });
 }
 
@@ -458,15 +467,42 @@ function dcBuildAdditionalPersonnelSelect() {
         displayKey: 'full_name',
         onSelect: (personnel) => {
             const userId = personnel.user_id || 0;
-            if (userId && !dcSelectedAdditionalPersonnel.has(userId)) {
-                dcSelectedAdditionalPersonnel.add(userId);
-                dcUpdateAdditionalPersonnelList(personnel);
-                // Clear the input after selection
+            const primaryUserId = parseInt(document.getElementById('dc-release-personnel-id').value || '0', 10) || null;
+
+            // Validation: prevent adding same person twice
+            if (!userId) {
+                return;
+            }
+
+            // Prevent adding primary release personnel as additional personnel
+            if (userId === primaryUserId) {
+                alert(personnel.full_name + ' is already assigned as Primary Release Personnel. Cannot add as Additional Personnel.');
                 document.getElementById('dc-additional-personnel-search').value = '';
                 document.getElementById('dc-additional-personnel-id').value = '';
                 if (dcAdditionalPersonnelSelect) {
                     dcAdditionalPersonnelSelect.clearSelection();
                 }
+                return;
+            }
+
+            // Prevent adding same person twice in additional personnel
+            if (dcSelectedAdditionalPersonnel.has(userId)) {
+                alert(personnel.full_name + ' is already added to Additional Personnel.');
+                document.getElementById('dc-additional-personnel-search').value = '';
+                document.getElementById('dc-additional-personnel-id').value = '';
+                if (dcAdditionalPersonnelSelect) {
+                    dcAdditionalPersonnelSelect.clearSelection();
+                }
+                return;
+            }
+
+            dcSelectedAdditionalPersonnel.add(userId);
+            dcUpdateAdditionalPersonnelList(personnel);
+            // Clear the input after selection
+            document.getElementById('dc-additional-personnel-search').value = '';
+            document.getElementById('dc-additional-personnel-id').value = '';
+            if (dcAdditionalPersonnelSelect) {
+                dcAdditionalPersonnelSelect.clearSelection();
             }
         },
     });
