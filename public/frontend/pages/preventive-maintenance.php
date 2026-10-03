@@ -1959,11 +1959,6 @@ function pmBuildPrintView() {
                 <div class="pm-print-school-sub">Calasiao, Pangasinan</div>
                 <div class="pm-print-school-system">School Facility Maintenance System</div>
             </div>
-            <div class="pm-print-meta">
-                <strong>Preventive Maintenance</strong><br>
-                Schedule: ${year}<br>
-                ${new Date().toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' })}
-            </div>
         </div>
         <div class="pm-print-accent"></div>
         <div class="pm-print-title-block">
