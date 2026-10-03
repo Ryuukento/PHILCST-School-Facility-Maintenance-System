@@ -119,7 +119,7 @@
             const container = document.createElement('div'); container.style.position='relative';
             this.input.parentNode.insertBefore(container, this.input); container.appendChild(this.input);
             this.container = container;
-            this.list = document.createElement('div'); this.list.className='search-dropdown'; this.list.style.cssText='position:absolute;left:0;right:0;z-index:1000;background:#1a1230;border:1px solid rgba(168,139,250,0.22);color:#f0eaff;max-height:220px;overflow:auto;display:none;border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,0.4)'; container.appendChild(this.list);
+            this.list = document.createElement('div'); this.list.className='search-dropdown'; this.list.style.cssText='position:absolute;left:0;right:0;z-index:1000;background:#ffffff;border:1px solid #e5e7eb;color:#111827;max-height:220px;overflow:auto;display:none;border-radius:8px;box-shadow:0 4px 6px rgba(15,23,42,0.06)'; container.appendChild(this.list);
             this.input.addEventListener('input', (e)=> this.onInput(e));
             this.input.addEventListener('focus', (e)=> this.onInput(e));
 
@@ -178,8 +178,10 @@
             this.list.innerHTML = '';
             if(!items || items.length === 0){ this.list.style.display='none'; return; }
             items.forEach(it=>{
-                const row = document.createElement('div'); row.className='search-item'; row.style.padding='8px'; row.style.cursor='pointer';
+                const row = document.createElement('div'); row.className='search-item'; row.style.cssText='padding:12px;cursor:pointer;font-size:14px;border-bottom:1px solid #f1f5f9;transition:background-color 150ms ease';
                 row.textContent = (it[this.displayKey] || '') + ((it.code || it.asset_code) ? (' — ' + (it.code || it.asset_code)) : '');
+                row.addEventListener('mouseenter', ()=>{ row.style.backgroundColor='#f8fafc'; });
+                row.addEventListener('mouseleave', ()=>{ row.style.backgroundColor='transparent'; });
                 row.addEventListener('click', ()=>{ this.input.value = it[this.displayKey] || ''; this.hidden.value = it.id || it.department_id || it.user_id || it.room_id || ''; this.list.style.display='none'; if (this.onSelect) this.onSelect(it); });
                 this.list.appendChild(row);
             });
