@@ -119,20 +119,21 @@ include __DIR__ . '/../includes/header.php';
                              removed (see DispatchAuthorizationService) — the
                              helper text below is now the same for every role. -->
                         <!-- Multi-Personnel Dispatch: Additional Personnel Assignment -->
-                        <div class="form-group">
-                            <label for="dc-release-personnel-search">Primary Release Personnel <span style="color:#ef4444;">*</span></label>
-                            <input type="text" id="dc-release-personnel-search" class="form-control" placeholder="Search maintenance staff…" autocomplete="off">
-                            <input type="hidden" id="dc-release-personnel-id">
-                            <small class="text-muted">The primary Maintenance Staff member responsible for the dispatch. Any active Maintenance Staff member may be selected, regardless of department.</small>
-                        </div>
+                        <div class="form-row-2">
+                            <div class="form-group">
+                                <label for="dc-release-personnel-search">Primary Release Personnel <span style="color:#ef4444;">*</span></label>
+                                <input type="text" id="dc-release-personnel-search" class="form-control" placeholder="Search maintenance staff…" autocomplete="off">
+                                <input type="hidden" id="dc-release-personnel-id">
+                                <small class="text-muted">The primary Maintenance Staff member responsible for the dispatch.</small>
+                            </div>
 
-                        <div class="form-group">
-                            <label for="dc-additional-personnel-search">Additional Personnel (Optional)</label>
-                            <p style="font-size:13px;color:#6b7280;margin-bottom:8px;">Assign personnel from different departments to dispatch relevant items. For example, IT staff for computers, Electrical staff for aircon/electrical items.</p>
-                            <input type="text" id="dc-additional-personnel-search" class="form-control" placeholder="Search and add maintenance staff from different departments…" autocomplete="off" style="margin-bottom:8px;">
-                            <input type="hidden" id="dc-additional-personnel-id">
-                            <div id="dc-additional-personnel-list" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;"></div>
-                            <small class="text-muted">Personnel added here can dispatch items relevant to their department. Multiple personnel can work on the same dispatch.</small>
+                            <div class="form-group">
+                                <label for="dc-additional-personnel-search">Additional Personnel (Optional)</label>
+                                <input type="text" id="dc-additional-personnel-search" class="form-control" placeholder="Search and add maintenance staff…" autocomplete="off" style="margin-bottom:8px;">
+                                <input type="hidden" id="dc-additional-personnel-id">
+                                <div id="dc-additional-personnel-list" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;"></div>
+                                <small class="text-muted">Add personnel from different departments.</small>
+                            </div>
                         </div>
 
                         <?php if ($_dcIsAdmin): ?>
