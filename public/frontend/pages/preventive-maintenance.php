@@ -57,6 +57,11 @@ include __DIR__ . '/../includes/header.php';
         </div>
     </section>
 
+    <div style="margin-bottom: 16px;">
+        <label for="pm-print-notes" style="display: block; font-size: 12.5px; font-weight: 600; margin-bottom: 6px; color: #475569;">Notes for Print (Optional)</label>
+        <textarea id="pm-print-notes" placeholder="Add any notes or comments to appear on the printed report..." style="width: 100%; min-height: 60px; padding: 10px; border: 1px solid #dbe3f0; border-radius: 8px; font-family: inherit; font-size: 13px;"></textarea>
+    </div>
+
     <?php if ($_pmIsViewOnly): ?>
     <div class="pm-role-note" role="note">
         <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg>
@@ -1935,6 +1940,19 @@ async function pmToggleActive(row, activate) {
 // Print view — manual-style Jan–Dec schedule grid
 // ---------------------------------------------------------------------
 
+function pmGetPrintNotes() {
+    const notesField = document.getElementById('pm-print-notes');
+    const notes = notesField ? notesField.value.trim() : '';
+    if (!notes) return '';
+
+    return `
+        <div class="pm-print-notes">
+            <div class="pm-print-notes-label">Notes:</div>
+            <div class="pm-print-notes-content">${pmEscapeHtml(notes).replace(/\n/g, '<br>')}</div>
+        </div>
+    `;
+}
+
 function pmBuildPrintView() {
     const year = new Date().getFullYear();
     const monthHeaders = PM_MONTH_NAMES.map((name) => `<th>${name}</th>`).join('');
@@ -1964,6 +1982,7 @@ function pmBuildPrintView() {
         <div class="pm-print-title-block">
             <h1>PREVENTIVE MAINTENANCE SCHEDULE — ${year}</h1>
         </div>
+        ${pmGetPrintNotes()}
         <table class="pm-print-table">
             <thead>
                 <tr><th>Frequency</th><th>Equipment Nomenclature</th><th>Location</th>${monthHeaders}</tr>
