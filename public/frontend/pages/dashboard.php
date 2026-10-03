@@ -2456,11 +2456,13 @@ function buildStatsFromReports(reports) {
         const normalizedPriority = priority === 'urgent' ? 'critical' : priority;
         const createdAt = (report.created_at || '').toString().slice(0, 10);
 
-        stats.total += 1;
-
         if (createdAt === todayKey) {
             stats.reports_today += 1;
+            // Exclude today's data from chart statistics — charts show only complete past data
+            return;
         }
+
+        stats.total += 1;
 
         if (Object.prototype.hasOwnProperty.call(stats, status)) {
             stats[status] += 1;
