@@ -32,6 +32,35 @@ include __DIR__ . '/../includes/header.php';
         </div>
     </section>
 
+    <section class="deployment-tracking-trace-panel">
+        <div class="deployment-tracking-trace-panel__header">
+            <div>
+                <h2 class="deployment-tracking-trace-panel__title">Trace by OR Number</h2>
+                <p class="deployment-tracking-trace-panel__description">Search receipts directly to see where received items were ultimately deployed.</p>
+            </div>
+        </div>
+
+        <div class="deployment-tracking-trace-toolbar">
+            <div class="deployment-tracking-trace-toolbar__search">
+                <label class="deployment-tracking-toolbar__label" for="dt-or-input">OR Number</label>
+                <input type="text" id="dt-or-input" class="form-control deployment-tracking-toolbar__control" placeholder="Enter OR number (e.g. OR-2026-001)">
+            </div>
+            <div class="deployment-tracking-trace-toolbar__action-group">
+                <button type="button" class="btn deployment-tracking-page__primary-action" id="dt-or-search-btn">Search</button>
+                <button type="button" class="btn deployment-tracking-page__ghost-action" id="dt-or-clear-btn">Clear</button>
+            </div>
+        </div>
+
+        <p class="deployment-tracking-trace-panel__hint">Partial matches are supported. Searches by OR number only.</p>
+
+        <div id="dt-or-results" class="deployment-tracking-trace-results">
+            <div class="ui-empty-state">
+                <strong>Enter an OR number above to trace items.</strong>
+                <span>Partial matches are supported.</span>
+            </div>
+        </div>
+    </section>
+
     <section class="deployment-tracking-panel">
         <div class="deployment-tracking-panel__header">
             <div>
@@ -112,35 +141,6 @@ include __DIR__ . '/../includes/header.php';
         <!-- Pagination Controls -->
         <div id="dt-pagination" style="display:flex;align-items:center;justify-content:center;gap:8px;margin-top:16px;padding-top:12px;border-top:1px solid var(--border);">
             <!-- Pagination will be inserted here -->
-        </div>
-    </section>
-
-    <section class="deployment-tracking-trace-panel">
-        <div class="deployment-tracking-trace-panel__header">
-            <div>
-                <h2 class="deployment-tracking-trace-panel__title">Trace by OR Number</h2>
-                <p class="deployment-tracking-trace-panel__description">Search receipts directly to see where received items were ultimately deployed.</p>
-            </div>
-        </div>
-
-        <div class="deployment-tracking-trace-toolbar">
-            <div class="deployment-tracking-trace-toolbar__search">
-                <label class="deployment-tracking-toolbar__label" for="dt-or-input">OR Number</label>
-                <input type="text" id="dt-or-input" class="form-control deployment-tracking-toolbar__control" placeholder="Enter OR number (e.g. OR-2026-001)">
-            </div>
-            <div class="deployment-tracking-trace-toolbar__action-group">
-                <button type="button" class="btn deployment-tracking-page__primary-action" id="dt-or-search-btn">Search</button>
-                <button type="button" class="btn deployment-tracking-page__ghost-action" id="dt-or-clear-btn">Clear</button>
-            </div>
-        </div>
-
-        <p class="deployment-tracking-trace-panel__hint">Partial matches are supported. Searches by OR number only.</p>
-
-        <div id="dt-or-results" class="deployment-tracking-trace-results">
-            <div class="ui-empty-state">
-                <strong>Enter an OR number above to trace items.</strong>
-                <span>Partial matches are supported.</span>
-            </div>
         </div>
     </section>
 </main>
