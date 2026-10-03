@@ -583,14 +583,14 @@ document.getElementById('dc-form').addEventListener('submit', async (e) => {
 
     const orId = parseInt(document.getElementById('dc-or-id').value || '0', 10) || null;
 
-    // TASK 13 — Release Personnel validation temporarily disabled since the fields are hidden
-    // (Multi-Personnel Dispatch feature pending UI completion)
-    // TODO: Re-enable when Primary Release Personnel fields are shown
+    // TASK 13 — Release Personnel is required. This is a UX guard only; the
+    // authoritative role/department check runs server-side in
+    // DispatchAuthorizationService::assertAssignableReleasePersonnel().
     const releaseAssignedTo = parseInt(document.getElementById('dc-release-personnel-id').value || '0', 10) || null;
-    // if (!releaseAssignedTo) {
-    //     dcShowError('Please select the Release Personnel for this dispatch.');
-    //     return;
-    // }
+    if (!releaseAssignedTo) {
+        dcShowError('Please select the Release Personnel for this dispatch.');
+        return;
+    }
 
     const submitBtn  = document.getElementById('dc-submit-btn');
     const origText   = submitBtn.textContent;
