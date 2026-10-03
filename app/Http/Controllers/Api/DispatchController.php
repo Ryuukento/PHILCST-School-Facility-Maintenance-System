@@ -502,11 +502,11 @@ class DispatchController extends Controller
     }
 
     /**
-     * Multi-Personnel Dispatch: Assign personnel to a dispatch.
+     * Multi-Personnel Dispatch: Add personnel to a dispatch.
      * Allows multiple maintenance staff from different departments to be assigned
-     * to a single dispatch.
+     * to a single dispatch (distinct from the single release_assigned_to flow).
      */
-    public function assignPersonnel(Request $request, Dispatch $dispatch)
+    public function addPersonnelToDispatch(Request $request, Dispatch $dispatch)
     {
         $validated = $request->validate([
             'personnel_user_id' => ['required', 'integer', 'exists:users,user_id'],

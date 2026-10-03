@@ -338,6 +338,9 @@ Route::prefix('api')->group(function (): void {
             Route::get('{dispatch}', [\App\Http\Controllers\Api\DispatchController::class, 'show']);
             Route::post('{dispatch}/assign-personnel', [\App\Http\Controllers\Api\DispatchController::class, 'assignPersonnel'])
                 ->middleware(\App\Http\Middleware\EnsureRole::class . ':maintenance_admin');
+            // Multi-Personnel Dispatch: Add personnel to dispatch (different from single release_assigned_to)
+            Route::post('{dispatch}/add-personnel', [\App\Http\Controllers\Api\DispatchController::class, 'addPersonnelToDispatch'])
+                ->middleware(\App\Http\Middleware\EnsureRole::class . ':maintenance_admin');
             Route::post('{dispatch}/approve', [\App\Http\Controllers\Api\DispatchController::class, 'approve'])
                 ->middleware(\App\Http\Middleware\EnsureRole::class . ':super_admin');
             Route::post('{dispatch}/reject', [\App\Http\Controllers\Api\DispatchController::class, 'reject'])
