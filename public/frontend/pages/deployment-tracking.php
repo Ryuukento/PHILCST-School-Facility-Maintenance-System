@@ -567,6 +567,47 @@ function dtLoadPage(pageNum) {
     loadDeployed();
 }
 
+async function dtSetCurrentAcademicSession() {
+    try {
+        const { data: payload } = await dtFetch('/api/school-settings', {
+            credentials: 'same-origin',
+            headers: { Accept: 'application/json' },
+        });
+
+        if (!payload || !payload.success) {
+            return;
+        }
+
+        const settings = payload.data;
+        if (!settings) return;
+
+        // Extract year from school_year (e.g., "2026-2027" -> "2026")
+        if (settings.school_year) {
+            const yearMatch = settings.school_year.match(/^(\d{4})/);
+            if (yearMatch) {
+                const yearSel = document.getElementById('dt-year');
+                if (yearSel) {
+                    yearSel.value = yearMatch[1];
+                }
+            }
+        }
+
+        // Set semester based on current_semester
+        if (settings.current_semester) {
+            const semesterSel = document.getElementById('dt-semester');
+            if (semesterSel) {
+                if (settings.current_semester.toLowerCase().includes('first')) {
+                    semesterSel.value = '1';
+                } else if (settings.current_semester.toLowerCase().includes('second')) {
+                    semesterSel.value = '2';
+                }
+            }
+        }
+    } catch (err) {
+        // Silently fail if unable to fetch settings
+    }
+}
+
 async function loadDeployed() {
     const container = document.getElementById('dt-deployed-container');
     container.innerHTML = dtLoadingMarkup('Loading deployed items...');
@@ -696,9 +737,12 @@ async function loadDeployed() {
     }
 }
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
     // Populate year dropdown
     dtPopulateYearDropdown();
+
+    // Set current academic session defaults
+    await dtSetCurrentAcademicSession();
 
     // Setup date filter listeners - reset page to 1 when filters change
     const yearSel = document.getElementById('dt-year');
@@ -717,7 +761,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (e.key === 'Enter') { dtCurrentPage = 1; loadDeployed(); }
     });
 
-document.getElementById('dt-search').addEventListener('keydown', (e) => {
+    document.getElementById('dt-search').addEventListener('keydown', (e) => {
         if (e.key === 'Enter') loadDeployed();
     });
     document.getElementById('dt-room').addEventListener('change', loadDeployed);
