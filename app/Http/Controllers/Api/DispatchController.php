@@ -159,14 +159,12 @@ class DispatchController extends Controller
             'report_id'            => ['nullable', 'integer', 'exists:maintenance_reports,report_id'],
             'damage_report_id'     => ['nullable', 'integer', 'exists:damage_reports,id'],
             'notes'               => ['nullable', 'string'],
-            // TASK 13 — Dispatch Release Assignment Workflow: Head Maintenance
-            // chooses the Release Personnel while creating the dispatch.
-            // Required here (unlike at the service layer) because every
-            // dispatch created through the UI must be releasable by someone.
-            // (TASK 13 — the internal path this named,
-            // RepairService::fulfillReplacement(), has been retired; the
-            // service layer still accepts the key as optional.)
-            'release_assigned_to' => ['required', 'integer', 'exists:users,user_id'],
+            // Multi-Personnel Dispatch: release_assigned_to is now optional.
+            // When using multi-personnel dispatch, personnel may be assigned
+            // via the Additional Personnel field (added via /add-personnel
+            // endpoint after creation). At least one personnel assignment
+            // (primary or additional) is enforced on the client.
+            'release_assigned_to' => ['nullable', 'integer', 'exists:users,user_id'],
             'items'               => ['required', 'array', 'min:1'],
             // TASK 47 — Dispatch Create & Assignment Workflow: 'distinct'
             // rejects two rows for the same item_id in one request. Without
@@ -188,21 +186,26 @@ class DispatchController extends Controller
 
         $authUser = $this->authUser($request);
 
-        try {
-            // SERVER-SIDE role/active enforcement. The searchable selector on
-            // the create page is already filtered to Head Maintenance +
-            // Maintenance Staff (TASK 57 — Administrator excluded), but
-            // that is a convenience only — this is the check that actually
-            // stops a crafted request from naming an inactive user or an
-            // ineligible role. Department-based restriction was removed here
-            // (see DispatchAuthorizationService class doc comment) —
-            // department_id is a reporting tag, not an eligibility filter.
-            $this->dispatchAuthorizationService->assertAssignableReleasePersonnel(
-                $authUser,
-                (int) $validated['release_assigned_to']
-            );
-        } catch (ValidationException $e) {
-            return $this->fail(collect($e->errors())->flatten()->first() ?: 'Invalid release personnel.', 400);
+        // Multi-Personnel Dispatch: only validate release personnel if one was
+        // assigned. Validation is skipped when additional personnel will be
+        // assigned via the /add-personnel endpoint after creation.
+        if (!empty($validated['release_assigned_to'])) {
+            try {
+                // SERVER-SIDE role/active enforcement. The searchable selector on
+                // the create page is already filtered to Head Maintenance +
+                // Maintenance Staff (TASK 57 — Administrator excluded), but
+                // that is a convenience only — this is the check that actually
+                // stops a crafted request from naming an inactive user or an
+                // ineligible role. Department-based restriction was removed here
+                // (see DispatchAuthorizationService class doc comment) —
+                // department_id is a reporting tag, not an eligibility filter.
+                $this->dispatchAuthorizationService->assertAssignableReleasePersonnel(
+                    $authUser,
+                    (int) $validated['release_assigned_to']
+                );
+            } catch (ValidationException $e) {
+                return $this->fail(collect($e->errors())->flatten()->first() ?: 'Invalid release personnel.', 400);
+            }
         }
 
         // TASK 41 — the approval-bypass decision is derived from the SESSION

@@ -583,12 +583,15 @@ document.getElementById('dc-form').addEventListener('submit', async (e) => {
 
     const orId = parseInt(document.getElementById('dc-or-id').value || '0', 10) || null;
 
-    // TASK 13 — Release Personnel is required. This is a UX guard only; the
-    // authoritative role/department check runs server-side in
-    // DispatchAuthorizationService::assertAssignableReleasePersonnel().
+    // Multi-Personnel Dispatch: Release Personnel is now optional. When using
+    // multi-personnel dispatch, additional personnel are assigned via the
+    // Additional Personnel field instead. The form requires at least one
+    // personnel assignment (primary or additional).
     const releaseAssignedTo = parseInt(document.getElementById('dc-release-personnel-id').value || '0', 10) || null;
-    if (!releaseAssignedTo) {
-        dcShowError('Please select the Release Personnel for this dispatch.');
+    const hasAdditionalPersonnel = dcSelectedAdditionalPersonnel.size > 0;
+
+    if (!releaseAssignedTo && !hasAdditionalPersonnel) {
+        dcShowError('Please assign at least one personnel (Primary Release Personnel or Additional Personnel) to this dispatch.');
         return;
     }
 
