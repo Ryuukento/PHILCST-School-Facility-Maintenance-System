@@ -135,20 +135,6 @@ include __DIR__ . '/../includes/header.php';
                                 <small class="text-muted">Add personnel from different departments.</small>
                             </div>
                         </div>
-
-                        <?php if ($_dcIsAdmin): ?>
-                        <!-- TASK 41 — Administrator dispatches skip the approval
-                             step, so the Administrator is told up front that no
-                             approval will be requested. Head Maintenance sees no
-                             such notice and keeps the unchanged pending flow. -->
-                        <div class="form-group">
-                            <div class="alert alert-info" style="margin:0;">
-                                <strong>No approval required.</strong>
-                                Dispatches you create are ready for release immediately — they are not sent to anyone for approval.
-                                The assigned Release Personnel is notified and performs the actual hand-off, which is when stock is deducted.
-                            </div>
-                        </div>
-                        <?php endif; ?>
                     </div>
                 </div>
 
