@@ -29,7 +29,6 @@ include __DIR__ . '/../includes/header.php';
         <div class="deployment-tracking-page__title-group">
             <p class="deployment-tracking-page__eyebrow">Released Inventory Visibility</p>
             <h1 class="deployment-tracking-page__title">Deployment Tracking</h1>
-            <p class="deployment-tracking-page__description">Every item in a room — released through Dispatch, or recorded as existing equipment from before the system — with its source purchase receipt where available.</p>
         </div>
     </section>
 
