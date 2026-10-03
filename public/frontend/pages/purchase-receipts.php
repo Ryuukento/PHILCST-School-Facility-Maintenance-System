@@ -53,8 +53,20 @@ include __DIR__ . '/../includes/header.php';
             </div>
         </div>
         <div class="card-body">
+            <!-- Controls: Show Older Receipts button -->
+            <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid var(--border);">
+                <button type="button" id="prToggleOlderReceipts" class="btn btn-sm btn-secondary" style="padding:6px 12px;font-size:13px;">📅 Show Older Receipts</button>
+                <small class="text-muted" id="prDateRangeInfo">Showing last 12 months</small>
+            </div>
+
+            <!-- Receipts Table -->
             <div id="receipts-container" class="table-responsive">
                 <div class="ui-empty-state"><strong>Loading receipts...</strong></div>
+            </div>
+
+            <!-- Pagination Controls -->
+            <div id="pr-pagination" style="display:flex;align-items:center;justify-content:center;gap:8px;margin-top:16px;padding-top:12px;border-top:1px solid var(--border);">
+                <!-- Pagination will be inserted here -->
             </div>
         </div>
     </div>
@@ -798,10 +810,102 @@ async function prPrintReceiptById(id) {
     }
 }
 
+// ---------------------------------------------------------------------------
+// Purchase Receipts: Pagination & Date Filtering
+// ---------------------------------------------------------------------------
+
+let prShowOlderReceipts = false;
+let prCurrentPage = 1;
+let prTotalPages = 1;
+let prPaginationData = null;
+
+function prToggleOlderReceipts() {
+    prShowOlderReceipts = !prShowOlderReceipts;
+    prCurrentPage = 1; // Reset to first page
+
+    const btn = document.getElementById('prToggleOlderReceipts');
+    const info = document.getElementById('prDateRangeInfo');
+
+    if (prShowOlderReceipts) {
+        btn.textContent = '✓ Showing All Receipts';
+        btn.style.backgroundColor = '#d1fae5';
+        btn.style.borderColor = '#a7f3d0';
+        btn.style.color = '#065f46';
+        info.textContent = 'Showing all receipts';
+    } else {
+        btn.textContent = '📅 Show Older Receipts';
+        btn.style.backgroundColor = '';
+        btn.style.borderColor = '';
+        btn.style.color = '';
+        info.textContent = 'Showing last 12 months';
+    }
+
+    loadReceipts();
+}
+
+function prRenderPagination(paginationData) {
+    const container = document.getElementById('pr-pagination');
+    if (!paginationData || paginationData.last_page <= 1) {
+        container.innerHTML = '';
+        return;
+    }
+
+    let html = '';
+
+    // Previous button
+    if (prCurrentPage > 1) {
+        html += `<button type="button" class="btn btn-sm btn-secondary" onclick="prLoadPage(${prCurrentPage - 1})">← Previous</button>`;
+    }
+
+    // Page numbers
+    const startPage = Math.max(1, prCurrentPage - 2);
+    const endPage = Math.min(paginationData.last_page, prCurrentPage + 2);
+
+    if (startPage > 1) {
+        html += `<button type="button" class="btn btn-sm btn-secondary" onclick="prLoadPage(1)">1</button>`;
+        if (startPage > 2) html += '<span style="padding:0 4px;">…</span>';
+    }
+
+    for (let i = startPage; i <= endPage; i++) {
+        if (i === prCurrentPage) {
+            html += `<button type="button" class="btn btn-sm btn-primary" disabled>${i}</button>`;
+        } else {
+            html += `<button type="button" class="btn btn-sm btn-secondary" onclick="prLoadPage(${i})">${i}</button>`;
+        }
+    }
+
+    if (endPage < paginationData.last_page) {
+        if (endPage < paginationData.last_page - 1) html += '<span style="padding:0 4px;">…</span>';
+        html += `<button type="button" class="btn btn-sm btn-secondary" onclick="prLoadPage(${paginationData.last_page})">${paginationData.last_page}</button>`;
+    }
+
+    // Next button
+    if (prCurrentPage < paginationData.last_page) {
+        html += `<button type="button" class="btn btn-sm btn-secondary" onclick="prLoadPage(${prCurrentPage + 1})">Next →</button>`;
+    }
+
+    // Info text
+    html += `<span style="margin-left:12px;font-size:13px;color:var(--text-muted);">Page ${prCurrentPage} of ${paginationData.last_page}</span>`;
+
+    container.innerHTML = html;
+}
+
+function prLoadPage(pageNum) {
+    prCurrentPage = pageNum;
+    loadReceipts();
+}
+
 async function loadReceipts() {
     try {
+        const params = new URLSearchParams();
+        params.append('page', prCurrentPage);
+        params.append('per_page', 10);
+        if (prShowOlderReceipts) {
+            params.append('show_older', '1');
+        }
+
         const { response, data: payload } = await prFetch(
-            PURCHASE_API,
+            PURCHASE_API + '?' + params.toString(),
             { credentials: 'same-origin', headers: { 'Accept': 'application/json' } }
         );
 
@@ -843,9 +947,17 @@ async function loadReceipts() {
         prListReceipts = receipts;
         const listPrintBtn = document.getElementById('printReceiptListBtn');
         if (listPrintBtn) listPrintBtn.disabled = false;
+
+        // Render pagination
+        prPaginationData = payload.data?.pagination;
+        if (prPaginationData) {
+            prTotalPages = prPaginationData.last_page || 1;
+            prRenderPagination(prPaginationData);
+        }
     } catch (err) {
         document.getElementById('receipts-container').innerHTML =
             '<div class="ui-empty-state"><strong>Failed to load receipts.</strong></div>';
+        document.getElementById('pr-pagination').innerHTML = '';
         prNotify(err.message || 'Unable to load receipts.');
     }
 }
@@ -920,6 +1032,15 @@ function initListView() {
     loadReceipts();
     loadDepartmentsIntoSelect('nr-department-id');
     loadUsersIntoReceivedBySelect();
+
+    // Setup "Show Older Receipts" toggle button
+    const toggleBtn = document.getElementById('prToggleOlderReceipts');
+    if (toggleBtn) {
+        toggleBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            prToggleOlderReceipts();
+        });
+    }
 
     const printListBtn = document.getElementById('printReceiptListBtn');
     if (printListBtn) printListBtn.addEventListener('click', prPrintReceiptList);

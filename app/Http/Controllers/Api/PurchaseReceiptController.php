@@ -50,7 +50,11 @@ class PurchaseReceiptController extends Controller
 
     public function index(Request $request): JsonResponse
     {
-        $receipts = DB::table('purchase_receipts as pr')
+        $showOlder = $request->boolean('show_older', false);
+        $perPage = (int) $request->query('per_page', 10);
+        $perPage = max(5, min($perPage, 100)); // Clamp between 5-100
+
+        $query = DB::table('purchase_receipts as pr')
             ->select([
                 'pr.id',
                 'pr.or_number',
@@ -71,13 +75,41 @@ class PurchaseReceiptController extends Controller
             ])
             ->join('users as u', 'u.user_id', '=', 'pr.received_by')
             ->leftJoin('departments as d', 'd.department_id', '=', 'pr.department_id')
-            ->leftJoin('purchase_receipt_items as pri', 'pri.purchase_receipt_id', '=', 'pr.id')
-            ->when($request->filled('date_from'), function ($q) use ($request) {
-                $q->whereDate('pr.receipt_date', '>=', $request->input('date_from'));
-            })
-            ->when($request->filled('date_to'), function ($q) use ($request) {
-                $q->whereDate('pr.receipt_date', '<=', $request->input('date_to'));
-            })
+            ->leftJoin('purchase_receipt_items as pri', 'pri.purchase_receipt_id', '=', 'pr.id');
+
+        // Date filtering: default to last 12 months, can show all with show_older=1
+        if (!$showOlder) {
+            $oneYearAgo = now()->subYear();
+            $query->whereDate('pr.receipt_date', '>=', $oneYearAgo);
+        }
+
+        // Support explicit date_from/date_to if provided (for future use)
+        $query->when($request->filled('date_from'), function ($q) use ($request) {
+            $q->whereDate('pr.receipt_date', '>=', $request->input('date_from'));
+        })
+        ->when($request->filled('date_to'), function ($q) use ($request) {
+            $q->whereDate('pr.receipt_date', '<=', $request->input('date_to'));
+        });
+
+        // Get total count before pagination
+        $totalQuery = clone $query;
+        $total = $totalQuery->groupBy(
+            'pr.id',
+            'pr.or_number',
+            'pr.receipt_date',
+            'pr.supplier_name',
+            'u.full_name',
+            'd.name',
+            'pr.status',
+            'pr.proof_image',
+            'pr.created_at'
+        )->count();
+
+        // Pagination
+        $page = max(1, (int) $request->query('page', 1));
+        $offset = ($page - 1) * $perPage;
+
+        $receipts = $query
             ->groupBy(
                 'pr.id',
                 'pr.or_number',
@@ -90,11 +122,18 @@ class PurchaseReceiptController extends Controller
                 'pr.created_at'
             )
             ->orderByDesc('pr.created_at')
+            ->offset($offset)
+            ->limit($perPage)
             ->get();
 
         return $this->ok('Receipts retrieved', [
             'receipts' => $receipts,
-            'pagination' => ['total' => $receipts->count()],
+            'pagination' => [
+                'total' => $total,
+                'per_page' => $perPage,
+                'current_page' => $page,
+                'last_page' => (int) ceil($total / $perPage),
+            ],
         ]);
     }
 
