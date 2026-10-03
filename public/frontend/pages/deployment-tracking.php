@@ -744,6 +744,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Set current academic session defaults
     await dtSetCurrentAcademicSession();
 
+    // Poll for Academic Session changes every 30 seconds
+    setInterval(dtSetCurrentAcademicSession, 30000);
+
     // Setup date filter listeners - reset page to 1 when filters change
     const yearSel = document.getElementById('dt-year');
     const monthSel = document.getElementById('dt-month');
