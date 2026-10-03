@@ -584,7 +584,6 @@ class PurchaseReceiptController extends Controller
     public function search(Request $request): JsonResponse
     {
         $q = trim((string) $request->query('q', ''));
-        $showOlder = $request->boolean('show_older', false);
 
         $query = DB::table('purchase_receipts as pr')
             ->select([
@@ -599,13 +598,6 @@ class PurchaseReceiptController extends Controller
             ->orderByDesc('pr.receipt_date')
             ->orderBy('pr.or_number')
             ->limit(50);
-
-        // Default: show only receipts from the last 12 months
-        // User can click "Show Older Receipts" to see all
-        if (!$showOlder) {
-            $oneYearAgo = now()->subYear();
-            $query->where('pr.receipt_date', '>=', $oneYearAgo);
-        }
 
         if ($q !== '') {
             $query->where(function ($builder) use ($q): void {
