@@ -421,19 +421,7 @@ include __DIR__ . '/../includes/header.php';
         </div>
     </div>
 
-    <!-- Section 3: Items Table -->
-    <div class="card" style="margin-top:14px;">
-        <div class="card-header">
-            <h3 style="margin:0;">Line Items</h3>
-        </div>
-        <div class="card-body">
-            <div id="dd-items-container" class="table-responsive">
-                <div class="ui-empty-state"><strong>Loading items...</strong></div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Section 4: Action Buttons — each button is PHP role-gated so it is not
+    <!-- Section 3: Action Buttons — each button is PHP role-gated so it is not
          even present in the DOM for a role that may not perform it; JS then
          gates on dispatch status (and, for Release, on the assignment). -->
     <?php if ($canAct): ?>
@@ -715,16 +703,6 @@ function ddDispatchBadge(status) {
     const safeStatus = String(status || '').toLowerCase();
     const badgeClass = knownStatuses.includes(safeStatus) ? `badge-${safeStatus}` : 'badge-info';
     const label = String(status || '').replace(/\b\w/g, (s) => s.toUpperCase());
-    return `<span class="badge ${badgeClass}">${ddEscapeHtml(label)}</span>`;
-}
-
-function ddItemStatusBadge(status) {
-    // Reuses the new .badge-available/.badge-low-stock/.badge-out-of-stock
-    // classes added to enterprise-workflow.css for item stock-status semantics.
-    const knownStatuses = { available: 'badge-available', low_stock: 'badge-low-stock', out_of_stock: 'badge-out-of-stock' };
-    const safeStatus = String(status || '').toLowerCase();
-    const badgeClass = knownStatuses[safeStatus] || 'badge-info';
-    const label = String(status || '').replace(/_/g, ' ').replace(/\b\w/g, (s) => s.toUpperCase());
     return `<span class="badge ${badgeClass}">${ddEscapeHtml(label)}</span>`;
 }
 
@@ -1260,7 +1238,6 @@ async function loadDispatchDetail() {
     if (DSP_ID <= 0) {
         document.getElementById('dd-header-container').innerHTML =
             '<div class="ui-empty-state"><strong>Dispatch not found.</strong><span>No valid ID was provided in the URL.</span></div>';
-        document.getElementById('dd-items-container').innerHTML = '';
         document.getElementById('dd-timeline-card').style.display = 'none';
         document.getElementById('dd-assignment-card').style.display = 'none';
         return;
@@ -1276,7 +1253,6 @@ async function loadDispatchDetail() {
         if (response.status === 404 || (payload && !payload.success && /not found/i.test(payload.message || ''))) {
             document.getElementById('dd-header-container').innerHTML =
                 '<div class="ui-empty-state"><strong>Dispatch not found.</strong><span>This dispatch does not exist or has been removed.</span></div>';
-            document.getElementById('dd-items-container').innerHTML = '';
             document.getElementById('dd-timeline-card').style.display = 'none';
         document.getElementById('dd-assignment-card').style.display = 'none';
             document.getElementById('dd-title').textContent = 'Dispatch Not Found';
@@ -1372,28 +1348,6 @@ async function loadDispatchDetail() {
         renderReleaseAssignment(dispatch);
 
         renderDispatchTimeline(dispatch);
-
-        // --- Items table ---
-        const itemsContainer = document.getElementById('dd-items-container');
-        if (items.length === 0) {
-            itemsContainer.innerHTML =
-                '<div class="ui-empty-state"><strong>No items in this dispatch.</strong></div>';
-        } else {
-            let html = '<table class="table dd-items-table"><thead><tr>'
-                + '<th scope="col">Item Name</th><th scope="col" class="text-right">Quantity</th>'
-                + '<th scope="col">Item Status</th><th scope="col" class="text-right">Available Stock</th>'
-                + '</tr></thead><tbody>';
-            items.forEach((item) => {
-                html += '<tr>';
-                html += `<td><strong>${ddEscapeHtml(item.item?.name ?? '—')}</strong></td>`;
-                html += `<td class="text-right">${ddEscapeHtml(item.quantity)}</td>`;
-                html += `<td>${ddItemStatusBadge(item.item?.status ?? '')}</td>`;
-                html += `<td class="text-right">${ddEscapeHtml(item.item?.quantity ?? '—')}</td>`;
-                html += '</tr>';
-            });
-            html += '</tbody></table>';
-            itemsContainer.innerHTML = html;
-        }
 
         // --- Action buttons ---------------------------------------------
         // TASK 13 — each button was already PHP role-gated (a role that may
