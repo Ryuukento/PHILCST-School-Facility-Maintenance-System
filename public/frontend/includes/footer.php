@@ -25,7 +25,7 @@
         <div class="modal-content logout-modal-content">
             <div class="modal-header logout-modal-header">
                 <div class="logout-modal-text">
-                    <h2 id="global-logout-title" class="modal-title">Log out of your account?</h2>
+                    <h2 id="global-logout-title" class="modal-title">Log out?</h2>
                     <p class="logout-modal-subtitle">Are you sure you want to log out now?</p>
                 </div>
                 <button class="modal-close logout-modal-close" type="button" aria-label="Close logout dialog">×</button>
