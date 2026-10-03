@@ -51,6 +51,38 @@ include __DIR__ . '/../includes/header.php';
                 <input type="search" id="dt-search" class="form-control deployment-tracking-toolbar__control" placeholder="Search deployed items...">
             </div>
             <div class="deployment-tracking-toolbar__filter">
+                <label class="deployment-tracking-toolbar__label" for="dt-year">Year</label>
+                <select id="dt-year" class="form-control deployment-tracking-toolbar__control">
+                    <option value="">All Years</option>
+                </select>
+            </div>
+            <div class="deployment-tracking-toolbar__filter">
+                <label class="deployment-tracking-toolbar__label" for="dt-month">Month</label>
+                <select id="dt-month" class="form-control deployment-tracking-toolbar__control">
+                    <option value="">All Months</option>
+                    <option value="1">January</option>
+                    <option value="2">February</option>
+                    <option value="3">March</option>
+                    <option value="4">April</option>
+                    <option value="5">May</option>
+                    <option value="6">June</option>
+                    <option value="7">July</option>
+                    <option value="8">August</option>
+                    <option value="9">September</option>
+                    <option value="10">October</option>
+                    <option value="11">November</option>
+                    <option value="12">December</option>
+                </select>
+            </div>
+            <div class="deployment-tracking-toolbar__filter">
+                <label class="deployment-tracking-toolbar__label" for="dt-semester">Semester</label>
+                <select id="dt-semester" class="form-control deployment-tracking-toolbar__control">
+                    <option value="">All Semesters</option>
+                    <option value="1">1st Semester (Jun-Nov)</option>
+                    <option value="2">2nd Semester (Dec-May)</option>
+                </select>
+            </div>
+            <div class="deployment-tracking-toolbar__filter">
                 <label class="deployment-tracking-toolbar__label" for="dt-room">Room</label>
                 <select id="dt-room" class="form-control deployment-tracking-toolbar__control">
                     <option value="">All Rooms</option>
@@ -76,6 +108,11 @@ include __DIR__ . '/../includes/header.php';
                     <div class="ui-skeleton-row w-55"></div>
                 </div>
             </div>
+        </div>
+
+        <!-- Pagination Controls -->
+        <div id="dt-pagination" style="display:flex;align-items:center;justify-content:center;gap:8px;margin-top:16px;padding-top:12px;border-top:1px solid var(--border);">
+            <!-- Pagination will be inserted here -->
         </div>
     </section>
 
@@ -151,6 +188,11 @@ include __DIR__ . '/../includes/header.php';
 <script>
 const DT_API = '/api/deployment-tracking';
 let dtFilterOptionsLoaded = false;
+
+// Pagination & Date Filtering State
+let dtCurrentPage = 1;
+let dtTotalPages = 1;
+let dtPaginationData = null;
 
 function dtEscapeHtml(value) {
     return String(value ?? '')
@@ -574,6 +616,73 @@ new MutationObserver((mutations) => {
     });
 }).observe(document.getElementById('dt-scan-modal'), { attributes: true });
 
+// Populate year dropdown with years from current year back 5 years
+function dtPopulateYearDropdown() {
+    const yearSel = document.getElementById('dt-year');
+    if (!yearSel) return;
+
+    const currentYear = new Date().getFullYear();
+    for (let year = currentYear; year >= currentYear - 5; year--) {
+        const opt = document.createElement('option');
+        opt.value = year;
+        opt.textContent = year;
+        yearSel.appendChild(opt);
+    }
+}
+
+// Render pagination controls
+function dtRenderPagination(paginationData) {
+    const container = document.getElementById('dt-pagination');
+    if (!paginationData || paginationData.last_page <= 1) {
+        container.innerHTML = '';
+        return;
+    }
+
+    let html = '';
+
+    // Previous button
+    if (dtCurrentPage > 1) {
+        html += `<button type="button" class="btn btn-sm btn-secondary" onclick="dtLoadPage(${dtCurrentPage - 1})">← Previous</button>`;
+    }
+
+    // Page numbers
+    const startPage = Math.max(1, dtCurrentPage - 2);
+    const endPage = Math.min(paginationData.last_page, dtCurrentPage + 2);
+
+    if (startPage > 1) {
+        html += `<button type="button" class="btn btn-sm btn-secondary" onclick="dtLoadPage(1)">1</button>`;
+        if (startPage > 2) html += '<span style="padding:0 4px;">…</span>';
+    }
+
+    for (let i = startPage; i <= endPage; i++) {
+        if (i === dtCurrentPage) {
+            html += `<button type="button" class="btn btn-sm btn-primary" disabled>${i}</button>`;
+        } else {
+            html += `<button type="button" class="btn btn-sm btn-secondary" onclick="dtLoadPage(${i})">${i}</button>`;
+        }
+    }
+
+    if (endPage < paginationData.last_page) {
+        if (endPage < paginationData.last_page - 1) html += '<span style="padding:0 4px;">…</span>';
+        html += `<button type="button" class="btn btn-sm btn-secondary" onclick="dtLoadPage(${paginationData.last_page})">${paginationData.last_page}</button>`;
+    }
+
+    // Next button
+    if (dtCurrentPage < paginationData.last_page) {
+        html += `<button type="button" class="btn btn-sm btn-secondary" onclick="dtLoadPage(${dtCurrentPage + 1})">Next →</button>`;
+    }
+
+    // Info text
+    html += `<span style="margin-left:12px;font-size:13px;color:var(--text-muted);">Page ${dtCurrentPage} of ${paginationData.last_page}</span>`;
+
+    container.innerHTML = html;
+}
+
+function dtLoadPage(pageNum) {
+    dtCurrentPage = pageNum;
+    loadDeployed();
+}
+
 async function loadDeployed() {
     const container = document.getElementById('dt-deployed-container');
     container.innerHTML = dtLoadingMarkup('Loading deployed items...');
@@ -581,11 +690,19 @@ async function loadDeployed() {
     const q = document.getElementById('dt-search').value.trim();
     const roomId = document.getElementById('dt-room').value;
     const deptId = document.getElementById('dt-dept').value;
+    const year = document.getElementById('dt-year').value;
+    const month = document.getElementById('dt-month').value;
+    const semester = document.getElementById('dt-semester').value;
 
     const params = new URLSearchParams();
+    params.set('page', dtCurrentPage);
+    params.set('per_page', 10);
     if (q) params.set('q', q);
     if (roomId) params.set('room_id', roomId);
     if (deptId) params.set('department_id', deptId);
+    if (year) params.set('year', year);
+    if (month) params.set('month', month);
+    if (semester) params.set('semester', semester);
 
     try {
         const { data: payload } = await dtFetch(`${DT_API}?${params.toString()}`, {
@@ -683,15 +800,43 @@ async function loadDeployed() {
 
         html += '</tbody></table></div>';
         container.innerHTML = html;
+
+        // Render pagination
+        dtPaginationData = payload.data?.pagination;
+        if (dtPaginationData) {
+            dtTotalPages = dtPaginationData.last_page || 1;
+            dtRenderPagination(dtPaginationData);
+        }
     } catch (err) {
         dtSetResultCount('Unable to load results');
         container.innerHTML = '<div class="ui-empty-state"><strong>Failed to load deployed items.</strong>'
             + '<span>Check your connection and try again.</span></div>';
+        document.getElementById('dt-pagination').innerHTML = '';
         dtNotify(err.message || 'Unable to load.');
     }
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+    // Populate year dropdown
+    dtPopulateYearDropdown();
+
+    // Setup date filter listeners - reset page to 1 when filters change
+    const yearSel = document.getElementById('dt-year');
+    const monthSel = document.getElementById('dt-month');
+    const semesterSel = document.getElementById('dt-semester');
+    const roomSel = document.getElementById('dt-room');
+    const deptSel = document.getElementById('dt-dept');
+    const searchInp = document.getElementById('dt-search');
+
+    if (yearSel) yearSel.addEventListener('change', () => { dtCurrentPage = 1; loadDeployed(); });
+    if (monthSel) monthSel.addEventListener('change', () => { dtCurrentPage = 1; loadDeployed(); });
+    if (semesterSel) semesterSel.addEventListener('change', () => { dtCurrentPage = 1; loadDeployed(); });
+    if (roomSel) roomSel.addEventListener('change', loadDeployed);
+    if (deptSel) deptSel.addEventListener('change', loadDeployed);
+    if (searchInp) searchInp.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') { dtCurrentPage = 1; loadDeployed(); }
+    });
+
     document.getElementById('dt-or-search-btn').addEventListener('click', searchByOr);
     document.getElementById('dt-or-input').addEventListener('keydown', (e) => {
         if (e.key === 'Enter') searchByOr();

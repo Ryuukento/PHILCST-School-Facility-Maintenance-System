@@ -39,10 +39,15 @@ class DeploymentTrackingController extends Controller
             return $this->fail('Forbidden', 403);
         }
 
-        $q      = trim((string) $request->query('q', ''));
-        $roomId = (int) $request->query('room_id', 0);
-        $deptId = (int) $request->query('department_id', 0);
-        $status = trim((string) $request->query('status', 'released'));
+        $q         = trim((string) $request->query('q', ''));
+        $roomId    = (int) $request->query('room_id', 0);
+        $deptId    = (int) $request->query('department_id', 0);
+        $status    = trim((string) $request->query('status', 'released'));
+        $year      = (int) $request->query('year', 0);
+        $month     = (int) $request->query('month', 0);
+        $semester  = (int) $request->query('semester', 0);
+        $perPage   = max(5, min((int) $request->query('per_page', 10), 100));
+        $page      = max(1, (int) $request->query('page', 1));
 
         $validStatuses = ['pending', 'approved', 'released', 'cancelled'];
         if (!in_array($status, $validStatuses, true)) {
@@ -67,6 +72,25 @@ class DeploymentTrackingController extends Controller
         if ($deptId > 0) {
             $where[]  = 'd.department_id = ?';
             $params[] = $deptId;
+        }
+
+        // Date filtering by year, month, or semester
+        if ($year > 0) {
+            $where[]  = 'YEAR(d.created_at) = ?';
+            $params[] = $year;
+
+            if ($month > 0 && $month <= 12) {
+                $where[]  = 'MONTH(d.created_at) = ?';
+                $params[] = $month;
+            } elseif ($semester > 0 && $semester <= 2) {
+                // 1st Semester: June-November (months 6-11)
+                // 2nd Semester: December-May (months 12, 1-5)
+                if ($semester == 1) {
+                    $where[]  = 'MONTH(d.created_at) BETWEEN 6 AND 11';
+                } else {
+                    $where[]  = '(MONTH(d.created_at) = 12 OR MONTH(d.created_at) BETWEEN 1 AND 5)';
+                }
+            }
         }
 
         $whereClause = 'WHERE ' . implode(' AND ', $where);
@@ -193,7 +217,14 @@ class DeploymentTrackingController extends Controller
             $params = array_merge($params, $paramsDirect);
         }
 
-        $sql  = "SELECT * FROM ({$sql}) AS combined ORDER BY deployed_at DESC, item_name ASC LIMIT 500";
+        // Get total count before pagination
+        $countSql = "SELECT COUNT(*) as total FROM ({$sql}) AS combined";
+        $countResult = DB::select($countSql, $params);
+        $total = $countResult[0]->total ?? 0;
+
+        // Add pagination
+        $offset = ($page - 1) * $perPage;
+        $sql  = "SELECT * FROM ({$sql}) AS combined ORDER BY deployed_at DESC, item_name ASC LIMIT {$perPage} OFFSET {$offset}";
         $rows = DB::select($sql, $params);
 
         // Filter-option dropdowns: rooms/departments that have at least one
@@ -227,9 +258,17 @@ class DeploymentTrackingController extends Controller
             ->orderBy('dept.name')
             ->get();
 
+        $lastPage = (int) ceil($total / $perPage);
+
         return $this->ok('Deployed items retrieved', [
             'rows'           => $rows,
-            'total'          => count($rows),
+            'total'          => $total,
+            'pagination'     => [
+                'total'        => $total,
+                'per_page'     => $perPage,
+                'current_page' => $page,
+                'last_page'    => $lastPage,
+            ],
             'filter_options' => [
                 'rooms'       => $rooms,
                 'departments' => $departments,
