@@ -594,13 +594,17 @@ async function dtSetCurrentAcademicSession() {
 
         // Update semester dropdown labels based on actual dates
         if (settings.first_sem_start && settings.first_sem_end && settings.second_sem_start && settings.second_sem_end) {
-            const formatDate = (dateStr) => {
-                const d = new Date(dateStr);
-                return `${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}`;
+            const formatDateRange = (startStr, endStr) => {
+                const formatFullDate = (dateStr) => {
+                    const d = new Date(dateStr);
+                    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                    return `${months[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
+                };
+                return `${formatFullDate(startStr)} – ${formatFullDate(endStr)}`;
             };
 
-            const s1Label = `1st Semester (${formatDate(settings.first_sem_start)} - ${formatDate(settings.first_sem_end)})`;
-            const s2Label = `2nd Semester (${formatDate(settings.second_sem_start)} - ${formatDate(settings.second_sem_end)})`;
+            const s1Label = `First Semester — ${formatDateRange(settings.first_sem_start, settings.first_sem_end)}`;
+            const s2Label = `Second Semester — ${formatDateRange(settings.second_sem_start, settings.second_sem_end)}`;
 
             const semesterSel = document.getElementById('dt-semester');
             if (semesterSel) {
