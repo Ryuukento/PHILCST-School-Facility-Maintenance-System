@@ -1013,7 +1013,7 @@
 .pm-print-table td:nth-child(3) { text-align: left; }
 
 @page {
-    margin: 0;
+    margin: 5mm 11mm 14mm;
     size: letter;
 }
 
@@ -1033,7 +1033,7 @@
     body.pm-printing .sidebar-toggle-mobile { display: none !important; }
     body.pm-printing .pm-page > *:not(.pm-print-only) { display: none !important; }
     body.pm-printing .pm-print-only { display: block !important; }
-    body.pm-printing main { margin: 0; padding: 10px 20px 20px 20px; }
+    body.pm-printing main { margin: 0; padding: 0 20px 20px 20px; }
 }
 
 /* ==========================================================================
