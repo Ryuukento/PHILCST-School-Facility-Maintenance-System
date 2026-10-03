@@ -1264,7 +1264,7 @@ main.maintenance-admin-dashboard-page #school-settings-widget .academic-period-i
 
 /* Dashboard KPI Icon Colors */
 .kpi-icon-reports {
-    background: rgba(30, 64, 175, 0.12) !important;
+    background: #dbeafe !important;
     color: #1e40af;
 }
 
@@ -1274,8 +1274,8 @@ main.maintenance-admin-dashboard-page #school-settings-widget .academic-period-i
 }
 
 .kpi-icon-today {
-    background: rgba(6, 95, 70, 0.12) !important;
-    color: #065f46;
+    background: #dcfce7 !important;
+    color: #059669;
 }
 
 .kpi-icon-today svg {
@@ -1284,8 +1284,8 @@ main.maintenance-admin-dashboard-page #school-settings-widget .academic-period-i
 }
 
 .kpi-icon-pending {
-    background: rgba(180, 83, 9, 0.12) !important;
-    color: #b45309;
+    background: #fef08a !important;
+    color: #d97706;
 }
 
 .kpi-icon-pending svg {
@@ -1294,8 +1294,8 @@ main.maintenance-admin-dashboard-page #school-settings-widget .academic-period-i
 }
 
 .kpi-icon-progress {
-    background: rgba(13, 92, 92, 0.12) !important;
-    color: #0d5c5c;
+    background: #ccfbf1 !important;
+    color: #0d9488;
 }
 
 .kpi-icon-progress svg {
@@ -1304,8 +1304,8 @@ main.maintenance-admin-dashboard-page #school-settings-widget .academic-period-i
 }
 
 .kpi-icon-completed {
-    background: rgba(21, 128, 61, 0.12) !important;
-    color: #15803d;
+    background: #dcfce7 !important;
+    color: #059669;
 }
 
 .kpi-icon-completed svg {
