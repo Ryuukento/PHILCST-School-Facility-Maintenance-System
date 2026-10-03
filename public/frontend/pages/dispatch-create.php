@@ -152,6 +152,9 @@ include __DIR__ . '/../includes/header.php';
                             <input type="text" id="dc-or-search" class="form-control" placeholder="Search by OR number or supplier…">
                             <input type="hidden" id="dc-or-id">
                             <small class="text-muted">Links this dispatch to a purchase receipt for deployment tracking.</small>
+                            <div style="margin-top:8px;">
+                                <button type="button" id="dc-toggle-older-receipts" class="btn btn-sm btn-secondary" style="padding:6px 12px;font-size:13px;">📅 Show Older Receipts</button>
+                            </div>
                         </div>
 
                         <div class="form-group">
@@ -246,6 +249,50 @@ function dcHideError() {
     const el = document.getElementById('dc-form-error');
     el.style.display = 'none';
     el.textContent   = '';
+}
+
+// ---------------------------------------------------------------------------
+// Purchase Receipts: Show Older Receipts Toggle
+// ---------------------------------------------------------------------------
+
+let dcShowOlderReceipts = false;
+let dcOrSearchSelect = null;
+
+function dcToggleOlderReceipts() {
+    dcShowOlderReceipts = !dcShowOlderReceipts;
+    const btn = document.getElementById('dc-toggle-older-receipts');
+
+    // Update button text and styling
+    if (dcShowOlderReceipts) {
+        btn.textContent = '✓ Showing All Receipts';
+        btn.style.backgroundColor = '#d1fae5';
+        btn.style.borderColor = '#a7f3d0';
+        btn.style.color = '#065f46';
+    } else {
+        btn.textContent = '📅 Show Older Receipts';
+        btn.style.backgroundColor = '';
+        btn.style.borderColor = '';
+        btn.style.color = '';
+    }
+
+    // Rebuild the search select with new endpoint
+    if (dcOrSearchSelect && typeof dcOrSearchSelect.destroy === 'function') {
+        dcOrSearchSelect.destroy();
+    }
+
+    dcBuildOrSearch();
+}
+
+function dcBuildOrSearch() {
+    if (!(window.Components && typeof Components.SearchableSelect === 'function')) return;
+
+    const showOlderParam = dcShowOlderReceipts ? '&show_older=1' : '';
+    dcOrSearchSelect = new Components.SearchableSelect({
+        inputId:    'dc-or-search',
+        hiddenId:   'dc-or-id',
+        endpoint:   '/api/purchase-receipts/search' + showOlderParam,
+        displayKey: 'name',
+    });
 }
 
 // ---------------------------------------------------------------------------
@@ -687,15 +734,20 @@ document.getElementById('dc-form').addEventListener('submit', async (e) => {
 // ---------------------------------------------------------------------------
 
 document.addEventListener('DOMContentLoaded', async () => {
+    // Setup the "Show Older Receipts" button
+    const toggleBtn = document.getElementById('dc-toggle-older-receipts');
+    if (toggleBtn) {
+        toggleBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            dcToggleOlderReceipts();
+        });
+    }
+
     // OR number / Room / Release Personnel / Departments are all Components.SearchableSelect
     // instances — raw path, resolveAppUrl adds base prefix
     if (window.Components && typeof Components.SearchableSelect === 'function') {
-        new Components.SearchableSelect({
-            inputId:    'dc-or-search',
-            hiddenId:   'dc-or-id',
-            endpoint:   '/api/purchase-receipts/search',
-            displayKey: 'name',   // name = or_number, code = supplier_name (shown as "OR — Supplier")
-        });
+        // Purchase Receipts search with show_older toggle
+        dcBuildOrSearch();
 
         // Multi-Department Selection for reporting purposes. Allows selecting
         // multiple departments for dispatch when personnel from different
