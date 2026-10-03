@@ -952,7 +952,9 @@
     body.pm-printing header,
     body.pm-printing nav,
     body.pm-printing .navbar,
-    body.pm-printing .hamburger-icon { display: none !important; }
+    body.pm-printing .hamburger-icon,
+    body.pm-printing .sidebar-toggle,
+    body.pm-printing .sidebar-toggle-mobile { display: none !important; }
     body.pm-printing .pm-page > *:not(.pm-print-only) { display: none !important; }
     body.pm-printing .pm-print-only { display: block !important; }
     body.pm-printing main { margin: 0; padding: 20px; }
