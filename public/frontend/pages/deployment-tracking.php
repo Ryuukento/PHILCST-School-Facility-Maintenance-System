@@ -32,36 +32,7 @@ include __DIR__ . '/../includes/header.php';
         </div>
     </section>
 
-    <section class="deployment-tracking-trace-panel">
-        <div class="deployment-tracking-trace-panel__header">
-            <div>
-                <h2 class="deployment-tracking-trace-panel__title">Trace by OR Number</h2>
-                <p class="deployment-tracking-trace-panel__description">Search receipts directly to see where received items were ultimately deployed.</p>
-            </div>
-        </div>
-
-        <div class="deployment-tracking-trace-toolbar">
-            <div class="deployment-tracking-trace-toolbar__search">
-                <label class="deployment-tracking-toolbar__label" for="dt-or-input">OR Number</label>
-                <input type="text" id="dt-or-input" class="form-control deployment-tracking-toolbar__control" placeholder="Enter OR number (e.g. OR-2026-001)">
-            </div>
-            <div class="deployment-tracking-trace-toolbar__action-group">
-                <button type="button" class="btn deployment-tracking-page__primary-action" id="dt-or-search-btn">Search</button>
-                <button type="button" class="btn deployment-tracking-page__ghost-action" id="dt-or-clear-btn">Clear</button>
-            </div>
-        </div>
-
-        <p class="deployment-tracking-trace-panel__hint">Partial matches are supported. Searches by OR number only.</p>
-
-        <div id="dt-or-results" class="deployment-tracking-trace-results">
-            <div class="ui-empty-state">
-                <strong>Enter an OR number above to trace items.</strong>
-                <span>Partial matches are supported.</span>
-            </div>
-        </div>
-    </section>
-
-    <section class="deployment-tracking-panel">
+<section class="deployment-tracking-panel">
         <div class="deployment-tracking-panel__header">
             <div>
                 <h2 class="deployment-tracking-panel__title">All Deployed Items</h2>
@@ -364,92 +335,6 @@ function dtSetResultCount(text) {
     const target = document.getElementById('dt-result-count');
     if (target) {
         target.textContent = text;
-    }
-}
-
-async function searchByOr() {
-    const q = document.getElementById('dt-or-input').value.trim();
-    const resultsEl = document.getElementById('dt-or-results');
-
-    if (!q) {
-        resultsEl.innerHTML = '<div class="ui-empty-state"><strong>Enter an OR number above to trace items.</strong>'
-            + '<span>Partial matches are supported.</span></div>';
-        return;
-    }
-
-    resultsEl.innerHTML = dtLoadingMarkup('Searching receipts...');
-
-    try {
-        const params = new URLSearchParams({ q });
-        const { data: payload } = await dtFetch(`${DT_API}/search?${params.toString()}`, {
-            credentials: 'same-origin',
-            headers: { Accept: 'application/json' },
-        });
-
-        if (!payload || !payload.success) {
-            throw new Error((payload && payload.message) || 'Failed to search');
-        }
-
-        const rows = Array.isArray(payload.data?.rows) ? payload.data.rows : [];
-        const receipts = Array.isArray(payload.data?.receipts) ? payload.data.receipts : [];
-
-        if (rows.length === 0) {
-            const message = payload.data?.message || `No items found for OR number matching "${q}".`;
-            resultsEl.innerHTML = `<div class="ui-empty-state"><strong>${dtEscapeHtml(message)}</strong></div>`;
-            return;
-        }
-
-        let html = '';
-
-        if (receipts.length > 0) {
-            html += '<div class="deployment-tracking-receipt-grid">';
-            receipts.forEach((pr) => {
-                html += '<article class="deployment-tracking-receipt-card">';
-                html += `<div class="deployment-tracking-receipt-card__code">${dtEscapeHtml(pr.or_number)}</div>`;
-                html += '<div class="deployment-tracking-receipt-card__meta">';
-                html += `<span>${dtEscapeHtml(pr.supplier_name || 'Unknown supplier')}</span>`;
-                html += `<span>${dtFormatDate(pr.receipt_date)}</span>`;
-                html += dtReceiptBadge(pr.status);
-                html += '</div></article>';
-            });
-            html += '</div>';
-        }
-
-        html += '<div class="table-responsive"><table class="table deployment-tracking-table deployment-tracking-table--trace"><thead><tr>'
-            + '<th scope="col">OR Number</th>'
-            + '<th scope="col">Supplier</th>'
-            + '<th scope="col">Date Received</th>'
-            + '<th scope="col" class="deployment-tracking-table__item-head">Item Name</th>'
-            + '<th scope="col" class="deployment-tracking-table__qty">Qty Received</th>'
-            + '<th scope="col">Deployed To</th>'
-            + '<th scope="col">Dispatch Code</th>'
-            + '<th scope="col">Dispatch Status</th>'
-            + '</tr></thead><tbody>';
-
-        rows.forEach((row) => {
-            const deployedToSubLabel = row.room_note || row.department_name || '';
-            const deployedTo = row.room_name
-                ? `<div class="deployment-tracking-location-cell">${dtEscapeHtml(row.room_name)}${deployedToSubLabel ? `<span>${dtEscapeHtml(deployedToSubLabel)}</span>` : ''}</div>`
-                : '<span class="deployment-tracking-muted-cell deployment-tracking-muted-cell--italic">In Inventory / Not Deployed</span>';
-
-            html += '<tr>';
-            html += `<td>${dtTextCell(row.or_number, { variant: 'code' })}</td>`;
-            html += `<td>${dtTextCell(row.supplier_name, { variant: 'muted' })}</td>`;
-            html += `<td class="deployment-tracking-table__date-cell">${dtFormatDate(row.receipt_date)}</td>`;
-            html += `<td class="deployment-tracking-table__item-cell">${dtTextCell(row.receipt_item_name, { variant: 'item' })}</td>`;
-            html += `<td class="deployment-tracking-table__qty">${dtTextCell(row.quantity_received)} ${dtTextCell(row.unit || 'pc', { fallback: 'pc' })}</td>`;
-            html += `<td>${deployedTo}</td>`;
-            html += `<td>${dtTextCell(row.dispatch_code, { variant: 'code' })}</td>`;
-            html += `<td>${row.dispatch_status ? dtStatusBadge(row.dispatch_status) : dtMutedDash()}</td>`;
-            html += '</tr>';
-        });
-
-        html += '</tbody></table></div>';
-        resultsEl.innerHTML = html;
-    } catch (err) {
-        resultsEl.innerHTML = '<div class="ui-empty-state"><strong>Search failed.</strong>'
-            + '<span>Check your connection and try the search again.</span></div>';
-        dtNotify(err.message || 'Unable to search.');
     }
 }
 
@@ -768,14 +653,10 @@ async function loadDeployed() {
             + '<th scope="col">Department</th>'
             + '<th scope="col">Dispatch Code</th>'
             + '<th scope="col">Dispatch Date</th>'
-            // Status intentionally omitted here — loadDeployed() never sends a
+            // Status intentionally omitted — loadDeployed() never sends a
             // `status` filter and DeploymentTrackingController::index() defaults
             // it to 'released', so every row in this table would always render
-            // the same badge. A column that never varies is pure noise against
-            // the "information density / scannability" goals of this pass. The
-            // Trace-by-OR table below keeps its own Dispatch Status column
-            // (`dtStatusBadge(row.dispatch_status)` in searchByOr()) since that
-            // one genuinely varies per traced item.
+            // the same badge. A column that never varies is pure noise.
             + '</tr></thead><tbody>';
 
         rows.forEach((row) => {
@@ -836,18 +717,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (e.key === 'Enter') { dtCurrentPage = 1; loadDeployed(); }
     });
 
-    document.getElementById('dt-or-search-btn').addEventListener('click', searchByOr);
-    document.getElementById('dt-or-input').addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') searchByOr();
-    });
-    document.getElementById('dt-or-clear-btn').addEventListener('click', () => {
-        document.getElementById('dt-or-input').value = '';
-        document.getElementById('dt-or-results').innerHTML =
-            '<div class="ui-empty-state"><strong>Enter an OR number above to trace items.</strong>'
-            + '<span>Partial matches are supported.</span></div>';
-    });
-
-    document.getElementById('dt-search').addEventListener('keydown', (e) => {
+document.getElementById('dt-search').addEventListener('keydown', (e) => {
         if (e.key === 'Enter') loadDeployed();
     });
     document.getElementById('dt-room').addEventListener('change', loadDeployed);
@@ -927,8 +797,7 @@ document.addEventListener('DOMContentLoaded', () => {
     font-size: 0.98rem;
 }
 
-.deployment-tracking-panel,
-.deployment-tracking-trace-panel {
+.deployment-tracking-panel {
     background: var(--deployment-surface);
     border: 1px solid var(--deployment-border);
     border-radius: 16px;
@@ -936,12 +805,7 @@ document.addEventListener('DOMContentLoaded', () => {
     overflow: hidden;
 }
 
-.deployment-tracking-trace-panel {
-    margin-top: 18px;
-}
-
-.deployment-tracking-panel__header,
-.deployment-tracking-trace-panel__header {
+.deployment-tracking-panel__header {
     display: flex;
     justify-content: space-between;
     align-items: end;
@@ -1055,16 +919,14 @@ document.addEventListener('DOMContentLoaded', () => {
    Without it these <h2>s inherit the shared h1-h6 rule in styles.css, which
    pairs Poppins with a different weight than the Dispatches panel headings —
    the two pages' section titles did not read as the same component. */
-.deployment-tracking-panel__title,
-.deployment-tracking-trace-panel__title {
+.deployment-tracking-panel__title {
     margin: 0;
     font-size: 1.08rem;
     font-weight: 700;
     color: var(--deployment-text);
 }
 
-.deployment-tracking-panel__description,
-.deployment-tracking-trace-panel__description {
+.deployment-tracking-panel__description {
     margin: 8px 0 0;
     color: var(--deployment-text-muted);
     font-size: 0.93rem;
@@ -1076,21 +938,13 @@ document.addEventListener('DOMContentLoaded', () => {
     color: var(--deployment-text-muted) !important;
 }
 
-.deployment-tracking-toolbar,
-.deployment-tracking-trace-toolbar {
+.deployment-tracking-toolbar {
     display: grid;
     gap: 14px;
     padding: 22px 26px;
     border-bottom: 1px solid var(--deployment-border);
     background: color-mix(in srgb, var(--deployment-surface) 86%, var(--deployment-surface-muted));
-}
-
-.deployment-tracking-toolbar {
     grid-template-columns: minmax(0, 1.7fr) minmax(180px, 0.75fr) minmax(180px, 0.75fr) auto;
-}
-
-.deployment-tracking-trace-toolbar {
-    grid-template-columns: minmax(0, 1fr) auto;
 }
 
 .deployment-tracking-toolbar__label {
@@ -1127,8 +981,7 @@ document.addEventListener('DOMContentLoaded', () => {
     transform: none;
 }
 
-.deployment-tracking-toolbar__action,
-.deployment-tracking-trace-toolbar__action-group {
+.deployment-tracking-toolbar__action {
     display: flex;
     align-items: end;
     gap: 10px;
@@ -1170,24 +1023,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
 /* 26px gutters throughout, matching the Dispatches panel rhythm (this page
    was on 24px, which read as a subtly different container width side by side). */
-.deployment-tracking-table-shell,
-.deployment-tracking-trace-results {
+.deployment-tracking-table-shell {
     padding: 0 26px 26px;
-}
-
-.deployment-tracking-trace-panel__hint {
-    margin: 0 0 4px;
-    padding: 16px 26px 0;
-    color: var(--deployment-text-muted);
-    font-size: 0.88rem;
 }
 
 /* Section 5 — empty states.
    Built on the shared .ui-empty-state component (styles.css), which already
    supplies the dashed border, 12px radius and centred text. What is added here
    is a tall 60px well, a 14px/600 title and a faint supporting line. */
-.deployment-tracking-table-shell .ui-empty-state,
-.deployment-tracking-trace-results .ui-empty-state {
+.deployment-tracking-table-shell .ui-empty-state {
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -1200,16 +1044,14 @@ document.addEventListener('DOMContentLoaded', () => {
     color: var(--deployment-text-muted);
 }
 
-.deployment-tracking-table-shell .ui-empty-state strong,
-.deployment-tracking-trace-results .ui-empty-state strong {
+.deployment-tracking-table-shell .ui-empty-state strong {
     margin-bottom: 0;
     font-size: 14px;
     font-weight: 600;
     color: var(--deployment-text);
 }
 
-.deployment-tracking-table-shell .ui-empty-state span,
-.deployment-tracking-trace-results .ui-empty-state span {
+.deployment-tracking-table-shell .ui-empty-state span {
     font-size: 13px;
     color: var(--deployment-text-faint);
 }
@@ -1225,8 +1067,7 @@ document.addEventListener('DOMContentLoaded', () => {
    list is a normal block that stretches full-width by default. Restoring
    that same full-width behavior here, scoped to just the skeleton list.
    Confirmed via live screenshot before and after this fix. */
-.deployment-tracking-table-shell .ui-skeleton-list,
-.deployment-tracking-trace-results .ui-skeleton-list {
+.deployment-tracking-table-shell .ui-skeleton-list {
     width: 100%;
 }
 
@@ -1252,12 +1093,8 @@ document.addEventListener('DOMContentLoaded', () => {
     overflow: hidden;
 }
 
-/* TASK 36 PHASE 2 — loadDeployed()'s table gained two additive columns
-   (Deployment Type, Asset Code) so it now has 11 vs. the base rule's 9-column
-   1040px floor. Scoped to the `--deployed` modifier only (applied solely to
-   the main deployed-items table, not the Trace-by-OR table below, which is
-   unaffected by this task and keeps the 9-column comment above unchanged for
-   its own sizing). */
+/* TASK 36 PHASE 2 — deployed table has 11 columns (Deployment Type, Asset Code)
+   vs. the base rule's 9-column 1040px floor. */
 .deployment-tracking-page .deployment-tracking-table--deployed {
     min-width: 1280px;
 }
@@ -1523,30 +1360,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
 @media (max-width: 768px) {
     .deployment-tracking-panel__header,
-    .deployment-tracking-trace-panel__header,
     .deployment-tracking-toolbar,
-    .deployment-tracking-trace-toolbar,
-    .deployment-tracking-table-shell,
-    .deployment-tracking-trace-results,
-    .deployment-tracking-trace-panel__hint {
+    .deployment-tracking-table-shell {
         padding-left: 16px;
         padding-right: 16px;
     }
 
-    .deployment-tracking-panel__header,
-    .deployment-tracking-trace-panel__header {
+    .deployment-tracking-panel__header {
         flex-direction: column;
         align-items: flex-start;
     }
 
-    .deployment-tracking-toolbar,
-    .deployment-tracking-trace-toolbar {
+    .deployment-tracking-toolbar {
         grid-template-columns: 1fr;
-    }
-
-    .deployment-tracking-trace-toolbar__action-group {
-        align-items: stretch;
-        flex-wrap: wrap;
     }
 }
 
@@ -1605,11 +1431,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 }
 
-@media (max-width: 540px) {
-    .deployment-tracking-trace-toolbar__action-group .btn {
-        width: 100%;
-    }
-}
 </style>
 
 <?php include __DIR__ . '/../includes/footer.php'; ?>
