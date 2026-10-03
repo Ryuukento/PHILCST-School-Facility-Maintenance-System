@@ -41,23 +41,7 @@ $user = $_SESSION['user'] ?? $_SESSION['auth_user'];
         <!-- Transparent compatibility wrapper for the KPI strip. -->
         <div class="card dashboard-hero-panel">
             <div class="card-body dashboard-hero-kpi-body">
-                <!-- TASK 36 — the 5 KPI cards' decorative .summary-card-spark
-                     (a small static SVG sparkline, per Task 31.9's original
-                     brief) read as a mini stock/trading chart per the user's
-                     explicit feedback, and the big number above it was too
-                     small. Replaced the sparkline with a single large, faint
-                     watermark version of the card's own icon glyph
-                     (.dashboard-hero-kpi-item-watermark — aria-hidden,
-                     position:absolute in the card's already-existing
-                     position:relative/overflow:hidden box, pointer-events:
-                     none, same per-card accent color the icon chip already
-                     used) instead — same "clearly decorative, not real data"
-                     treatment as .summary-card-illustration elsewhere on this
-                     page, just re-purposed here as a plain icon rather than a
-                     chart shape. The KPI value text itself was enlarged in
-                     dashboard.inline.css. Same ids/onclick handlers/data as
-                     every prior task — only the decoration and value font
-                     size changed. -->
+                <!-- KPI cards display clean icon, title, and value. -->
                 <div class="dashboard-hero-kpi-row">
                     <!-- TASK 31.10 — icon + title now share one row
                          (.dashboard-hero-kpi-item-head) instead of icon-above-title,
@@ -65,10 +49,6 @@ $user = $_SESSION['user'] ?? $_SESSION['auth_user'];
                          as every prior task; only the wrapper nesting changed. -->
                     <!-- Total Reports -->
                     <div class="dashboard-hero-kpi-item" onclick="navigateToReportsCard('total')">
-                        <svg class="dashboard-hero-kpi-item-watermark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
-                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                            <path d="M14 2v6h6"></path>
-                        </svg>
                         <div class="dashboard-hero-kpi-item-head">
                             <div class="summary-card-icon kpi-icon-reports" aria-hidden="true">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -88,10 +68,6 @@ $user = $_SESSION['user'] ?? $_SESSION['auth_user'];
 
                     <!-- Reports Today -->
                     <div class="dashboard-hero-kpi-item" onclick="navigateToReportsCard('today')">
-                        <svg class="dashboard-hero-kpi-item-watermark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
-                            <rect x="3" y="4" width="18" height="18" rx="2"></rect>
-                            <path d="M16 2v4M8 2v4M3 10h18"></path>
-                        </svg>
                         <div class="dashboard-hero-kpi-item-head">
                             <div class="summary-card-icon kpi-icon-today" aria-hidden="true">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -111,10 +87,6 @@ $user = $_SESSION['user'] ?? $_SESSION['auth_user'];
 
                     <!-- Pending Tasks -->
                     <div class="dashboard-hero-kpi-item" onclick="navigateToReportsCard('pending_tasks')">
-                        <svg class="dashboard-hero-kpi-item-watermark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
-                            <circle cx="12" cy="12" r="9"></circle>
-                            <path d="M12 7v6l4 2"></path>
-                        </svg>
                         <div class="dashboard-hero-kpi-item-head">
                             <div class="summary-card-icon kpi-icon-pending" aria-hidden="true">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -134,9 +106,6 @@ $user = $_SESSION['user'] ?? $_SESSION['auth_user'];
 
                     <!-- In Progress -->
                     <div class="dashboard-hero-kpi-item" onclick="navigateToReportsCard('in_progress')">
-                        <svg class="dashboard-hero-kpi-item-watermark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
-                            <path d="M20 7a5 5 0 0 1-7 4.6L7.6 17A2 2 0 1 1 5 14.4l5.4-5.4A5 5 0 1 1 20 7z"></path>
-                        </svg>
                         <div class="dashboard-hero-kpi-item-head">
                             <div class="summary-card-icon kpi-icon-progress" aria-hidden="true">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -155,9 +124,6 @@ $user = $_SESSION['user'] ?? $_SESSION['auth_user'];
 
                     <!-- Completed -->
                     <div class="dashboard-hero-kpi-item" onclick="navigateToReportsCard('completed')">
-                        <svg class="dashboard-hero-kpi-item-watermark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
-                            <path d="M20 6L9 17l-5-5"></path>
-                        </svg>
                         <div class="dashboard-hero-kpi-item-head">
                             <div class="summary-card-icon kpi-icon-completed" aria-hidden="true">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
