@@ -77,8 +77,8 @@ include __DIR__ . '/../includes/header.php';
                 <label class="deployment-tracking-toolbar__label" for="dt-semester">Semester</label>
                 <select id="dt-semester" class="form-control deployment-tracking-toolbar__control">
                     <option value="">All Semesters</option>
-                    <option value="1">1st Semester (Jun-Nov)</option>
-                    <option value="2">2nd Semester (Dec-May)</option>
+                    <option value="1">1st Semester</option>
+                    <option value="2">2nd Semester</option>
                 </select>
             </div>
             <div class="deployment-tracking-toolbar__filter">
@@ -589,6 +589,26 @@ async function dtSetCurrentAcademicSession() {
                 if (yearSel) {
                     yearSel.value = yearMatch[1];
                 }
+            }
+        }
+
+        // Update semester dropdown labels based on actual dates
+        if (settings.first_sem_start && settings.first_sem_end && settings.second_sem_start && settings.second_sem_end) {
+            const formatDate = (dateStr) => {
+                const d = new Date(dateStr);
+                return `${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}`;
+            };
+
+            const s1Label = `1st Semester (${formatDate(settings.first_sem_start)} - ${formatDate(settings.first_sem_end)})`;
+            const s2Label = `2nd Semester (${formatDate(settings.second_sem_start)} - ${formatDate(settings.second_sem_end)})`;
+
+            const semesterSel = document.getElementById('dt-semester');
+            if (semesterSel) {
+                // Update option labels
+                const opt1 = semesterSel.querySelector('option[value="1"]');
+                const opt2 = semesterSel.querySelector('option[value="2"]');
+                if (opt1) opt1.textContent = s1Label;
+                if (opt2) opt2.textContent = s2Label;
             }
         }
 
