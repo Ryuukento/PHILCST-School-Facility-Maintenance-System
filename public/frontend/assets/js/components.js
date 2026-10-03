@@ -178,9 +178,9 @@
             this.list.innerHTML = '';
             if(!items || items.length === 0){ this.list.style.display='none'; return; }
             items.forEach(it=>{
-                const row = document.createElement('div'); row.className='search-item'; row.style.cssText='padding:12px;cursor:pointer;font-size:14px;border-bottom:1px solid #f1f5f9;transition:background-color 150ms ease';
+                const row = document.createElement('div'); row.className='search-item'; row.style.cssText='padding:12px;cursor:pointer;font-size:14px;color:#000000;font-weight:600;border-bottom:1px solid #f1f5f9;transition:background-color 150ms ease;background-color:transparent';
                 row.textContent = (it[this.displayKey] || '') + ((it.code || it.asset_code) ? (' — ' + (it.code || it.asset_code)) : '');
-                row.addEventListener('mouseenter', ()=>{ row.style.backgroundColor='#f8fafc'; });
+                row.addEventListener('mouseenter', ()=>{ row.style.backgroundColor='#e5e7eb'; });
                 row.addEventListener('mouseleave', ()=>{ row.style.backgroundColor='transparent'; });
                 row.addEventListener('click', ()=>{ this.input.value = it[this.displayKey] || ''; this.hidden.value = it.id || it.department_id || it.user_id || it.room_id || ''; this.list.style.display='none'; if (this.onSelect) this.onSelect(it); });
                 this.list.appendChild(row);
