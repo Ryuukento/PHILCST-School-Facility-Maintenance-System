@@ -1041,10 +1041,7 @@ document.addEventListener('DOMContentLoaded', () => {
 /* Section 5 — empty states.
    Built on the shared .ui-empty-state component (styles.css), which already
    supplies the dashed border, 12px radius and centred text. What is added here
-   is the Inventory Reports *proportion*: the tall 60px well, a 14px/600 title
-   and a faint supporting line. The .ir-empty rules themselves cannot be reused
-   directly — they are scoped under .ir-page inside inventory-reports.php, and
-   lifting them into a shared stylesheet is out of bounds for this pass. */
+   is a tall 60px well, a 14px/600 title and a faint supporting line. */
 .deployment-tracking-table-shell .ui-empty-state,
 .deployment-tracking-trace-results .ui-empty-state {
     display: flex;

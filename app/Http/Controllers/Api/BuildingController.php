@@ -157,12 +157,8 @@ class BuildingController extends Controller
                 'di.quantity',
                 'i.unit_type as unit',
                 'i.item_condition as condition',
-                // INVENTORY REPORTS PER ROOM FIX — asset_code/status were never
-                // selected here because this endpoint originally only fed the
-                // Buildings Overview cards, which don't show them. The Per Room
-                // Report table (inventory-reports.php) now reuses this same
-                // union as its item source (see that controller's docblock
-                // above), and its existing table columns expect both.
+                // asset_code/status are needed for completeness of the
+                // inventory data (see that controller's docblock above).
                 'i.asset_code',
                 'i.status',
                 'd.updated_at as date_dispatched',

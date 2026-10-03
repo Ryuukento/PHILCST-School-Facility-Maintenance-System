@@ -499,7 +499,7 @@ const INVENTORY_STOCK_API_BASE = window.SFMS_PUBLIC_URL('/api/inventory-stock');
 // so every API path must go through window.SFMS_PUBLIC_URL(). These two previously used
 // bare root-absolute paths, which resolved to http://localhost/api/... (outside the app's
 // base path) and returned Apache's 404 HTML page instead of JSON — the routes were fine
-// all along; only the URLs were wrong. Same bug/fix already applied in inventory-reports.php.
+// all along; only the URLs were wrong.
 const ROOMS_API_BASE = window.SFMS_PUBLIC_URL('/api/rooms');
 const BUILDINGS_API_BASE = window.SFMS_PUBLIC_URL('/api/buildings');
 const CATEGORIES_API_BASE = window.SFMS_PUBLIC_URL('/api/inventory-categories');
