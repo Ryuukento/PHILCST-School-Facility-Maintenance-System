@@ -998,11 +998,32 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 .deployment-tracking-toolbar {
     display: grid;
-    gap: 14px;
-    padding: 22px 26px;
+    gap: 16px;
+    padding: 26px;
     border-bottom: 1px solid var(--deployment-border);
     background: color-mix(in srgb, var(--deployment-surface) 86%, var(--deployment-surface-muted));
-    grid-template-columns: minmax(0, 1.7fr) minmax(180px, 0.75fr) minmax(180px, 0.75fr) auto;
+    grid-template-columns: repeat(4, 1fr);
+    grid-auto-flow: dense;
+}
+
+.deployment-tracking-toolbar__search {
+    grid-column: 1 / -1;
+}
+
+.deployment-tracking-toolbar__filter:nth-child(2),
+.deployment-tracking-toolbar__filter:nth-child(3),
+.deployment-tracking-toolbar__filter:nth-child(4) {
+    grid-column: span 1;
+}
+
+.deployment-tracking-toolbar__filter:nth-child(5),
+.deployment-tracking-toolbar__filter:nth-child(6) {
+    grid-column: span 1.5;
+}
+
+.deployment-tracking-toolbar__action {
+    grid-column: auto;
+    align-self: end;
 }
 
 .deployment-tracking-toolbar__label {
@@ -1026,11 +1047,17 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 .deployment-tracking-toolbar__control {
     width: 100%;
-    padding: 0 14px;
+    padding: 12px 14px;
     background: var(--deployment-surface);
     color: var(--deployment-text);
     border: 1px solid var(--deployment-border-strong);
     box-shadow: none;
+    transition: all 200ms ease;
+}
+
+.deployment-tracking-toolbar__control:hover {
+    border-color: #a78bfa;
+    background: color-mix(in srgb, var(--deployment-surface) 95%, #7c3aed 5%);
 }
 
 .deployment-tracking-toolbar__control:focus {
