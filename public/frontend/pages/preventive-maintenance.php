@@ -1953,8 +1953,10 @@ function pmBuildPrintView() {
 
     return `
         <div class="pm-print-header">
+            <img src="/School_Facility_Maintenance_System/frontend/assets/images/logo-seal.svg" alt="School Logo" class="pm-print-logo" />
             <h1>PHILIPPINE COLLEGE OF SCIENCE AND TECHNOLOGY</h1>
             <h2>PREVENTIVE MAINTENANCE SCHEDULE — ${year}</h2>
+            <div class="pm-print-generated">${new Date().toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' })}</div>
         </div>
         <table class="pm-print-table">
             <thead>

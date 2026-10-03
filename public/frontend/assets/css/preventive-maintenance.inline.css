@@ -883,9 +883,38 @@
 
 .pm-print-only { display: none; }
 
-.pm-print-header { text-align: center; margin-bottom: 16px; }
-.pm-print-header h1 { margin: 0; font-size: 16px; }
-.pm-print-header h2 { margin: 4px 0 0; font-size: 13px; font-weight: 600; }
+.pm-print-header {
+    text-align: center;
+    margin-bottom: 20px;
+    padding-bottom: 12px;
+    border-bottom: 2px solid #000;
+}
+
+.pm-print-logo {
+    display: block;
+    width: 60px;
+    height: 60px;
+    margin: 0 auto 12px;
+}
+
+.pm-print-header h1 {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+}
+
+.pm-print-header h2 {
+    margin: 6px 0 0;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.pm-print-generated {
+    margin-top: 8px;
+    font-size: 11px;
+    color: #666;
+}
 
 .pm-print-table {
     width: 100%;
