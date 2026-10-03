@@ -671,7 +671,8 @@ class UiEmojiIconReplacementTest extends TestCase
         $this->assertStringContainsString('nav-parent-toggle', $sidebar);
         $this->assertStringContainsString('nav-submenu-inventory', $sidebar);
 
-        $order = ['inventory', 'purchase-receipts', 'dispatches', 'deployment-tracking', 'inventory-reports'];
+        // Inventory Reports was removed from the system entirely
+        $order = ['inventory', 'purchase-receipts', 'dispatches', 'deployment-tracking'];
         $last = -1;
         foreach ($order as $page) {
             $pos = strpos($sidebar, 'data-page="' . $page . '"');
@@ -679,6 +680,12 @@ class UiEmojiIconReplacementTest extends TestCase
             $this->assertGreaterThan($last, $pos, "Submenu order changed at '{$page}'.");
             $last = $pos;
         }
+
+        // Verify inventory-reports is no longer present
+        $this->assertFalse(
+            strpos($sidebar, 'data-page="inventory-reports"'),
+            'Inventory Reports has been removed and should not appear in the submenu.'
+        );
     }
 
     public function test_role_gates_were_not_touched_by_a_presentation_change(): void

@@ -69,14 +69,13 @@ class InventoryNavigationSubmenuTest extends TestCase
      * parent row's own destination now, not a child. Re-adding it here would
      * reintroduce the duplicate this task removed.
      *
-     * Inventory Reports is last; Deployment Tracking precedes it; Dispatches
-     * sits between Purchase Receipts and Deployment Tracking.
+     * Inventory Reports was removed from the system entirely.
+     * Dispatches sits between Purchase Receipts and Deployment Tracking.
      */
     private const SUBMENU_ORDER = [
         'purchase-receipts' => 'Purchase Receipts',
         'dispatches' => 'Dispatches',
         'deployment-tracking' => 'Deployment Tracking',
-        'inventory-reports' => 'Inventory Reports',
     ];
 
     /** The pages the relocated Dispatches entry highlights on. */
@@ -410,33 +409,30 @@ class InventoryNavigationSubmenuTest extends TestCase
         );
     }
 
-    public function test_inventory_reports_is_the_final_submenu_item(): void
+    public function test_deployment_tracking_is_the_final_submenu_item(): void
     {
         $submenu = $this->submenuBlock();
 
         preg_match_all('/data-page="([a-z-]+)"/', $submenu, $matches);
 
         $this->assertSame(
-            'inventory-reports',
+            'deployment-tracking',
             end($matches[1]),
-            'Inventory Reports must be the last item in the Inventory submenu.'
+            'Deployment Tracking must be the last item in the Inventory submenu.'
         );
     }
 
-    public function test_deployment_tracking_sits_between_dispatches_and_inventory_reports(): void
+    public function test_submenu_has_exactly_three_children(): void
     {
         $submenu = $this->submenuBlock();
 
-        $dispatches = strpos($submenu, 'data-page="dispatches"');
-        $deployment = strpos($submenu, 'data-page="deployment-tracking"');
-        $reports = strpos($submenu, 'data-page="inventory-reports"');
+        preg_match_all('/data-page="([a-z-]+)"/', $submenu, $matches);
 
-        $this->assertNotFalse($dispatches);
-        $this->assertNotFalse($deployment);
-        $this->assertNotFalse($reports);
-
-        $this->assertGreaterThan($dispatches, $deployment, 'Deployment Tracking follows Dispatches.');
-        $this->assertLessThan($reports, $deployment, 'Deployment Tracking precedes Inventory Reports.');
+        $this->assertSame(
+            3,
+            count($matches[1]),
+            'The Inventory submenu must contain exactly three destinations after Inventory Reports was removed.'
+        );
     }
 
     public function test_submenu_items_keep_their_original_destination_urls(): void
@@ -447,7 +443,6 @@ class InventoryNavigationSubmenuTest extends TestCase
             "public_url('/purchase-receipts')",
             "public_url('/dispatches')",
             "public_url('/deployment-tracking')",
-            "public_url('/inventory-reports')",
         ] as $href) {
             $this->assertStringContainsString(
                 $href,
@@ -455,6 +450,13 @@ class InventoryNavigationSubmenuTest extends TestCase
                 "Consolidating navigation must not change the {$href} destination."
             );
         }
+
+        // Inventory Reports has been removed from the system entirely
+        $this->assertStringNotContainsString(
+            "public_url('/inventory-reports')",
+            $submenu,
+            'Inventory Reports was removed and should not appear in navigation.'
+        );
 
         // Same escaping / URL-helper convention as every other nav entry.
         $this->assertStringContainsString('htmlspecialchars(public_url(', $submenu);
@@ -515,7 +517,6 @@ class InventoryNavigationSubmenuTest extends TestCase
     {
         foreach ([
             'inventory.index',
-            'inventory.reports',
             'purchase-receipts.page',
             'deployment.tracking',
         ] as $routeName) {
@@ -524,6 +525,12 @@ class InventoryNavigationSubmenuTest extends TestCase
                 "Route '{$routeName}' must remain registered — this task changes navigation only."
             );
         }
+
+        // Inventory Reports route was removed
+        $this->assertFalse(
+            Route::has('inventory.reports'),
+            "Route 'inventory.reports' was removed when Inventory Reports feature was deleted."
+        );
     }
 
     public function test_every_underlying_page_still_exists(): void
@@ -531,7 +538,6 @@ class InventoryNavigationSubmenuTest extends TestCase
         foreach ([
             'inventory.php',
             'purchase-receipts.php',
-            'inventory-reports.php',
             'deployment-tracking.php',
         ] as $page) {
             $this->assertFileExists(
@@ -539,6 +545,12 @@ class InventoryNavigationSubmenuTest extends TestCase
                 "Consolidating navigation must not delete {$page}."
             );
         }
+
+        // Inventory Reports was removed from the system entirely
+        $this->assertFileDoesNotExist(
+            base_path('public/frontend/pages/inventory-reports.php'),
+            'Inventory Reports page has been deleted.'
+        );
     }
 
     // -----------------------------------------------------------------
@@ -554,7 +566,6 @@ class InventoryNavigationSubmenuTest extends TestCase
             // Dispatches is the one child with a multi-page active list.
             'in_array($current_page, $dispatchesPages, true)',
             "\$current_page === 'deployment-tracking.php'",
-            "\$current_page === 'inventory-reports.php'",
         ] as $condition) {
             $this->assertStringContainsString(
                 $condition,
@@ -562,6 +573,13 @@ class InventoryNavigationSubmenuTest extends TestCase
                 "The submenu item guarded by `{$condition}` lost its active-state rule."
             );
         }
+
+        // Inventory Reports was removed
+        $this->assertStringNotContainsString(
+            "\$current_page === 'inventory-reports.php'",
+            $submenu,
+            'Inventory Reports has been removed and should not have an active-state rule.'
+        );
     }
 
     /**
@@ -606,13 +624,20 @@ class InventoryNavigationSubmenuTest extends TestCase
             'The parent must derive its open state from the child pages.'
         );
 
-        foreach (['purchase-receipts.php', 'deployment-tracking.php', 'inventory-reports.php'] as $page) {
+        foreach (['purchase-receipts.php', 'deployment-tracking.php'] as $page) {
             $this->assertStringContainsString(
                 "\$inventorySectionPages[] = '{$page}'",
                 $markup,
                 "Being on {$page} must open the Inventory section."
             );
         }
+
+        // Inventory Reports was removed
+        $this->assertStringNotContainsString(
+            "\$inventorySectionPages[] = 'inventory-reports.php'",
+            $markup,
+            'Inventory Reports page has been removed.'
+        );
 
         // TASK 6A — Dispatches contributes three pages, merged in as a set.
         $this->assertStringContainsString(
@@ -670,14 +695,16 @@ class InventoryNavigationSubmenuTest extends TestCase
         $markup = $this->sidebar();
 
         $this->assertMatchesRegularExpression(
-            "/\\\$showInventoryReportsNav\s*=\s*in_array\(\(\\\$user\['role'\] \?\? ''\), \['super_admin', 'maintenance_admin', 'maintenance_staff'\], true\)/",
-            $markup,
-            'Inventory Reports must keep its original three-role gate.'
-        );
-        $this->assertMatchesRegularExpression(
             "/\\\$showPurchaseReceiptsNav\s*=\s*in_array\(\(\\\$user\['role'\] \?\? ''\), \['super_admin', 'maintenance_admin', 'maintenance_staff'\], true\)/",
             $markup,
             'Purchase Receipts must keep its original three-role gate.'
+        );
+
+        // Inventory Reports was removed
+        $this->assertStringNotContainsString(
+            '$showInventoryReportsNav',
+            $markup,
+            'Inventory Reports role gate has been removed.'
         );
     }
 
@@ -928,17 +955,8 @@ class InventoryNavigationSubmenuTest extends TestCase
     // TASK 6A — Dispatches relocated into the submenu
     // -----------------------------------------------------------------
 
-    public function test_the_submenu_has_exactly_four_children(): void
-    {
-        $submenu = $this->submenuBlock();
-
-        $this->assertSame(
-            4,
-            substr_count($submenu, '<li class="nav-item nav-subitem">'),
-            'The Inventory submenu must contain exactly four destinations: '
-            . 'Purchase Receipts, Dispatches, Deployment Tracking, Inventory Reports.'
-        );
-    }
+    // NOTE: Inventory Reports was removed from the system entirely,
+    // so the expected count is now 3 instead of 4.
 
     public function test_dispatches_keeps_its_original_url_icon_and_active_pages(): void
     {
