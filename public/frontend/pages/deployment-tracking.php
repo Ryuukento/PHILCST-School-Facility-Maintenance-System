@@ -744,8 +744,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Set current academic session defaults
     await dtSetCurrentAcademicSession();
 
-    // Poll for Academic Session changes every 30 seconds
-    setInterval(dtSetCurrentAcademicSession, 30000);
+    // Listen for Academic Session changes via BroadcastChannel
+    try {
+        const channel = new BroadcastChannel('academic_session_change');
+        channel.onmessage = async (event) => {
+            if (event.data.event === 'settings_updated') {
+                await dtSetCurrentAcademicSession();
+            }
+        };
+    } catch (err) {
+        // BroadcastChannel not supported
+    }
 
     // Setup date filter listeners - reset page to 1 when filters change
     const yearSel = document.getElementById('dt-year');

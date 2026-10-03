@@ -203,6 +203,19 @@ document.getElementById('semester-settings-form').addEventListener('submit', asy
 
         renderCurrentSummary(result.data);
         showSemesterAlert('Semester settings saved successfully.', 'success');
+
+        // Broadcast Academic Session change to other tabs/windows
+        try {
+            const channel = new BroadcastChannel('academic_session_change');
+            channel.postMessage({
+                event: 'settings_updated',
+                data: result.data,
+                timestamp: new Date().toISOString()
+            });
+            channel.close();
+        } catch (err) {
+            // BroadcastChannel not supported or error occurred
+        }
     } catch (error) {
         console.error('Save semester settings error:', error);
         showSemesterAlert(error.message || 'Failed to save semester settings', 'error');
