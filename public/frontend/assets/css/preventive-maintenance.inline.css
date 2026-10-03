@@ -936,6 +936,11 @@
 .pm-print-table td:nth-child(2),
 .pm-print-table td:nth-child(3) { text-align: left; }
 
+@page {
+    margin: 0;
+    size: letter;
+}
+
 @media print {
     body.pm-printing { background: #fff; margin: 0; padding: 0; }
     body.pm-printing .sidebar,
