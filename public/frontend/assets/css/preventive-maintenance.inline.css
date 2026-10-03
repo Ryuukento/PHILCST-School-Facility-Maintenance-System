@@ -937,18 +937,19 @@
 .pm-print-table td:nth-child(3) { text-align: left; }
 
 @media print {
-    body.pm-printing * { display: none !important; }
-    body.pm-printing #pm-print-container { display: block !important; }
     body.pm-printing { background: #fff; margin: 0; padding: 0; }
-    #pm-print-container { margin: 0; padding: 20px; }
-    .pm-print-table { width: 100%; }
-    .pm-print-header,
-    .pm-print-table,
-    .pm-print-header h1,
-    .pm-print-header h2,
-    .pm-print-logo,
-    .pm-print-generated,
-    .pm-print-footer { display: block !important; }
+    body.pm-printing .sidebar,
+    body.pm-printing .utility-bar,
+    body.pm-printing .pm-page__header,
+    body.pm-printing .pm-role-note,
+    body.pm-printing .pm-summary-cards,
+    body.pm-printing .pm-panel,
+    body.pm-printing header,
+    body.pm-printing nav,
+    body.pm-printing .navbar { display: none !important; }
+    body.pm-printing .pm-page > *:not(.pm-print-only) { display: none !important; }
+    body.pm-printing .pm-print-only { display: block !important; }
+    body.pm-printing main { margin: 0; padding: 20px; }
 }
 
 /* ==========================================================================
