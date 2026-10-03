@@ -1264,28 +1264,53 @@ main.maintenance-admin-dashboard-page #school-settings-widget .academic-period-i
 
 /* Dashboard KPI Icon Colors */
 .kpi-icon-reports {
-    background: rgba(219, 234, 254, 0.6) !important;
+    background: rgba(30, 64, 175, 0.12) !important;
     color: #1e40af;
 }
 
+.kpi-icon-reports svg {
+    width: 16px !important;
+    height: 16px !important;
+}
+
 .kpi-icon-today {
-    background: rgba(220, 252, 231, 0.6) !important;
+    background: rgba(6, 95, 70, 0.12) !important;
     color: #065f46;
 }
 
+.kpi-icon-today svg {
+    width: 16px !important;
+    height: 16px !important;
+}
+
 .kpi-icon-pending {
-    background: rgba(254, 243, 199, 0.6) !important;
+    background: rgba(180, 83, 9, 0.12) !important;
     color: #b45309;
 }
 
+.kpi-icon-pending svg {
+    width: 16px !important;
+    height: 16px !important;
+}
+
 .kpi-icon-progress {
-    background: rgba(196, 254, 240, 0.6) !important;
+    background: rgba(13, 92, 92, 0.12) !important;
     color: #0d5c5c;
 }
 
+.kpi-icon-progress svg {
+    width: 16px !important;
+    height: 16px !important;
+}
+
 .kpi-icon-completed {
-    background: rgba(220, 252, 231, 0.6) !important;
+    background: rgba(21, 128, 61, 0.12) !important;
     color: #15803d;
+}
+
+.kpi-icon-completed svg {
+    width: 16px !important;
+    height: 16px !important;
 }
 </style>
 
