@@ -53,9 +53,17 @@ include __DIR__ . '/../includes/header.php';
             </div>
         </div>
         <div class="card-body">
-            <!-- Controls: Show Older Receipts button -->
-            <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid var(--border);">
-                <button type="button" id="prToggleOlderReceipts" class="btn btn-sm btn-secondary" style="padding:6px 12px;font-size:13px;">📅 Show Older Receipts</button>
+            <!-- Controls: Date Range Filter -->
+            <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid var(--border);flex-wrap:wrap;">
+                <div style="display:flex;align-items:center;gap:8px;">
+                    <label for="prDateFrom" style="font-size:13px;font-weight:500;">From:</label>
+                    <input type="date" id="prDateFrom" class="form-control" style="padding:6px 10px;font-size:13px;width:140px;">
+                </div>
+                <div style="display:flex;align-items:center;gap:8px;">
+                    <label for="prDateTo" style="font-size:13px;font-weight:500;">To:</label>
+                    <input type="date" id="prDateTo" class="form-control" style="padding:6px 10px;font-size:13px;width:140px;">
+                </div>
+                <button type="button" id="prResetDateFilter" class="btn btn-sm btn-secondary" style="padding:6px 12px;font-size:13px;">Reset</button>
                 <small class="text-muted" id="prDateRangeInfo">Showing last 12 months</small>
             </div>
 
@@ -814,33 +822,45 @@ async function prPrintReceiptById(id) {
 // Purchase Receipts: Pagination & Date Filtering
 // ---------------------------------------------------------------------------
 
-let prShowOlderReceipts = false;
 let prCurrentPage = 1;
 let prTotalPages = 1;
 let prPaginationData = null;
+let prFilterDateFrom = null;
+let prFilterDateTo = null;
 
-function prToggleOlderReceipts() {
-    prShowOlderReceipts = !prShowOlderReceipts;
+function prSetDefaultDateRange() {
+    const today = new Date();
+    const oneYearAgo = new Date(today.getFullYear() - 1, today.getMonth(), today.getDate());
+
+    prFilterDateFrom = oneYearAgo.toISOString().split('T')[0];
+    prFilterDateTo = today.toISOString().split('T')[0];
+
+    document.getElementById('prDateFrom').value = prFilterDateFrom;
+    document.getElementById('prDateTo').value = prFilterDateTo;
+}
+
+function prUpdateDateFilter() {
+    prFilterDateFrom = document.getElementById('prDateFrom').value || null;
+    prFilterDateTo = document.getElementById('prDateTo').value || null;
     prCurrentPage = 1; // Reset to first page
 
-    const btn = document.getElementById('prToggleOlderReceipts');
     const info = document.getElementById('prDateRangeInfo');
-
-    if (prShowOlderReceipts) {
-        btn.textContent = '✓ Showing All Receipts';
-        btn.style.backgroundColor = '#d1fae5';
-        btn.style.borderColor = '#a7f3d0';
-        btn.style.color = '#065f46';
-        info.textContent = 'Showing all receipts';
+    if (prFilterDateFrom && prFilterDateTo) {
+        info.textContent = `From ${prFilterDateFrom} to ${prFilterDateTo}`;
+    } else if (prFilterDateFrom) {
+        info.textContent = `From ${prFilterDateFrom}`;
+    } else if (prFilterDateTo) {
+        info.textContent = `To ${prFilterDateTo}`;
     } else {
-        btn.textContent = '📅 Show Older Receipts';
-        btn.style.backgroundColor = '';
-        btn.style.borderColor = '';
-        btn.style.color = '';
-        info.textContent = 'Showing last 12 months';
+        info.textContent = 'All dates';
     }
 
     loadReceipts();
+}
+
+function prResetDateFilter() {
+    prSetDefaultDateRange();
+    prUpdateDateFilter();
 }
 
 function prRenderPagination(paginationData) {
@@ -900,8 +920,11 @@ async function loadReceipts() {
         const params = new URLSearchParams();
         params.append('page', prCurrentPage);
         params.append('per_page', 10);
-        if (prShowOlderReceipts) {
-            params.append('show_older', '1');
+        if (prFilterDateFrom) {
+            params.append('date_from', prFilterDateFrom);
+        }
+        if (prFilterDateTo) {
+            params.append('date_to', prFilterDateTo);
         }
 
         const { response, data: payload } = await prFetch(
@@ -1029,16 +1052,28 @@ async function loadUsersIntoReceivedBySelect() {
 }
 
 function initListView() {
+    // Set default date range (last 12 months)
+    prSetDefaultDateRange();
+
     loadReceipts();
     loadDepartmentsIntoSelect('nr-department-id');
     loadUsersIntoReceivedBySelect();
 
-    // Setup "Show Older Receipts" toggle button
-    const toggleBtn = document.getElementById('prToggleOlderReceipts');
-    if (toggleBtn) {
-        toggleBtn.addEventListener('click', (e) => {
+    // Setup date filter inputs
+    const dateFromInput = document.getElementById('prDateFrom');
+    const dateToInput = document.getElementById('prDateTo');
+    const resetBtn = document.getElementById('prResetDateFilter');
+
+    if (dateFromInput) {
+        dateFromInput.addEventListener('change', prUpdateDateFilter);
+    }
+    if (dateToInput) {
+        dateToInput.addEventListener('change', prUpdateDateFilter);
+    }
+    if (resetBtn) {
+        resetBtn.addEventListener('click', (e) => {
             e.preventDefault();
-            prToggleOlderReceipts();
+            prResetDateFilter();
         });
     }
 

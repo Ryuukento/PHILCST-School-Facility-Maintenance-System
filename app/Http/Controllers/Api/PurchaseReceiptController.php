@@ -50,7 +50,6 @@ class PurchaseReceiptController extends Controller
 
     public function index(Request $request): JsonResponse
     {
-        $showOlder = $request->boolean('show_older', false);
         $perPage = (int) $request->query('per_page', 10);
         $perPage = max(5, min($perPage, 100)); // Clamp between 5-100
 
@@ -77,13 +76,7 @@ class PurchaseReceiptController extends Controller
             ->leftJoin('departments as d', 'd.department_id', '=', 'pr.department_id')
             ->leftJoin('purchase_receipt_items as pri', 'pri.purchase_receipt_id', '=', 'pr.id');
 
-        // Date filtering: default to last 12 months, can show all with show_older=1
-        if (!$showOlder) {
-            $oneYearAgo = now()->subYear();
-            $query->whereDate('pr.receipt_date', '>=', $oneYearAgo);
-        }
-
-        // Support explicit date_from/date_to if provided (for future use)
+        // Date filtering: support date_from and date_to parameters
         $query->when($request->filled('date_from'), function ($q) use ($request) {
             $q->whereDate('pr.receipt_date', '>=', $request->input('date_from'));
         })
