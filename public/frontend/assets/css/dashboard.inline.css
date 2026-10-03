@@ -361,12 +361,12 @@ main.container .dashboard-hero-panel .card-header.dashboard-hero-header {
 .dashboard-hero-kpi-item .summary-card-title {
     margin: 0;
     min-width: 0;
-    font-size: 0.74rem;
+    font-size: 0.95rem;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    color: #000000;
-    font-weight: 700;
+    color: #000000 !important;
+    font-weight: 800 !important;
 }
 
 .dashboard-hero-kpi-item .summary-card-value {
