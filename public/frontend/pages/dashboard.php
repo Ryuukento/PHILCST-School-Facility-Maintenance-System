@@ -70,7 +70,7 @@ $user = $_SESSION['user'] ?? $_SESSION['auth_user'];
                             <path d="M14 2v6h6"></path>
                         </svg>
                         <div class="dashboard-hero-kpi-item-head">
-                            <div class="summary-card-icon" aria-hidden="true">
+                            <div class="summary-card-icon kpi-icon-reports" aria-hidden="true">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                     <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
                                     <path d="M14 2v6h6"></path>
@@ -93,7 +93,7 @@ $user = $_SESSION['user'] ?? $_SESSION['auth_user'];
                             <path d="M16 2v4M8 2v4M3 10h18"></path>
                         </svg>
                         <div class="dashboard-hero-kpi-item-head">
-                            <div class="summary-card-icon" aria-hidden="true">
+                            <div class="summary-card-icon kpi-icon-today" aria-hidden="true">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                     <rect x="3" y="4" width="18" height="18" rx="2"></rect>
                                     <path d="M16 2v4M8 2v4M3 10h18"></path>
@@ -116,7 +116,7 @@ $user = $_SESSION['user'] ?? $_SESSION['auth_user'];
                             <path d="M12 7v6l4 2"></path>
                         </svg>
                         <div class="dashboard-hero-kpi-item-head">
-                            <div class="summary-card-icon" aria-hidden="true">
+                            <div class="summary-card-icon kpi-icon-pending" aria-hidden="true">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                     <circle cx="12" cy="12" r="9"></circle>
                                     <path d="M12 7v6l4 2"></path>
@@ -138,7 +138,7 @@ $user = $_SESSION['user'] ?? $_SESSION['auth_user'];
                             <path d="M20 7a5 5 0 0 1-7 4.6L7.6 17A2 2 0 1 1 5 14.4l5.4-5.4A5 5 0 1 1 20 7z"></path>
                         </svg>
                         <div class="dashboard-hero-kpi-item-head">
-                            <div class="summary-card-icon" aria-hidden="true">
+                            <div class="summary-card-icon kpi-icon-progress" aria-hidden="true">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                     <path d="M20 7a5 5 0 0 1-7 4.6L7.6 17A2 2 0 1 1 5 14.4l5.4-5.4A5 5 0 1 1 20 7z"></path>
                                 </svg>
@@ -159,7 +159,7 @@ $user = $_SESSION['user'] ?? $_SESSION['auth_user'];
                             <path d="M20 6L9 17l-5-5"></path>
                         </svg>
                         <div class="dashboard-hero-kpi-item-head">
-                            <div class="summary-card-icon" aria-hidden="true">
+                            <div class="summary-card-icon kpi-icon-completed" aria-hidden="true">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                     <path d="M20 6L9 17l-5-5"></path>
                                 </svg>
@@ -1260,6 +1260,32 @@ main.maintenance-admin-dashboard-page #school-settings-widget .academic-period-i
 
     /* Footer */
     .bldg-print-footer { margin-top: 14pt; font-size: 8pt; color: #888; text-align: center; }
+}
+
+/* Dashboard KPI Icon Colors */
+.kpi-icon-reports {
+    background: rgba(219, 234, 254, 0.6) !important;
+    color: #1e40af;
+}
+
+.kpi-icon-today {
+    background: rgba(220, 252, 231, 0.6) !important;
+    color: #065f46;
+}
+
+.kpi-icon-pending {
+    background: rgba(254, 243, 199, 0.6) !important;
+    color: #b45309;
+}
+
+.kpi-icon-progress {
+    background: rgba(196, 254, 240, 0.6) !important;
+    color: #0d5c5c;
+}
+
+.kpi-icon-completed {
+    background: rgba(220, 252, 231, 0.6) !important;
+    color: #15803d;
 }
 </style>
 
