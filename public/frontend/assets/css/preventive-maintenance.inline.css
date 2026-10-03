@@ -883,39 +883,83 @@
 
 .pm-print-only { display: none; }
 
-.pm-print-header {
-    text-align: center;
-    margin-bottom: 24px;
-    padding-bottom: 16px;
-    border-bottom: 2px solid #000;
+.pm-print-letterhead {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding-bottom: 10px;
+    border-bottom: 3px solid #6b21a8;
+    margin-bottom: 0;
 }
 
 .pm-print-logo {
-    display: block;
-    width: 70px;
-    height: 70px;
-    margin: 0 auto 14px;
+    width: 74px;
+    height: 74px;
+    flex-shrink: 0;
+    object-fit: cover;
+    object-position: center;
 }
 
-.pm-print-header h1 {
+.pm-print-school {
+    flex: 1;
+    min-width: 0;
+}
+
+.pm-print-school-name {
     margin: 0;
-    font-size: 16px;
+    font-size: 13.5pt;
+    font-weight: 800;
+    color: #4c1d95;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+}
+
+.pm-print-school-sub {
+    margin: 2px 0 0;
+    font-size: 9.5pt;
+    color: #475569;
+}
+
+.pm-print-school-system {
+    margin: 3px 0 0;
+    font-size: 9pt;
     font-weight: 700;
+    color: #6b21a8;
     letter-spacing: 0.06em;
-    color: #000;
+    text-transform: uppercase;
 }
 
-.pm-print-header h2 {
-    margin: 8px 0 0;
-    font-size: 13px;
-    font-weight: 600;
-    color: #333;
+.pm-print-meta {
+    text-align: right;
+    font-size: 8.5pt;
+    color: #475569;
+    line-height: 1.5;
+    white-space: nowrap;
 }
 
-.pm-print-generated {
-    margin-top: 10px;
-    font-size: 11px;
-    color: #666;
+.pm-print-meta strong {
+    color: #1f2937;
+}
+
+.pm-print-accent {
+    height: 2px;
+    background: #c4b5fd;
+    margin-top: 2px;
+    margin-bottom: 10px;
+}
+
+.pm-print-title-block {
+    text-align: center;
+    margin: 10px 0 20px;
+}
+
+.pm-print-title-block h1 {
+    margin: 0;
+    font-size: 15pt;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #111827;
+    font-weight: 700;
 }
 
 .pm-print-table {

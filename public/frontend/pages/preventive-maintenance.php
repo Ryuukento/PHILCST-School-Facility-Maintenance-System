@@ -1952,11 +1952,22 @@ function pmBuildPrintView() {
     });
 
     return `
-        <div class="pm-print-header">
+        <div class="pm-print-letterhead">
             <img src="/School_Facility_Maintenance_System/frontend/assets/images/logo-seal.svg" alt="School Logo" class="pm-print-logo" />
-            <h1>PHILIPPINE COLLEGE OF SCIENCE AND TECHNOLOGY</h1>
-            <h2>PREVENTIVE MAINTENANCE SCHEDULE — ${year}</h2>
-            <div class="pm-print-generated">${new Date().toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' })}</div>
+            <div class="pm-print-school">
+                <div class="pm-print-school-name">Philippine College of Science and Technology</div>
+                <div class="pm-print-school-sub">Calasiao, Pangasinan</div>
+                <div class="pm-print-school-system">School Facility Maintenance System</div>
+            </div>
+            <div class="pm-print-meta">
+                <strong>Preventive Maintenance</strong><br>
+                Schedule: ${year}<br>
+                ${new Date().toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' })}
+            </div>
+        </div>
+        <div class="pm-print-accent"></div>
+        <div class="pm-print-title-block">
+            <h1>PREVENTIVE MAINTENANCE SCHEDULE — ${year}</h1>
         </div>
         <table class="pm-print-table">
             <thead>
