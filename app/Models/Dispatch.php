@@ -89,6 +89,11 @@ class Dispatch extends Model
         return $this->hasMany(DispatchItem::class, 'dispatch_id', 'id');
     }
 
+    public function personnelAssignments(): HasMany
+    {
+        return $this->hasMany(DispatchPersonnelAssignment::class, 'dispatch_id', 'id');
+    }
+
     public function department(): BelongsTo
     {
         return $this->belongsTo(Department::class, 'department_id', 'department_id');

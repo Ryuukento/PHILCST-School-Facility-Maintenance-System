@@ -500,4 +500,90 @@ class DispatchController extends Controller
 
         return response($html, 200)->header('Content-Type', 'text/html');
     }
+
+    /**
+     * Multi-Personnel Dispatch: Assign personnel to a dispatch.
+     * Allows multiple maintenance staff from different departments to be assigned
+     * to a single dispatch.
+     */
+    public function assignPersonnel(Request $request, Dispatch $dispatch)
+    {
+        $validated = $request->validate([
+            'personnel_user_id' => ['required', 'integer', 'exists:users,user_id'],
+        ]);
+
+        $authUser = $this->authUser($request);
+        $actorUserId = (int) $request->session()->get('user_id');
+
+        // Only Head Maintenance (maintenance_admin) can assign personnel
+        if ($authUser['role'] !== 'maintenance_admin') {
+            return $this->fail('Only Head Maintenance can assign dispatch personnel.', 403);
+        }
+
+        try {
+            $this->dispatchService->assignPersonnelToDispatch(
+                $dispatch,
+                (int) $validated['personnel_user_id'],
+                $actorUserId,
+                $actorUserId
+            );
+
+            return $this->ok('Personnel assigned to dispatch');
+        } catch (\Throwable $e) {
+            $code = $e instanceof ValidationException ? 400 : 500;
+            $message = $e instanceof ValidationException
+                ? (collect($e->errors())->flatten()->first() ?: 'Unable to assign personnel')
+                : 'Failed to assign personnel: ' . $e->getMessage();
+
+            return $this->fail($message, $code);
+        }
+    }
+
+    /**
+     * Multi-Personnel Dispatch: Mark an item as dispatched by a personnel.
+     * Called when a maintenance staff member physically dispatches an item.
+     */
+    public function dispatchItem(Request $request, Dispatch $dispatch, DispatchItem $item)
+    {
+        // Verify the item belongs to this dispatch
+        if ($item->dispatch_id !== $dispatch->id) {
+            return $this->fail('This item does not belong to this dispatch.', 404);
+        }
+
+        $validated = $request->validate([
+            'dispatched_by' => ['required', 'integer', 'exists:users,user_id'],
+        ]);
+
+        $authUser = $this->authUser($request);
+        $actorUserId = (int) $request->session()->get('user_id');
+
+        // Only Maintenance Staff (maintenance_staff) can dispatch items
+        if ($authUser['role'] !== 'maintenance_staff') {
+            return $this->fail('Only Maintenance Staff can dispatch items.', 403);
+        }
+
+        try {
+            $this->dispatchService->dispatchItem(
+                $item,
+                (int) $validated['dispatched_by'],
+                $actorUserId
+            );
+
+            // Check if all items are now dispatched and auto-complete if so
+            $this->dispatchService->completeDispatchIfAllItemsDispatched(
+                $dispatch,
+                (int) $validated['dispatched_by'],
+                $actorUserId
+            );
+
+            return $this->ok('Item dispatched successfully');
+        } catch (\Throwable $e) {
+            $code = $e instanceof ValidationException ? 400 : 500;
+            $message = $e instanceof ValidationException
+                ? (collect($e->errors())->flatten()->first() ?: 'Unable to dispatch item')
+                : 'Failed to dispatch item: ' . $e->getMessage();
+
+            return $this->fail($message, $code);
+        }
+    }
 }

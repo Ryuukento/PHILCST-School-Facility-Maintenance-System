@@ -397,7 +397,11 @@ class CrossDepartmentAssignmentWarningTest extends TestCase
     private function statusUpdateSubmitHandlerSource(): string
     {
         $page = $this->assignmentPageSource();
-        $start = strpos($page, "document.getElementById('status-update-form').addEventListener('submit'");
+        // 2026-10-01: getElementById() call is now optional-chained (?.) since
+        // #status-update-form is no longer rendered for super_admin (see
+        // maintenance-report-detail.php's 2026-09-30 role-gate change) — the
+        // literal string below was updated to match, not a behavior change.
+        $start = strpos($page, "document.getElementById('status-update-form')?.addEventListener('submit'");
         $this->assertNotFalse($start, 'The status/assignment submit handler must exist.');
 
         $end = strpos($page, "document.getElementById('approve-need-change-btn')", $start);

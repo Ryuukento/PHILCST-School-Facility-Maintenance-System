@@ -16,7 +16,16 @@ class DispatchItem extends Model
         'dispatch_id',
         'item_id',
         'quantity',
+        'dispatched_by',
+        'dispatched_at',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'dispatched_at' => 'datetime',
+        ];
+    }
 
     public function dispatch(): BelongsTo
     {
@@ -26,5 +35,10 @@ class DispatchItem extends Model
     public function item(): BelongsTo
     {
         return $this->belongsTo(Item::class, 'item_id', 'id');
+    }
+
+    public function dispatchedByUser(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'dispatched_by', 'user_id');
     }
 }

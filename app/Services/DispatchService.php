@@ -730,4 +730,188 @@ class DispatchService
             ];
         });
     }
+
+    /**
+     * Multi-Personnel Dispatch Support: Assign personnel to a dispatch.
+     *
+     * Allows multiple maintenance staff from different departments to be assigned
+     * to a single dispatch. Each person will only dispatch items relevant to their
+     * department. This complements the existing release_assigned_to field which
+     * represents the primary release person.
+     */
+    public function assignPersonnelToDispatch(
+        Dispatch $dispatch,
+        int $personnelUserId,
+        ?int $assignedBy = null,
+        ?int $actorUserId = null
+    ): Dispatch {
+        return DB::transaction(function () use ($dispatch, $personnelUserId, $assignedBy, $actorUserId): Dispatch {
+            // Check if already assigned
+            $existing = \App\Models\DispatchPersonnelAssignment::query()
+                ->where('dispatch_id', $dispatch->id)
+                ->where('personnel_user_id', $personnelUserId)
+                ->first();
+
+            if ($existing) {
+                return $dispatch->fresh('personnelAssignments.personnel', 'items.item');
+            }
+
+            // Create the assignment
+            \App\Models\DispatchPersonnelAssignment::query()->create([
+                'dispatch_id' => $dispatch->id,
+                'personnel_user_id' => $personnelUserId,
+                'assigned_by' => $assignedBy ?? $actorUserId,
+                'assigned_at' => now(),
+            ]);
+
+            $personnelName = User::query()->find($personnelUserId)?->full_name ?? 'Unknown personnel';
+
+            if ($actorUserId) {
+                $this->activityLogService->logFromSession([
+                    'user_id' => $actorUserId,
+                    'action' => 'ASSIGN_DISPATCH_PERSONNEL',
+                    'module' => 'dispatch',
+                    'entity_type' => 'dispatch',
+                    'entity_id' => $dispatch->id,
+                    'details' => 'Assigned ' . $personnelName . ' to dispatch ' . $dispatch->dispatch_code . '.',
+                    'meta' => [
+                        'dispatch_code' => $dispatch->dispatch_code,
+                        'personnel_user_id' => $personnelUserId,
+                        'personnel_name' => $personnelName,
+                    ],
+                ]);
+            }
+
+            // Notify the assigned personnel
+            $this->notificationService->notify(
+                $personnelUserId,
+                'Assigned to Dispatch',
+                'You have been assigned to dispatch ' . $dispatch->dispatch_code . '.',
+                'dispatch',
+                $dispatch->id
+            );
+
+            return $dispatch->fresh('personnelAssignments.personnel', 'items.item');
+        });
+    }
+
+    /**
+     * Multi-Personnel Dispatch Support: Mark an item as dispatched by personnel.
+     *
+     * When a person from a specific department dispatches an item, record who
+     * dispatched it and when. Multiple items in the same dispatch can be
+     * dispatched by different people.
+     */
+    public function dispatchItem(
+        DispatchItem $item,
+        int $dispatchedBy,
+        ?int $actorUserId = null
+    ): DispatchItem {
+        return DB::transaction(function () use ($item, $dispatchedBy, $actorUserId): DispatchItem {
+            // Check dispatch status - should be approved or released
+            $dispatch = Dispatch::query()->whereKey($item->dispatch_id)->lockForUpdate()->first();
+
+            if (!$dispatch || !in_array($dispatch->status, ['approved', 'released'], true)) {
+                throw ValidationException::withMessages([
+                    'status' => 'Item can only be dispatched if the dispatch is approved or released.',
+                ]);
+            }
+
+            // Update the item with who dispatched it and when
+            $item->update([
+                'dispatched_by' => $dispatchedBy,
+                'dispatched_at' => now(),
+            ]);
+
+            $dispatchedByName = User::query()->find($dispatchedBy)?->full_name ?? 'Unknown personnel';
+            $itemName = $item->item?->name ?? 'Unknown item';
+
+            if ($actorUserId) {
+                $this->activityLogService->logFromSession([
+                    'user_id' => $actorUserId,
+                    'action' => 'DISPATCH_ITEM',
+                    'module' => 'dispatch',
+                    'entity_type' => 'dispatch_item',
+                    'entity_id' => $item->id,
+                    'details' => $dispatchedByName . ' dispatched ' . $itemName . ' (quantity: ' . $item->quantity . ') from dispatch ' . $dispatch->dispatch_code . '.',
+                    'meta' => [
+                        'dispatch_code' => $dispatch->dispatch_code,
+                        'dispatch_id' => $dispatch->id,
+                        'item_name' => $itemName,
+                        'quantity' => $item->quantity,
+                        'dispatched_by' => $dispatchedBy,
+                        'dispatched_by_name' => $dispatchedByName,
+                    ],
+                ]);
+            }
+
+            return $item->fresh('dispatch', 'item', 'dispatchedByUser');
+        });
+    }
+
+    /**
+     * Multi-Personnel Dispatch Support: Check if all items in a dispatch are dispatched.
+     *
+     * Returns true if every item in the dispatch has been marked as dispatched
+     * (has a dispatched_by value). Used to determine if a dispatch is complete.
+     */
+    public function isDispatchComplete(Dispatch $dispatch): bool
+    {
+        $totalItems = $dispatch->items()->count();
+        $dispatchedItems = $dispatch->items()
+            ->whereNotNull('dispatched_by')
+            ->count();
+
+        return $totalItems > 0 && $totalItems === $dispatchedItems;
+    }
+
+    /**
+     * Multi-Personnel Dispatch Support: Mark dispatch as released when all items are dispatched.
+     *
+     * This is called after an item is dispatched. If all items are now dispatched,
+     * update the dispatch status to 'released' if it's still 'approved'.
+     */
+    public function completeDispatchIfAllItemsDispatched(
+        Dispatch $dispatch,
+        ?int $releasedBy = null,
+        ?int $actorUserId = null
+    ): Dispatch {
+        return DB::transaction(function () use ($dispatch, $releasedBy, $actorUserId): Dispatch {
+            $locked = Dispatch::query()->whereKey($dispatch->id)->lockForUpdate()->first();
+
+            if (!$locked || $locked->status !== 'approved') {
+                return $locked ?? $dispatch;
+            }
+
+            // Check if all items are dispatched
+            if (!$this->isDispatchComplete($locked)) {
+                return $locked;
+            }
+
+            // All items are dispatched - mark dispatch as released
+            $releasedByUser = $releasedBy ? User::query()->find($releasedBy)?->full_name : 'System';
+
+            $locked->update([
+                'status' => 'released',
+                'released_by' => $releasedBy,
+            ]);
+
+            if ($actorUserId) {
+                $this->activityLogService->logFromSession([
+                    'user_id' => $actorUserId,
+                    'action' => 'AUTO_COMPLETE_DISPATCH',
+                    'module' => 'dispatch',
+                    'entity_type' => 'dispatch',
+                    'entity_id' => $locked->id,
+                    'details' => 'All items have been dispatched. Dispatch ' . $locked->dispatch_code . ' is now complete.',
+                    'meta' => [
+                        'dispatch_code' => $locked->dispatch_code,
+                        'completed_by' => $releasedByUser,
+                    ],
+                ]);
+            }
+
+            return $locked->fresh('items.item', 'personnelAssignments.personnel');
+        });
+    }
 }

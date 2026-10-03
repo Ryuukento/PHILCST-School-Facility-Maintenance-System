@@ -210,9 +210,6 @@ $current_page = basename($_SERVER['PHP_SELF']);
                 if ($showDeploymentTrackingNav) {
                     $inventorySectionPages[] = 'deployment-tracking.php';
                 }
-                if ($showInventoryReportsNav) {
-                    $inventorySectionPages[] = 'inventory-reports.php';
-                }
 
                 $inventorySectionOpen = in_array($current_page, $inventorySectionPages, true);
 
@@ -337,21 +334,6 @@ $current_page = basename($_SERVER['PHP_SELF']);
                     </li>
                     <?php endif; ?>
 
-                    <?php if ($showInventoryReportsNav): ?>
-                    <li class="nav-item nav-subitem">
-                        <a href="<?php echo htmlspecialchars(public_url('/inventory-reports')); ?>"
-                           class="nav-link nav-sublink <?php echo ($current_page === 'inventory-reports.php') ? 'active' : ''; ?>"
-                           data-page="inventory-reports">
-                            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <rect x="3" y="3" width="18" height="18" rx="2"></rect>
-                                <line x1="8" y1="8" x2="16" y2="8"></line>
-                                <line x1="8" y1="12" x2="16" y2="12"></line>
-                                <line x1="8" y1="16" x2="12" y2="16"></line>
-                            </svg>
-                            <span class="nav-text">Inventory Reports</span>
-                        </a>
-                    </li>
-                    <?php endif; ?>
                 </ul>
             </li>
 

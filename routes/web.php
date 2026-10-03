@@ -105,7 +105,6 @@ Route::middleware(EnsureApiAuthenticated::class)->group(function (): void {
     Route::get('/analytics', fn() => redirect('/frontend/pages/analytics-dashboard.php'))->name('analytics');
     Route::get('/buildings-overview', fn() => redirect('/frontend/pages/buildings-overview.php'))->name('buildings.overview');
     Route::get('/inventory-transactions', fn() => redirect('/frontend/pages/inventory-transactions.php'))->name('inventory.transactions');
-    Route::get('/inventory-reports', fn() => redirect('/frontend/pages/inventory-reports.php'))->name('inventory.reports');
     Route::get('/purchase-receipts', fn() => redirect('/frontend/pages/purchase-receipts.php'))->name('purchase-receipts.page');
     Route::get('/deployment-tracking', fn() => redirect('/frontend/pages/deployment-tracking.php'))->name('deployment.tracking');
     Route::get('/preventive-maintenance', fn() => redirect('/frontend/pages/preventive-maintenance.php'))->name('preventive-maintenance.page');
@@ -348,6 +347,9 @@ Route::prefix('api')->group(function (): void {
             Route::post('{dispatch}/cancel', [\App\Http\Controllers\Api\DispatchController::class, 'cancel'])
                 ->middleware(\App\Http\Middleware\EnsureRole::class . ':super_admin,maintenance_admin');
             Route::get('{dispatch}/print', [\App\Http\Controllers\Api\DispatchController::class, 'print']);
+            // Multi-Personnel Dispatch: Dispatch an item by a specific personnel
+            Route::post('{dispatch}/items/{dispatchItem}/dispatch', [\App\Http\Controllers\Api\DispatchController::class, 'dispatchItem'])
+                ->middleware(\App\Http\Middleware\EnsureRole::class . ':maintenance_staff');
         });
 
         Route::prefix('damage-reports')->group(function (): void {

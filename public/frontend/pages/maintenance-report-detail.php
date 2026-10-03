@@ -972,7 +972,13 @@ async function loadReport() {
         document.getElementById('report-details').innerHTML = html;
         
         // Set current status in form
-        document.getElementById('new-status').value = report.status;
+        // 2026-10-01 fix: #new-status lives inside #update-status-card, which is
+        // not rendered for super_admin (2026-09-30 change). Optional chaining
+        // (?.) cannot be used on the left-hand side of an assignment in JS
+        // (`el?.value = x` is a SyntaxError), so this must use an explicit
+        // null check instead, unlike the addEventListener fixes above.
+        const newStatusSelect = document.getElementById('new-status');
+        if (newStatusSelect) newStatusSelect.value = report.status;
         const assignGroup = document.getElementById('assigned-to-group');
         const assignSelect = document.getElementById('assigned-to');
         if (assignGroup && assignSelect) {
@@ -998,7 +1004,18 @@ async function loadReport() {
 }
 
 // Handle status update
-document.getElementById('status-update-form').addEventListener('submit', async (e) => {
+// 2026-10-01 fix: the entire #update-status-card (and this form inside it) is
+// no longer rendered for super_admin as of the 2026-09-30 change above ("the
+// Administrator has no status-change action left on a report"), so
+// getElementById() returns null for that role. This call was never updated to
+// use optional chaining like its sibling listeners further down (e.g.
+// archive-reopen-btn, reject-need-change-btn), so it threw a TypeError at
+// script-parse time for every super_admin viewing ANY report — which aborted
+// the whole inline <script> block before the DOMContentLoaded listener further
+// down (the one that calls loadReport()) ever got registered. That is exactly
+// why the page was stuck forever on "Loading report details..." only for
+// Administrator accounts, on every report, with no error shown.
+document.getElementById('status-update-form')?.addEventListener('submit', async (e) => {
     e.preventDefault();
 
     const newStatus = document.getElementById('new-status').value;
@@ -1415,7 +1432,9 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // Toggle assignment dropdown for assign flow only.
-document.getElementById('new-status').addEventListener('change', () => {
+// 2026-10-01 fix: same null-guard issue as status-update-form above — #new-status
+// lives inside the same super_admin-hidden card, so this must also be optional-chained.
+document.getElementById('new-status')?.addEventListener('change', () => {
     syncAssignedToVisibility();
     syncCompletionProofVisibility();
 });
