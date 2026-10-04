@@ -1469,6 +1469,28 @@ function anRenderReportsByStatusChart(data) {
 
     const colors = ['#d97706', '#3b82f6', '#10b981', '#8b5cf6', '#ef4444'];
 
+    // Plugin to draw center text in doughnut
+    const centerTextPlugin = {
+        id: 'centerText',
+        beforeDatasetsDraw(chart) {
+            const { ctx, chartArea: { left, top, width, height } } = chart;
+            const centerX = left + width / 2;
+            const centerY = top + height / 2;
+
+            ctx.save();
+            ctx.font = 'bold 32px Arial';
+            ctx.fillStyle = '#1f2937';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(total, centerX, centerY - 12);
+
+            ctx.font = '12px Arial';
+            ctx.fillStyle = '#6b7280';
+            ctx.fillText('Total Reports', centerX, centerY + 16);
+            ctx.restore();
+        }
+    };
+
     anChartReportsStatus = new Chart(canvas, {
         type: 'doughnut',
         data: {
@@ -1495,7 +1517,8 @@ function anRenderReportsByStatusChart(data) {
                     }
                 }
             }
-        }
+        },
+        plugins: [centerTextPlugin]
     });
 
     // Render legend manually (vertical, right-aligned)
@@ -1608,6 +1631,28 @@ function anRenderInventoryStatusChart(data) {
 
     const colors = ['#10b981', '#f59e0b', '#dc2626'];
 
+    // Plugin to draw center text in doughnut
+    const centerTextPlugin = {
+        id: 'centerText',
+        beforeDatasetsDraw(chart) {
+            const { ctx, chartArea: { left, top, width, height } } = chart;
+            const centerX = left + width / 2;
+            const centerY = top + height / 2;
+
+            ctx.save();
+            ctx.font = 'bold 32px Arial';
+            ctx.fillStyle = '#1f2937';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(total, centerX, centerY - 12);
+
+            ctx.font = '12px Arial';
+            ctx.fillStyle = '#6b7280';
+            ctx.fillText('Total Items', centerX, centerY + 16);
+            ctx.restore();
+        }
+    };
+
     anChartInventoryStatus = new Chart(canvas, {
         type: 'doughnut',
         data: {
@@ -1634,7 +1679,8 @@ function anRenderInventoryStatusChart(data) {
                     }
                 }
             }
-        }
+        },
+        plugins: [centerTextPlugin]
     });
 
     // Render legend manually
