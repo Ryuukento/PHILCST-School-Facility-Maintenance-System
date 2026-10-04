@@ -27,28 +27,35 @@ include __DIR__ . '/../includes/header.php';
 
 <style>
 /* ═══════════════════════════════════════════════════════════════════════════
-   Analytics Dashboard — Professional styling
+   Analytics Dashboard — Professional Enterprise Styling
    ═══════════════════════════════════════════════════════════════════════════ */
 
 #an-analytics-card {
-    border-radius: 14px !important;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.04) !important;
+    border-radius: 16px !important;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08) !important;
+    background: #ffffff !important;
+}
+
+#an-analytics-card .card-header {
+    background: linear-gradient(135deg, #ffffff 0%, #fafbff 100%) !important;
+    border-bottom: 1px solid #e5e7eb !important;
 }
 
 .an-metric-card {
     display: flex;
     align-items: flex-start;
     gap: 16px;
-    padding: 20px;
-    border-radius: 12px;
-    transition: all 0.2s ease;
+    padding: 24px;
+    border-radius: 14px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     position: relative;
     overflow: hidden;
+    backdrop-filter: blur(1px);
 }
 
 .an-metric-card:hover {
-    box-shadow: 0 4px 12px rgba(0,0,0,0.08) !important;
-    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.12) !important;
+    transform: translateY(-3px);
 }
 
 .an-metric-card::before {
@@ -56,77 +63,131 @@ include __DIR__ . '/../includes/header.php';
     position: absolute;
     top: 0;
     left: 0;
-    right: 0;
-    height: 2px;
+    width: 100%;
+    height: 4px;
     background: linear-gradient(90deg, transparent, currentColor, transparent);
-    opacity: 0.1;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.an-metric-card:hover::before {
+    opacity: 0.2;
 }
 
 .an-section-title {
-    font-size: 15px;
-    font-weight: 700;
-    color: #111827;
-    margin: 28px 0 16px 0 !important;
+    font-size: 14px;
+    font-weight: 800;
+    color: #1f2937;
+    margin: 32px 0 20px 0 !important;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
-    border-bottom: 2px solid rgba(109,40,217,0.1);
-    padding-bottom: 10px;
+    letter-spacing: 0.8px;
+    border-bottom: 3px solid #6d28d9;
+    padding-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.an-section-title::before {
+    content: '';
+    width: 4px;
+    height: 20px;
+    background: #6d28d9;
+    border-radius: 2px;
 }
 
 .an-metric-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-    gap: 16px;
-    margin-bottom: 24px;
+    gap: 20px;
+    margin-bottom: 32px;
 }
 
 .an-metric-grid--compact {
     grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-    gap: 14px;
-    margin-bottom: 20px;
+    gap: 16px;
+    margin-bottom: 28px;
 }
 
 .an-tabs {
     display: flex;
-    gap: 4px;
-    margin-bottom: 24px;
+    gap: 8px;
+    margin-bottom: 28px;
     border-bottom: 2px solid #e5e7eb;
     padding-bottom: 0;
 }
 
 .an-tab-btn {
-    padding: 12px 16px;
+    padding: 12px 18px;
     border: none;
     background: transparent;
     color: #6b7280;
     font-size: 13px;
-    font-weight: 600;
+    font-weight: 700;
     cursor: pointer;
     border-bottom: 3px solid transparent;
     margin-bottom: -2px;
-    transition: all 0.2s ease;
+    transition: all 0.3s ease;
+    position: relative;
 }
 
 .an-tab-btn:hover {
     color: #374151;
+    background: rgba(109, 40, 217, 0.04);
+    border-radius: 4px 4px 0 0;
 }
 
 .an-tab-btn.active {
     color: #6d28d9;
     border-bottom-color: #6d28d9;
+    background: rgba(109, 40, 217, 0.06);
 }
 
 .an-panel {
-    background: #fff;
-    border: 1px solid #e5e7eb;
-    border-radius: 12px;
+    background: #ffffff;
+    border: 1px solid #e0e7ff;
+    border-radius: 14px;
     padding: 24px;
     margin-top: 24px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    box-shadow: 0 2px 8px rgba(109,40,217,0.06);
+    transition: all 0.3s ease;
+}
+
+.an-panel:hover {
+    box-shadow: 0 4px 16px rgba(109,40,217,0.1);
+    border-color: #c4b5fd;
 }
 
 .an-panel .an-section-title {
     margin-top: 0 !important;
+    margin-bottom: 20px !important;
+}
+
+/* Chart Card Styling */
+.an-panel[style*="padding:20px"] {
+    background: linear-gradient(135deg, #ffffff 0%, #fafbff 100%);
+    border: 1px solid #e5e7eb;
+    box-shadow: 0 2px 8px rgba(109,40,217,0.05);
+}
+
+.an-panel[style*="padding:20px"] h3 {
+    margin: 0 0 20px 0 !important;
+    font-size: 13px !important;
+    font-weight: 800 !important;
+    color: #1f2937 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.7px !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+}
+
+.an-panel[style*="padding:20px"] h3::before {
+    content: '';
+    width: 3px;
+    height: 16px;
+    background: #6d28d9;
+    border-radius: 1px;
 }
 
 .an-sem-cards-grid {
@@ -139,33 +200,98 @@ include __DIR__ . '/../includes/header.php';
 .table {
     font-size: 13px;
     border-collapse: collapse;
+    width: 100%;
 }
 
 .table thead th {
-    background: #f9fafb;
-    border-bottom: 2px solid #e5e7eb;
-    padding: 12px 14px;
-    font-weight: 700;
-    color: #374151;
+    background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
+    border-bottom: 2px solid #d1d5db;
+    padding: 14px 16px;
+    font-weight: 800;
+    color: #1f2937;
     text-align: left;
+    text-transform: uppercase;
+    font-size: 11px;
+    letter-spacing: 0.5px;
 }
 
 .table tbody td {
-    padding: 12px 14px;
-    border-bottom: 1px solid #f3f4f6;
+    padding: 14px 16px;
+    border-bottom: 1px solid #f0f0f0;
+    color: #374151;
+}
+
+.table tbody tr {
+    transition: all 0.2s ease;
 }
 
 .table tbody tr:hover {
-    background: #f9fafb;
+    background: linear-gradient(90deg, rgba(109,40,217,0.03) 0%, transparent 100%);
+}
+
+.table tbody tr:last-child td {
+    border-bottom: none;
 }
 
 .ui-empty-state {
     text-align: center;
-    padding: 40px 20px;
+    padding: 48px 24px;
     color: #9ca3af;
-    background: #f9fafb;
-    border-radius: 8px;
+    background: linear-gradient(135deg, #fafbff 0%, #f9fafb 100%);
+    border-radius: 10px;
     font-size: 13px;
+    border: 1px solid #e5e7eb;
+}
+
+/* Additional Professional Styling */
+main.container {
+    background: linear-gradient(135deg, #f8f7fc 0%, #ffffff 100%) !important;
+}
+
+#an-analytics-card .card-body {
+    background: #ffffff;
+}
+
+/* Improve chart card appearance */
+.an-panel[style*="grid-column"] {
+    background: linear-gradient(135deg, #ffffff 0%, #fafbff 100%);
+}
+
+/* Better spacing for chart grids */
+[style*="display:grid;grid-template-columns:repeat(auto-fit,minmax(400px"] {
+    margin: 32px 0 24px 0 !important;
+}
+
+/* Improve overall card appearance */
+.an-metric-card svg {
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.08));
+}
+
+/* Legend styling improvements */
+div[id*="-legend"] {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 12px;
+    padding: 4px 0;
+}
+
+div[id*="-legend"] > div {
+    padding: 8px;
+    background: rgba(109, 40, 217, 0.02);
+    border-radius: 6px;
+    border: 1px solid rgba(109, 40, 217, 0.1);
+    transition: all 0.2s ease;
+}
+
+div[id*="-legend"] > div:hover {
+    background: rgba(109, 40, 217, 0.06);
+    border-color: rgba(109, 40, 217, 0.2);
+}
+
+div[id*="-legend"] strong {
+    color: #1f2937;
+    display: block;
+    margin-bottom: 2px;
 }
 </style>
 
