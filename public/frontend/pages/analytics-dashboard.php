@@ -515,7 +515,9 @@ div[id*="-legend"]:not(#chart-reports-status-legend) strong {
                     <div class="an-panel" style="margin:0;padding:24px;">
                         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
                             <h3 style="font-size:13px;font-weight:700;color:#374151;margin:0;text-transform:uppercase;letter-spacing:0.5px;flex:1;">Reports by Status</h3>
-                            <button type="button" style="padding:6px 12px;font-size:12px;font-weight:600;background:#f3f4f6;border:1px solid #d1d5db;border-radius:6px;color:#374151;cursor:pointer;transition:all 0.2s ease;" onmouseover="this.style.background='#e5e7eb'" onmouseout="this.style.background='#f3f4f6'">This Semester ▼</button>
+                            <select id="an-semester-filter" style="padding:6px 12px;font-size:12px;font-weight:600;background:#f3f4f6;border:1px solid #d1d5db;border-radius:6px;color:#374151;cursor:pointer;transition:all 0.2s ease;">
+                                <option value="">Loading...</option>
+                            </select>
                         </div>
                         <div style="display:grid;grid-template-columns:1fr 180px;gap:20px;align-items:center;">
                             <div style="height:280px;position:relative;display:flex;align-items:center;justify-content:center;">
@@ -1242,15 +1244,18 @@ function anStockBadge(qty, threshold) {
 // ---------------------------------------------------------------------------
 // Tab switching (lazy-loads each tab on first activation)
 // ---------------------------------------------------------------------------
-// Load all dashboard overview data once (cached)
+// Load all dashboard overview data (with optional semester filter)
 // ---------------------------------------------------------------------------
 
-async function anLoadDashboardOverview() {
-    if (anDashboardOverviewCache) return anDashboardOverviewCache;
-
+async function anLoadDashboardOverview(semester = '') {
     try {
+        let url = `${AN_API}/dashboard-overview`;
+        if (semester) {
+            url += `?semester=${encodeURIComponent(semester)}`;
+        }
+
         const { response, data: payload } = await anFetch(
-            `${AN_API}/dashboard-overview`,
+            url,
             { credentials: 'same-origin', headers: { 'Accept': 'application/json' } }
         );
         if (!response.ok || !payload.success) throw new Error(payload.message || 'Failed');
@@ -1259,6 +1264,53 @@ async function anLoadDashboardOverview() {
     } catch (err) {
         console.error('Failed to load dashboard overview:', err);
         return null;
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Load available semesters
+// ---------------------------------------------------------------------------
+
+async function anLoadSemesters() {
+    try {
+        const { response, data: payload } = await anFetch(
+            `${AN_API}/semester-detail`,
+            { credentials: 'same-origin', headers: { 'Accept': 'application/json' } }
+        );
+        if (!response.ok || !payload.success) return [];
+
+        const data = payload.data || {};
+        const semesters = [];
+
+        // Add current semester
+        const schoolYear = data.school_year || '';
+        if (schoolYear) {
+            semesters.push({
+                value: 'current',
+                label: `Current (${schoolYear})`
+            });
+        }
+
+        // Add first and second semester options
+        if (data.semesters) {
+            if (data.semesters.s1) {
+                semesters.push({
+                    value: '1',
+                    label: `1st Semester ${schoolYear}`
+                });
+            }
+            if (data.semesters.s2) {
+                semesters.push({
+                    value: '2',
+                    label: `2nd Semester ${schoolYear}`
+                });
+            }
+        }
+
+        return semesters;
+    } catch (err) {
+        console.error('Failed to load semesters:', err);
+        return [];
     }
 }
 
@@ -1275,7 +1327,24 @@ function anSwitchTab(tabId) {
     if (!anLoadedTabs.has(tabId)) {
         anLoadedTabs.add(tabId);
         switch (tabId) {
-            case 'an-tab1': anLoadSummary(); anLoadHealth(); anLoadLowStock(); break;
+            case 'an-tab1':
+                anLoadSemesters().then(semesters => {
+                    const sel = document.getElementById('an-semester-filter');
+                    if (sel && semesters.length > 0) {
+                        sel.innerHTML = '';
+                        semesters.forEach(sem => {
+                            const opt = document.createElement('option');
+                            opt.value = sem.value;
+                            opt.textContent = sem.label;
+                            sel.appendChild(opt);
+                        });
+                        sel.addEventListener('change', () => anReloadTab1Data());
+                    }
+                });
+                anLoadSummary();
+                anLoadHealth();
+                anLoadLowStock();
+                break;
             case 'an-tab2': anLoadTab2Data(); break;
             case 'an-tab3': anLoadSemesterDetail(); break;
             case 'an-tab4': anLoadTab4Data(); break;
@@ -1287,9 +1356,9 @@ function anSwitchTab(tabId) {
 // TAB 1: Overview
 // ---------------------------------------------------------------------------
 
-async function anLoadHealth() {
+async function anLoadHealth(semester = '') {
     try {
-        const data = await anLoadDashboardOverview();
+        const data = await anLoadDashboardOverview(semester);
         if (!data) throw new Error('Failed to load dashboard overview');
         const inv = data.inventory || {};
 
@@ -1385,10 +1454,10 @@ async function anLoadLowStock() {
 // no new endpoint/query). total_reports/pending/in_progress/completed
 // come back `null` when no semester is currently active — that is shown
 // as an explicit note rather than guessed at or left blank/zeroed.
-async function anLoadSummary() {
+async function anLoadSummary(semester = '') {
     const noteEl = document.getElementById('an-sum-note');
     try {
-        const data = await anLoadDashboardOverview();
+        const data = await anLoadDashboardOverview(semester);
         if (!data) throw new Error('Failed to load dashboard overview');
         const d = data.summary || {};
 
@@ -1445,6 +1514,23 @@ async function anLoadSummary() {
         // Cards stay as '—' — non-fatal; other Overview widgets load independently
         if (noteEl) noteEl.textContent = '';
     }
+}
+
+// ---------------------------------------------------------------------------
+// Reload Tab 1 data with selected semester
+// ---------------------------------------------------------------------------
+
+async function anReloadTab1Data() {
+    const semesterSel = document.getElementById('an-semester-filter');
+    const semester = semesterSel ? semesterSel.value : '';
+
+    // Clear cache to force reload
+    anDashboardOverviewCache = null;
+
+    // Reload all Tab 1 data with new semester
+    await anLoadSummary(semester);
+    await anLoadHealth(semester);
+    await anLoadLowStock(semester);
 }
 
 // ---------------------------------------------------------------------------
