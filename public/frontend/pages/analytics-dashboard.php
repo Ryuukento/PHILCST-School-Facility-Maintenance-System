@@ -372,6 +372,73 @@ include __DIR__ . '/../includes/header.php';
 
                 </div>
 
+                <!-- Charts Grid — Responsive layout (2 cols on desktop, 1 on tablet/mobile) -->
+                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(400px,1fr));gap:20px;margin:28px 0 20px;">
+
+                    <!-- Chart 1: Reports by Status -->
+                    <div class="an-panel" style="margin:0;padding:20px;">
+                        <h3 style="font-size:13px;font-weight:700;color:#374151;margin:0 0 16px;text-transform:uppercase;letter-spacing:0.5px;">Reports by Status</h3>
+                        <div style="height:300px;position:relative;margin-bottom:12px;">
+                            <canvas id="chart-reports-status" style="width:100%;height:100%;"></canvas>
+                        </div>
+                        <div id="chart-reports-status-legend" style="font-size:12px;color:#6b7280;"></div>
+                    </div>
+
+                    <!-- Chart 2: Reports by Category -->
+                    <div class="an-panel" style="margin:0;padding:20px;">
+                        <h3 style="font-size:13px;font-weight:700;color:#374151;margin:0 0 16px;text-transform:uppercase;letter-spacing:0.5px;">Reports by Category</h3>
+                        <div style="height:300px;position:relative;margin-bottom:12px;">
+                            <canvas id="chart-reports-category" style="width:100%;height:100%;"></canvas>
+                        </div>
+                        <div id="chart-reports-category-legend" style="font-size:12px;color:#6b7280;"></div>
+                    </div>
+
+                    <!-- Chart 3: Monthly Reports Trend -->
+                    <div class="an-panel" style="margin:0;padding:20px;">
+                        <h3 style="font-size:13px;font-weight:700;color:#374151;margin:0 0 16px;text-transform:uppercase;letter-spacing:0.5px;">Monthly Reports Trend</h3>
+                        <div style="height:300px;position:relative;margin-bottom:12px;">
+                            <canvas id="chart-monthly-trend" style="width:100%;height:100%;"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Chart 4: Inventory Status -->
+                    <div class="an-panel" style="margin:0;padding:20px;">
+                        <h3 style="font-size:13px;font-weight:700;color:#374151;margin:0 0 16px;text-transform:uppercase;letter-spacing:0.5px;">Inventory Status</h3>
+                        <div style="height:300px;position:relative;margin-bottom:12px;">
+                            <canvas id="chart-inventory-status" style="width:100%;height:100%;"></canvas>
+                        </div>
+                        <div id="chart-inventory-status-legend" style="font-size:12px;color:#6b7280;"></div>
+                    </div>
+
+                    <!-- Chart 5: Damage Reports by Category -->
+                    <div class="an-panel" style="margin:0;padding:20px;">
+                        <h3 style="font-size:13px;font-weight:700;color:#374151;margin:0 0 16px;text-transform:uppercase;letter-spacing:0.5px;">Damage Reports by Category</h3>
+                        <div style="height:300px;position:relative;margin-bottom:12px;">
+                            <canvas id="chart-damage-category" style="width:100%;height:100%;"></canvas>
+                        </div>
+                        <div id="chart-damage-category-legend" style="font-size:12px;color:#6b7280;"></div>
+                    </div>
+
+                    <!-- Chart 6: Semester Comparison -->
+                    <div class="an-panel" style="margin:0;padding:20px;">
+                        <h3 style="font-size:13px;font-weight:700;color:#374151;margin:0 0 16px;text-transform:uppercase;letter-spacing:0.5px;">Semester Comparison</h3>
+                        <div style="height:300px;position:relative;margin-bottom:12px;">
+                            <canvas id="chart-semester-compare" style="width:100%;height:100%;"></canvas>
+                        </div>
+                        <div id="chart-semester-compare-legend" style="font-size:12px;color:#6b7280;"></div>
+                    </div>
+
+                    <!-- Chart 7: Dispatch Status (Full width) -->
+                    <div class="an-panel" style="margin:0;padding:20px;grid-column:1/-1;">
+                        <h3 style="font-size:13px;font-weight:700;color:#374151;margin:0 0 16px;text-transform:uppercase;letter-spacing:0.5px;">Dispatch Status</h3>
+                        <div style="height:300px;position:relative;margin-bottom:12px;">
+                            <canvas id="chart-dispatch-status" style="width:100%;height:100%;"></canvas>
+                        </div>
+                        <div id="chart-dispatch-status-legend" style="font-size:12px;color:#6b7280;"></div>
+                    </div>
+
+                </div>
+
                 <div class="an-panel">
                     <p class="an-section-title">Items Needing Attention</p>
                     <div id="an-lowstock-container" class="table-responsive">
@@ -976,6 +1043,16 @@ const anLoadedTabs = new Set();
 let anDashboardOverviewCache = null;
 
 // Chart instances — destroyed and recreated on each data reload
+// Tab 1 (Overview) charts
+let anChartReportsStatus = null;
+let anChartReportsCategory = null;
+let anChartMonthlyTrend = null;
+let anChartInventoryStatus = null;
+let anChartDamageCategory = null;
+let anChartSemesterCompare = null;
+let anChartDispatchStatus = null;
+
+// Tab 2-4 charts
 let anChartDamaged  = null;
 let anChartSemester = null;
 let anChartMonthly  = null;
@@ -1114,6 +1191,9 @@ async function anLoadHealth() {
 
         // Populate Items Needing Attention table with the data we just received
         anRenderItemsNeedingAttention(data.items_needing_attention);
+
+        // Render all charts with the dashboard data
+        anRenderChartsForTab1(data);
     } catch (_) {
         // Cards stay as '—' — non-fatal; low-stock table will show its own error
     }
@@ -1216,6 +1296,327 @@ async function anLoadSummary() {
         // Cards stay as '—' — non-fatal; other Overview widgets load independently
         if (noteEl) noteEl.textContent = '';
     }
+}
+
+// ---------------------------------------------------------------------------
+// Chart Rendering Functions — Tab 1 Overview Charts
+// ---------------------------------------------------------------------------
+
+function anRenderChartsForTab1(data) {
+    if (!data) return;
+
+    anRenderReportsByStatusChart(data.charts?.reports_by_status);
+    anRenderReportsByCategoryChart(data.charts?.reports_by_category);
+    anRenderMonthlyTrendChart(data.charts?.monthly_trend);
+    anRenderInventoryStatusChart(data.charts?.inventory_status);
+    anRenderDamageByCategoryChart(data.charts?.damage_by_category);
+    anRenderSemesterComparisonChart(data.summary);
+    anRenderDispatchStatusChart(data.charts?.dispatch_status);
+}
+
+function anRenderReportsByStatusChart(data) {
+    const canvas = document.getElementById('chart-reports-status');
+    if (!canvas || !data || !Array.isArray(data) || data.length === 0) {
+        return;
+    }
+
+    if (anChartReportsStatus) { anChartReportsStatus.destroy(); anChartReportsStatus = null; }
+
+    const labels = data.map(d => d.label);
+    const values = data.map(d => d.count);
+    const total = values.reduce((a, b) => a + b, 0);
+
+    const colors = ['#d97706', '#3b82f6', '#10b981', '#8b5cf6', '#ef4444'];
+
+    anChartReportsStatus = new Chart(canvas, {
+        type: 'doughnut',
+        data: {
+            labels: labels,
+            datasets: [{
+                data: values,
+                backgroundColor: colors.slice(0, labels.length),
+                borderColor: '#fff',
+                borderWidth: 2,
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const value = context.parsed;
+                            const pct = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+                            return `${context.label}: ${value} (${pct}%)`;
+                        }
+                    }
+                }
+            }
+        }
+    });
+
+    // Render legend manually
+    const legendDiv = document.getElementById('chart-reports-status-legend');
+    if (legendDiv) {
+        let html = '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;">';
+        labels.forEach((label, i) => {
+            const pct = total > 0 ? ((values[i] / total) * 100).toFixed(1) : 0;
+            html += `<div style="padding:4px;"><span style="display:inline-block;width:10px;height:10px;background:${colors[i]};border-radius:2px;margin-right:6px;vertical-align:middle;"></span><strong>${label}</strong><br/>${values[i]} (${pct}%)</div>`;
+        });
+        html += '</div>';
+        legendDiv.innerHTML = html;
+    }
+}
+
+function anRenderReportsByCategoryChart(data) {
+    const canvas = document.getElementById('chart-reports-category');
+    if (!canvas || !data || !Array.isArray(data) || data.length === 0) {
+        return;
+    }
+
+    if (anChartReportsCategory) { anChartReportsCategory.destroy(); anChartReportsCategory = null; }
+
+    const labels = data.map(d => d.label);
+    const values = data.map(d => d.count);
+
+    const colors = '#6d28d9';
+
+    anChartReportsCategory = new Chart(canvas, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Count',
+                data: values,
+                backgroundColor: colors,
+                borderRadius: 4,
+            }]
+        },
+        options: {
+            indexAxis: 'y',
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+            },
+            scales: {
+                x: { beginAtZero: true, ticks: { stepSize: 1 } }
+            }
+        }
+    });
+}
+
+function anRenderMonthlyTrendChart(data) {
+    const canvas = document.getElementById('chart-monthly-trend');
+    if (!canvas || !data || !Array.isArray(data) || data.length === 0) {
+        return;
+    }
+
+    if (anChartMonthlyTrend) { anChartMonthlyTrend.destroy(); anChartMonthlyTrend = null; }
+
+    const labels = data.map(d => d.month || d.label);
+    const values = data.map(d => d.count);
+
+    anChartMonthlyTrend = new Chart(canvas, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Reports',
+                data: values,
+                borderColor: '#6d28d9',
+                backgroundColor: 'rgba(109,40,217,0.1)',
+                fill: true,
+                tension: 0.4,
+                pointBackgroundColor: '#6d28d9',
+                pointBorderColor: '#fff',
+                pointBorderWidth: 2,
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+            },
+            scales: {
+                y: { beginAtZero: true, ticks: { stepSize: 1 } }
+            }
+        }
+    });
+}
+
+function anRenderInventoryStatusChart(data) {
+    const canvas = document.getElementById('chart-inventory-status');
+    if (!canvas || !data || !Array.isArray(data) || data.length === 0) {
+        return;
+    }
+
+    if (anChartInventoryStatus) { anChartInventoryStatus.destroy(); anChartInventoryStatus = null; }
+
+    const labels = data.map(d => d.label);
+    const values = data.map(d => d.count);
+    const total = values.reduce((a, b) => a + b, 0);
+
+    const colors = ['#10b981', '#f59e0b', '#dc2626'];
+
+    anChartInventoryStatus = new Chart(canvas, {
+        type: 'doughnut',
+        data: {
+            labels: labels,
+            datasets: [{
+                data: values,
+                backgroundColor: colors.slice(0, labels.length),
+                borderColor: '#fff',
+                borderWidth: 2,
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const value = context.parsed;
+                            const pct = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+                            return `${context.label}: ${value} (${pct}%)`;
+                        }
+                    }
+                }
+            }
+        }
+    });
+
+    // Render legend manually
+    const legendDiv = document.getElementById('chart-inventory-status-legend');
+    if (legendDiv) {
+        let html = '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;">';
+        labels.forEach((label, i) => {
+            const pct = total > 0 ? ((values[i] / total) * 100).toFixed(1) : 0;
+            html += `<div style="padding:4px;"><span style="display:inline-block;width:10px;height:10px;background:${colors[i]};border-radius:2px;margin-right:6px;vertical-align:middle;"></span><strong>${label}</strong><br/>${values[i]} (${pct}%)</div>`;
+        });
+        html += '</div>';
+        legendDiv.innerHTML = html;
+    }
+}
+
+function anRenderDamageByCategoryChart(data) {
+    const canvas = document.getElementById('chart-damage-category');
+    if (!canvas || !data || !Array.isArray(data) || data.length === 0) {
+        return;
+    }
+
+    if (anChartDamageCategory) { anChartDamageCategory.destroy(); anChartDamageCategory = null; }
+
+    const labels = data.map(d => d.label);
+    const values = data.map(d => d.count);
+
+    const colors = '#ef4444';
+
+    anChartDamageCategory = new Chart(canvas, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Damage Count',
+                data: values,
+                backgroundColor: colors,
+                borderRadius: 4,
+            }]
+        },
+        options: {
+            indexAxis: 'y',
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+            },
+            scales: {
+                x: { beginAtZero: true, ticks: { stepSize: 1 } }
+            }
+        }
+    });
+}
+
+function anRenderSemesterComparisonChart(summaryData) {
+    const canvas = document.getElementById('chart-semester-compare');
+    if (!canvas || !summaryData) {
+        return;
+    }
+
+    if (anChartSemesterCompare) { anChartSemesterCompare.destroy(); anChartSemesterCompare = null; }
+
+    // Create comparison data: current vs previous semester
+    const labels = ['Reports Submitted', 'Reports Completed'];
+    const currentData = [
+        summaryData.total_reports || 0,
+        summaryData.completed || 0
+    ];
+
+    anChartSemesterCompare = new Chart(canvas, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Current Semester',
+                data: currentData,
+                backgroundColor: '#6d28d9',
+                borderRadius: 4,
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: true, position: 'top' },
+            },
+            scales: {
+                y: { beginAtZero: true, ticks: { stepSize: 1 } }
+            }
+        }
+    });
+}
+
+function anRenderDispatchStatusChart(data) {
+    const canvas = document.getElementById('chart-dispatch-status');
+    if (!canvas || !data || !Array.isArray(data) || data.length === 0) {
+        return;
+    }
+
+    if (anChartDispatchStatus) { anChartDispatchStatus.destroy(); anChartDispatchStatus = null; }
+
+    const labels = data.map(d => d.label);
+    const values = data.map(d => d.count);
+
+    const colors = '#3b82f6';
+
+    anChartDispatchStatus = new Chart(canvas, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Count',
+                data: values,
+                backgroundColor: colors,
+                borderRadius: 4,
+            }]
+        },
+        options: {
+            indexAxis: 'y',
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+            },
+            scales: {
+                x: { beginAtZero: true, ticks: { stepSize: 1 } }
+            }
+        }
+    });
 }
 
 // ---------------------------------------------------------------------------
