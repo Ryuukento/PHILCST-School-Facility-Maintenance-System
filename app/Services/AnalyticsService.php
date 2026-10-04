@@ -728,8 +728,8 @@ class AnalyticsService
         // Get reports by category (using full semester date range)
         $reportsByCategory = $this->getReportsByCategory($semesterStartForCharts, $semesterEndForCharts);
 
-        // Get monthly trend
-        $monthlyTrend = $this->getMonthlyReportsTrend($semesterStartDate, $currentSemester);
+        // Get monthly trend (using full semester date range)
+        $monthlyTrend = $this->getMonthlyReportsTrend($semesterStartForCharts, $semesterEndForCharts);
 
         // Get inventory status breakdown
         $inventoryStatus = $this->getInventoryStatusBreakdown();
@@ -1035,37 +1035,32 @@ class AnalyticsService
     }
 
     /**
-     * Get monthly trend of reports created.
+     * Get monthly trend of reports created within the semester date range.
      */
-    private function getMonthlyReportsTrend(?string $semesterStartDate, ?string $currentSemester): array
+    private function getMonthlyReportsTrend(?string $semesterStartDate, ?string $semesterEndDate): array
     {
-        $query = DB::table('maintenance_reports')
-            ->where(function ($q) {
-                $user = auth()->user();
-                if ($user && !in_array($user->role, ['super_admin', 'maintenance_admin'])) {
-                    $userId = $user->user_id;
-                    $q->where(function ($innerQ) use ($userId) {
-                        $innerQ->where('created_by', $userId)
-                            ->orWhere('assigned_to', $userId);
-                    });
-                }
-            });
+        $query = DB::table('maintenance_reports');
 
-        if ($semesterStartDate && $currentSemester) {
-            $query->where('created_at', '>=', $semesterStartDate);
+        if ($semesterStartDate) {
+            $query->whereDate('created_at', '>=', $semesterStartDate);
+        }
+
+        if ($semesterEndDate) {
+            $query->whereDate('created_at', '<=', $semesterEndDate);
         }
 
         $results = $query->selectRaw('
-            DATE_FORMAT(created_at, \'%Y-%m\') as month,
+            DATE_FORMAT(created_at, \'%Y-%m\') as month_key,
+            DATE_FORMAT(created_at, \'%b\') as month_label,
             COUNT(*) as count
         ')
-        ->groupBy('month')
-        ->orderBy('month')
+        ->groupBy('month_key', 'month_label')
+        ->orderBy('month_key')
         ->get();
 
         return $results->map(function ($row) {
             return [
-                'month' => $row->month,
+                'month' => $row->month_label,
                 'count' => (int) $row->count,
             ];
         })->toArray();
