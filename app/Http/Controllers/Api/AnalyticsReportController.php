@@ -131,4 +131,13 @@ class AnalyticsReportController extends Controller
         // card) is the single source of truth, and there is only one.
         return $this->ok('Semester detail', $this->service->semesterDetail());
     }
+
+    public function dashboardOverview(Request $request)
+    {
+        // Comprehensive analytics dashboard with real data only.
+        // Filters: semester (optional)
+        $filters = $request->only(['semester']);
+        $data = $this->service->dashboardOverview($filters);
+        return $this->ok('Dashboard overview analytics', $data);
+    }
 }

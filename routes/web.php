@@ -541,6 +541,7 @@ Route::prefix('api')->group(function (): void {
                 // Damage Report data and stays.
                 Route::get('replacement-report', [AnalyticsReportController::class, 'replacementReport']);
                 Route::get('semester-detail', [AnalyticsReportController::class, 'semesterDetail']);
+                Route::get('dashboard-overview', [AnalyticsReportController::class, 'dashboardOverview']);
             });
     });
 });

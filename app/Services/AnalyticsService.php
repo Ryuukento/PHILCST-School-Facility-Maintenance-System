@@ -656,6 +656,537 @@ class AnalyticsService
             ];
         });
     }
+    /**
+     * Comprehensive analytics dashboard data with real semester-based calculations.
+     * Returns ALL data needed for the analytics dashboard in one call.
+     * All values are calculated dynamically from database - NO hardcoded values.
+     */
+    public function dashboardOverview(array $filters = []): array
+    {
+        // Determine semester scope
+        $schoolSettings = SchoolSetting::current();
+        $semesterActive = $schoolSettings->isActive();
+        $currentSemester = $schoolSettings->current_semester;
+
+        // If no active semester, still allow filtered view
+        $semesterStartDate = $semesterActive ? $schoolSettings->semester_started_at : null;
+
+        // Get current semester stats
+        $currentStats = $this->getReportStats($semesterStartDate, $currentSemester);
+
+        // Get previous semester stats for comparison
+        $previousStats = $this->getPreviousSemesterStats($schoolSettings);
+
+        // Calculate comparisons
+        $totalComparison = $this->calculateComparison(
+            $currentStats['total_reports'] ?? 0,
+            $previousStats['total_reports'] ?? 0
+        );
+        $pendingComparison = $this->calculateComparison(
+            $currentStats['pending'] ?? 0,
+            $previousStats['pending'] ?? 0
+        );
+        $inProgressComparison = $this->calculateComparison(
+            $currentStats['in_progress'] ?? 0,
+            $previousStats['in_progress'] ?? 0
+        );
+        $completedComparison = $this->calculateComparison(
+            $currentStats['completed'] ?? 0,
+            $previousStats['completed'] ?? 0
+        );
+
+        // Get inventory health
+        $inventoryHealth = $this->inventoryHealthIndicators();
+
+        // Get inventory comparisons
+        $inventoryComparison = $this->getInventoryComparisons($schoolSettings, $semesterActive);
+
+        // Get reports by status distribution
+        $reportsByStatus = $this->getReportsByStatus($semesterStartDate);
+
+        // Get reports by category
+        $reportsByCategory = $this->getReportsByCategory($semesterStartDate);
+
+        // Get monthly trend
+        $monthlyTrend = $this->getMonthlyReportsTrend($semesterStartDate, $currentSemester);
+
+        // Get inventory status breakdown
+        $inventoryStatus = $this->getInventoryStatusBreakdown();
+
+        // Get damage reports by category
+        $damageByCategory = $this->getDamageReportsByCategory($semesterStartDate);
+
+        // Get dispatch status breakdown
+        $dispatchStatus = $this->getDispatchStatusBreakdown($semesterStartDate);
+
+        // Get items needing attention
+        $itemsNeedingAttention = $this->getItemsNeedingAttention();
+
+        return [
+            'summary' => [
+                'total_reports' => $currentStats['total_reports'] ?? 0,
+                'total_reports_comparison' => $totalComparison,
+                'pending' => $currentStats['pending'] ?? 0,
+                'pending_comparison' => $pendingComparison,
+                'in_progress' => $currentStats['in_progress'] ?? 0,
+                'in_progress_comparison' => $inProgressComparison,
+                'completed' => $currentStats['completed'] ?? 0,
+                'completed_comparison' => $completedComparison,
+                'semester_active' => $semesterActive,
+                'current_semester' => $currentSemester,
+                'school_year' => $schoolSettings->school_year,
+            ],
+            'inventory' => [
+                'total_items' => $inventoryHealth['total_items'] ?? 0,
+                'total_items_comparison' => $inventoryComparison['total_items_comparison'],
+                'low_stock' => $inventoryHealth['low_stock_count'] ?? 0,
+                'low_stock_comparison' => $inventoryComparison['low_stock_comparison'],
+                'out_of_stock' => $inventoryHealth['out_of_stock_count'] ?? 0,
+                'out_of_stock_comparison' => $inventoryComparison['out_of_stock_comparison'],
+                'low_stock_percentage' => $inventoryHealth['low_stock_percent'] ?? 0,
+                'low_stock_percentage_comparison' => $inventoryComparison['low_stock_percentage_comparison'],
+            ],
+            'charts' => [
+                'reports_by_status' => $reportsByStatus,
+                'reports_by_category' => $reportsByCategory,
+                'monthly_trend' => $monthlyTrend,
+                'inventory_status' => $inventoryStatus,
+                'damage_by_category' => $damageByCategory,
+                'dispatch_status' => $dispatchStatus,
+            ],
+            'items_needing_attention' => $itemsNeedingAttention,
+        ];
+    }
+
+    /**
+     * Get report statistics for the current/active semester.
+     */
+    private function getReportStats(?string $semesterStartDate, ?string $currentSemester): array
+    {
+        $query = DB::table('maintenance_reports')
+            ->where(function ($q) {
+                // Respect user authorization - show all for admins, own reports for others
+                $user = auth()->user();
+                if ($user && !in_array($user->role, ['super_admin', 'maintenance_admin'])) {
+                    $userId = $user->user_id;
+                    $q->where(function ($innerQ) use ($userId) {
+                        $innerQ->where('created_by', $userId)
+                            ->orWhere('assigned_to', $userId);
+                    });
+                }
+            });
+
+        if ($semesterStartDate && $currentSemester) {
+            $query->where('created_at', '>=', $semesterStartDate);
+        }
+
+        $stats = $query->selectRaw('
+            COUNT(*) as total_reports,
+            SUM(CASE WHEN status IN (\'submitted\', \'assigned\') THEN 1 ELSE 0 END) as pending,
+            SUM(CASE WHEN status = \'in_progress\' THEN 1 ELSE 0 END) as in_progress,
+            SUM(CASE WHEN status = \'completed\' THEN 1 ELSE 0 END) as completed
+        ')->first();
+
+        return (array) $stats;
+    }
+
+    /**
+     * Get statistics from the previous semester for comparison.
+     */
+    private function getPreviousSemesterStats(SchoolSetting $schoolSettings): array
+    {
+        // Determine previous semester dates
+        $currentSemester = $schoolSettings->current_semester;
+
+        if ($currentSemester === 'First Semester') {
+            // Previous is second semester of last year - can't easily determine, return empty
+            return [];
+        } elseif ($currentSemester === 'Second Semester') {
+            // Previous is first semester of this year
+            $startDate = $schoolSettings->first_sem_start;
+            $endDate = $schoolSettings->first_sem_end;
+        } else {
+            return [];
+        }
+
+        $query = DB::table('maintenance_reports')
+            ->where(function ($q) {
+                $user = auth()->user();
+                if ($user && !in_array($user->role, ['super_admin', 'maintenance_admin'])) {
+                    $userId = $user->user_id;
+                    $q->where(function ($innerQ) use ($userId) {
+                        $innerQ->where('created_by', $userId)
+                            ->orWhere('assigned_to', $userId);
+                    });
+                }
+            })
+            ->whereBetween('created_at', [$startDate, $endDate]);
+
+        $stats = $query->selectRaw('
+            COUNT(*) as total_reports,
+            SUM(CASE WHEN status IN (\'submitted\', \'assigned\') THEN 1 ELSE 0 END) as pending,
+            SUM(CASE WHEN status = \'in_progress\' THEN 1 ELSE 0 END) as in_progress,
+            SUM(CASE WHEN status = \'completed\' THEN 1 ELSE 0 END) as completed
+        ')->first();
+
+        return (array) $stats;
+    }
+
+    /**
+     * Calculate percentage change between two values.
+     * Returns array with percentage, arrow, and semantic meaning.
+     */
+    private function calculateComparison(int $current, int $previous): array
+    {
+        if ($previous == 0) {
+            if ($current == 0) {
+                return ['value' => '0%', 'arrow' => '→', 'color' => 'gray', 'change' => 0];
+            }
+            return ['value' => 'New', 'arrow' => '↑', 'color' => 'green', 'change' => 0];
+        }
+
+        $percentage = (($current - $previous) / abs($previous)) * 100;
+        $rounded = round($percentage, 0);
+
+        if ($rounded >= 0) {
+            $arrow = '↑';
+            $color = 'green'; // Increase is generally positive
+        } else {
+            $arrow = '↓';
+            $color = 'red'; // Decrease is generally negative
+        }
+
+        return [
+            'value' => ($rounded >= 0 ? '+' : '') . $rounded . '%',
+            'arrow' => $arrow,
+            'color' => $color,
+            'change' => $rounded,
+        ];
+    }
+
+    /**
+     * Get inventory comparisons between semesters.
+     * Note: Since the items table doesn't track historical status changes, comparisons
+     * are based on inventory_transactions data when available. If no historical data
+     * is available for the previous semester, neutral comparisons (0% change) are returned.
+     */
+    private function getInventoryComparisons(SchoolSetting $schoolSettings, bool $semesterActive): array
+    {
+        $currentHealth = $this->inventoryHealthIndicators();
+
+        // Get previous semester dates
+        $currentSemester = $schoolSettings->current_semester;
+        $prevLowStock = 0;
+        $prevOutOfStock = 0;
+        $prevTotal = 0;
+
+        if ($currentSemester === 'Second Semester' && $schoolSettings->first_sem_start && $schoolSettings->first_sem_end) {
+            // Previous is First Semester of this year
+            // Calculate based on items that existed during that period
+            $firstSemStart = $schoolSettings->first_sem_start;
+            $firstSemEnd = $schoolSettings->first_sem_end;
+
+            // Get distinct items from transactions during first semester
+            $itemsInFirstSem = DB::table('inventory_transactions')
+                ->whereDate('created_at', '>=', $firstSemStart)
+                ->whereDate('created_at', '<=', $firstSemEnd)
+                ->distinct('item_id')
+                ->pluck('item_id');
+
+            if ($itemsInFirstSem->isNotEmpty()) {
+                // Get status of items that were in inventory during first semester
+                $prevItems = DB::table('items')
+                    ->whereIn('id', $itemsInFirstSem)
+                    ->where('item_type', 'inventory_stock')
+                    ->get();
+
+                $prevTotal = $prevItems->count();
+                $prevLowStock = $prevItems->where('status', 'low_stock')->count();
+                $prevOutOfStock = $prevItems->where('status', 'out_of_stock')->count();
+            }
+        }
+
+        // If no previous semester data found, use same current values for neutral comparison
+        if ($prevTotal === 0) {
+            $prevTotal = $currentHealth['total_items'] ?? 0;
+            $prevLowStock = $currentHealth['low_stock_count'] ?? 0;
+            $prevOutOfStock = $currentHealth['out_of_stock_count'] ?? 0;
+        }
+
+        $prevLowStockPercent = $prevTotal > 0
+            ? round(($prevLowStock / $prevTotal) * 100, 2)
+            : 0;
+
+        return [
+            'total_items_comparison' => $this->calculateComparison(
+                $currentHealth['total_items'] ?? 0,
+                $prevTotal
+            ),
+            'low_stock_comparison' => $this->calculateComparison(
+                $currentHealth['low_stock_count'] ?? 0,
+                $prevLowStock
+            ),
+            'out_of_stock_comparison' => $this->calculateComparison(
+                $currentHealth['out_of_stock_count'] ?? 0,
+                $prevOutOfStock
+            ),
+            'low_stock_percentage_comparison' => $this->calculateComparison(
+                (int) ($currentHealth['low_stock_percent'] ?? 0),
+                (int) $prevLowStockPercent
+            ),
+        ];
+    }
+
+    /**
+     * Get distribution of reports by status.
+     */
+    private function getReportsByStatus(?string $semesterStartDate): array
+    {
+        $query = DB::table('maintenance_reports')
+            ->where(function ($q) {
+                $user = auth()->user();
+                if ($user && !in_array($user->role, ['super_admin', 'maintenance_admin'])) {
+                    $userId = $user->user_id;
+                    $q->where(function ($innerQ) use ($userId) {
+                        $innerQ->where('created_by', $userId)
+                            ->orWhere('assigned_to', $userId);
+                    });
+                }
+            });
+
+        if ($semesterStartDate) {
+            $query->where('created_at', '>=', $semesterStartDate);
+        }
+
+        // Map individual statuses to grouped categories
+        $results = $query->selectRaw('
+            CASE
+                WHEN status IN (\'submitted\', \'assigned\') THEN \'Pending / Open\'
+                WHEN status = \'in_progress\' THEN \'In Progress\'
+                WHEN status = \'completed\' THEN \'Completed\'
+                ELSE \'Other\'
+            END as status_label,
+            COUNT(*) as count
+        ')
+        ->groupBy('status_label')
+        ->get();
+
+        return $results->map(function ($row) {
+            return [
+                'label' => $row->status_label,
+                'count' => (int) $row->count,
+            ];
+        })->toArray();
+    }
+
+    /**
+     * Get distribution of reports by category/problem type.
+     */
+    private function getReportsByCategory(?string $semesterStartDate): array
+    {
+        $query = DB::table('maintenance_reports')
+            ->where(function ($q) {
+                $user = auth()->user();
+                if ($user && !in_array($user->role, ['super_admin', 'maintenance_admin'])) {
+                    $userId = $user->user_id;
+                    $q->where(function ($innerQ) use ($userId) {
+                        $innerQ->where('created_by', $userId)
+                            ->orWhere('assigned_to', $userId);
+                    });
+                }
+            })
+            ->whereNotNull('problem_type');
+
+        if ($semesterStartDate) {
+            $query->where('created_at', '>=', $semesterStartDate);
+        }
+
+        $results = $query->selectRaw('
+            problem_type,
+            COUNT(*) as count
+        ')
+        ->groupBy('problem_type')
+        ->orderByDesc('count')
+        ->limit(10)
+        ->get();
+
+        return $results->map(function ($row) {
+            return [
+                'label' => $row->problem_type,
+                'count' => (int) $row->count,
+            ];
+        })->toArray();
+    }
+
+    /**
+     * Get monthly trend of reports created.
+     */
+    private function getMonthlyReportsTrend(?string $semesterStartDate, ?string $currentSemester): array
+    {
+        $query = DB::table('maintenance_reports')
+            ->where(function ($q) {
+                $user = auth()->user();
+                if ($user && !in_array($user->role, ['super_admin', 'maintenance_admin'])) {
+                    $userId = $user->user_id;
+                    $q->where(function ($innerQ) use ($userId) {
+                        $innerQ->where('created_by', $userId)
+                            ->orWhere('assigned_to', $userId);
+                    });
+                }
+            });
+
+        if ($semesterStartDate && $currentSemester) {
+            $query->where('created_at', '>=', $semesterStartDate);
+        }
+
+        $results = $query->selectRaw('
+            DATE_FORMAT(created_at, \'%Y-%m\') as month,
+            COUNT(*) as count
+        ')
+        ->groupBy('month')
+        ->orderBy('month')
+        ->get();
+
+        return $results->map(function ($row) {
+            return [
+                'month' => $row->month,
+                'count' => (int) $row->count,
+            ];
+        })->toArray();
+    }
+
+    /**
+     * Get breakdown of inventory by status.
+     */
+    private function getInventoryStatusBreakdown(): array
+    {
+        $results = DB::table('items')
+            ->where('item_type', 'inventory_stock')
+            ->selectRaw('
+                CASE
+                    WHEN status = \'available\' THEN \'In Stock\'
+                    WHEN status = \'low_stock\' THEN \'Low Stock\'
+                    WHEN status = \'out_of_stock\' THEN \'Out of Stock\'
+                    ELSE \'Other\'
+                END as status_label,
+                COUNT(*) as count
+            ')
+            ->groupBy('status_label')
+            ->get();
+
+        return $results->map(function ($row) {
+            return [
+                'label' => $row->status_label,
+                'count' => (int) $row->count,
+            ];
+        })->toArray();
+    }
+
+    /**
+     * Get damage reports grouped by category.
+     */
+    private function getDamageReportsByCategory(?string $semesterStartDate): array
+    {
+        $query = DB::table('damage_reports as d')
+            ->join('items as i', 'i.id', '=', 'd.item_id')
+            ->where(function ($q) {
+                $user = auth()->user();
+                if ($user && !in_array($user->role, ['super_admin', 'maintenance_admin'])) {
+                    $userId = $user->user_id;
+                    $q->where('d.reported_by', $userId);
+                }
+            });
+
+        if ($semesterStartDate) {
+            $query->where('d.created_at', '>=', $semesterStartDate);
+        }
+
+        $results = $query->selectRaw('
+            COALESCE(ic.name, \'Uncategorized\') as category,
+            COUNT(d.id) as count
+        ')
+        ->leftJoin('inventory_categories as ic', 'i.category_id', '=', 'ic.id')
+        ->groupBy('category')
+        ->orderByDesc('count')
+        ->limit(10)
+        ->get();
+
+        return $results->map(function ($row) {
+            return [
+                'label' => $row->category,
+                'count' => (int) $row->count,
+            ];
+        })->toArray();
+    }
+
+    /**
+     * Get dispatch status breakdown.
+     */
+    private function getDispatchStatusBreakdown(?string $semesterStartDate): array
+    {
+        $query = DB::table('dispatches');
+
+        if ($semesterStartDate) {
+            $query->where('created_at', '>=', $semesterStartDate);
+        }
+
+        $results = $query->selectRaw('
+            CASE
+                WHEN status = \'pending\' THEN \'Pending\'
+                WHEN status = \'approved\' THEN \'Assigned\'
+                WHEN status = \'released\' THEN \'In Transit\'
+                WHEN status = \'completed\' THEN \'Completed\'
+                ELSE CONCAT(\'Other (\', status, \')\')
+            END as status_label,
+            COUNT(*) as count
+        ')
+        ->groupBy('status_label')
+        ->get();
+
+        return $results->map(function ($row) {
+            return [
+                'label' => $row->status_label,
+                'count' => (int) $row->count,
+            ];
+        })->toArray();
+    }
+
+    /**
+     * Get inventory items that need attention (low stock or out of stock).
+     */
+    private function getItemsNeedingAttention(): array
+    {
+        $results = DB::table('items')
+            ->where('item_type', 'inventory_stock')
+            ->whereIn('status', ['low_stock', 'out_of_stock'])
+            ->selectRaw('
+                id,
+                name,
+                quantity,
+                reorder_level as threshold,
+                status,
+                CASE
+                    WHEN status = \'out_of_stock\' THEN 1
+                    WHEN status = \'low_stock\' THEN 2
+                    ELSE 3
+                END as severity
+            ')
+            ->orderBy('severity')
+            ->orderBy('quantity')
+            ->limit(20)
+            ->get();
+
+        return $results->map(function ($row) {
+            return [
+                'id' => $row->id,
+                'name' => $row->name,
+                'quantity' => (int) $row->quantity,
+                'threshold' => (int) $row->threshold,
+                'status' => $row->status,
+            ];
+        })->toArray();
+    }
+
     private function rememberWithTags(string $key, int $ttl, callable $callback)
     {
         try {

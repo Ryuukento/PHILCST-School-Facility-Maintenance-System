@@ -25,6 +25,150 @@ $pageTitle = 'Analytics - SFMS';
 include __DIR__ . '/../includes/header.php';
 ?>
 
+<style>
+/* ═══════════════════════════════════════════════════════════════════════════
+   Analytics Dashboard — Professional styling
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+#an-analytics-card {
+    border-radius: 14px !important;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04) !important;
+}
+
+.an-metric-card {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+    padding: 20px;
+    border-radius: 12px;
+    transition: all 0.2s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.an-metric-card:hover {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08) !important;
+    transform: translateY(-2px);
+}
+
+.an-metric-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, currentColor, transparent);
+    opacity: 0.1;
+}
+
+.an-section-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: #111827;
+    margin: 28px 0 16px 0 !important;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 2px solid rgba(109,40,217,0.1);
+    padding-bottom: 10px;
+}
+
+.an-metric-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.an-metric-grid--compact {
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 14px;
+    margin-bottom: 20px;
+}
+
+.an-tabs {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 24px;
+    border-bottom: 2px solid #e5e7eb;
+    padding-bottom: 0;
+}
+
+.an-tab-btn {
+    padding: 12px 16px;
+    border: none;
+    background: transparent;
+    color: #6b7280;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    border-bottom: 3px solid transparent;
+    margin-bottom: -2px;
+    transition: all 0.2s ease;
+}
+
+.an-tab-btn:hover {
+    color: #374151;
+}
+
+.an-tab-btn.active {
+    color: #6d28d9;
+    border-bottom-color: #6d28d9;
+}
+
+.an-panel {
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 24px;
+    margin-top: 24px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+}
+
+.an-panel .an-section-title {
+    margin-top: 0 !important;
+}
+
+.an-sem-cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 14px;
+    margin-bottom: 20px;
+}
+
+.table {
+    font-size: 13px;
+    border-collapse: collapse;
+}
+
+.table thead th {
+    background: #f9fafb;
+    border-bottom: 2px solid #e5e7eb;
+    padding: 12px 14px;
+    font-weight: 700;
+    color: #374151;
+    text-align: left;
+}
+
+.table tbody td {
+    padding: 12px 14px;
+    border-bottom: 1px solid #f3f4f6;
+}
+
+.table tbody tr:hover {
+    background: #f9fafb;
+}
+
+.ui-empty-state {
+    text-align: center;
+    padding: 40px 20px;
+    color: #9ca3af;
+    background: #f9fafb;
+    border-radius: 8px;
+    font-size: 13px;
+}
+</style>
+
 <style media="print">
     aside, nav, .sidebar, [class*="sidebar"], header { display: none !important; }
     .an-tabs, .an-filter-row, #an-print-btn          { display: none !important; }
@@ -87,10 +231,13 @@ include __DIR__ . '/../includes/header.php';
                                 <polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>
                             </svg>
                         </div>
-                        <div>
+                        <div style="flex:1;">
                             <div style="font-size:11px;color:var(--muted-text);text-transform:uppercase;letter-spacing:.6px;font-weight:500;margin-bottom:4px;">Total Reports</div>
-                            <div id="an-sum-total" style="font-size:32px;font-weight:700;color:#6d28d9;line-height:1;">—</div>
-                            <div style="font-size:11px;color:var(--muted-text);margin-top:4px;">This semester</div>
+                            <div style="display:flex;align-items:baseline;gap:8px;">
+                                <div id="an-sum-total" style="font-size:32px;font-weight:700;color:#6d28d9;line-height:1;">—</div>
+                                <div id="an-sum-total-pct" style="font-size:11px;font-weight:600;color:#10b981;display:none;">↑ +12%</div>
+                            </div>
+                            <div style="font-size:11px;color:var(--muted-text);margin-top:4px;" id="an-sum-total-label">This semester</div>
                         </div>
                     </div>
 
@@ -101,10 +248,13 @@ include __DIR__ . '/../includes/header.php';
                                 <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
                             </svg>
                         </div>
-                        <div>
+                        <div style="flex:1;">
                             <div style="font-size:11px;color:var(--muted-text);text-transform:uppercase;letter-spacing:.6px;font-weight:500;margin-bottom:4px;">Pending / Open</div>
-                            <div id="an-sum-pending" style="font-size:32px;font-weight:700;color:#d97706;line-height:1;">—</div>
-                            <div style="font-size:11px;color:var(--muted-text);margin-top:4px;">Awaiting action</div>
+                            <div style="display:flex;align-items:baseline;gap:8px;">
+                                <div id="an-sum-pending" style="font-size:32px;font-weight:700;color:#d97706;line-height:1;">—</div>
+                                <div id="an-sum-pending-pct" style="font-size:11px;font-weight:600;color:#dc2626;display:none;">↑ +3%</div>
+                            </div>
+                            <div style="font-size:11px;color:var(--muted-text);margin-top:4px;" id="an-sum-pending-label">Awaiting action</div>
                         </div>
                     </div>
 
@@ -115,10 +265,13 @@ include __DIR__ . '/../includes/header.php';
                                 <path d="M21 12a9 9 0 1 1-6.219-8.56"/><polyline points="21 3 21 9 15 9"/>
                             </svg>
                         </div>
-                        <div>
+                        <div style="flex:1;">
                             <div style="font-size:11px;color:var(--muted-text);text-transform:uppercase;letter-spacing:.6px;font-weight:500;margin-bottom:4px;">In Progress</div>
-                            <div id="an-sum-inprogress" style="font-size:32px;font-weight:700;color:#1d4ed8;line-height:1;">—</div>
-                            <div style="font-size:11px;color:var(--muted-text);margin-top:4px;">Being worked on</div>
+                            <div style="display:flex;align-items:baseline;gap:8px;">
+                                <div id="an-sum-inprogress" style="font-size:32px;font-weight:700;color:#1d4ed8;line-height:1;">—</div>
+                                <div id="an-sum-inprogress-pct" style="font-size:11px;font-weight:600;color:#dc2626;display:none;">↓ -25%</div>
+                            </div>
+                            <div style="font-size:11px;color:var(--muted-text);margin-top:4px;" id="an-sum-inprogress-label">Being worked on</div>
                         </div>
                     </div>
 
@@ -129,10 +282,13 @@ include __DIR__ . '/../includes/header.php';
                                 <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>
                             </svg>
                         </div>
-                        <div>
+                        <div style="flex:1;">
                             <div style="font-size:11px;color:var(--muted-text);text-transform:uppercase;letter-spacing:.6px;font-weight:500;margin-bottom:4px;">Completed</div>
-                            <div id="an-sum-completed" style="font-size:32px;font-weight:700;color:#047857;line-height:1;">—</div>
-                            <div style="font-size:11px;color:var(--muted-text);margin-top:4px;">Resolved</div>
+                            <div style="display:flex;align-items:baseline;gap:8px;">
+                                <div id="an-sum-completed" style="font-size:32px;font-weight:700;color:#047857;line-height:1;">—</div>
+                                <div id="an-sum-completed-pct" style="font-size:11px;font-weight:600;color:#10b981;display:none;">↑ +50%</div>
+                            </div>
+                            <div style="font-size:11px;color:var(--muted-text);margin-top:4px;" id="an-sum-completed-label">Resolved</div>
                         </div>
                     </div>
 
@@ -150,10 +306,13 @@ include __DIR__ . '/../includes/header.php';
                                 <polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/>
                             </svg>
                         </div>
-                        <div>
+                        <div style="flex:1;">
                             <div style="font-size:11px;color:var(--muted-text);text-transform:uppercase;letter-spacing:.6px;font-weight:500;margin-bottom:4px;">Total Items</div>
-                            <div id="an-h-total" style="font-size:32px;font-weight:700;color:#1d4ed8;line-height:1;">—</div>
-                            <div style="font-size:11px;color:var(--muted-text);margin-top:4px;">In inventory</div>
+                            <div style="display:flex;align-items:baseline;gap:8px;">
+                                <div id="an-h-total" style="font-size:32px;font-weight:700;color:#1d4ed8;line-height:1;">—</div>
+                                <div id="an-h-total-pct" style="font-size:11px;font-weight:600;color:#6b7280;display:none;">↑ +0%</div>
+                            </div>
+                            <div style="font-size:11px;color:var(--muted-text);margin-top:4px;" id="an-h-total-label">In inventory</div>
                         </div>
                     </div>
 
@@ -165,10 +324,13 @@ include __DIR__ . '/../includes/header.php';
                                 <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
                             </svg>
                         </div>
-                        <div>
+                        <div style="flex:1;">
                             <div style="font-size:11px;color:var(--muted-text);text-transform:uppercase;letter-spacing:.6px;font-weight:500;margin-bottom:4px;">Low Stock</div>
-                            <div id="an-h-lowstock" style="font-size:32px;font-weight:700;color:#d97706;line-height:1;">—</div>
-                            <div style="font-size:11px;color:var(--muted-text);margin-top:4px;">Need restocking</div>
+                            <div style="display:flex;align-items:baseline;gap:8px;">
+                                <div id="an-h-lowstock" style="font-size:32px;font-weight:700;color:#d97706;line-height:1;">—</div>
+                                <div id="an-h-lowstock-pct" style="font-size:11px;font-weight:600;color:#dc2626;display:none;">↑ +1</div>
+                            </div>
+                            <div style="font-size:11px;color:var(--muted-text);margin-top:4px;" id="an-h-lowstock-label">Need restocking</div>
                         </div>
                     </div>
 
@@ -180,10 +342,13 @@ include __DIR__ . '/../includes/header.php';
                                 <line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/>
                             </svg>
                         </div>
-                        <div>
+                        <div style="flex:1;">
                             <div style="font-size:11px;color:var(--muted-text);text-transform:uppercase;letter-spacing:.6px;font-weight:500;margin-bottom:4px;">Out of Stock</div>
-                            <div id="an-h-outofstock" style="font-size:32px;font-weight:700;color:#dc2626;line-height:1;">—</div>
-                            <div style="font-size:11px;color:var(--muted-text);margin-top:4px;">Depleted items</div>
+                            <div style="display:flex;align-items:baseline;gap:8px;">
+                                <div id="an-h-outofstock" style="font-size:32px;font-weight:700;color:#dc2626;line-height:1;">—</div>
+                                <div id="an-h-outofstock-pct" style="font-size:11px;font-weight:600;color:#dc2626;display:none;">↑ +2</div>
+                            </div>
+                            <div style="font-size:11px;color:var(--muted-text);margin-top:4px;" id="an-h-outofstock-label">Depleted items</div>
                         </div>
                     </div>
 
@@ -195,10 +360,13 @@ include __DIR__ . '/../includes/header.php';
                                 <circle cx="6.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/>
                             </svg>
                         </div>
-                        <div>
+                        <div style="flex:1;">
                             <div style="font-size:11px;color:var(--muted-text);text-transform:uppercase;letter-spacing:.6px;font-weight:500;margin-bottom:4px;">Low Stock %</div>
-                            <div id="an-h-pct" style="font-size:32px;font-weight:700;color:#7c3aed;line-height:1;">—</div>
-                            <div style="font-size:11px;color:var(--muted-text);margin-top:4px;">Stock health</div>
+                            <div style="display:flex;align-items:baseline;gap:8px;">
+                                <div id="an-h-pct" style="font-size:32px;font-weight:700;color:#7c3aed;line-height:1;">—</div>
+                                <div id="an-h-pct-pct" style="font-size:11px;font-weight:600;color:#10b981;display:none;">↑ +8%</div>
+                            </div>
+                            <div style="font-size:11px;color:var(--muted-text);margin-top:4px;" id="an-h-pct-label">Stock health</div>
                         </div>
                     </div>
 
@@ -641,23 +809,43 @@ include __DIR__ . '/../includes/header.php';
     flex-wrap: wrap;
     align-items: center;
     gap: 8px 32px;
-    background: var(--muted-card);
-    border: 1px solid var(--border);
+    background: linear-gradient(135deg, rgba(109,40,217,0.04) 0%, transparent 100%);
+    border: 1px solid rgba(109,40,217,0.15);
     border-radius: 12px;
-    padding: 14px 18px;
-    margin-bottom: 20px;
+    padding: 20px 24px;
+    margin-bottom: 28px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.02);
 }
-#an-tab3 .an-sem-period-item { display: flex; flex-direction: column; gap: 2px; }
+#an-tab3 .an-sem-period-item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding-right: 16px;
+    border-right: 1px solid rgba(0,0,0,0.08);
+}
+#an-tab3 .an-sem-period-item:last-child { border-right: none; }
 #an-tab3 .an-sem-period-label {
-    font-size: 10.5px;
-    font-weight: 600;
+    font-size: 10px;
+    font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: .06em;
-    color: var(--muted-text);
+    letter-spacing: .08em;
+    color: #6b7280;
 }
-#an-tab3 .an-sem-period-value { font-size: 13px; font-weight: 500; color: var(--text-light); }
+#an-tab3 .an-sem-period-value {
+    font-size: 14px;
+    font-weight: 600;
+    color: #111827;
+}
 
-#an-tab3 .an-sem-section-title { font-size: 14px; font-weight: 500; margin: 0 0 10px; }
+#an-tab3 .an-sem-section-title {
+    font-size: 15px;
+    font-weight: 700;
+    margin: 24px 0 16px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 2px solid rgba(109,40,217,0.1);
+    padding-bottom: 10px;
+}
 
 /* TASK 13 PHASE 8 (Repair retirement) — this grid was repeat(4, 1fr) for
    the four semester metric cards. AnalyticsService::semesterDetail() no
@@ -678,16 +866,29 @@ include __DIR__ . '/../includes/header.php';
    arrow, and Year Total are unchanged. */
 #an-tab3 .an-sem-card {
     border-radius: 12px;
-    padding: 1.25rem 1.1rem;
+    padding: 20px;
     border: 1px solid var(--border);
     border-top: 3px solid var(--border);
     background: var(--card-color);
-    transition: box-shadow 0.15s ease, transform 0.15s ease;
+    transition: box-shadow 0.2s ease, transform 0.2s ease;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
 }
-#an-tab3 .an-sem-card:hover { box-shadow: 0 10px 24px rgba(15, 23, 42, 0.10); transform: translateY(-1px); }
-#an-tab3 .an-sem-card--maintenance { border-top-color: #8b5cf6; }
-#an-tab3 .an-sem-card--dispatches  { border-top-color: #185FA5; }
-#an-tab3 .an-sem-card--damage      { border-top-color: #d97706; }
+#an-tab3 .an-sem-card:hover {
+    box-shadow: 0 8px 20px rgba(15, 23, 42, 0.12);
+    transform: translateY(-3px);
+}
+#an-tab3 .an-sem-card--maintenance {
+    border-top-color: #8b5cf6;
+    background: linear-gradient(135deg, rgba(139,92,246,0.03) 0%, transparent 100%);
+}
+#an-tab3 .an-sem-card--dispatches {
+    border-top-color: #185FA5;
+    background: linear-gradient(135deg, rgba(24,95,165,0.03) 0%, transparent 100%);
+}
+#an-tab3 .an-sem-card--damage {
+    border-top-color: #d97706;
+    background: linear-gradient(135deg, rgba(217,119,6,0.03) 0%, transparent 100%);
+}
 /* TASK 13 PHASE 8 — the .an-sem-card--repairs accent rule was removed here
    (and its matching icon-background rule below). The three surviving
    modifiers are untouched. */
@@ -706,25 +907,26 @@ include __DIR__ . '/../includes/header.php';
 #an-tab3 .an-sem-card--damage      .an-sem-card-icon { background: rgba(217, 119, 6, 0.14); }
 
 #an-tab3 .an-sem-card-label {
-    font-size: 11px;
-    color: var(--muted-text);
+    font-size: 10px;
+    color: #6b7280;
     text-transform: uppercase;
-    letter-spacing: .6px;
-    font-weight: 500;
-    margin-bottom: 12px;
+    letter-spacing: .08em;
+    font-weight: 700;
+    margin-bottom: 14px;
 }
 #an-tab3 .an-sem-card-body {
     display: flex;
     justify-content: space-around;
     align-items: center;
-    margin-bottom: 10px;
+    margin-bottom: 12px;
 }
 #an-tab3 .an-sem-card-foot {
     text-align: center;
     font-size: 12px;
-    color: var(--muted-text);
-    border-top: 1px solid var(--border);
-    padding-top: 8px;
+    color: #6b7280;
+    border-top: 1px solid rgba(0,0,0,0.08);
+    padding-top: 10px;
+    font-weight: 500;
 }
 
 #an-tab3 .an-sem-panel {
@@ -770,6 +972,9 @@ const AN_API = window.SFMS_PUBLIC_URL
 
 const anLoadedTabs = new Set();
 
+// Cache for dashboard overview data (loaded once, reused for summary/health/items)
+let anDashboardOverviewCache = null;
+
 // Chart instances — destroyed and recreated on each data reload
 let anChartDamaged  = null;
 let anChartSemester = null;
@@ -811,6 +1016,27 @@ function anStockBadge(qty, threshold) {
 // ---------------------------------------------------------------------------
 // Tab switching (lazy-loads each tab on first activation)
 // ---------------------------------------------------------------------------
+// Load all dashboard overview data once (cached)
+// ---------------------------------------------------------------------------
+
+async function anLoadDashboardOverview() {
+    if (anDashboardOverviewCache) return anDashboardOverviewCache;
+
+    try {
+        const { response, data: payload } = await anFetch(
+            `${AN_API}/dashboard-overview`,
+            { credentials: 'same-origin', headers: { 'Accept': 'application/json' } }
+        );
+        if (!response.ok || !payload.success) throw new Error(payload.message || 'Failed');
+        anDashboardOverviewCache = payload.data || {};
+        return anDashboardOverviewCache;
+    } catch (err) {
+        console.error('Failed to load dashboard overview:', err);
+        return null;
+    }
+}
+
+// ---------------------------------------------------------------------------
 
 function anSwitchTab(tabId) {
     document.querySelectorAll('.an-tab-content').forEach((el) => { el.style.display = 'none'; });
@@ -837,53 +1063,92 @@ function anSwitchTab(tabId) {
 
 async function anLoadHealth() {
     try {
-        const { response, data: payload } = await anFetch(
-            `${AN_API}/inventory-health`,
-            { credentials: 'same-origin', headers: { 'Accept': 'application/json' } }
-        );
-        if (!response.ok || !payload.success) throw new Error(payload.message || 'Failed');
-        const d = payload.data;
-        document.getElementById('an-h-total').textContent      = d.total_items        ?? '—';
-        document.getElementById('an-h-lowstock').textContent   = d.low_stock_count    ?? '—';
-        document.getElementById('an-h-outofstock').textContent = d.out_of_stock_count ?? '—';
+        const data = await anLoadDashboardOverview();
+        if (!data) throw new Error('Failed to load dashboard overview');
+        const inv = data.inventory || {};
+
+        document.getElementById('an-h-total').textContent      = inv.total_items        ?? '—';
+        document.getElementById('an-h-lowstock').textContent   = inv.low_stock         ?? '—';
+        document.getElementById('an-h-outofstock').textContent = inv.out_of_stock      ?? '—';
         document.getElementById('an-h-pct').textContent =
-            (d.low_stock_percent != null) ? d.low_stock_percent + '%' : '—';
+            (inv.low_stock_percentage != null) ? inv.low_stock_percentage + '%' : '—';
+
+        // Show comparison data from API
+        const formatComparison = (comp) => {
+            if (!comp || comp.value === undefined) return '—';
+            return (comp.arrow || '') + ' ' + (comp.value || '');
+        };
+
+        const totalPctEl = document.getElementById('an-h-total-pct');
+        const lowstockPctEl = document.getElementById('an-h-lowstock-pct');
+        const outofstockPctEl = document.getElementById('an-h-outofstock-pct');
+        const pctPctEl = document.getElementById('an-h-pct-pct');
+
+        if (totalPctEl) {
+            totalPctEl.style.display = 'block';
+            totalPctEl.textContent = formatComparison(inv.total_items_comparison);
+        }
+        if (lowstockPctEl) {
+            lowstockPctEl.style.display = 'block';
+            lowstockPctEl.textContent = formatComparison(inv.low_stock_comparison);
+        }
+        if (outofstockPctEl) {
+            outofstockPctEl.style.display = 'block';
+            outofstockPctEl.textContent = formatComparison(inv.out_of_stock_comparison);
+        }
+        if (pctPctEl) {
+            pctPctEl.style.display = 'block';
+            pctPctEl.textContent = formatComparison(inv.low_stock_percentage_comparison);
+        }
+
+        // Update subtitle to show "vs. last semester"
+        const totalLblEl = document.getElementById('an-h-total-label');
+        const lowstockLblEl = document.getElementById('an-h-lowstock-label');
+        const outofstockLblEl = document.getElementById('an-h-outofstock-label');
+        const pctLblEl = document.getElementById('an-h-pct-label');
+
+        if (totalLblEl) totalLblEl.textContent = 'vs. last semester';
+        if (lowstockLblEl) lowstockLblEl.textContent = 'vs. last semester';
+        if (outofstockLblEl) outofstockLblEl.textContent = 'vs. last semester';
+        if (pctLblEl) pctLblEl.textContent = 'vs. last semester';
+
+        // Populate Items Needing Attention table with the data we just received
+        anRenderItemsNeedingAttention(data.items_needing_attention);
     } catch (_) {
         // Cards stay as '—' — non-fatal; low-stock table will show its own error
     }
 }
 
-async function anLoadLowStock() {
+function anRenderItemsNeedingAttention(items) {
     const container = document.getElementById('an-lowstock-container');
-    try {
-        const { response, data: payload } = await anFetch(
-            `${AN_API}/low-stock`,
-            { credentials: 'same-origin', headers: { 'Accept': 'application/json' } }
-        );
-        if (!response.ok || !payload.success) throw new Error(payload.message || 'Failed');
-        const items = Array.isArray(payload.data?.items) ? payload.data.items : [];
+    if (!container) return;
 
-        if (items.length === 0) {
-            container.innerHTML = '<div class="ui-empty-state"><strong>No low-stock items.</strong><span>All items are at healthy stock levels.</span></div>';
-            return;
-        }
+    items = Array.isArray(items) ? items : [];
 
-        let html = '<table class="table"><thead><tr>'
-            + '<th>Item Name</th><th>Quantity</th><th>Threshold</th><th>Status</th>'
-            + '</tr></thead><tbody>';
-        items.forEach((item) => {
-            html += '<tr>';
-            html += `<td><strong>${anEsc(item.name)}</strong></td>`;
-            html += `<td>${anEsc(item.quantity)}</td>`;
-            html += `<td>${anEsc(item.threshold)}</td>`;
-            html += `<td>${anStockBadge(item.quantity, item.threshold)}</td>`;
-            html += '</tr>';
-        });
-        html += '</tbody></table>';
-        container.innerHTML = html;
-    } catch (err) {
-        container.innerHTML = '<div class="ui-empty-state"><strong>Failed to load low-stock data.</strong></div>';
+    if (items.length === 0) {
+        container.innerHTML = '<div class="ui-empty-state"><strong>No items needing attention.</strong><span>All items are at healthy stock levels.</span></div>';
+        return;
     }
+
+    let html = '<table class="table"><thead><tr>'
+        + '<th>Item Name</th><th>Quantity</th><th>Threshold</th><th>Status</th>'
+        + '</tr></thead><tbody>';
+    items.forEach((item) => {
+        html += '<tr>';
+        html += `<td><strong>${anEsc(item.name)}</strong></td>`;
+        html += `<td>${anEsc(item.quantity)}</td>`;
+        html += `<td>${anEsc(item.threshold)}</td>`;
+        html += `<td>${anStockBadge(item.quantity, item.threshold)}</td>`;
+        html += '</tr>';
+    });
+    html += '</tbody></table>';
+    container.innerHTML = html;
+}
+
+async function anLoadLowStock() {
+    // This function is now replaced by anRenderItemsNeedingAttention which is
+    // called from anLoadHealth() after fetching dashboard-overview data.
+    // Keeping this as a no-op for backward compatibility.
 }
 
 // Key Analytics Summary — reuses the existing, unrestricted
@@ -894,20 +1159,53 @@ async function anLoadLowStock() {
 async function anLoadSummary() {
     const noteEl = document.getElementById('an-sum-note');
     try {
-        const url = window.SFMS_PUBLIC_URL
-            ? window.SFMS_PUBLIC_URL('/api/dashboard/stats')
-            : '/api/dashboard/stats';
-        const { response, data: payload } = await anFetch(
-            url,
-            { credentials: 'same-origin', headers: { 'Accept': 'application/json' } }
-        );
-        if (!response.ok || !payload.success) throw new Error(payload.message || 'Failed');
-        const d = payload.data;
+        const data = await anLoadDashboardOverview();
+        if (!data) throw new Error('Failed to load dashboard overview');
+        const d = data.summary || {};
 
         document.getElementById('an-sum-total').textContent      = d.total_reports ?? '—';
         document.getElementById('an-sum-pending').textContent    = d.pending       ?? '—';
         document.getElementById('an-sum-inprogress').textContent = d.in_progress   ?? '—';
         document.getElementById('an-sum-completed').textContent  = d.completed     ?? '—';
+
+        // Show comparison data from API
+        const formatComparison = (comp) => {
+            if (!comp || comp.value === undefined) return '—';
+            return (comp.arrow || '') + ' ' + (comp.value || '');
+        };
+
+        const totalPctEl = document.getElementById('an-sum-total-pct');
+        const pendingPctEl = document.getElementById('an-sum-pending-pct');
+        const inprogressPctEl = document.getElementById('an-sum-inprogress-pct');
+        const completedPctEl = document.getElementById('an-sum-completed-pct');
+
+        if (totalPctEl) {
+            totalPctEl.style.display = 'block';
+            totalPctEl.textContent = formatComparison(d.total_reports_comparison);
+        }
+        if (pendingPctEl) {
+            pendingPctEl.style.display = 'block';
+            pendingPctEl.textContent = formatComparison(d.pending_comparison);
+        }
+        if (inprogressPctEl) {
+            inprogressPctEl.style.display = 'block';
+            inprogressPctEl.textContent = formatComparison(d.in_progress_comparison);
+        }
+        if (completedPctEl) {
+            completedPctEl.style.display = 'block';
+            completedPctEl.textContent = formatComparison(d.completed_comparison);
+        }
+
+        // Update subtitle to show "vs. last semester"
+        const totalLblEl = document.getElementById('an-sum-total-label');
+        const pendingLblEl = document.getElementById('an-sum-pending-label');
+        const inprogressLblEl = document.getElementById('an-sum-inprogress-label');
+        const completedLblEl = document.getElementById('an-sum-completed-label');
+
+        if (totalLblEl) totalLblEl.textContent = 'vs. last semester';
+        if (pendingLblEl) pendingLblEl.textContent = 'vs. last semester';
+        if (inprogressLblEl) inprogressLblEl.textContent = 'vs. last semester';
+        if (completedLblEl) completedLblEl.textContent = 'vs. last semester';
 
         if (noteEl) {
             noteEl.textContent = d.semester_active
