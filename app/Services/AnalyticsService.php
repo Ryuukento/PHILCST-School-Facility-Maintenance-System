@@ -1002,20 +1002,11 @@ class AnalyticsService
 
     /**
      * Get distribution of reports by category/problem type.
+     * Shows all reports for the semester in the analytics dashboard.
      */
     private function getReportsByCategory(?string $semesterStartDate, ?string $semesterEndDate = null): array
     {
         $query = DB::table('maintenance_reports')
-            ->where(function ($q) {
-                $user = auth()->user();
-                if ($user && !in_array($user->role, ['super_admin', 'maintenance_admin'])) {
-                    $userId = $user->user_id;
-                    $q->where(function ($innerQ) use ($userId) {
-                        $innerQ->where('created_by', $userId)
-                            ->orWhere('assigned_to', $userId);
-                    });
-                }
-            })
             ->whereNotNull('problem_type');
 
         if ($semesterStartDate) {
