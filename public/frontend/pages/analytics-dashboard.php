@@ -520,6 +520,10 @@ div[id*="-legend"]:not(#chart-reports-status-legend) strong {
                         <div style="display:grid;grid-template-columns:1fr 180px;gap:20px;align-items:center;">
                             <div style="height:280px;position:relative;display:flex;align-items:center;justify-content:center;">
                                 <canvas id="chart-reports-status" style="width:100%;height:100%;"></canvas>
+                                <div id="chart-reports-status-center" style="position:absolute;text-align:center;pointer-events:none;">
+                                    <div style="font-size:36px;font-weight:700;color:#1f2937;line-height:1;margin-bottom:4px;" id="chart-reports-status-total">9</div>
+                                    <div style="font-size:12px;color:#6b7280;font-weight:500;">Total Reports</div>
+                                </div>
                             </div>
                             <div id="chart-reports-status-legend" style="font-size:12px;color:#6b7280;display:flex;flex-direction:column;gap:10px;"></div>
                         </div>
@@ -547,6 +551,10 @@ div[id*="-legend"]:not(#chart-reports-status-legend) strong {
                         <h3 style="font-size:13px;font-weight:700;color:#374151;margin:0 0 16px;text-transform:uppercase;letter-spacing:0.5px;">Inventory Status</h3>
                         <div style="height:300px;position:relative;margin-bottom:12px;">
                             <canvas id="chart-inventory-status" style="width:100%;height:100%;"></canvas>
+                            <div id="chart-inventory-status-center" style="position:absolute;text-align:center;top:50%;left:50%;transform:translate(-50%,-50%);pointer-events:none;">
+                                <div style="font-size:36px;font-weight:700;color:#1f2937;line-height:1;margin-bottom:4px;" id="chart-inventory-status-total">5</div>
+                                <div style="font-size:12px;color:#6b7280;font-weight:500;">Total Items</div>
+                            </div>
                         </div>
                         <div id="chart-inventory-status-legend" style="font-size:12px;color:#6b7280;"></div>
                     </div>
@@ -1469,30 +1477,11 @@ function anRenderReportsByStatusChart(data) {
 
     const colors = ['#d97706', '#3b82f6', '#10b981', '#8b5cf6', '#ef4444'];
 
-    // Plugin to draw center text in doughnut
-    const centerTextPlugin = {
-        id: 'centerText',
-        afterDatasetsDraw(chart) {
-            const { ctx, data, chartArea: { left, top, width, height } } = chart;
-
-            if (!width || !height) return;
-
-            const centerX = left + width / 2;
-            const centerY = top + height / 2;
-
-            ctx.save();
-            ctx.font = 'bold 32px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif';
-            ctx.fillStyle = '#1f2937';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillText(total, centerX, centerY - 10);
-
-            ctx.font = '13px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif';
-            ctx.fillStyle = '#6b7280';
-            ctx.fillText('Total Reports', centerX, centerY + 18);
-            ctx.restore();
-        }
-    };
+    // Update center text with total count
+    const totalEl = document.getElementById('chart-reports-status-total');
+    if (totalEl) {
+        totalEl.textContent = total;
+    }
 
     anChartReportsStatus = new Chart(canvas, {
         type: 'doughnut',
@@ -1520,8 +1509,7 @@ function anRenderReportsByStatusChart(data) {
                     }
                 }
             }
-        },
-        plugins: [centerTextPlugin]
+        }
     });
 
     // Render legend manually (vertical, right-aligned)
@@ -1634,30 +1622,11 @@ function anRenderInventoryStatusChart(data) {
 
     const colors = ['#10b981', '#f59e0b', '#dc2626'];
 
-    // Plugin to draw center text in doughnut
-    const centerTextPlugin = {
-        id: 'centerText',
-        afterDatasetsDraw(chart) {
-            const { ctx, data, chartArea: { left, top, width, height } } = chart;
-
-            if (!width || !height) return;
-
-            const centerX = left + width / 2;
-            const centerY = top + height / 2;
-
-            ctx.save();
-            ctx.font = 'bold 32px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif';
-            ctx.fillStyle = '#1f2937';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillText(total, centerX, centerY - 10);
-
-            ctx.font = '13px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif';
-            ctx.fillStyle = '#6b7280';
-            ctx.fillText('Total Items', centerX, centerY + 18);
-            ctx.restore();
-        }
-    };
+    // Update center text with total count
+    const totalEl = document.getElementById('chart-inventory-status-total');
+    if (totalEl) {
+        totalEl.textContent = total;
+    }
 
     anChartInventoryStatus = new Chart(canvas, {
         type: 'doughnut',
@@ -1685,8 +1654,7 @@ function anRenderInventoryStatusChart(data) {
                     }
                 }
             }
-        },
-        plugins: [centerTextPlugin]
+        }
     });
 
     // Render legend manually
