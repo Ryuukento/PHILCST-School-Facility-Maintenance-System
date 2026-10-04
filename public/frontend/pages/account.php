@@ -76,6 +76,42 @@ include __DIR__ . '/../includes/header.php';
                                         <span class="settings-help-text">Upload JPG, PNG, WEBP, or GIF (max 3MB)</span>
                                     </div>
                                 </div>
+
+                                <!-- Email Verification Section -->
+                                <div class="settings-form-group settings-span-2" style="border-top: 1px solid #e2e8f0; padding-top: 24px; margin-top: 24px;">
+                                    <label class="settings-label" style="display: flex; align-items: center; gap: 8px;">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 18px; height: 18px;"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M2 6l10 7 10-7"/></svg>
+                                        Email Address
+                                    </label>
+                                    <div id="email-display" style="margin-bottom: 16px;">
+                                        <p style="font-size: 13px; color: #64748b; margin: 0;">
+                                            Verified Email: <strong id="verified-email-display" style="color: #1e293b;">Not set</strong>
+                                        </p>
+                                    </div>
+
+                                    <!-- Email Input and Send OTP Button -->
+                                    <div id="email-form" style="display: flex; gap: 8px; margin-bottom: 16px;">
+                                        <input type="email" id="new-email" class="form-control settings-input" placeholder="Enter your email address" style="flex: 1;">
+                                        <button type="button" id="send-otp-btn" class="btn btn-secondary" style="white-space: nowrap;">Send Code</button>
+                                    </div>
+
+                                    <!-- OTP Verification Form (Hidden initially) -->
+                                    <div id="otp-form" style="display: none; background: #f8fafc; padding: 16px; border-radius: 8px; border: 1px solid #e2e8f0;">
+                                        <p style="font-size: 13px; color: #64748b; margin: 0 0 12px 0;">Enter the 6-digit code sent to <strong id="otp-email-display"></strong></p>
+                                        <div style="display: flex; gap: 8px; margin-bottom: 12px;">
+                                            <input type="text" id="otp-code" class="form-control settings-input" placeholder="000000" maxlength="6" inputmode="numeric" style="flex: 1; letter-spacing: 4px; font-size: 18px; text-align: center;">
+                                            <button type="button" id="verify-otp-btn" class="btn btn-primary">Verify</button>
+                                        </div>
+                                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                                            <p id="otp-timer" style="font-size: 12px; color: #64748b; margin: 0;"></p>
+                                            <button type="button" id="resend-otp-btn" class="btn btn-link" style="font-size: 12px; padding: 0; display: none;">Resend Code</button>
+                                            <button type="button" id="cancel-otp-btn" class="btn btn-link" style="font-size: 12px; padding: 0; color: #ef4444;">Cancel</button>
+                                        </div>
+                                    </div>
+
+                                    <!-- Status Messages -->
+                                    <div id="email-status" class="alert" style="display: none; margin-top: 12px;"></div>
+                                </div>
                             </div>
 
                             <button type="submit" class="btn btn-primary settings-primary-btn">Save Changes</button>
@@ -325,6 +361,283 @@ if (<?php echo $forceProfileUpdate ? 'true' : 'false'; ?>) {
         }
     });
 }
+
+// ═════════════════════════════════════════════════════════════════════════════
+// Email Verification Flow
+// ═════════════════════════════════════════════════════════════════════════════
+
+let otpTimer = null;
+let otpExpiresAt = null;
+
+const emailForm = document.getElementById('email-form');
+const otpForm = document.getElementById('otp-form');
+const sendOtpBtn = document.getElementById('send-otp-btn');
+const verifyOtpBtn = document.getElementById('verify-otp-btn');
+const resendOtpBtn = document.getElementById('resend-otp-btn');
+const cancelOtpBtn = document.getElementById('cancel-otp-btn');
+const newEmailInput = document.getElementById('new-email');
+const otpCodeInput = document.getElementById('otp-code');
+const emailStatusDiv = document.getElementById('email-status');
+const otpTimerDiv = document.getElementById('otp-timer');
+const otpEmailDisplay = document.getElementById('otp-email-display');
+const verifiedEmailDisplay = document.getElementById('verified-email-display');
+
+// Load current verified email on page load
+async function loadVerifiedEmail() {
+    try {
+        const response = await fetch(window.SFMS_PUBLIC_URL('/api/users/profile'), {
+            method: 'GET',
+            credentials: 'include'
+        });
+        if (response.ok) {
+            const data = await response.json();
+            if (data.data?.verified_email) {
+                verifiedEmailDisplay.textContent = data.data.verified_email;
+            }
+        }
+    } catch (err) {
+        console.error('Failed to load verified email:', err);
+    }
+}
+
+// Show status message
+function showEmailStatus(message, isError = false) {
+    emailStatusDiv.textContent = message;
+    emailStatusDiv.className = 'alert ' + (isError ? 'alert-error' : 'alert-success');
+    emailStatusDiv.style.display = 'block';
+}
+
+// Hide status message
+function hideEmailStatus() {
+    emailStatusDiv.style.display = 'none';
+}
+
+// Start OTP timer countdown
+function startOtpTimer(expiresAt) {
+    otpExpiresAt = expiresAt;
+    clearInterval(otpTimer);
+
+    function updateTimer() {
+        const now = Date.now();
+        const remaining = Math.max(0, expiresAt - now);
+        const minutes = Math.floor(remaining / 60000);
+        const seconds = Math.floor((remaining % 60000) / 1000);
+
+        if (remaining <= 0) {
+            otpTimerDiv.textContent = 'Code expired';
+            resendOtpBtn.style.display = 'block';
+            verifyOtpBtn.disabled = true;
+            clearInterval(otpTimer);
+        } else {
+            otpTimerDiv.textContent = `Expires in ${minutes}:${seconds.toString().padStart(2, '0')}`;
+            verifyOtpBtn.disabled = false;
+        }
+    }
+
+    updateTimer();
+    otpTimer = setInterval(updateTimer, 1000);
+}
+
+// Send OTP
+sendOtpBtn.addEventListener('click', async () => {
+    const email = newEmailInput.value.trim();
+
+    if (!email) {
+        showEmailStatus('Please enter an email address', true);
+        return;
+    }
+
+    if (!email.includes('@')) {
+        showEmailStatus('Please enter a valid email address', true);
+        return;
+    }
+
+    sendOtpBtn.disabled = true;
+    sendOtpBtn.textContent = 'Sending...';
+
+    try {
+        const response = await fetch(window.SFMS_PUBLIC_URL('/api/email-verification/initiate'), {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ email })
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+            hideEmailStatus();
+            emailForm.style.display = 'none';
+            otpForm.style.display = 'block';
+            otpEmailDisplay.textContent = email;
+            otpCodeInput.focus();
+
+            // DEVELOPMENT MODE: If OTP is in response, show it to user for testing
+            if (data.data?.otp) {
+                const testOtpDiv = document.createElement('div');
+                testOtpDiv.style.cssText = 'background: #fef3c7; border: 1px solid #fcd34d; padding: 12px; border-radius: 6px; margin-bottom: 12px;';
+                testOtpDiv.innerHTML = `
+                    <p style="margin: 0 0 8px 0; font-size: 12px; font-weight: 600; color: #92400e;">
+                        🔧 TESTING MODE - OTP Code:
+                    </p>
+                    <div style="display: flex; gap: 8px; align-items: center;">
+                        <code style="background: #fff; padding: 8px 12px; border-radius: 4px; font-size: 16px; font-weight: bold; letter-spacing: 2px; flex: 1; text-align: center;">
+                            ${data.data.otp}
+                        </code>
+                        <button type="button" onclick="navigator.clipboard.writeText('${data.data.otp}'); alert('Copied!');" style="padding: 8px 12px; background: #fcd34d; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: 600;">
+                            Copy
+                        </button>
+                    </div>
+                    <p style="margin: 8px 0 0 0; font-size: 11px; color: #92400e;">
+                        Copy the code above and paste it in the field below.
+                    </p>
+                `;
+                otpForm.insertBefore(testOtpDiv, otpForm.firstChild);
+            }
+
+            // Start timer: 5 minutes
+            const expiresAt = Date.now() + (5 * 60 * 1000);
+            startOtpTimer(expiresAt);
+        } else {
+            showEmailStatus(data.message || 'Failed to send OTP', true);
+        }
+    } catch (err) {
+        console.error('OTP send error:', err);
+        showEmailStatus('Failed to send OTP. Please try again.', true);
+    } finally {
+        sendOtpBtn.disabled = false;
+        sendOtpBtn.textContent = 'Send Code';
+    }
+});
+
+// Verify OTP
+verifyOtpBtn.addEventListener('click', async () => {
+    const email = newEmailInput.value.trim();
+    const otp = otpCodeInput.value.trim();
+
+    if (!otp || otp.length !== 6) {
+        showEmailStatus('Please enter a 6-digit code', true);
+        return;
+    }
+
+    verifyOtpBtn.disabled = true;
+    verifyOtpBtn.textContent = 'Verifying...';
+
+    try {
+        const response = await fetch(window.SFMS_PUBLIC_URL('/api/email-verification/verify-otp'), {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ email, otp })
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+            hideEmailStatus();
+            otpForm.style.display = 'none';
+            emailForm.style.display = 'flex';
+            newEmailInput.value = '';
+            otpCodeInput.value = '';
+            verifiedEmailDisplay.textContent = email;
+
+            showSettingsToast('Email verified successfully!', 'success');
+            clearInterval(otpTimer);
+        } else {
+            showEmailStatus(data.message || 'Verification failed', true);
+        }
+    } catch (err) {
+        console.error('OTP verification error:', err);
+        showEmailStatus('Verification failed. Please try again.', true);
+    } finally {
+        verifyOtpBtn.disabled = false;
+        verifyOtpBtn.textContent = 'Verify';
+    }
+});
+
+// Resend OTP
+resendOtpBtn.addEventListener('click', async () => {
+    const email = newEmailInput.value.trim();
+
+    resendOtpBtn.disabled = true;
+    resendOtpBtn.textContent = 'Resending...';
+
+    try {
+        const response = await fetch(window.SFMS_PUBLIC_URL('/api/email-verification/resend-otp'), {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ email })
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+            otpCodeInput.value = '';
+            otpCodeInput.focus();
+            resendOtpBtn.style.display = 'none';
+
+            // DEVELOPMENT MODE: If OTP is in response, show it to user for testing
+            if (data.data?.otp) {
+                const existingTestDiv = otpForm.querySelector('div[style*="fef3c7"]');
+                if (existingTestDiv) {
+                    existingTestDiv.remove();
+                }
+
+                const testOtpDiv = document.createElement('div');
+                testOtpDiv.style.cssText = 'background: #fef3c7; border: 1px solid #fcd34d; padding: 12px; border-radius: 6px; margin-bottom: 12px;';
+                testOtpDiv.innerHTML = `
+                    <p style="margin: 0 0 8px 0; font-size: 12px; font-weight: 600; color: #92400e;">
+                        🔧 TESTING MODE - New OTP Code:
+                    </p>
+                    <div style="display: flex; gap: 8px; align-items: center;">
+                        <code style="background: #fff; padding: 8px 12px; border-radius: 4px; font-size: 16px; font-weight: bold; letter-spacing: 2px; flex: 1; text-align: center;">
+                            ${data.data.otp}
+                        </code>
+                        <button type="button" onclick="navigator.clipboard.writeText('${data.data.otp}'); alert('Copied!');" style="padding: 8px 12px; background: #fcd34d; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: 600;">
+                            Copy
+                        </button>
+                    </div>
+                `;
+                otpForm.insertBefore(testOtpDiv, otpForm.firstChild);
+            }
+
+            const expiresAt = Date.now() + (5 * 60 * 1000);
+            startOtpTimer(expiresAt);
+
+            showSettingsToast('New OTP sent', 'success');
+        } else {
+            showEmailStatus(data.message || 'Failed to resend OTP', true);
+        }
+    } catch (err) {
+        console.error('Resend OTP error:', err);
+        showEmailStatus('Failed to resend OTP. Please try again.', true);
+    } finally {
+        resendOtpBtn.disabled = false;
+        resendOtpBtn.textContent = 'Resend Code';
+    }
+});
+
+// Cancel OTP verification
+cancelOtpBtn.addEventListener('click', () => {
+    otpForm.style.display = 'none';
+    emailForm.style.display = 'flex';
+    newEmailInput.value = '';
+    otpCodeInput.value = '';
+    hideEmailStatus();
+    clearInterval(otpTimer);
+    newEmailInput.focus();
+});
+
+// Allow Enter key to submit OTP
+otpCodeInput.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+        verifyOtpBtn.click();
+    }
+});
+
+// Load verified email on page load
+document.addEventListener('DOMContentLoaded', loadVerifiedEmail);
 </script>
 
 <?php include __DIR__ . '/../includes/footer.php'; ?>

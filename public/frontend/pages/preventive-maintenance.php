@@ -33,10 +33,10 @@ $_pmUserId = (int)($_pmUser['user_id'] ?? 0);
 // 2026-09-27: Preventive Maintenance is performed by Head Maintenance and
 // Staff. The Administrator (super_admin) is view/monitor only; Head
 // Maintenance owns the plan and is the one who assigns tasks to staff.
-$_pmCanCreate = $_pmRole === 'maintenance_admin';
-$_pmCanArchive = $_pmRole === 'maintenance_admin';
-$_pmCanAssign = $_pmRole === 'maintenance_admin';
-$_pmIsViewOnly = $_pmRole === 'super_admin';
+$_pmCanCreate = $_pmRole === 'maintenance_admin' || $_pmRole === 'super_admin';
+$_pmCanArchive = $_pmRole === 'maintenance_admin' || $_pmRole === 'super_admin';
+$_pmCanAssign = $_pmRole === 'maintenance_admin' || $_pmRole === 'super_admin';
+$_pmIsViewOnly = false;
 
 $pageTitle = 'Preventive Maintenance - SFMS';
 include __DIR__ . '/../includes/header.php';
@@ -63,10 +63,6 @@ include __DIR__ . '/../includes/header.php';
     </div>
 
     <?php if ($_pmIsViewOnly): ?>
-    <div class="pm-role-note" role="note">
-        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg>
-        <div><strong>Monitoring view.</strong> Preventive maintenance is carried out by Head Maintenance and Maintenance Staff. You can review the schedule, progress, inspection results, and history.</div>
-    </div>
     <?php elseif ($_pmRole === 'maintenance_staff'): ?>
     <div class="pm-role-note" role="note">
         <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>

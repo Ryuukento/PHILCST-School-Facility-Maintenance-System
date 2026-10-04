@@ -327,18 +327,10 @@ div[id*="-legend"]:not(#chart-reports-status-legend) strong {
                  Active/inactive state is applied via the .active class in JS
                  (anSwitchTab()) rather than inline styles; see the CSS block
                  below (#an-analytics-card .an-tab-btn) for the visual spec. -->
-            <div class="an-tabs">
+            <div class="an-tabs" style="display:none;">
                 <button type="button" class="an-tab-btn active" data-tab="an-tab1">
                     Overview
                 </button>
-                <button type="button" class="an-tab-btn" data-tab="an-tab2">
-                    Damage Analytics
-                </button>
-                <button type="button" class="an-tab-btn" data-tab="an-tab3">
-                    Semester Comparison
-                </button>
-                <button type="button" class="an-tab-btn" data-tab="an-tab4">
-                    <?php /* TASK 13 PHASE 8 — was "Dispatch & Repair". The
                              Repair Report table this tab also carried was
                              removed with the retired /api/analytics/repair-report
                              endpoint; the tab itself stays because its Dispatch
@@ -349,164 +341,6 @@ div[id*="-legend"]:not(#chart-reports-status-legend) strong {
 
             <!-- ─── TAB 1: Overview ──────────────────────────────────────── -->
             <div id="an-tab1" class="an-tab-content">
-
-                <!-- Key Analytics Summary — reuses /api/dashboard/stats (the
-                     same unrestricted endpoint the main Dashboard reads; see
-                     anLoadSummary()). No new query/endpoint. total_reports/
-                     pending/in_progress/completed come back null when no
-                     semester is active — shown as "—" plus the note below
-                     rather than guessed at. -->
-                <p class="an-section-title">Key Analytics Summary</p>
-                <div class="an-metric-grid">
-
-                    <!-- Total Reports — purple -->
-                    <div class="an-metric-card" style="border:1px solid rgba(109,40,217,0.2);background:linear-gradient(135deg,rgba(109,40,217,0.06) 0%,transparent 60%);">
-                        <div style="width:48px;height:48px;border-radius:12px;background:rgba(109,40,217,0.12);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#6d28d9" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                                <polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>
-                            </svg>
-                        </div>
-                        <div style="flex:1;">
-                            <div style="font-size:11px;color:var(--muted-text);text-transform:uppercase;letter-spacing:.6px;font-weight:500;margin-bottom:4px;">Total Reports</div>
-                            <div style="display:flex;align-items:baseline;gap:8px;">
-                                <div id="an-sum-total" style="font-size:32px;font-weight:700;color:#6d28d9;line-height:1;">—</div>
-                                <div id="an-sum-total-pct" style="font-size:11px;font-weight:600;color:#10b981;display:none;">↑ +12%</div>
-                            </div>
-                            <div style="font-size:11px;color:var(--muted-text);margin-top:4px;" id="an-sum-total-label">This semester</div>
-                        </div>
-                    </div>
-
-                    <!-- Pending/Open — amber -->
-                    <div class="an-metric-card" style="border:1px solid rgba(217,119,6,0.22);background:linear-gradient(135deg,rgba(217,119,6,0.06) 0%,transparent 60%);">
-                        <div style="width:48px;height:48px;border-radius:12px;background:rgba(217,119,6,0.12);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
-                            </svg>
-                        </div>
-                        <div style="flex:1;">
-                            <div style="font-size:11px;color:var(--muted-text);text-transform:uppercase;letter-spacing:.6px;font-weight:500;margin-bottom:4px;">Pending / Open</div>
-                            <div style="display:flex;align-items:baseline;gap:8px;">
-                                <div id="an-sum-pending" style="font-size:32px;font-weight:700;color:#d97706;line-height:1;">—</div>
-                                <div id="an-sum-pending-pct" style="font-size:11px;font-weight:600;color:#dc2626;display:none;">↑ +3%</div>
-                            </div>
-                            <div style="font-size:11px;color:var(--muted-text);margin-top:4px;" id="an-sum-pending-label">Awaiting action</div>
-                        </div>
-                    </div>
-
-                    <!-- In Progress — blue -->
-                    <div class="an-metric-card" style="border:1px solid rgba(29,78,216,0.2);background:linear-gradient(135deg,rgba(29,78,216,0.06) 0%,transparent 60%);">
-                        <div style="width:48px;height:48px;border-radius:12px;background:rgba(29,78,216,0.12);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1d4ed8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M21 12a9 9 0 1 1-6.219-8.56"/><polyline points="21 3 21 9 15 9"/>
-                            </svg>
-                        </div>
-                        <div style="flex:1;">
-                            <div style="font-size:11px;color:var(--muted-text);text-transform:uppercase;letter-spacing:.6px;font-weight:500;margin-bottom:4px;">In Progress</div>
-                            <div style="display:flex;align-items:baseline;gap:8px;">
-                                <div id="an-sum-inprogress" style="font-size:32px;font-weight:700;color:#1d4ed8;line-height:1;">—</div>
-                                <div id="an-sum-inprogress-pct" style="font-size:11px;font-weight:600;color:#dc2626;display:none;">↓ -25%</div>
-                            </div>
-                            <div style="font-size:11px;color:var(--muted-text);margin-top:4px;" id="an-sum-inprogress-label">Being worked on</div>
-                        </div>
-                    </div>
-
-                    <!-- Completed — green -->
-                    <div class="an-metric-card" style="border:1px solid rgba(4,120,87,0.2);background:linear-gradient(135deg,rgba(4,120,87,0.06) 0%,transparent 60%);">
-                        <div style="width:48px;height:48px;border-radius:12px;background:rgba(4,120,87,0.12);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#047857" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>
-                            </svg>
-                        </div>
-                        <div style="flex:1;">
-                            <div style="font-size:11px;color:var(--muted-text);text-transform:uppercase;letter-spacing:.6px;font-weight:500;margin-bottom:4px;">Completed</div>
-                            <div style="display:flex;align-items:baseline;gap:8px;">
-                                <div id="an-sum-completed" style="font-size:32px;font-weight:700;color:#047857;line-height:1;">—</div>
-                                <div id="an-sum-completed-pct" style="font-size:11px;font-weight:600;color:#10b981;display:none;">↑ +50%</div>
-                            </div>
-                            <div style="font-size:11px;color:var(--muted-text);margin-top:4px;" id="an-sum-completed-label">Resolved</div>
-                        </div>
-                    </div>
-
-                </div>
-                <p id="an-sum-note" style="font-size:12px;color:var(--muted-text);margin:-18px 0 26px;"></p>
-
-                <p class="an-section-title">Inventory Health</p>
-                <div class="an-metric-grid">
-
-                    <!-- Total Items — blue -->
-                    <div class="an-metric-card" style="border:1px solid rgba(37,99,235,0.2);background:linear-gradient(135deg,rgba(37,99,235,0.06) 0%,transparent 60%);">
-                        <div style="width:48px;height:48px;border-radius:12px;background:rgba(37,99,235,0.12);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
-                                <polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/>
-                            </svg>
-                        </div>
-                        <div style="flex:1;">
-                            <div style="font-size:11px;color:var(--muted-text);text-transform:uppercase;letter-spacing:.6px;font-weight:500;margin-bottom:4px;">Total Items</div>
-                            <div style="display:flex;align-items:baseline;gap:8px;">
-                                <div id="an-h-total" style="font-size:32px;font-weight:700;color:#1d4ed8;line-height:1;">—</div>
-                                <div id="an-h-total-pct" style="font-size:11px;font-weight:600;color:#6b7280;display:none;">↑ +0%</div>
-                            </div>
-                            <div style="font-size:11px;color:var(--muted-text);margin-top:4px;" id="an-h-total-label">In inventory</div>
-                        </div>
-                    </div>
-
-                    <!-- Low Stock — orange -->
-                    <div class="an-metric-card" style="border:1px solid rgba(245,158,11,0.25);background:linear-gradient(135deg,rgba(245,158,11,0.06) 0%,transparent 60%);">
-                        <div style="width:48px;height:48px;border-radius:12px;background:rgba(245,158,11,0.12);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
-                                <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
-                            </svg>
-                        </div>
-                        <div style="flex:1;">
-                            <div style="font-size:11px;color:var(--muted-text);text-transform:uppercase;letter-spacing:.6px;font-weight:500;margin-bottom:4px;">Low Stock</div>
-                            <div style="display:flex;align-items:baseline;gap:8px;">
-                                <div id="an-h-lowstock" style="font-size:32px;font-weight:700;color:#d97706;line-height:1;">—</div>
-                                <div id="an-h-lowstock-pct" style="font-size:11px;font-weight:600;color:#dc2626;display:none;">↑ +1</div>
-                            </div>
-                            <div style="font-size:11px;color:var(--muted-text);margin-top:4px;" id="an-h-lowstock-label">Need restocking</div>
-                        </div>
-                    </div>
-
-                    <!-- Out of Stock — red -->
-                    <div class="an-metric-card" style="border:1px solid rgba(239,68,68,0.22);background:linear-gradient(135deg,rgba(239,68,68,0.06) 0%,transparent 60%);">
-                        <div style="width:48px;height:48px;border-radius:12px;background:rgba(239,68,68,0.12);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <circle cx="12" cy="12" r="10"/>
-                                <line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/>
-                            </svg>
-                        </div>
-                        <div style="flex:1;">
-                            <div style="font-size:11px;color:var(--muted-text);text-transform:uppercase;letter-spacing:.6px;font-weight:500;margin-bottom:4px;">Out of Stock</div>
-                            <div style="display:flex;align-items:baseline;gap:8px;">
-                                <div id="an-h-outofstock" style="font-size:32px;font-weight:700;color:#dc2626;line-height:1;">—</div>
-                                <div id="an-h-outofstock-pct" style="font-size:11px;font-weight:600;color:#dc2626;display:none;">↑ +2</div>
-                            </div>
-                            <div style="font-size:11px;color:var(--muted-text);margin-top:4px;" id="an-h-outofstock-label">Depleted items</div>
-                        </div>
-                    </div>
-
-                    <!-- Low Stock % — purple -->
-                    <div class="an-metric-card" style="border:1px solid rgba(139,92,246,0.22);background:linear-gradient(135deg,rgba(139,92,246,0.06) 0%,transparent 60%);">
-                        <div style="width:48px;height:48px;border-radius:12px;background:rgba(139,92,246,0.12);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <line x1="19" y1="5" x2="5" y2="19"/>
-                                <circle cx="6.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/>
-                            </svg>
-                        </div>
-                        <div style="flex:1;">
-                            <div style="font-size:11px;color:var(--muted-text);text-transform:uppercase;letter-spacing:.6px;font-weight:500;margin-bottom:4px;">Low Stock %</div>
-                            <div style="display:flex;align-items:baseline;gap:8px;">
-                                <div id="an-h-pct" style="font-size:32px;font-weight:700;color:#7c3aed;line-height:1;">—</div>
-                                <div id="an-h-pct-pct" style="font-size:11px;font-weight:600;color:#10b981;display:none;">↑ +8%</div>
-                            </div>
-                            <div style="font-size:11px;color:var(--muted-text);margin-top:4px;" id="an-h-pct-label">Stock health</div>
-                        </div>
-                    </div>
-
-                </div>
 
                 <!-- Charts Grid — Responsive layout (2 cols on desktop, 1 on tablet/mobile) -->
                 <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(400px,1fr));gap:20px;margin:28px 0 20px;">
@@ -546,22 +380,13 @@ div[id*="-legend"]:not(#chart-reports-status-legend) strong {
                     <div class="an-panel" style="margin:0;padding:20px;">
                         <h3 style="font-size:13px;font-weight:700;color:#374151;margin:0 0 16px;text-transform:uppercase;letter-spacing:0.5px;">Inventory Status</h3>
                         <div style="height:300px;position:relative;margin-bottom:12px;">
-                            <canvas id="chart-inventory-status" style="width:100%;height:100%;"></canvas>
-                            <div id="chart-inventory-status-center" style="position:absolute;text-align:center;top:50%;left:50%;transform:translate(-50%,-50%);pointer-events:none;">
-                                <div style="font-size:36px;font-weight:700;color:#1f2937;line-height:1;margin-bottom:4px;" id="chart-inventory-status-total">5</div>
-                                <div style="font-size:12px;color:#6b7280;font-weight:500;">Total Items</div>
+                            <canvas id="chart-inventory-status" style="width:100%;height:100%;display:block;"></canvas>
+                            <div id="chart-inventory-status-center" style="position:absolute;top:50%;left:38%;transform:translate(-50%,-50%);pointer-events:none;">
+                                <div style="font-size:48px;font-weight:700;color:#1f2937;line-height:1;margin:0;padding:0;text-align:center;" id="chart-inventory-status-total">5</div>
+                                <div style="font-size:13px;color:#6b7280;font-weight:500;line-height:1.2;margin-top:6px;padding:0;text-align:center;white-space:nowrap;">Total Items</div>
                             </div>
                         </div>
                         <div id="chart-inventory-status-legend" style="font-size:12px;color:#6b7280;"></div>
-                    </div>
-
-                    <!-- Chart 5: Damage Reports by Category -->
-                    <div class="an-panel" style="margin:0;padding:20px;">
-                        <h3 style="font-size:13px;font-weight:700;color:#374151;margin:0 0 16px;text-transform:uppercase;letter-spacing:0.5px;">Damage Reports by Category</h3>
-                        <div style="height:300px;position:relative;margin-bottom:12px;">
-                            <canvas id="chart-damage-category" style="width:100%;height:100%;"></canvas>
-                        </div>
-                        <div id="chart-damage-category-legend" style="font-size:12px;color:#6b7280;"></div>
                     </div>
 
                     <!-- Chart 6: Semester Comparison -->
@@ -573,8 +398,8 @@ div[id*="-legend"]:not(#chart-reports-status-legend) strong {
                         <div id="chart-semester-compare-legend" style="font-size:12px;color:#6b7280;"></div>
                     </div>
 
-                    <!-- Chart 7: Dispatch Status (Full width) -->
-                    <div class="an-panel" style="margin:0;padding:20px;grid-column:1/-1;">
+                    <!-- Chart 7: Dispatch Status -->
+                    <div class="an-panel" style="margin:0;padding:20px;">
                         <h3 style="font-size:13px;font-weight:700;color:#374151;margin:0 0 16px;text-transform:uppercase;letter-spacing:0.5px;">Dispatch Status</h3>
                         <div style="height:300px;position:relative;margin-bottom:12px;">
                             <canvas id="chart-dispatch-status" style="width:100%;height:100%;"></canvas>
@@ -582,13 +407,6 @@ div[id*="-legend"]:not(#chart-reports-status-legend) strong {
                         <div id="chart-dispatch-status-legend" style="font-size:12px;color:#6b7280;"></div>
                     </div>
 
-                </div>
-
-                <div class="an-panel">
-                    <p class="an-section-title">Items Needing Attention</p>
-                    <div id="an-lowstock-container" class="table-responsive">
-                        <div class="ui-empty-state"><strong>Loading...</strong></div>
-                    </div>
                 </div>
 
             </div>
@@ -1193,7 +1011,6 @@ let anChartReportsStatus = null;
 let anChartReportsCategory = null;
 let anChartMonthlyTrend = null;
 let anChartInventoryStatus = null;
-let anChartDamageCategory = null;
 let anChartSemesterCompare = null;
 let anChartDispatchStatus = null;
 
@@ -1296,11 +1113,15 @@ async function anLoadHealth(semester = '') {
         if (!data) throw new Error('Failed to load dashboard overview');
         const inv = data.inventory || {};
 
-        document.getElementById('an-h-total').textContent      = inv.total_items        ?? '—';
-        document.getElementById('an-h-lowstock').textContent   = inv.low_stock         ?? '—';
-        document.getElementById('an-h-outofstock').textContent = inv.out_of_stock      ?? '—';
-        document.getElementById('an-h-pct').textContent =
-            (inv.low_stock_percentage != null) ? inv.low_stock_percentage + '%' : '—';
+        const totalEl = document.getElementById('an-h-total');
+        const lowstockEl = document.getElementById('an-h-lowstock');
+        const outofstockEl = document.getElementById('an-h-outofstock');
+        const pctEl = document.getElementById('an-h-pct');
+
+        if (totalEl) totalEl.textContent = inv.total_items ?? '—';
+        if (lowstockEl) lowstockEl.textContent = inv.low_stock ?? '—';
+        if (outofstockEl) outofstockEl.textContent = inv.out_of_stock ?? '—';
+        if (pctEl) pctEl.textContent = (inv.low_stock_percentage != null) ? inv.low_stock_percentage + '%' : '—';
 
         // Show comparison data from API
         const formatComparison = (comp) => {
@@ -1341,40 +1162,11 @@ async function anLoadHealth(semester = '') {
         if (outofstockLblEl) outofstockLblEl.textContent = 'vs. last semester';
         if (pctLblEl) pctLblEl.textContent = 'vs. last semester';
 
-        // Populate Items Needing Attention table with the data we just received
-        anRenderItemsNeedingAttention(data.items_needing_attention);
-
         // Render all charts with the dashboard data
         anRenderChartsForTab1(data);
     } catch (_) {
         // Cards stay as '—' — non-fatal; low-stock table will show its own error
     }
-}
-
-function anRenderItemsNeedingAttention(items) {
-    const container = document.getElementById('an-lowstock-container');
-    if (!container) return;
-
-    items = Array.isArray(items) ? items : [];
-
-    if (items.length === 0) {
-        container.innerHTML = '<div class="ui-empty-state"><strong>No items needing attention.</strong><span>All items are at healthy stock levels.</span></div>';
-        return;
-    }
-
-    let html = '<table class="table"><thead><tr>'
-        + '<th>Item Name</th><th>Quantity</th><th>Threshold</th><th>Status</th>'
-        + '</tr></thead><tbody>';
-    items.forEach((item) => {
-        html += '<tr>';
-        html += `<td><strong>${anEsc(item.name)}</strong></td>`;
-        html += `<td>${anEsc(item.quantity)}</td>`;
-        html += `<td>${anEsc(item.threshold)}</td>`;
-        html += `<td>${anStockBadge(item.quantity, item.threshold)}</td>`;
-        html += '</tr>';
-    });
-    html += '</tbody></table>';
-    container.innerHTML = html;
 }
 
 async function anLoadLowStock() {
@@ -1395,10 +1187,15 @@ async function anLoadSummary(semester = '') {
         if (!data) throw new Error('Failed to load dashboard overview');
         const d = data.summary || {};
 
-        document.getElementById('an-sum-total').textContent      = d.total_reports ?? '—';
-        document.getElementById('an-sum-pending').textContent    = d.pending       ?? '—';
-        document.getElementById('an-sum-inprogress').textContent = d.in_progress   ?? '—';
-        document.getElementById('an-sum-completed').textContent  = d.completed     ?? '—';
+        const totalEl = document.getElementById('an-sum-total');
+        const pendingEl = document.getElementById('an-sum-pending');
+        const inProgressEl = document.getElementById('an-sum-inprogress');
+        const completedEl = document.getElementById('an-sum-completed');
+
+        if (totalEl) totalEl.textContent = d.total_reports ?? '—';
+        if (pendingEl) pendingEl.textContent = d.pending ?? '—';
+        if (inProgressEl) inProgressEl.textContent = d.in_progress ?? '—';
+        if (completedEl) completedEl.textContent = d.completed ?? '—';
 
         // Show comparison data from API
         const formatComparison = (comp) => {
@@ -1462,7 +1259,6 @@ function anRenderChartsForTab1(data) {
     anRenderReportsByCategoryChart(data.charts?.reports_by_category);
     anRenderMonthlyTrendChart(data.charts?.monthly_trend);
     anRenderInventoryStatusChart(data.charts?.inventory_status);
-    anRenderDamageByCategoryChart(data.charts?.damage_by_category);
     anRenderSemesterComparisonChart(data.summary);
     anRenderDispatchStatusChart(data.charts?.dispatch_status);
 }
@@ -1696,6 +1492,9 @@ function anRenderInventoryStatusChart(data) {
         options: {
             responsive: true,
             maintainAspectRatio: false,
+            layout: {
+                padding: 0
+            },
             plugins: {
                 legend: { display: false },
                 tooltip: {
@@ -1711,55 +1510,22 @@ function anRenderInventoryStatusChart(data) {
         }
     });
 
-    // Render legend manually
+    // Render legend manually (vertical layout matching Reports by Status)
     const legendDiv = document.getElementById('chart-inventory-status-legend');
     if (legendDiv) {
-        let html = '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;">';
+        let html = '';
         labels.forEach((label, i) => {
             const pct = total > 0 ? ((values[i] / total) * 100).toFixed(1) : 0;
-            html += `<div style="padding:4px;"><span style="display:inline-block;width:10px;height:10px;background:${colors[i]};border-radius:2px;margin-right:6px;vertical-align:middle;"></span><strong>${label}</strong><br/>${values[i]} (${pct}%)</div>`;
+            html += `<div style="display:flex;align-items:flex-start;gap:12px;padding:12px 0;border-bottom:1px solid rgba(0,0,0,0.05);">
+                <span style="display:inline-block;width:14px;height:14px;background:${colors[i]};border-radius:2px;flex-shrink:0;margin-top:2px;"></span>
+                <div style="flex:1;">
+                    <div style="font-weight:600;color:#1f2937;font-size:13px;line-height:1.4;">${label}</div>
+                    <div style="font-size:12px;color:#6b7280;margin-top:2px;">${values[i]} (${pct}%)</div>
+                </div>
+            </div>`;
         });
-        html += '</div>';
         legendDiv.innerHTML = html;
     }
-}
-
-function anRenderDamageByCategoryChart(data) {
-    const canvas = document.getElementById('chart-damage-category');
-    if (!canvas || !data || !Array.isArray(data) || data.length === 0) {
-        return;
-    }
-
-    if (anChartDamageCategory) { anChartDamageCategory.destroy(); anChartDamageCategory = null; }
-
-    const labels = data.map(d => d.label);
-    const values = data.map(d => d.count);
-
-    const colors = '#ef4444';
-
-    anChartDamageCategory = new Chart(canvas, {
-        type: 'bar',
-        data: {
-            labels: labels,
-            datasets: [{
-                label: 'Damage Count',
-                data: values,
-                backgroundColor: colors,
-                borderRadius: 4,
-            }]
-        },
-        options: {
-            indexAxis: 'y',
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: { display: false },
-            },
-            scales: {
-                x: { beginAtZero: true, ticks: { stepSize: 1 } }
-            }
-        }
-    });
 }
 
 function anRenderSemesterComparisonChart(summaryData) {
@@ -1770,32 +1536,56 @@ function anRenderSemesterComparisonChart(summaryData) {
 
     if (anChartSemesterCompare) { anChartSemesterCompare.destroy(); anChartSemesterCompare = null; }
 
-    // Create comparison data: current vs previous semester
-    const labels = ['Reports Submitted', 'Reports Completed'];
-    const currentData = [
-        summaryData.total_reports || 0,
-        summaryData.completed || 0
-    ];
+    // Get semester comparison data
+    const semesterComp = summaryData.semester_comparison;
+    if (!semesterComp) return;
+
+    const labels = [semesterComp.current.label, semesterComp.previous.label];
+    const submittedData = [semesterComp.current.submitted, semesterComp.previous.submitted];
+    const completedData = [semesterComp.current.completed, semesterComp.previous.completed];
+
+    console.log('Semester Comparison Data:', { semesterComp, submittedData, completedData });
 
     anChartSemesterCompare = new Chart(canvas, {
         type: 'bar',
         data: {
             labels: labels,
-            datasets: [{
-                label: 'Current Semester',
-                data: currentData,
-                backgroundColor: '#6d28d9',
-                borderRadius: 4,
-            }]
+            datasets: [
+                {
+                    label: 'Reports Submitted',
+                    data: submittedData,
+                    backgroundColor: '#7c3aed',
+                    borderRadius: 4,
+                },
+                {
+                    label: 'Reports Completed',
+                    data: completedData,
+                    backgroundColor: '#10b981',
+                    borderRadius: 4,
+                }
+            ]
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
             plugins: {
-                legend: { display: true, position: 'top' },
+                legend: {
+                    display: true,
+                    position: 'top',
+                    labels: { usePointStyle: true, padding: 20 }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const label = context.dataset.label || '';
+                            const value = context.parsed.y;
+                            return `${label}: ${value}`;
+                        }
+                    }
+                }
             },
             scales: {
-                y: { beginAtZero: true, ticks: { stepSize: 1 } }
+                y: { beginAtZero: true, min: 0, max: Math.max(...submittedData, ...completedData, 10) }
             }
         }
     });
@@ -1812,7 +1602,14 @@ function anRenderDispatchStatusChart(data) {
     const labels = data.map(d => d.label);
     const values = data.map(d => d.count);
 
-    const colors = '#3b82f6';
+    // Color mapping for dispatch statuses
+    const colorMap = {
+        'Pending': '#f59e0b',      // Orange
+        'Approved': '#3b82f6',     // Blue
+        'Released': '#10b981'      // Green
+    };
+
+    const colors = labels.map(label => colorMap[label] || '#6b7280');
 
     anChartDispatchStatus = new Chart(canvas, {
         type: 'bar',
@@ -1826,14 +1623,20 @@ function anRenderDispatchStatusChart(data) {
             }]
         },
         options: {
-            indexAxis: 'y',
             responsive: true,
             maintainAspectRatio: false,
             plugins: {
                 legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return context.parsed.y;
+                        }
+                    }
+                }
             },
             scales: {
-                x: { beginAtZero: true, ticks: { stepSize: 1 } }
+                y: { beginAtZero: true, ticks: { stepSize: 1 } }
             }
         }
     });
@@ -2470,6 +2273,25 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Preload department dropdown (non-blocking; Tab 2 may not be visited)
     anLoadOptions();
+
+    // Add click handlers to KPI cards to navigate to All Reports
+    const cardHandlers = [
+        { id: 'an-sum-total', status: '' },  // All statuses
+        { id: 'an-sum-pending', status: 'submitted' },
+        { id: 'an-sum-inprogress', status: 'in_progress' },
+        { id: 'an-sum-completed', status: 'completed' }
+    ];
+
+    cardHandlers.forEach(({ id, status }) => {
+        const card = document.getElementById(id);
+        if (card && card.closest('.an-metric-card')) {
+            card.closest('.an-metric-card').style.cursor = 'pointer';
+            card.closest('.an-metric-card').addEventListener('click', () => {
+                const url = status ? `/All%20Reports?status=${status}` : '/All%20Reports';
+                window.location.href = url;
+            });
+        }
+    });
 
     // Activate first tab
     anSwitchTab('an-tab1');

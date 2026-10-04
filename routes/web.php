@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\ActivityLogController;
 use App\Http\Controllers\Api\DamageReportController;
+use App\Http\Controllers\Api\EmailVerificationController;
 use App\Http\Controllers\Api\DeploymentTrackingController;
 use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\DepartmentController;
@@ -248,6 +249,13 @@ Route::prefix('api')->group(function (): void {
             Route::post('read-all',     [NotificationController::class, 'markAllRead']);
             Route::post('{id}/read',    [NotificationController::class, 'markRead']);
             Route::delete('{id}',       [NotificationController::class, 'destroy']);
+        });
+
+        Route::prefix('email-verification')->group(function (): void {
+            Route::post('initiate',     [EmailVerificationController::class, 'initiate']);
+            Route::post('verify-otp',   [EmailVerificationController::class, 'verifyOtp']);
+            Route::post('resend-otp',   [EmailVerificationController::class, 'resendOtp']);
+            Route::get('status',        [EmailVerificationController::class, 'getStatus']);
         });
 
         Route::get('items', [ItemController::class, 'index']);

@@ -354,4 +354,44 @@ HTML;
 </html>
 HTML;
     }
+
+    /**
+     * Send a general-purpose email to a single recipient.
+     *
+     * @param string $toEmail    Recipient email address
+     * @param string $subject    Email subject
+     * @param string $htmlBody   HTML email body
+     * @param string $textBody   Plain text alternative (optional)
+     * @param string $toName     Recipient display name (optional)
+     */
+    public static function sendEmail(
+        string $toEmail,
+        string $subject,
+        string $htmlBody,
+        string $textBody = '',
+        string $toName = ''
+    ): bool {
+        if (empty($toEmail) || !filter_var($toEmail, FILTER_VALIDATE_EMAIL)) {
+            error_log('[EmailService] Invalid recipient email: ' . $toEmail);
+            return false;
+        }
+
+        try {
+            $mail = self::createMailer();
+            $mail->addAddress($toEmail, $toName);
+
+            $mail->Subject = $subject;
+            $mail->Body = $htmlBody;
+            if (!empty($textBody)) {
+                $mail->AltBody = $textBody;
+            }
+
+            $mail->send();
+            error_log('[EmailService] Email sent to ' . $toEmail);
+            return true;
+        } catch (Throwable $e) {
+            error_log('[EmailService] Failed to send email to ' . $toEmail . ': ' . $e->getMessage());
+            return false;
+        }
+    }
 }

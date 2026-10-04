@@ -682,18 +682,23 @@ class AnalyticsService
         $semesterStartDate = $semesterActive ? $schoolSettings->semester_started_at : null;
 
         // Get full semester date range for chart data (entire semester, not just to today)
+        // Include 2 months before semester start to capture reports created earlier
         $semesterStartForCharts = null;
         $semesterEndForCharts = null;
         if ($currentSemester === 'First Semester') {
-            $semesterStartForCharts = $schoolSettings->first_sem_start?->toDateString();
-            $semesterEndForCharts = $schoolSettings->first_sem_end?->toDateString();
+            if ($schoolSettings->first_sem_start && $schoolSettings->first_sem_end) {
+                $semesterStartForCharts = $schoolSettings->first_sem_start->copy()->subMonths(2)->toDateString();
+                $semesterEndForCharts = $schoolSettings->first_sem_end?->toDateString();
+            }
         } elseif ($currentSemester === 'Second Semester') {
-            $semesterStartForCharts = $schoolSettings->second_sem_start?->toDateString();
-            $semesterEndForCharts = $schoolSettings->second_sem_end?->toDateString();
+            if ($schoolSettings->second_sem_start && $schoolSettings->second_sem_end) {
+                $semesterStartForCharts = $schoolSettings->second_sem_start->copy()->subMonths(2)->toDateString();
+                $semesterEndForCharts = $schoolSettings->second_sem_end?->toDateString();
+            }
         }
 
-        // Get current semester stats
-        $currentStats = $this->getReportStats($semesterStartDate, $currentSemester);
+        // Get current semester stats using full semester date range
+        $currentStats = $this->getReportStats($semesterStartForCharts, $semesterEndForCharts);
 
         // Get previous semester stats for comparison
         $previousStats = $this->getPreviousSemesterStats($schoolSettings);
@@ -734,14 +739,8 @@ class AnalyticsService
         // Get inventory status breakdown
         $inventoryStatus = $this->getInventoryStatusBreakdown();
 
-        // Get damage reports by category
-        $damageByCategory = $this->getDamageReportsByCategory($semesterStartDate);
-
-        // Get dispatch status breakdown
-        $dispatchStatus = $this->getDispatchStatusBreakdown($semesterStartDate);
-
-        // Get items needing attention
-        $itemsNeedingAttention = $this->getItemsNeedingAttention();
+        // Get dispatch status breakdown using full semester date range
+        $dispatchStatus = $this->getDispatchStatusBreakdown($semesterStartForCharts, $semesterEndForCharts);
 
         return [
             'summary' => [
@@ -756,6 +755,18 @@ class AnalyticsService
                 'semester_active' => $semesterActive,
                 'current_semester' => $currentSemester,
                 'school_year' => $schoolSettings->school_year,
+                'semester_comparison' => [
+                    'current' => [
+                        'label' => $currentSemester ? "{$currentSemester} {$schoolSettings->school_year}" : 'No Active Semester',
+                        'submitted' => $currentStats['total_reports'] ?? 0,
+                        'completed' => $currentStats['completed'] ?? 0,
+                    ],
+                    'previous' => [
+                        'label' => $this->getPreviousSemesterLabel($schoolSettings),
+                        'submitted' => $previousStats['total_reports'] ?? 0,
+                        'completed' => $previousStats['completed'] ?? 0,
+                    ]
+                ]
             ],
             'inventory' => [
                 'total_items' => $inventoryHealth['total_items'] ?? 0,
@@ -772,23 +783,21 @@ class AnalyticsService
                 'reports_by_category' => $reportsByCategory,
                 'monthly_trend' => $monthlyTrend,
                 'inventory_status' => $inventoryStatus,
-                'damage_by_category' => $damageByCategory,
                 'dispatch_status' => $dispatchStatus,
             ],
-            'items_needing_attention' => $itemsNeedingAttention,
         ];
     }
 
     /**
-     * Get report statistics for the current/active semester.
+     * Get report statistics for the given date range.
      */
-    private function getReportStats(?string $semesterStartDate, ?string $currentSemester): array
+    private function getReportStats(?string $startDate = null, ?string $endDate = null): array
     {
         $query = DB::table('maintenance_reports')
             ->where(function ($q) {
                 // Respect user authorization - show all for admins, own reports for others
                 $user = auth()->user();
-                if ($user && !in_array($user->role, ['super_admin', 'maintenance_admin'])) {
+                if ($user && !in_array($user->role, ['Administrator', 'Head'])) {
                     $userId = $user->user_id;
                     $q->where(function ($innerQ) use ($userId) {
                         $innerQ->where('created_by', $userId)
@@ -797,8 +806,8 @@ class AnalyticsService
                 }
             });
 
-        if ($semesterStartDate && $currentSemester) {
-            $query->where('created_at', '>=', $semesterStartDate);
+        if ($startDate && $endDate) {
+            $query->whereBetween('created_at', [$startDate, $endDate]);
         }
 
         $stats = $query->selectRaw('
@@ -812,20 +821,27 @@ class AnalyticsService
     }
 
     /**
-     * Get statistics from the previous semester for comparison.
+     * Get statistics from the same semester of the previous school year for comparison.
      */
     private function getPreviousSemesterStats(SchoolSetting $schoolSettings): array
     {
-        // Determine previous semester dates
+        // Determine previous year's same semester dates
         $currentSemester = $schoolSettings->current_semester;
 
         if ($currentSemester === 'First Semester') {
-            // Previous is second semester of last year - can't easily determine, return empty
-            return [];
+            // Get First Semester of previous year by subtracting 1 year from start/end dates
+            if (!$schoolSettings->first_sem_start || !$schoolSettings->first_sem_end) {
+                return [];
+            }
+            $startDate = $schoolSettings->first_sem_start->subYear();
+            $endDate = $schoolSettings->first_sem_end->subYear();
         } elseif ($currentSemester === 'Second Semester') {
-            // Previous is first semester of this year
-            $startDate = $schoolSettings->first_sem_start;
-            $endDate = $schoolSettings->first_sem_end;
+            // Get Second Semester of previous year
+            if (!$schoolSettings->second_sem_start || !$schoolSettings->second_sem_end) {
+                return [];
+            }
+            $startDate = $schoolSettings->second_sem_start->subYear();
+            $endDate = $schoolSettings->second_sem_end->subYear();
         } else {
             return [];
         }
@@ -833,7 +849,7 @@ class AnalyticsService
         $query = DB::table('maintenance_reports')
             ->where(function ($q) {
                 $user = auth()->user();
-                if ($user && !in_array($user->role, ['super_admin', 'maintenance_admin'])) {
+                if ($user && !in_array($user->role, ['Administrator', 'Head'])) {
                     $userId = $user->user_id;
                     $q->where(function ($innerQ) use ($userId) {
                         $innerQ->where('created_by', $userId)
@@ -851,6 +867,41 @@ class AnalyticsService
         ')->first();
 
         return (array) $stats;
+    }
+
+    /**
+     * Generate the label for the previous year's same semester (used for comparison chart).
+     */
+    private function getPreviousSemesterLabel(SchoolSetting $schoolSettings): string
+    {
+        $currentSemester = $schoolSettings->current_semester;
+        $schoolYear = $schoolSettings->school_year;
+
+        if (!$currentSemester) {
+            return 'No Active Semester';
+        }
+
+        // Extract school year range (e.g., "2026-2027" -> years 2026 and 2027)
+        $years = explode('-', $schoolYear);
+        if (count($years) !== 2) {
+            return 'No Previous Data';
+        }
+
+        $startYear = (int) $years[0];
+        $endYear = (int) $years[1];
+
+        // Previous year's same semester
+        $prevStartYear = $startYear - 1;
+        $prevEndYear = $endYear - 1;
+        $prevSchoolYear = "{$prevStartYear}-{$prevEndYear}";
+
+        if ($currentSemester === 'First Semester') {
+            return "First Semester {$prevSchoolYear}";
+        } elseif ($currentSemester === 'Second Semester') {
+            return "Second Semester {$prevSchoolYear}";
+        }
+
+        return 'No Previous Data';
     }
 
     /**
@@ -1083,70 +1134,37 @@ class AnalyticsService
                 COUNT(*) as count
             ')
             ->groupBy('status_label')
-            ->get();
+            ->pluck('count', 'status_label');
 
-        return $results->map(function ($row) {
-            return [
-                'label' => $row->status_label,
-                'count' => (int) $row->count,
-            ];
-        })->toArray();
+        // Always return all three statuses in consistent order
+        return [
+            ['label' => 'In Stock', 'count' => (int) ($results['In Stock'] ?? 0)],
+            ['label' => 'Low Stock', 'count' => (int) ($results['Low Stock'] ?? 0)],
+            ['label' => 'Out of Stock', 'count' => (int) ($results['Out of Stock'] ?? 0)],
+        ];
     }
 
     /**
      * Get damage reports grouped by category.
      */
-    private function getDamageReportsByCategory(?string $semesterStartDate): array
-    {
-        $query = DB::table('damage_reports as d')
-            ->join('items as i', 'i.id', '=', 'd.item_id')
-            ->where(function ($q) {
-                $user = auth()->user();
-                if ($user && !in_array($user->role, ['super_admin', 'maintenance_admin'])) {
-                    $userId = $user->user_id;
-                    $q->where('d.reported_by', $userId);
-                }
-            });
-
-        if ($semesterStartDate) {
-            $query->where('d.created_at', '>=', $semesterStartDate);
-        }
-
-        $results = $query->selectRaw('
-            COALESCE(ic.name, \'Uncategorized\') as category,
-            COUNT(d.id) as count
-        ')
-        ->leftJoin('inventory_categories as ic', 'i.category_id', '=', 'ic.id')
-        ->groupBy('category')
-        ->orderByDesc('count')
-        ->limit(10)
-        ->get();
-
-        return $results->map(function ($row) {
-            return [
-                'label' => $row->category,
-                'count' => (int) $row->count,
-            ];
-        })->toArray();
-    }
-
     /**
      * Get dispatch status breakdown.
      */
-    private function getDispatchStatusBreakdown(?string $semesterStartDate): array
+    private function getDispatchStatusBreakdown(?string $semesterStartDate, ?string $semesterEndDate = null): array
     {
         $query = DB::table('dispatches');
 
-        if ($semesterStartDate) {
+        if ($semesterStartDate && $semesterEndDate) {
+            $query->whereBetween('created_at', [$semesterStartDate, $semesterEndDate]);
+        } elseif ($semesterStartDate) {
             $query->where('created_at', '>=', $semesterStartDate);
         }
 
         $results = $query->selectRaw('
             CASE
                 WHEN status = \'pending\' THEN \'Pending\'
-                WHEN status = \'approved\' THEN \'Assigned\'
-                WHEN status = \'released\' THEN \'In Transit\'
-                WHEN status = \'completed\' THEN \'Completed\'
+                WHEN status = \'approved\' THEN \'Approved\'
+                WHEN status = \'released\' THEN \'Released\'
                 ELSE CONCAT(\'Other (\', status, \')\')
             END as status_label,
             COUNT(*) as count
@@ -1158,42 +1176,6 @@ class AnalyticsService
             return [
                 'label' => $row->status_label,
                 'count' => (int) $row->count,
-            ];
-        })->toArray();
-    }
-
-    /**
-     * Get inventory items that need attention (low stock or out of stock).
-     */
-    private function getItemsNeedingAttention(): array
-    {
-        $results = DB::table('items')
-            ->where('item_type', 'inventory_stock')
-            ->whereIn('status', ['low_stock', 'out_of_stock'])
-            ->selectRaw('
-                id,
-                name,
-                quantity,
-                reorder_level as threshold,
-                status,
-                CASE
-                    WHEN status = \'out_of_stock\' THEN 1
-                    WHEN status = \'low_stock\' THEN 2
-                    ELSE 3
-                END as severity
-            ')
-            ->orderBy('severity')
-            ->orderBy('quantity')
-            ->limit(20)
-            ->get();
-
-        return $results->map(function ($row) {
-            return [
-                'id' => $row->id,
-                'name' => $row->name,
-                'quantity' => (int) $row->quantity,
-                'threshold' => (int) $row->threshold,
-                'status' => $row->status,
             ];
         })->toArray();
     }

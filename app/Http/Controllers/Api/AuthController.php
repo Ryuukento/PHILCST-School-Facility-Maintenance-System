@@ -54,7 +54,13 @@ class AuthController extends Controller
             ]);
         }
 
+        // Try to find user by username first
         $user = User::query()->where('username', $identifier)->first();
+
+        // If not found by username, try by verified_email
+        if (!$user) {
+            $user = User::query()->where('verified_email', $identifier)->first();
+        }
 
         if (!$user || !Hash::check($validated['password'], $user->password)) {
             return $this->failedLoginResponse($throttleKey, 'Invalid username or password', 401);
