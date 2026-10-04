@@ -268,14 +268,24 @@ main.container {
 }
 
 /* Legend styling improvements */
-div[id*="-legend"] {
+#chart-reports-status-legend {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+}
+
+#chart-reports-status-legend > div:last-child {
+    border-bottom: none !important;
+}
+
+div[id*="-legend"]:not(#chart-reports-status-legend) {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
     gap: 12px;
     padding: 4px 0;
 }
 
-div[id*="-legend"] > div {
+div[id*="-legend"]:not(#chart-reports-status-legend) > div {
     padding: 8px;
     background: rgba(109, 40, 217, 0.02);
     border-radius: 6px;
@@ -283,12 +293,12 @@ div[id*="-legend"] > div {
     transition: all 0.2s ease;
 }
 
-div[id*="-legend"] > div:hover {
+div[id*="-legend"]:not(#chart-reports-status-legend) > div:hover {
     background: rgba(109, 40, 217, 0.06);
     border-color: rgba(109, 40, 217, 0.2);
 }
 
-div[id*="-legend"] strong {
+div[id*="-legend"]:not(#chart-reports-status-legend) strong {
     color: #1f2937;
     display: block;
     margin-bottom: 2px;
@@ -502,12 +512,17 @@ div[id*="-legend"] strong {
                 <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(400px,1fr));gap:20px;margin:28px 0 20px;">
 
                     <!-- Chart 1: Reports by Status -->
-                    <div class="an-panel" style="margin:0;padding:20px;">
-                        <h3 style="font-size:13px;font-weight:700;color:#374151;margin:0 0 16px;text-transform:uppercase;letter-spacing:0.5px;">Reports by Status</h3>
-                        <div style="height:300px;position:relative;margin-bottom:12px;">
-                            <canvas id="chart-reports-status" style="width:100%;height:100%;"></canvas>
+                    <div class="an-panel" style="margin:0;padding:24px;">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+                            <h3 style="font-size:13px;font-weight:700;color:#374151;margin:0;text-transform:uppercase;letter-spacing:0.5px;flex:1;">Reports by Status</h3>
+                            <button type="button" style="padding:6px 12px;font-size:12px;font-weight:600;background:#f3f4f6;border:1px solid #d1d5db;border-radius:6px;color:#374151;cursor:pointer;transition:all 0.2s ease;" onmouseover="this.style.background='#e5e7eb'" onmouseout="this.style.background='#f3f4f6'">This Semester ▼</button>
                         </div>
-                        <div id="chart-reports-status-legend" style="font-size:12px;color:#6b7280;"></div>
+                        <div style="display:grid;grid-template-columns:1fr 180px;gap:20px;align-items:center;">
+                            <div style="height:280px;position:relative;display:flex;align-items:center;justify-content:center;">
+                                <canvas id="chart-reports-status" style="width:100%;height:100%;"></canvas>
+                            </div>
+                            <div id="chart-reports-status-legend" style="font-size:12px;color:#6b7280;display:flex;flex-direction:column;gap:10px;"></div>
+                        </div>
                     </div>
 
                     <!-- Chart 2: Reports by Category -->
@@ -1483,15 +1498,20 @@ function anRenderReportsByStatusChart(data) {
         }
     });
 
-    // Render legend manually
+    // Render legend manually (vertical, right-aligned)
     const legendDiv = document.getElementById('chart-reports-status-legend');
     if (legendDiv) {
-        let html = '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;">';
+        let html = '';
         labels.forEach((label, i) => {
             const pct = total > 0 ? ((values[i] / total) * 100).toFixed(1) : 0;
-            html += `<div style="padding:4px;"><span style="display:inline-block;width:10px;height:10px;background:${colors[i]};border-radius:2px;margin-right:6px;vertical-align:middle;"></span><strong>${label}</strong><br/>${values[i]} (${pct}%)</div>`;
+            html += `<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid rgba(0,0,0,0.05);">
+                <span style="width:12px;height:12px;background:${colors[i]};border-radius:2px;flex-shrink:0;"></span>
+                <div style="flex:1;min-width:0;">
+                    <div style="font-weight:600;color:#374151;font-size:12px;">${label}</div>
+                    <div style="font-size:11px;color:#6b7280;">${values[i]} (${pct}%)</div>
+                </div>
+            </div>`;
         });
-        html += '</div>';
         legendDiv.innerHTML = html;
     }
 }
