@@ -60,7 +60,7 @@ if (isset($_SESSION['auth_user']) || isset($_SESSION['user'])) {
                     <p class="auth-subtitle">Access your account to continue</p>
 
                     <div class="form-group">
-                        <label for="username">Username</label>
+                        <label for="username">Username or Email</label>
                         <div class="input-icon-wrapper">
                             <svg class="input-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
                                 <path d="M12 12C14.4853 12 16.5 9.98528 16.5 7.5C16.5 5.01472 14.4853 3 12 3C9.51472 3 7.5 5.01472 7.5 7.5C7.5 9.98528 9.51472 12 12 12Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -70,7 +70,7 @@ if (isset($_SESSION['auth_user']) || isset($_SESSION['user'])) {
                                 type="text"
                                 id="username"
                                 name="username"
-                                placeholder="Enter your username"
+                                placeholder="Enter your username or email"
                                 autocomplete="off"
                                 value=""
                                 required>
