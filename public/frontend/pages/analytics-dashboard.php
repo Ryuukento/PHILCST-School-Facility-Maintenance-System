@@ -1472,21 +1472,24 @@ function anRenderReportsByStatusChart(data) {
     // Plugin to draw center text in doughnut
     const centerTextPlugin = {
         id: 'centerText',
-        beforeDatasetsDraw(chart) {
-            const { ctx, chartArea: { left, top, width, height } } = chart;
+        afterDatasetsDraw(chart) {
+            const { ctx, data, chartArea: { left, top, width, height } } = chart;
+
+            if (!width || !height) return;
+
             const centerX = left + width / 2;
             const centerY = top + height / 2;
 
             ctx.save();
-            ctx.font = 'bold 32px Arial';
+            ctx.font = 'bold 32px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif';
             ctx.fillStyle = '#1f2937';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
-            ctx.fillText(total, centerX, centerY - 12);
+            ctx.fillText(total, centerX, centerY - 10);
 
-            ctx.font = '12px Arial';
+            ctx.font = '13px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif';
             ctx.fillStyle = '#6b7280';
-            ctx.fillText('Total Reports', centerX, centerY + 16);
+            ctx.fillText('Total Reports', centerX, centerY + 18);
             ctx.restore();
         }
     };
@@ -1634,21 +1637,24 @@ function anRenderInventoryStatusChart(data) {
     // Plugin to draw center text in doughnut
     const centerTextPlugin = {
         id: 'centerText',
-        beforeDatasetsDraw(chart) {
-            const { ctx, chartArea: { left, top, width, height } } = chart;
+        afterDatasetsDraw(chart) {
+            const { ctx, data, chartArea: { left, top, width, height } } = chart;
+
+            if (!width || !height) return;
+
             const centerX = left + width / 2;
             const centerY = top + height / 2;
 
             ctx.save();
-            ctx.font = 'bold 32px Arial';
+            ctx.font = 'bold 32px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif';
             ctx.fillStyle = '#1f2937';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
-            ctx.fillText(total, centerX, centerY - 12);
+            ctx.fillText(total, centerX, centerY - 10);
 
-            ctx.font = '12px Arial';
+            ctx.font = '13px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif';
             ctx.fillStyle = '#6b7280';
-            ctx.fillText('Total Items', centerX, centerY + 16);
+            ctx.fillText('Total Items', centerX, centerY + 18);
             ctx.restore();
         }
     };
