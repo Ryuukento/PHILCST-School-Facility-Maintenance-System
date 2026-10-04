@@ -529,10 +529,9 @@ div[id*="-legend"]:not(#chart-reports-status-legend) strong {
                     <!-- Chart 2: Reports by Category -->
                     <div class="an-panel" style="margin:0;padding:20px;">
                         <h3 style="font-size:13px;font-weight:700;color:#374151;margin:0 0 16px;text-transform:uppercase;letter-spacing:0.5px;">Reports by Category</h3>
-                        <div style="height:300px;position:relative;margin-bottom:12px;">
+                        <div style="height:250px;position:relative;margin-bottom:12px;">
                             <canvas id="chart-reports-category" style="width:100%;height:100%;"></canvas>
                         </div>
-                        <div id="chart-reports-category-legend" style="font-size:12px;color:#6b7280;"></div>
                     </div>
 
                     <!-- Chart 3: Monthly Reports Trend -->
@@ -1554,30 +1553,72 @@ function anRenderReportsByCategoryChart(data) {
     const labels = data.map(d => d.label);
     const values = data.map(d => d.count);
 
-    const colors = '#6d28d9';
+    // Color palette for each category bar
+    const categoryColors = [
+        '#7c3aed', // Purple for 1st
+        '#3b82f6', // Blue for 2nd
+        '#10b981', // Green for 3rd
+        '#f59e0b', // Amber for 4th
+        '#ef4444'  // Red for 5th
+    ];
+    const colors = labels.map((_, i) => categoryColors[i] || categoryColors[categoryColors.length - 1]);
 
     anChartReportsCategory = new Chart(canvas, {
         type: 'bar',
         data: {
             labels: labels,
             datasets: [{
-                label: 'Count',
+                label: 'Reports',
                 data: values,
                 backgroundColor: colors,
-                borderRadius: 4,
+                borderRadius: 6,
+                borderSkipped: false,
             }]
         },
         options: {
-            indexAxis: 'y',
             responsive: true,
             maintainAspectRatio: false,
             plugins: {
                 legend: { display: false },
+                tooltip: {
+                    backgroundColor: 'rgba(0,0,0,0.8)',
+                    padding: 8,
+                    titleFont: { size: 12 },
+                    bodyFont: { size: 12 },
+                    displayColors: false,
+                }
             },
             scales: {
-                x: { beginAtZero: true, ticks: { stepSize: 1 } }
+                y: {
+                    beginAtZero: true,
+                    ticks: { stepSize: 1 },
+                    grid: { color: 'rgba(0,0,0,0.05)' }
+                },
+                x: {
+                    grid: { display: false }
+                }
             }
-        }
+        },
+        plugins: [{
+            id: 'anDataLabels',
+            afterDatasetsDraw(chart) {
+                const { ctx, data, chartArea } = chart;
+                ctx.font = 'bold 12px sans-serif';
+                ctx.fillStyle = '#374151';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'bottom';
+
+                data.datasets.forEach((dataset, dsIndex) => {
+                    const meta = chart.getDatasetMeta(dsIndex);
+                    meta.data.forEach((datapoint, index) => {
+                        if (datapoint.y !== undefined) {
+                            const value = dataset.data[index];
+                            ctx.fillText(value, datapoint.x, datapoint.y - 5);
+                        }
+                    });
+                });
+            }
+        }]
     });
 }
 
