@@ -513,12 +513,7 @@ div[id*="-legend"]:not(#chart-reports-status-legend) strong {
 
                     <!-- Chart 1: Reports by Status -->
                     <div class="an-panel" style="margin:0;padding:24px;">
-                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
-                            <h3 style="font-size:13px;font-weight:700;color:#374151;margin:0;text-transform:uppercase;letter-spacing:0.5px;flex:1;">Reports by Status</h3>
-                            <select id="an-semester-filter" style="padding:6px 12px;font-size:12px;font-weight:600;background:#f3f4f6;border:1px solid #d1d5db;border-radius:6px;color:#374151;cursor:pointer;transition:all 0.2s ease;">
-                                <option value="">Loading...</option>
-                            </select>
-                        </div>
+                        <h3 style="font-size:13px;font-weight:700;color:#374151;margin:0 0 20px 0;text-transform:uppercase;letter-spacing:0.5px;">Reports by Status</h3>
                         <div style="display:grid;grid-template-columns:1fr 180px;gap:20px;align-items:center;">
                             <div style="height:280px;position:relative;display:flex;align-items:center;justify-content:center;">
                                 <canvas id="chart-reports-status" style="width:100%;height:100%;"></canvas>
@@ -1268,53 +1263,6 @@ async function anLoadDashboardOverview(semester = '') {
 }
 
 // ---------------------------------------------------------------------------
-// Load available semesters
-// ---------------------------------------------------------------------------
-
-async function anLoadSemesters() {
-    try {
-        const { response, data: payload } = await anFetch(
-            `${AN_API}/semester-detail`,
-            { credentials: 'same-origin', headers: { 'Accept': 'application/json' } }
-        );
-        if (!response.ok || !payload.success) return [];
-
-        const data = payload.data || {};
-        const semesters = [];
-
-        // Add current semester
-        const schoolYear = data.school_year || '';
-        if (schoolYear) {
-            semesters.push({
-                value: 'current',
-                label: `Current (${schoolYear})`
-            });
-        }
-
-        // Add first and second semester options
-        if (data.semesters) {
-            if (data.semesters.s1) {
-                semesters.push({
-                    value: '1',
-                    label: `1st Semester ${schoolYear}`
-                });
-            }
-            if (data.semesters.s2) {
-                semesters.push({
-                    value: '2',
-                    label: `2nd Semester ${schoolYear}`
-                });
-            }
-        }
-
-        return semesters;
-    } catch (err) {
-        console.error('Failed to load semesters:', err);
-        return [];
-    }
-}
-
-// ---------------------------------------------------------------------------
 
 function anSwitchTab(tabId) {
     document.querySelectorAll('.an-tab-content').forEach((el) => { el.style.display = 'none'; });
@@ -1328,19 +1276,6 @@ function anSwitchTab(tabId) {
         anLoadedTabs.add(tabId);
         switch (tabId) {
             case 'an-tab1':
-                anLoadSemesters().then(semesters => {
-                    const sel = document.getElementById('an-semester-filter');
-                    if (sel && semesters.length > 0) {
-                        sel.innerHTML = '';
-                        semesters.forEach(sem => {
-                            const opt = document.createElement('option');
-                            opt.value = sem.value;
-                            opt.textContent = sem.label;
-                            sel.appendChild(opt);
-                        });
-                        sel.addEventListener('change', () => anReloadTab1Data());
-                    }
-                });
                 anLoadSummary();
                 anLoadHealth();
                 anLoadLowStock();
@@ -1517,22 +1452,6 @@ async function anLoadSummary(semester = '') {
 }
 
 // ---------------------------------------------------------------------------
-// Reload Tab 1 data with selected semester
-// ---------------------------------------------------------------------------
-
-async function anReloadTab1Data() {
-    const semesterSel = document.getElementById('an-semester-filter');
-    const semester = semesterSel ? semesterSel.value : '';
-
-    // Clear cache to force reload
-    anDashboardOverviewCache = null;
-
-    // Reload all Tab 1 data with new semester
-    await anLoadSummary(semester);
-    await anLoadHealth(semester);
-    await anLoadLowStock(semester);
-}
-
 // ---------------------------------------------------------------------------
 // Chart Rendering Functions — Tab 1 Overview Charts
 // ---------------------------------------------------------------------------

@@ -533,6 +533,15 @@ class AnalyticsService
                     ->whereDate('created_at', '<=', $to)
                     ->count();
 
+            // Determine which semester is currently active
+            $today = now()->toDateString();
+            $currentSemester = 0;
+            if ($today >= $s1From && $today <= $s1To) {
+                $currentSemester = 1;
+            } elseif ($today >= $s2From && $today <= $s2To) {
+                $currentSemester = 2;
+            }
+
             $s1 = [
                 'label'               => 'First Semester',
                 'start'               => $s1From,
@@ -608,6 +617,7 @@ class AnalyticsService
             return [
                 'configured'           => true,
                 'school_year'          => $settings->school_year,
+                'current_semester'     => $currentSemester,
                 'semesters'            => ['s1' => $s1, 's2' => $s2],
                 'department_breakdown' => array_map(fn($r) => (array) $r, $deptRows),
             ];
