@@ -351,6 +351,9 @@ class ReportController extends Controller
             'repair_notes' => ['nullable', 'string'],
             'damage_image' => ['nullable', 'file', 'image', 'mimes:jpg,jpeg,png,webp,gif', 'max:5120'],
             'override_duplicate' => ['nullable', 'boolean'],
+            // Need Change fields - allow setting replacement request during creation
+            'need_change_item_id' => ['nullable', 'integer', 'exists:items,id'],
+            'need_change_quantity' => ['nullable', 'integer', 'min:1'],
         ]), $this->problemTypeMessages());
 
         // TASK 10 (Security Audit) — creation must not be usable as an
@@ -410,6 +413,11 @@ class ReportController extends Controller
             $canAssignAtCreation,
             $submitterName
         );
+
+        // If Need Change request was set during creation, send admin notification
+        if (!empty($validated['need_change_item_id'])) {
+            $this->reportService->sendNeedChangeEmailToAdminsAfterCreate($report, $authUser);
+        }
 
         return $this->ok('Report created successfully', ['report_id' => $report->report_id], 201);
     }

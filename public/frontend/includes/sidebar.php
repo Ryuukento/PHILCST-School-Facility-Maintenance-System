@@ -402,7 +402,7 @@ $current_page = basename($_SERVER['PHP_SELF']);
             </li>
             <?php endif; ?>
 
-            <?php if (in_array(($user['role'] ?? ''), ['super_admin', 'maintenance_admin', 'maintenance_staff'], true)): ?>
+            <?php if (($user['role'] ?? '') === 'super_admin'): ?>
             <li class="nav-section-label"><span>Analytics</span></li>
             <li class="nav-item">
                 <a href="<?php echo htmlspecialchars(public_url('/analytics')); ?>"

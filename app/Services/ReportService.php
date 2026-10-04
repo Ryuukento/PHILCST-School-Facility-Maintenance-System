@@ -358,6 +358,9 @@ class ReportService
             'assigned_to' => $canAssignAtCreation ? ($validated['assigned_to'] ?? null) : null,
             'department_id' => $validated['department_id'] ?? ($authUser['department_id'] ?? null),
             'due_date' => $validated['due_date'] ?? null,
+            // NEW: Support Need Change request during creation
+            'need_change_item_id' => !empty($validated['need_change_item_id']) ? (int)$validated['need_change_item_id'] : null,
+            'need_change_quantity' => !empty($validated['need_change_quantity']) ? max(1, (int)$validated['need_change_quantity']) : 1,
         ]);
 
         // HIGH PRIORITY FIX 1 (Audit Trail) — the module='report' /
@@ -608,6 +611,21 @@ class ReportService
                     'report',
                     $report->report_id
                 );
+
+                // EMAIL: Send assignment notification to assigned staff
+                $this->sendAssignmentEmail($report, $newAssignedTo, $authUser);
+            }
+        }
+
+        // EMAIL: Send Need Change request notification to administrators if item is being set/changed
+        if (array_key_exists('need_change_item_id', $changes)) {
+            $newNeedChangeItemId = $changes['need_change_item_id'] !== null ? (int) $changes['need_change_item_id'] : null;
+            $previousNeedChangeItemId = $report->getOriginal('need_change_item_id');
+            if ($newNeedChangeItemId !== null && $newNeedChangeItemId !== $previousNeedChangeItemId) {
+                // Only send if this is a NEW request or changed request (not rejected/approved)
+                if (!in_array($report->need_change_status, ['rejected', 'approved', 'deducted'], true)) {
+                    $this->sendNeedChangeEmailToAdmins($report, $authUser);
+                }
             }
         }
     }
@@ -698,7 +716,8 @@ class ReportService
             ]);
         }
 
-        $this->sendSuperAdminEmailForNewReport($report, $validated, $submitterName);
+        // EMAIL: Send to department head (new flow per user requirement)
+        $this->sendDepartmentHeadEmailForNewReport($report, $validated, $submitterName);
     }
 
     /**
@@ -762,6 +781,230 @@ class ReportService
         }
     }
 
+    /**
+     * Public wrapper for sending Need Change emails (called from controller during creation).
+     */
+    public function sendNeedChangeEmailToAdminsAfterCreate(MaintenanceReport $report, array $authUser): void
+    {
+        $this->sendNeedChangeEmailToAdmins($report, $authUser);
+    }
+
+    /**
+     * Send email to all administrators when a Need Change request is created/modified.
+     */
+    private function sendNeedChangeEmailToAdmins(MaintenanceReport $report, array $authUser): void
+    {
+        try {
+            $emailServicePath = base_path('public/backend/services/EmailService.php');
+            if (!file_exists($emailServicePath)) {
+                return;
+            }
+
+            require_once $emailServicePath;
+            if (!class_exists('EmailService')) {
+                return;
+            }
+
+            // Get all active super_admins to send the Need Change approval request
+            $superAdmins = DB::table('users')
+                ->select(['user_id', 'email', 'verified_email', 'full_name'])
+                ->whereRaw("LOWER(TRIM(role)) = 'super_admin'")
+                ->where('status', 'active')
+                ->get()
+                ->map(static function ($row): array {
+                    $emailToUse = strtolower(trim((string)($row->verified_email ?? $row->email ?? '')));
+                    return [
+                        'user_id' => (int)($row->user_id ?? 0),
+                        'email' => $emailToUse,
+                        'full_name' => (string)($row->full_name ?? 'Administrator'),
+                    ];
+                })
+                ->filter(static function (array $row): bool {
+                    return $row['email'] !== '' && filter_var($row['email'], FILTER_VALIDATE_EMAIL) !== false;
+                })
+                ->values()
+                ->all();
+
+            if (empty($superAdmins)) {
+                return;
+            }
+
+            // Get the item name if need_change_item_id is set
+            $itemName = 'Replacement Item';
+            if (!empty($report->need_change_item_id)) {
+                $item = DB::table('items')
+                    ->where('id', $report->need_change_item_id)
+                    ->value('name');
+                if ($item) {
+                    $itemName = $item;
+                }
+            }
+
+            $payload = [
+                'report_id' => (int)$report->report_id,
+                'title' => (string)$report->title,
+                'description' => (string)$report->description,
+                'location' => (string)($report->location ?? ''),
+                'priority' => (string)$report->priority,
+                'submitted_by' => optional(User::find((int)($authUser['user_id'] ?? 0)))->full_name ?? 'A staff member',
+                'creator_name' => optional(User::find((int)($authUser['user_id'] ?? 0)))->full_name ?? 'A staff member',
+            ];
+
+            // Use generic "New Report Notification" template but prefix subject/message to indicate it's a Need Change request
+            \EmailService::sendNewReportNotification($payload, $superAdmins);
+        } catch (\Throwable $e) {
+            Log::warning('Need Change request email notification error', [
+                'report_id' => (int)$report->report_id,
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    /**
+     * Send email to assigned staff member when a report is assigned to them.
+     */
+    private function sendAssignmentEmail(MaintenanceReport $report, int $assignedToUserId, array $authUser): void
+    {
+        try {
+            $emailServicePath = base_path('public/backend/services/EmailService.php');
+            if (!file_exists($emailServicePath)) {
+                return;
+            }
+
+            require_once $emailServicePath;
+            if (!class_exists('EmailService')) {
+                return;
+            }
+
+            // Get the assigned staff member's details
+            $assignedUser = DB::table('users')
+                ->select(['user_id', 'email', 'verified_email', 'full_name'])
+                ->where('user_id', $assignedToUserId)
+                ->where('status', 'active')
+                ->first();
+
+            if (!$assignedUser) {
+                return;
+            }
+
+            // Use verified_email if available, otherwise use email
+            $emailToUse = strtolower(trim((string)($assignedUser->verified_email ?? $assignedUser->email ?? '')));
+            if ($emailToUse === '' || filter_var($emailToUse, FILTER_VALIDATE_EMAIL) === false) {
+                return;
+            }
+
+            // Get assigner's name
+            $assignerName = optional(User::find((int)($authUser['user_id'] ?? 0)))->full_name ?? 'Administrator';
+
+            $payload = [
+                'report_id' => (int)$report->report_id,
+                'title' => (string)$report->title,
+                'description' => (string)$report->description,
+                'location' => (string)($report->location ?? ''),
+                'priority' => (string)$report->priority,
+                'submitted_by' => $assignerName,
+                'creator_name' => $assignerName,
+            ];
+
+            $recipients = [[
+                'email' => $emailToUse,
+                'full_name' => $assignedUser->full_name,
+            ]];
+
+            \EmailService::sendNewReportNotification($payload, $recipients);
+        } catch (\Throwable $e) {
+            Log::warning('Assignment email notification error', [
+                'report_id' => (int)$report->report_id,
+                'assigned_to' => $assignedToUserId,
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    /**
+     * Send email for new maintenance report to the department head.
+     * If no department head exists, falls back to super_admin.
+     *
+     * NEW EMAIL FLOW: Email goes to department head (maintenance_admin) of the same department only.
+     * Fallback to super_admin if no active department head found.
+     */
+    private function sendDepartmentHeadEmailForNewReport(MaintenanceReport $report, array $validated, string $submitterName): void
+    {
+        try {
+            $emailServicePath = base_path('public/backend/services/EmailService.php');
+            if (!file_exists($emailServicePath)) {
+                return;
+            }
+
+            require_once $emailServicePath;
+            if (!class_exists('EmailService')) {
+                return;
+            }
+
+            $recipients = [];
+
+            // Step 1: Try to find department head (maintenance_admin) for this report's department
+            if (!empty($report->department_id)) {
+                $departmentHead = DB::table('users')
+                    ->select(['user_id', 'email', 'verified_email', 'full_name'])
+                    ->where('department_id', $report->department_id)
+                    ->where('status', 'active')
+                    ->whereRaw("LOWER(TRIM(role)) = 'maintenance_admin'")
+                    ->first();
+
+                if ($departmentHead) {
+                    $recipients[] = [
+                        'user_id' => (int)($departmentHead->user_id ?? 0),
+                        'email' => strtolower(trim((string)($departmentHead->verified_email ?? $departmentHead->email ?? ''))),
+                        'full_name' => (string)($departmentHead->full_name ?? 'Department Head'),
+                    ];
+                }
+            }
+
+            // Step 2: If no department head found, fall back to super_admin
+            if (empty($recipients)) {
+                $superAdmin = DB::table('users')
+                    ->select(['user_id', 'email', 'verified_email', 'full_name'])
+                    ->whereRaw("LOWER(TRIM(role)) = 'super_admin'")
+                    ->where('status', 'active')
+                    ->first();
+
+                if ($superAdmin) {
+                    $recipients[] = [
+                        'user_id' => (int)($superAdmin->user_id ?? 0),
+                        'email' => strtolower(trim((string)($superAdmin->verified_email ?? $superAdmin->email ?? ''))),
+                        'full_name' => (string)($superAdmin->full_name ?? 'Administrator'),
+                    ];
+                }
+            }
+
+            // Step 3: Filter for valid emails only
+            $recipients = array_filter($recipients, static function (array $row): bool {
+                return $row['email'] !== '' && filter_var($row['email'], FILTER_VALIDATE_EMAIL) !== false;
+            });
+
+            // Step 4: Build payload and send email
+            if (!empty($recipients)) {
+                $payload = [
+                    'report_id' => (int)$report->report_id,
+                    'title' => (string)($validated['title'] ?? ''),
+                    'description' => (string)($validated['description'] ?? ''),
+                    'location' => (string)($validated['location'] ?? ''),
+                    'priority' => (string)($validated['priority'] ?? 'medium'),
+                    'submitted_by' => $submitterName,
+                    'creator_name' => $submitterName,
+                ];
+
+                \EmailService::sendNewReportNotification($payload, $recipients);
+            }
+        } catch (\Throwable $e) {
+            Log::warning('Department head email notification error', [
+                'report_id' => (int)$report->report_id,
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
     private function sendSuperAdminEmailForNewReport(MaintenanceReport $report, array $validated, string $submitterName): void
     {
         try {
@@ -776,7 +1019,7 @@ class ReportService
             }
 
             $superAdminRecipients = DB::table('users')
-                ->select(['user_id', 'email', 'full_name'])
+                ->select(['user_id', 'email', 'verified_email', 'full_name'])
                 ->where(function ($query): void {
                     $query->whereRaw("LOWER(TRIM(role)) = 'super_admin'")
                         ->orWhereRaw("LOWER(TRIM(role)) = 'super admin'");
@@ -785,18 +1028,18 @@ class ReportService
                     $query->whereNull('status')
                         ->orWhereRaw("LOWER(TRIM(status)) = 'active'");
                 })
-                ->whereNotNull('email')
-                ->where('email', '<>', '')
                 ->get()
                 ->map(static function ($row): array {
+                    // Use verified_email if available (preferred), fall back to email
+                    $emailToUse = strtolower(trim((string)($row->verified_email ?? $row->email ?? '')));
                     return [
                         'user_id' => (int)($row->user_id ?? 0),
-                        'email' => strtolower(trim((string)($row->email ?? ''))),
+                        'email' => $emailToUse,
                         'full_name' => (string)($row->full_name ?? 'Administrator'),
                     ];
                 })
                 ->filter(static function (array $row): bool {
-                    return filter_var($row['email'], FILTER_VALIDATE_EMAIL) !== false;
+                    return $row['email'] !== '' && filter_var($row['email'], FILTER_VALIDATE_EMAIL) !== false;
                 })
                 ->values()
                 ->all();

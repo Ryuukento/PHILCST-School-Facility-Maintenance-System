@@ -2458,8 +2458,6 @@ function buildStatsFromReports(reports) {
 
         if (createdAt === todayKey) {
             stats.reports_today += 1;
-            // Exclude today's data from chart statistics — charts show only complete past data
-            return;
         }
 
         stats.total += 1;

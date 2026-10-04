@@ -689,7 +689,7 @@ include __DIR__ . '/../includes/header.php';
 
 /* ── Per-report tag (All Reports rows) ────────────────────────────────── */
 #reports-container .report-archive-tag {
-    display: flex; align-items: center; gap: 4px; margin-top: 5px; padding: 1px 8px; border-radius: 999px;
+    display: flex; align-items: center; gap: 4px; margin-top: 8px; padding: 4px 10px; border-radius: 999px;
     font-size: 11px; font-weight: 700; white-space: nowrap; width: fit-content;
 }
 #reports-container .report-archive-tag.is-locked   { background: rgba(148,163,184,0.16); color: #cbd5e1; border: 1px solid rgba(148,163,184,0.3); }

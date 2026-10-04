@@ -68,6 +68,91 @@ class DamageReportService
         }
     }
 
+    /**
+     * Send email for new damage report to the department head.
+     * Uses the same department-based routing as general maintenance reports:
+     * email goes to maintenance_admin of the same department, or falls back to super_admin.
+     */
+    private function sendDepartmentHeadEmailForDamageReport(DamageReport $report, MaintenanceReport $maintenanceReport, string $submitterName): void
+    {
+        try {
+            $emailServicePath = base_path('public/backend/services/EmailService.php');
+            if (!file_exists($emailServicePath)) {
+                return;
+            }
+
+            require_once $emailServicePath;
+            if (!class_exists('EmailService')) {
+                return;
+            }
+
+            $recipients = [];
+            $departmentId = (int)$report->department_id;
+
+            // Step 1: Try to find department head (maintenance_admin) for this damage report's department
+            if ($departmentId > 0) {
+                $departmentHead = DB::table('users')
+                    ->select(['user_id', 'email', 'verified_email', 'full_name'])
+                    ->where('department_id', $departmentId)
+                    ->where('status', 'active')
+                    ->whereRaw("LOWER(TRIM(role)) = 'maintenance_admin'")
+                    ->first();
+
+                if ($departmentHead) {
+                    $recipients[] = [
+                        'user_id' => (int)($departmentHead->user_id ?? 0),
+                        'email' => strtolower(trim((string)($departmentHead->verified_email ?? $departmentHead->email ?? ''))),
+                        'full_name' => (string)($departmentHead->full_name ?? 'Department Head'),
+                    ];
+                }
+            }
+
+            // Step 2: If no department head found, fall back to super_admin
+            if (empty($recipients)) {
+                $superAdmin = DB::table('users')
+                    ->select(['user_id', 'email', 'verified_email', 'full_name'])
+                    ->whereRaw("LOWER(TRIM(role)) = 'super_admin'")
+                    ->where('status', 'active')
+                    ->first();
+
+                if ($superAdmin) {
+                    $recipients[] = [
+                        'user_id' => (int)($superAdmin->user_id ?? 0),
+                        'email' => strtolower(trim((string)($superAdmin->verified_email ?? $superAdmin->email ?? ''))),
+                        'full_name' => (string)($superAdmin->full_name ?? 'Administrator'),
+                    ];
+                }
+            }
+
+            // Step 3: Filter for valid emails only
+            $recipients = array_filter($recipients, static function (array $row): bool {
+                return $row['email'] !== '' && filter_var($row['email'], FILTER_VALIDATE_EMAIL) !== false;
+            });
+
+            // Step 4: Build payload and send email
+            if (!empty($recipients)) {
+                $payload = [
+                    'report_id' => (int)$maintenanceReport->report_id,
+                    'title' => (string)($maintenanceReport->title ?? ''),
+                    'description' => (string)($report->damage_description ?? ''),
+                    'location' => (string)(optional(optional($report->room)->building)->name ?? ''),
+                    'priority' => (string)$maintenanceReport->priority,
+                    'submitted_by' => $submitterName,
+                    'creator_name' => $submitterName,
+                ];
+
+                \EmailService::sendNewReportNotification($payload, $recipients);
+            }
+        } catch (\Throwable $e) {
+            // Log but don't fail the report creation
+            \Illuminate\Support\Facades\Log::warning('Damage report department head email notification error', [
+                'damage_report_id' => (int)$report->id,
+                'report_id' => (int)$maintenanceReport->report_id,
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
     public function listReports(array $filters, array $authUser): LengthAwarePaginator
     {
         $role = $this->normalizeRole((string)($authUser['role'] ?? ''));
@@ -273,6 +358,10 @@ class DamageReportService
                 'damage_report',
                 $report->id
             );
+
+            // EMAIL: Send to department head (same logic as general maintenance reports)
+            $submitterName = optional(User::find($reporterId))->full_name ?? 'A staff member';
+            $this->sendDepartmentHeadEmailForDamageReport($report, $maintenanceReport, $submitterName);
 
             return $report;
         });

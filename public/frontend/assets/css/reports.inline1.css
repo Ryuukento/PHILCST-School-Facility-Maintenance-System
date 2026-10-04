@@ -243,6 +243,9 @@
    standalone ID column. Neither value changed; only where the ID renders. */
 .reports-page-container .reports-table .reports-cell-report {
     white-space: normal;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
 }
 
 .reports-id {
