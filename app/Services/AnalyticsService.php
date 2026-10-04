@@ -681,6 +681,17 @@ class AnalyticsService
         // If no active semester, still allow filtered view
         $semesterStartDate = $semesterActive ? $schoolSettings->semester_started_at : null;
 
+        // Get full semester date range for chart data (entire semester, not just to today)
+        $semesterStartForCharts = null;
+        $semesterEndForCharts = null;
+        if ($currentSemester === 'First Semester') {
+            $semesterStartForCharts = $schoolSettings->first_sem_start?->toDateString();
+            $semesterEndForCharts = $schoolSettings->first_sem_end?->toDateString();
+        } elseif ($currentSemester === 'Second Semester') {
+            $semesterStartForCharts = $schoolSettings->second_sem_start?->toDateString();
+            $semesterEndForCharts = $schoolSettings->second_sem_end?->toDateString();
+        }
+
         // Get current semester stats
         $currentStats = $this->getReportStats($semesterStartDate, $currentSemester);
 
@@ -714,8 +725,8 @@ class AnalyticsService
         // Get reports by status distribution
         $reportsByStatus = $this->getReportsByStatus($semesterStartDate);
 
-        // Get reports by category
-        $reportsByCategory = $this->getReportsByCategory($semesterStartDate);
+        // Get reports by category (using full semester date range)
+        $reportsByCategory = $this->getReportsByCategory($semesterStartForCharts, $semesterEndForCharts);
 
         // Get monthly trend
         $monthlyTrend = $this->getMonthlyReportsTrend($semesterStartDate, $currentSemester);
@@ -992,7 +1003,7 @@ class AnalyticsService
     /**
      * Get distribution of reports by category/problem type.
      */
-    private function getReportsByCategory(?string $semesterStartDate): array
+    private function getReportsByCategory(?string $semesterStartDate, ?string $semesterEndDate = null): array
     {
         $query = DB::table('maintenance_reports')
             ->where(function ($q) {
@@ -1008,7 +1019,11 @@ class AnalyticsService
             ->whereNotNull('problem_type');
 
         if ($semesterStartDate) {
-            $query->where('created_at', '>=', $semesterStartDate);
+            $query->whereDate('created_at', '>=', $semesterStartDate);
+        }
+
+        if ($semesterEndDate) {
+            $query->whereDate('created_at', '<=', $semesterEndDate);
         }
 
         $results = $query->selectRaw('
