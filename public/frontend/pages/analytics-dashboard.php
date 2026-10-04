@@ -1561,7 +1561,15 @@ function anRenderReportsByStatusChart(data) {
     const values = data.map(d => d.count);
     const total = values.reduce((a, b) => a + b, 0);
 
-    const colors = ['#d97706', '#3b82f6', '#10b981', '#8b5cf6', '#ef4444'];
+    // Color mapping based on status label
+    const colorMap = {
+        'Pending / Open': '#f59e0b',    // Amber/Orange
+        'In Progress': '#3b82f6',       // Blue
+        'Completed': '#10b981',         // Green
+        'Other': '#6b7280'              // Gray
+    };
+
+    const colors = labels.map(label => colorMap[label] || '#6b7280');
 
     // Update center text with total count
     const totalEl = document.getElementById('chart-reports-status-total');
@@ -1575,7 +1583,7 @@ function anRenderReportsByStatusChart(data) {
             labels: labels,
             datasets: [{
                 data: values,
-                backgroundColor: colors.slice(0, labels.length),
+                backgroundColor: colors,
                 borderColor: '#fff',
                 borderWidth: 2,
             }]
