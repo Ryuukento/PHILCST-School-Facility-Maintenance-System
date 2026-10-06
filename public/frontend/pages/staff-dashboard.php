@@ -1,4 +1,6 @@
 <?php
+// Clean URLs: public_url() is used below, before header.php loads settings.
+require_once __DIR__ . '/../../backend/config/settings.php';
 /**
  * Maintenance Staff Dashboard
  */
@@ -11,7 +13,7 @@ if (session_status() === PHP_SESSION_NONE) {
 }
 
 if (!isset($_SESSION['user'])) {
-    header('Location: /School_Facility_Maintenance_System/frontend/pages/index.php');
+    header('Location: ' . public_url('/login'));
     exit;
 }
 
@@ -38,11 +40,11 @@ try {
 
 if (($user['role'] ?? '') !== 'maintenance_staff') {
     if (($user['role'] ?? '') === 'maintenance_admin' || ($user['role'] ?? '') === 'super_admin') {
-        header('Location: /School_Facility_Maintenance_System/frontend/pages/maintenance-dashboard.php');
+        header('Location: ' . public_url('/dashboard'));
         exit;
     }
 
-    header('Location: /School_Facility_Maintenance_System/frontend/pages/dashboard.php');
+    header('Location: ' . public_url('/dashboard'));
     exit;
 }
 
@@ -76,12 +78,12 @@ $pageStylesheets = [
      Maintenance Staff user reaching this page can always create a report
      (see reports.php's $canCreateReport gate), so no role check is needed
      here. -->
-<a href="/School_Facility_Maintenance_System/frontend/pages/create-report.php" style="display:none" aria-hidden="true" tabindex="-1"></a>
+<a href="<?php echo public_url('/create-report'); ?>" style="display:none" aria-hidden="true" tabindex="-1"></a>
 
 <main class="container staff-dashboard-page">
 
     <div class="stats-grid">
-        <div class="stat-card stat-card-total stat-card-clickable" role="button" tabindex="0" data-href="/School_Facility_Maintenance_System/frontend/pages/reports.php?status_group=assigned_to_me" aria-label="Open assigned reports">
+        <div class="stat-card stat-card-total stat-card-clickable" role="button" tabindex="0" data-href="<?php echo public_url('/reports'); ?>?status_group=assigned_to_me" aria-label="Open assigned reports">
             <div class="stat-content">
                 <p class="stat-label">Assigned to you</p>
                 <h3 class="stat-value" id="my-assigned-reports"><?php echo (int)$assignedReportsCount; ?></h3>
@@ -103,7 +105,7 @@ $pageStylesheets = [
              assignments server-side (DispatchController::index()), which is
              also why the count below is trustworthy without any client-side
              filtering. Starts at 0 and is filled in by JS. -->
-        <div class="stat-card stat-card-pending stat-card-clickable" role="button" tabindex="0" data-href="/School_Facility_Maintenance_System/frontend/pages/dispatches.php?status=approved" aria-label="Open dispatches waiting for your release">
+        <div class="stat-card stat-card-pending stat-card-clickable" role="button" tabindex="0" data-href="<?php echo public_url('/dispatches'); ?>?status=approved" aria-label="Open dispatches waiting for your release">
             <div class="stat-content">
                 <p class="stat-label">My Pending Releases</p>
                 <h3 class="stat-value" id="my-pending-releases">0</h3>
@@ -121,7 +123,7 @@ $pageStylesheets = [
             <div class="stat-icon-chip"><?php echo ui_icon('package', ['size' => 22]); ?></div>
         </div>
 
-        <div class="stat-card stat-card-pending stat-card-clickable" role="button" tabindex="0" data-href="/School_Facility_Maintenance_System/frontend/pages/reports.php?status=submitted" aria-label="Open pending reports">
+        <div class="stat-card stat-card-pending stat-card-clickable" role="button" tabindex="0" data-href="<?php echo public_url('/reports'); ?>?status=submitted" aria-label="Open pending reports">
             <div class="stat-content">
                 <p class="stat-label">Pending</p>
                 <h3 class="stat-value" id="my-pending">0</h3>
@@ -130,7 +132,7 @@ $pageStylesheets = [
             <div class="stat-icon-chip"><?php echo ui_icon('clock', ['size' => 22]); ?></div>
         </div>
 
-        <div class="stat-card stat-card-progress stat-card-clickable" role="button" tabindex="0" data-href="/School_Facility_Maintenance_System/frontend/pages/reports.php?status=in_progress" aria-label="Open in progress reports">
+        <div class="stat-card stat-card-progress stat-card-clickable" role="button" tabindex="0" data-href="<?php echo public_url('/reports'); ?>?status=in_progress" aria-label="Open in progress reports">
             <div class="stat-content">
                 <p class="stat-label">In Progress</p>
                 <h3 class="stat-value" id="my-in-progress">0</h3>
@@ -139,7 +141,7 @@ $pageStylesheets = [
             <div class="stat-icon-chip"><?php echo ui_icon('wrench', ['size' => 22]); ?></div>
         </div>
 
-        <div class="stat-card stat-card-completed stat-card-clickable" role="button" tabindex="0" data-href="/School_Facility_Maintenance_System/frontend/pages/reports.php?status=completed" aria-label="Open completed reports">
+        <div class="stat-card stat-card-completed stat-card-clickable" role="button" tabindex="0" data-href="<?php echo public_url('/reports'); ?>?status=completed" aria-label="Open completed reports">
             <div class="stat-content">
                 <p class="stat-label">Completed</p>
                 <h3 class="stat-value" id="my-completed">0</h3>
@@ -174,7 +176,7 @@ $pageStylesheets = [
                 <div class="hd-overview-side">
                     <div class="hd-breakdown">
                         <?php foreach (['submitted' => 'Submitted', 'in_progress' => 'In Progress', 'completed' => 'Completed'] as $key => $label): $slug = str_replace('_', '-', $key); ?>
-                        <a class="hd-breakdown-row" href="/School_Facility_Maintenance_System/frontend/pages/reports.php?status=<?php echo $key; ?>">
+                        <a class="hd-breakdown-row" href="<?php echo public_url('/reports'); ?>?status=<?php echo $key; ?>">
                             <span class="hd-breakdown-dot hd-dot-<?php echo $slug; ?>"></span>
                             <span class="hd-breakdown-label"><?php echo $label; ?></span>
                             <strong class="hd-breakdown-count" id="staff-status-<?php echo $slug; ?>">0</strong>
@@ -211,7 +213,7 @@ $pageStylesheets = [
                 <div class="hd-overview-side">
                     <div class="hd-breakdown">
                         <?php foreach (['critical' => 'Critical', 'high' => 'High', 'medium' => 'Medium', 'low' => 'Low'] as $key => $label): ?>
-                        <a class="hd-breakdown-row" href="/School_Facility_Maintenance_System/frontend/pages/reports.php?priority=<?php echo $key; ?>">
+                        <a class="hd-breakdown-row" href="<?php echo public_url('/reports'); ?>?priority=<?php echo $key; ?>">
                             <span class="hd-breakdown-dot hd-dot-<?php echo $key; ?>"></span>
                             <span class="hd-breakdown-label"><?php echo $label; ?></span>
                             <strong class="hd-breakdown-count" id="staff-priority-<?php echo $key; ?>">0</strong>
@@ -604,7 +606,7 @@ function initializeStaffCharts(data, scopeLabel) {
         ? `${statusTotals.completed} of ${statusTotal} report${statusTotal !== 1 ? 's' : ''} completed.`
         : 'No reports yet.');
 
-    const statusUrl = '/School_Facility_Maintenance_System/frontend/pages/reports.php?status=';
+    const statusUrl = '<?php echo public_url('/reports'); ?>?status=';
     renderDonut('staff-status-donut', [
         { key: 'submitted', label: 'Submitted', value: statusTotals.submitted, href: statusUrl + 'submitted' },
         { key: 'in-progress', label: 'In Progress', value: statusTotals.in_progress, href: statusUrl + 'in_progress' },
@@ -644,7 +646,7 @@ function initializeStaffCharts(data, scopeLabel) {
         ? `${urgentCount} Critical/High report${urgentCount !== 1 ? 's' : ''} should be handled first.`
         : (priorityTotal > 0 ? 'No Critical or High priority reports.' : 'No reports yet.'));
 
-    const priorityUrl = '/School_Facility_Maintenance_System/frontend/pages/reports.php?priority=';
+    const priorityUrl = '<?php echo public_url('/reports'); ?>?priority=';
     renderDonut('staff-priority-donut', ['critical', 'high', 'medium', 'low'].map((key) => ({
         key,
         label: key.charAt(0).toUpperCase() + key.slice(1),

@@ -1,4 +1,6 @@
 <?php
+// Clean URLs: public_url() is used below, before header.php loads settings.
+require_once __DIR__ . '/../../backend/config/settings.php';
 if (session_status() === PHP_SESSION_NONE) {
     session_set_cookie_params(['lifetime'=>0,'path'=>'/','secure'=>false,'httponly'=>true,'samesite'=>'Lax']);
     if (!@session_start()) {
@@ -11,7 +13,7 @@ if (session_status() === PHP_SESSION_NONE) {
 }
 
 if (!isset($_SESSION['user'])) {
-    header('Location: /School_Facility_Maintenance_System/frontend/pages/index.php');
+    header('Location: ' . public_url('/login'));
     exit;
 }
 
@@ -22,7 +24,7 @@ $currentRole = strtolower(trim((string)($user['role'] ?? '')));
 // per the sidebar link removal in includes/sidebar.php ($showAuditLogs)
 // and the matching API route guard in routes/web.php.
 if ($currentRole !== 'super_admin') {
-    header('Location: /School_Facility_Maintenance_System/frontend/pages/dashboard.php');
+    header('Location: ' . public_url('/dashboard'));
     exit;
 }
 

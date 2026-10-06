@@ -13,7 +13,7 @@ if (session_status() === PHP_SESSION_NONE) {
 require_once __DIR__ . '/../../backend/config/settings.php';
 
 if (!isset($_SESSION['user'])) {
-    header('Location: ' . public_url('/frontend/pages/index.php'));
+    header('Location: ' . public_url('/login'));
     exit;
 }
 
@@ -22,7 +22,7 @@ $userRole = $user['role'] ?? '';
 
 $allowedRoles = ['super_admin', 'maintenance_admin', 'maintenance_staff'];
 if (!in_array($userRole, $allowedRoles, true)) {
-    header('Location: ' . public_url('/frontend/pages/dashboard.php'));
+    header('Location: ' . public_url('/dashboard'));
     exit;
 }
 
@@ -225,7 +225,7 @@ include __DIR__ . '/../includes/header.php';
             </div>
             <div class="d-flex gap-sm">
                 <button type="button" class="btn btn-primary" id="printReceiptBtn" disabled><?php echo ui_icon('file-text'); ?> Print Receipt</button>
-                <a href="<?php echo htmlspecialchars(public_url('/frontend/pages/purchase-receipts.php')); ?>" class="btn btn-secondary"><?php echo ui_icon('arrow-left'); ?> Back to List</a>
+                <a href="<?php echo htmlspecialchars(public_url('/purchase-receipts')); ?>" class="btn btn-secondary"><?php echo ui_icon('arrow-left'); ?> Back to List</a>
             </div>
         </div>
         <div class="card-body" id="receipt-header-container">
@@ -595,8 +595,8 @@ const PR_SESSION_USER_NAME = <?php echo json_encode($user['full_name'] ?? ''); ?
 const PURCHASE_API  = window.SFMS_PUBLIC_URL('/api/purchase-receipts');
 
 const PURCHASE_PAGE  = window.SFMS_PUBLIC_URL
-    ? window.SFMS_PUBLIC_URL('/frontend/pages/purchase-receipts.php')
-    : '/frontend/pages/purchase-receipts.php';
+    ? window.SFMS_PUBLIC_URL('/purchase-receipts')
+    : '/purchase-receipts';
 
 // ---------------------------------------------------------------------------
 // Shared helpers

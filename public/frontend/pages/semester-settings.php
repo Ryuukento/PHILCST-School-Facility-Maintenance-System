@@ -1,4 +1,6 @@
 <?php
+// Clean URLs: public_url() is used below, before header.php loads settings.
+require_once __DIR__ . '/../../backend/config/settings.php';
 /**
  * TASK 25 — Semester Settings (dedicated System Settings page, Option A).
  *
@@ -23,7 +25,7 @@ if (session_status() === PHP_SESSION_NONE) {
 }
 
 if (!isset($_SESSION['user']) && !isset($_SESSION['auth_user'])) {
-    header('Location: /School_Facility_Maintenance_System/frontend/pages/index.php');
+    header('Location: ' . public_url('/login'));
     exit;
 }
 
@@ -31,7 +33,7 @@ $user = $_SESSION['user'] ?? $_SESSION['auth_user'];
 $userRole = $user['role'] ?? 'user';
 
 if (!in_array($userRole, ['super_admin'])) {
-    header('Location: /School_Facility_Maintenance_System/frontend/pages/dashboard.php');
+    header('Location: ' . public_url('/dashboard'));
     exit;
 }
 
@@ -93,7 +95,7 @@ include __DIR__ . '/../includes/header.php';
                             <p class="settings-help-text" style="margin-top:8px;">The current semester (and semester-scoped dashboard statistics) update automatically based on these dates. No report is deleted, archived, or modified, and historical reports remain fully visible on the Reports page regardless of semester changes.</p>
 
                             <button type="submit" class="btn btn-primary settings-primary-btn" id="semester-settings-save-btn">Save Settings</button>
-                            <a href="<?php echo public_url('/frontend/pages/dashboard.php'); ?>" class="btn btn-secondary" style="margin-left:8px;">Back to Dashboard</a>
+                            <a href="<?php echo public_url('/dashboard'); ?>" class="btn btn-secondary" style="margin-left:8px;">Back to Dashboard</a>
                         </form>
                     </div>
                 </div>

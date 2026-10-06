@@ -1,4 +1,6 @@
 <?php
+// Clean URLs: public_url() is used below, before header.php loads settings.
+require_once __DIR__ . '/../../backend/config/settings.php';
 /**
  * Maintenance Admin Dashboard
  * Main interface for maintenance administrators
@@ -13,13 +15,13 @@ if (session_status() === PHP_SESSION_NONE) {
 
 // Check if user is logged in and has maintenance_admin role
 if (!isset($_SESSION['user'])) {
-    header('Location: /School_Facility_Maintenance_System/frontend/pages/index.php');
+    header('Location: ' . public_url('/login'));
     exit;
 }
 
 $user = $_SESSION['user'];
 if (!in_array($user['role'], ['super_admin', 'maintenance_admin', 'maintenance_staff'])) {
-    header('Location: /School_Facility_Maintenance_System/frontend/pages/dashboard.php');
+    header('Location: ' . public_url('/dashboard'));
     exit;
 }
 
@@ -47,7 +49,7 @@ $pageStylesheets = [
 <?php include __DIR__ . '/../includes/header.php'; ?>
 <?php if ($canCreateReport): ?>
 <!-- create-report.php link preserved for navigation consolidation (CreateReportNavigationConsolidationTest) -->
-<a href="/School_Facility_Maintenance_System/frontend/pages/create-report.php" style="display:none" aria-hidden="true" tabindex="-1"></a>
+<a href="<?php echo public_url('/create-report'); ?>" style="display:none" aria-hidden="true" tabindex="-1"></a>
 <?php endif; ?>
 
 <main class="container maintenance-admin-dashboard-page" data-department-id="<?php echo $headMaintenanceDepartmentId; ?>">
@@ -117,7 +119,7 @@ $pageStylesheets = [
                 <div class="hd-overview-side">
                     <div class="hd-breakdown">
                         <?php foreach (['critical' => 'Critical', 'high' => 'High', 'medium' => 'Medium', 'low' => 'Low'] as $key => $label): ?>
-                        <a class="hd-breakdown-row" href="/School_Facility_Maintenance_System/frontend/pages/reports.php?priority=<?php echo $key; ?>">
+                        <a class="hd-breakdown-row" href="<?php echo public_url('/reports'); ?>?priority=<?php echo $key; ?>">
                             <span class="hd-breakdown-dot hd-dot-<?php echo $key; ?>"></span>
                             <span class="hd-breakdown-label"><?php echo $label; ?></span>
                             <strong class="hd-breakdown-count" id="legend-<?php echo $key; ?>">0</strong>
@@ -161,7 +163,7 @@ $pageStylesheets = [
                 <div class="hd-overview-side">
                     <div class="hd-breakdown">
                         <?php foreach (['submitted' => 'Submitted', 'in_progress' => 'In Progress', 'completed' => 'Completed'] as $key => $label): $slug = str_replace('_', '-', $key); ?>
-                        <a class="hd-breakdown-row" href="/School_Facility_Maintenance_System/frontend/pages/reports.php?status=<?php echo $key; ?>">
+                        <a class="hd-breakdown-row" href="<?php echo public_url('/reports'); ?>?status=<?php echo $key; ?>">
                             <span class="hd-breakdown-dot hd-dot-<?php echo $slug; ?>"></span>
                             <span class="hd-breakdown-label"><?php echo $label; ?></span>
                             <strong class="hd-breakdown-count" id="legend-status-<?php echo $slug; ?>">0</strong>
@@ -194,7 +196,7 @@ $pageStylesheets = [
         <div class="hd-card">
             <div class="hd-card-header">
                 <h2 class="hd-card-title">Pending Dispatch Requests</h2>
-                <a href="/School_Facility_Maintenance_System/frontend/pages/dispatches.php" class="hd-view-all">View All &rarr;</a>
+                <a href="<?php echo public_url('/dispatches'); ?>" class="hd-view-all">View All &rarr;</a>
             </div>
             <div class="hd-card-body hd-card-body-table">
                 <div id="pending-dispatch-container">
@@ -611,7 +613,7 @@ function setTextById(id, value) {
 
 function navigateToReportsCard(cardKey) {
     if (cardKey === 'low_stock') {
-        window.location.href = '/School_Facility_Maintenance_System/frontend/pages/inventory.php?status_filter=low_stock';
+        window.location.href = '<?php echo public_url('/inventory'); ?>?status_filter=low_stock';
         return;
     }
 
@@ -619,11 +621,11 @@ function navigateToReportsCard(cardKey) {
     // card — same existing page other dashboards already link to
     // (super-admin-dashboard.php, staff-dashboard.php, dashboard.php).
     if (cardKey === 'buildings') {
-        window.location.href = '/School_Facility_Maintenance_System/frontend/pages/buildings-overview.php';
+        window.location.href = '<?php echo public_url('/buildings-overview'); ?>';
         return;
     }
 
-    const targetUrl = new URL('/School_Facility_Maintenance_System/frontend/pages/reports.php', window.location.origin);
+    const targetUrl = new URL('<?php echo public_url('/reports'); ?>', window.location.origin);
 
     if (cardKey === 'today') {
         targetUrl.searchParams.set('date_scope', 'today');
@@ -733,7 +735,7 @@ function initializeCharts(data) {
         }
     }
 
-    const priorityReportsUrl = '/School_Facility_Maintenance_System/frontend/pages/reports.php?priority=';
+    const priorityReportsUrl = '<?php echo public_url('/reports'); ?>?priority=';
     renderDonut('priority-donut', [
         { key: 'critical', label: 'Critical', value: priorityCritical, href: priorityReportsUrl + 'critical' },
         { key: 'high', label: 'High', value: priorityHigh, href: priorityReportsUrl + 'high' },
@@ -778,7 +780,7 @@ function renderStatusChart(data) {
         ? `${statusCompleted} of ${statusTotal} report${statusTotal !== 1 ? 's' : ''} completed this month.`
         : 'No reports filed this month yet.');
 
-    const statusReportsUrl = '/School_Facility_Maintenance_System/frontend/pages/reports.php?status=';
+    const statusReportsUrl = '<?php echo public_url('/reports'); ?>?status=';
     renderDonut('status-donut', [
         { key: 'submitted', label: 'Submitted', value: statusSubmitted, href: statusReportsUrl + 'submitted' },
         { key: 'in-progress', label: 'In Progress', value: statusInProgress, href: statusReportsUrl + 'in_progress' },
@@ -1001,7 +1003,7 @@ function renderDispatchTable(dispatches) {
             const purpose = escapeHtmlGeneric((d.report && d.report.title) ? d.report.title : '—');
             const status = String(d.status || 'pending').toLowerCase();
             const date = d.created_at ? new Date(d.created_at).toLocaleDateString('en-US', {month:'short', day:'numeric'}) : '—';
-            const detailUrl = `/School_Facility_Maintenance_System/frontend/pages/dispatch-detail.php?id=${encodeURIComponent(d.id || '')}`;
+            const detailUrl = `<?php echo public_url('/dispatch-detail'); ?>?id=${encodeURIComponent(d.id || '')}`;
             return `<tr>
                 <td><a href="${detailUrl}" class="hd-link">${code}</a></td>
                 <td>${requester}</td>

@@ -1,4 +1,6 @@
 <?php
+// Clean URLs: public_url() is used below, before header.php loads settings.
+require_once __DIR__ . '/../../backend/config/settings.php';
 if (session_status() === PHP_SESSION_NONE) {
     session_set_cookie_params(['lifetime'=>0,'path'=>'/','secure'=>false,'httponly'=>true,'samesite'=>'Lax']);
     if (!@session_start()) {
@@ -10,7 +12,7 @@ if (session_status() === PHP_SESSION_NONE) {
     }
 }
 if (!isset($_SESSION['user']) && !isset($_SESSION['auth_user']) && !isset($user)) {
-    header('Location: /School_Facility_Maintenance_System/frontend/pages/index.php');
+    header('Location: ' . public_url('/login'));
     exit;
 }
 
@@ -328,7 +330,7 @@ document.getElementById('account-settings-form').addEventListener('submit', asyn
                 } catch (error) {
                     console.error('Post-setup logout error:', error);
                 }
-                window.location.href = window.SFMS_PUBLIC_URL('/frontend/pages/index.php?password_changed=1');
+                window.location.href = window.SFMS_PUBLIC_URL('/login?password_changed=1');
             }, 1200);
             return;
         }

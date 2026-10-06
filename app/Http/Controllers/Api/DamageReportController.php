@@ -93,10 +93,14 @@ class DamageReportController extends Controller
 
     public function checkDuplicate(Request $request)
     {
+        // Deployed Asset registry — a tracked unit is identified by its own id,
+        // so item/room/department become optional when deployed_asset_id is
+        // sent. Without it the original three-field contract is unchanged.
         $validated = $request->validate([
-            'item_id' => ['required', 'integer', 'exists:items,id'],
-            'room_id' => ['required', 'integer', 'exists:rooms,id'],
-            'department_id' => ['required', 'integer', 'exists:departments,department_id'],
+            'deployed_asset_id' => ['nullable', 'integer', 'exists:deployed_assets,id'],
+            'item_id' => ['required_without:deployed_asset_id', 'nullable', 'integer', 'exists:items,id'],
+            'room_id' => ['required_without:deployed_asset_id', 'nullable', 'integer', 'exists:rooms,id'],
+            'department_id' => ['required_without:deployed_asset_id', 'nullable', 'integer', 'exists:departments,department_id'],
             'damage_description' => ['nullable', 'string'],
         ]);
 

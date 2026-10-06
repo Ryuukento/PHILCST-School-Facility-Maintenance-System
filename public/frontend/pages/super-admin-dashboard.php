@@ -1,6 +1,8 @@
 <?php
 // Admin Dashboard
 // System-wide overview, statistics, and management
+// Clean URLs: public_url() is used below, before header.php loads settings.
+require_once __DIR__ . '/../../backend/config/settings.php';
 
 if (session_status() === PHP_SESSION_NONE) {
     session_set_cookie_params(['lifetime'=>0,'path'=>'/','secure'=>false,'httponly'=>true,'samesite'=>'Lax']);
@@ -15,13 +17,13 @@ if (session_status() === PHP_SESSION_NONE) {
 
 // Check if user is logged in
 if (!isset($_SESSION['user_id'])) {
-    header('Location: login.php');
+    header('Location: ' . public_url('/login'));
     exit;
 }
 
 // Check if user is super_admin
 if (!isset($_SESSION['user']) || $_SESSION['user']['role'] !== 'super_admin') {
-    header('Location: dashboard.php');
+    header('Location: ' . public_url('/dashboard'));
     exit;
 }
 
@@ -52,7 +54,7 @@ $pageStylesheets = [
                 <select id="dashboard-year-picker" style="padding:6px 10px;border-radius:6px;">
                     <!-- Year options will be populated by JS -->
                 </select>
-                <a href="/School_Facility_Maintenance_System/frontend/pages/reports.php?last_month=1" class="btn btn-primary" style="display: inline-flex; align-items: center; gap: 8px; padding: 10px 20px; text-decoration: none; border-radius: 6px; font-weight: 500; white-space: nowrap;">
+                <a href="<?php echo public_url('/reports'); ?>?last_month=1" class="btn btn-primary" style="display: inline-flex; align-items: center; gap: 8px; padding: 10px 20px; text-decoration: none; border-radius: 6px; font-weight: 500; white-space: nowrap;">
                     <?php echo ui_icon('calendar'); ?> Last Month Reports
                 </a>
             </div>
@@ -65,7 +67,7 @@ $pageStylesheets = [
 
         <!-- Charts Section -->
         <div class="charts-section">
-            <div class="chart-container chart-card-clickable" role="button" tabindex="0" data-href="/School_Facility_Maintenance_System/frontend/pages/reports.php" aria-label="Open reports by status">
+            <div class="chart-container chart-card-clickable" role="button" tabindex="0" data-href="<?php echo public_url('/reports'); ?>" aria-label="Open reports by status">
                 <div class="chart-title">Reports by Status</div>
                 <div class="chart-canvas">
                     <canvas id="statusChart"></canvas>
@@ -74,7 +76,7 @@ $pageStylesheets = [
                     <div class="loading">Loading status summary...</div>
                 </div>
             </div>
-            <div class="chart-container priority-chart-card chart-card-clickable" role="button" tabindex="0" data-href="/School_Facility_Maintenance_System/frontend/pages/reports.php" aria-label="Open reports by priority">
+            <div class="chart-container priority-chart-card chart-card-clickable" role="button" tabindex="0" data-href="<?php echo public_url('/reports'); ?>" aria-label="Open reports by priority">
                 <div class="chart-title">Reports by Priority</div>
                 <div class="chart-canvas">
                     <canvas id="priorityChart"></canvas>
@@ -582,7 +584,7 @@ $pageStylesheets = [
                     </div>
                 </div>
 
-                <div class="stat-card buildings stat-card-clickable stat-card-action" role="button" tabindex="0" data-href="/School_Facility_Maintenance_System/frontend/pages/buildings-overview.php" aria-label="Open buildings overview">
+                <div class="stat-card buildings stat-card-clickable stat-card-action" role="button" tabindex="0" data-href="<?php echo public_url('/buildings-overview'); ?>" aria-label="Open buildings overview">
                     <div class="stat-head">
                         <span class="stat-icon-chip">${saIcon('building')}</span>
                         <div class="stat-label">Buildings Overview</div>
@@ -899,7 +901,7 @@ $pageStylesheets = [
                             return;
                         }
 
-                        window.location.href = `/School_Facility_Maintenance_System/frontend/pages/reports.php?priority=${encodeURIComponent(priority)}`;
+                        window.location.href = `<?php echo public_url('/reports'); ?>?priority=${encodeURIComponent(priority)}`;
                     },
                     plugins: {
                         legend: {
@@ -1296,7 +1298,7 @@ $pageStylesheets = [
                 html += `<td style="padding: 12px; border-color: ${borderColor};"><span style="background: ${statusColor}; color: white; padding: 4px 10px; border-radius: 4px; font-size: 12px; font-weight: 600;">${UI.escapeHtml(report.status.replace('_', ' ').toUpperCase())}</span></td>`;
                 html += `<td class="cell-muted" style="padding: 12px; color: ${textMuted}; border-color: ${borderColor};">${UI.escapeHtml(report.assigned_name) || 'Unassigned'}</td>`;
                 html += `<td class="cell-muted" style="padding: 12px; color: ${textMuted}; border-color: ${borderColor};">${createdDate}</td>`;
-                html += `<td style="padding: 12px; border-color: ${borderColor};"><a href="/School_Facility_Maintenance_System/frontend/pages/maintenance-report-detail.php?id=${report.report_id}" class="last-month-view-link" style="color: ${viewText}; text-decoration: none; font-weight: 600; border: 1px solid #8A2BE2; padding: 6px 14px; border-radius: 6px; display: inline-block; background: ${viewBg};">View</a></td>`;
+                html += `<td style="padding: 12px; border-color: ${borderColor};"><a href="<?php echo public_url('/maintenance-report-detail'); ?>?id=${report.report_id}" class="last-month-view-link" style="color: ${viewText}; text-decoration: none; font-weight: 600; border: 1px solid #8A2BE2; padding: 6px 14px; border-radius: 6px; display: inline-block; background: ${viewBg};">View</a></td>`;
                 html += '</tr>';
             });
 

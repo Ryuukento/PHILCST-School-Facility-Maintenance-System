@@ -38,7 +38,7 @@ const NotificationManager = {
         },
         dispatch: {
             check: (id) => (window.SFMS_PUBLIC_URL ? window.SFMS_PUBLIC_URL(`/api/dispatches/${id}`) : `/api/dispatches/${id}`),
-            build: (id) => (window.SFMS_PUBLIC_URL ? window.SFMS_PUBLIC_URL('/frontend/pages/dispatch-detail.php') : '/frontend/pages/dispatch-detail.php') + `?id=${id}`,
+            build: (id) => (window.SFMS_PUBLIC_URL ? window.SFMS_PUBLIC_URL('/dispatch-detail') : '/dispatch-detail') + `?id=${id}`,
         },
         // TASK 12 — the 'repair_request' entity route was removed here. It
         // built a deep link to repair-detail.php, which this task deletes, so
@@ -53,11 +53,11 @@ const NotificationManager = {
         // today, so nothing in the current data set changes behaviour.
         damage_report: {
             check: (id) => (window.SFMS_PUBLIC_URL ? window.SFMS_PUBLIC_URL(`/api/damage-reports/${id}`) : `/api/damage-reports/${id}`),
-            build: (id) => (window.SFMS_PUBLIC_URL ? window.SFMS_PUBLIC_URL('/frontend/pages/damage-report-detail.php') : '/frontend/pages/damage-report-detail.php') + `?id=${id}`,
+            build: (id) => (window.SFMS_PUBLIC_URL ? window.SFMS_PUBLIC_URL('/damage-report-detail') : '/damage-report-detail') + `?id=${id}`,
         },
         user: {
             clientOnly: true,
-            build: (id) => (window.SFMS_PUBLIC_URL ? window.SFMS_PUBLIC_URL('/frontend/pages/users.php') : '/frontend/pages/users.php') + `?highlight=${id}`,
+            build: (id) => (window.SFMS_PUBLIC_URL ? window.SFMS_PUBLIC_URL('/users') : '/users') + `?highlight=${id}`,
         },
         // TASK 18 — extends the Task 17 ENTITY_ROUTES map (not a redesign) for
         // the three new notification events that need deep links.
@@ -66,13 +66,13 @@ const NotificationManager = {
             // (see $receiptId/$isDetail), so this follows the same
             // server-checked report/dispatch pattern below.
             check: (id) => (window.SFMS_PUBLIC_URL ? window.SFMS_PUBLIC_URL(`/api/purchase-receipts/${id}`) : `/api/purchase-receipts/${id}`),
-            build: (id) => (window.SFMS_PUBLIC_URL ? window.SFMS_PUBLIC_URL('/frontend/pages/purchase-receipts.php') : '/frontend/pages/purchase-receipts.php') + `?id=${id}`,
+            build: (id) => (window.SFMS_PUBLIC_URL ? window.SFMS_PUBLIC_URL('/purchase-receipts') : '/purchase-receipts') + `?id=${id}`,
         },
         inventory: {
             // GET /api/items/{id} has no extra role gate beyond authentication,
             // matching who can view the Inventory page itself.
             check: (id) => (window.SFMS_PUBLIC_URL ? window.SFMS_PUBLIC_URL(`/api/items/${id}`) : `/api/items/${id}`),
-            build: (id) => (window.SFMS_PUBLIC_URL ? window.SFMS_PUBLIC_URL('/frontend/pages/inventory.php') : '/frontend/pages/inventory.php') + `?highlight=${id}`,
+            build: (id) => (window.SFMS_PUBLIC_URL ? window.SFMS_PUBLIC_URL('/inventory') : '/inventory') + `?highlight=${id}`,
         },
         building: {
             // No GET /api/buildings/{id} show endpoint exists, so — like
@@ -81,7 +81,7 @@ const NotificationManager = {
             // Updated notification is sent to), via the allowedRoles override.
             clientOnly: true,
             allowedRoles: ['super_admin', 'maintenance_admin'],
-            build: (id) => (window.SFMS_PUBLIC_URL ? window.SFMS_PUBLIC_URL('/frontend/pages/buildings-overview.php') : '/frontend/pages/buildings-overview.php') + `?highlight=${id}`,
+            build: (id) => (window.SFMS_PUBLIC_URL ? window.SFMS_PUBLIC_URL('/buildings-overview') : '/buildings-overview') + `?highlight=${id}`,
         },
     },
 
@@ -471,7 +471,7 @@ const NotificationManager = {
         // lookup fails OR when the dispatch is not visible to this user —
         // the API decides that, not the client, so an unauthorised user is
         // never handed a detail URL they cannot open.
-        const listUrl = `${url('/frontend/pages/dispatches.php')}?search=${encodeURIComponent(code)}`;
+        const listUrl = `${url('/dispatches')}?search=${encodeURIComponent(code)}`;
 
         try {
             const response = await fetch(
@@ -484,7 +484,7 @@ const NotificationManager = {
                 const rows = Array.isArray(payload.data && payload.data.data) ? payload.data.data : [];
                 const id = Number(rows[0] && rows[0].id) || 0;
                 if (id > 0) {
-                    return `${url('/frontend/pages/dispatch-detail.php')}?id=${id}`;
+                    return `${url('/dispatch-detail')}?id=${id}`;
                 }
             }
         } catch (error) {
@@ -509,14 +509,14 @@ const NotificationManager = {
         const maintenanceDetailRoles = ['maintenance_staff'];
 
         if (allReportsContextRoles.includes(normalizedRole)) {
-            return `${window.SFMS_PUBLIC_URL ? window.SFMS_PUBLIC_URL('/frontend/pages/maintenance-report-detail.php') : '/frontend/pages/maintenance-report-detail.php'}?id=${safeReportId}&back=all_reports`;
+            return `${window.SFMS_PUBLIC_URL ? window.SFMS_PUBLIC_URL('/maintenance-report-detail') : '/maintenance-report-detail'}?id=${safeReportId}&back=all_reports`;
         }
 
         if (maintenanceDetailRoles.includes(normalizedRole)) {
-            return `${window.SFMS_PUBLIC_URL ? window.SFMS_PUBLIC_URL('/frontend/pages/maintenance-report-detail.php') : '/frontend/pages/maintenance-report-detail.php'}?id=${safeReportId}`;
+            return `${window.SFMS_PUBLIC_URL ? window.SFMS_PUBLIC_URL('/maintenance-report-detail') : '/maintenance-report-detail'}?id=${safeReportId}`;
         }
 
-        return `${window.SFMS_PUBLIC_URL ? window.SFMS_PUBLIC_URL('/frontend/pages/report-detail.php') : '/frontend/pages/report-detail.php'}?id=${safeReportId}`;
+        return `${window.SFMS_PUBLIC_URL ? window.SFMS_PUBLIC_URL('/report-detail') : '/report-detail'}?id=${safeReportId}`;
     },
 
     

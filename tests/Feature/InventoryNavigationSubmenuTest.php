@@ -249,10 +249,11 @@ class InventoryNavigationSubmenuTest extends TestCase
             $element,
             'The Inventory label must be an anchor so it navigates on click.'
         );
+        // Clean URLs (2026-10-06): the Inventory page is now reached at /inventory.
         $this->assertStringContainsString(
-            "public_url('/frontend/pages/' . \$inventoryLink)",
+            "public_url('/inventory')",
             $element,
-            'The label must reuse the pre-existing $inventoryLink destination — '
+            'The label must link to the existing Inventory page — '
             . 'this task must not introduce a new route.'
         );
         $this->assertStringContainsString(
@@ -389,7 +390,7 @@ class InventoryNavigationSubmenuTest extends TestCase
             . 'task removed.'
         );
         $this->assertStringNotContainsString(
-            "public_url('/frontend/pages/' . \$inventoryLink)",
+            "public_url('/inventory')",
             $submenu,
             'The landing-page link belongs on the parent row, not in the submenu.'
         );

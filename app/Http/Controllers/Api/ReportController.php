@@ -345,6 +345,10 @@ class ReportController extends Controller
             // just general (non-asset) reports.
             'item_id' => ['nullable', 'integer', 'exists:items,id'],
             'room_id' => ['nullable', 'integer', 'exists:rooms,id'],
+            // Deployed Asset registry — the exact tracked unit (from a
+            // dispatch released with "Track as Assets"). Its item, room and
+            // source dispatch are resolved server-side from the asset.
+            'deployed_asset_id' => ['nullable', 'integer', 'exists:deployed_assets,id'],
             'severity_level' => ['nullable', 'string', 'in:low,medium,high,critical'],
             'source_dispatch_id' => ['nullable', 'integer', 'exists:dispatches,id'],
             'damage_description' => ['nullable', 'string', 'min:5'],
@@ -390,7 +394,9 @@ class ReportController extends Controller
         // the /api/damage-reports validation, duplicate prevention, image
         // handling, history and notification behaviour are reused wholesale
         // rather than duplicated.
-        if (!empty($validated['item_id']) && !empty($validated['room_id'])) {
+        // Deployed Asset registry — a report against a tracked unit takes the
+        // same asset branch even though item_id/room_id come from the asset.
+        if (!empty($validated['deployed_asset_id']) || (!empty($validated['item_id']) && !empty($validated['room_id']))) {
             try {
                 $damageReport = $this->reportService->createAssetReport(
                     $validated,

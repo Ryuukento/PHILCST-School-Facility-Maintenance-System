@@ -35,6 +35,8 @@ class MaintenanceReport extends Model
         'problem_type_other',
         'item_id',
         'source_dispatch_id',
+        // Deployed Asset registry — mirrors damage_reports.deployed_asset_id.
+        'deployed_asset_id',
         'location',
         'priority',
         'status',

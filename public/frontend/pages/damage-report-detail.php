@@ -1,4 +1,6 @@
 <?php
+// Clean URLs: public_url() is used below, before header.php loads settings.
+require_once __DIR__ . '/../../backend/config/settings.php';
 if (session_status() === PHP_SESSION_NONE) {
     session_set_cookie_params(['lifetime'=>0,'path'=>'/','secure'=>false,'httponly'=>true,'samesite'=>'Lax']);
     if (!@session_start()) {
@@ -11,7 +13,7 @@ if (session_status() === PHP_SESSION_NONE) {
 }
 
 if (!isset($_SESSION['user']) && !isset($_SESSION['auth_user'])) {
-    header('Location: /School_Facility_Maintenance_System/frontend/pages/index.php');
+    header('Location: ' . public_url('/login'));
     exit;
 }
 
@@ -65,8 +67,8 @@ const DAMAGE_REPORTS_PAGE_BASE = window.SFMS_PUBLIC_URL ? window.SFMS_PUBLIC_URL
 // TASK 45 — the existing maintenance report detail page. Damage Reports links
 // TO this workflow rather than reimplementing any part of it.
 const MAINTENANCE_REPORT_DETAIL_BASE = window.SFMS_PUBLIC_URL
-    ? window.SFMS_PUBLIC_URL('/frontend/pages/maintenance-report-detail.php')
-    : '/frontend/pages/maintenance-report-detail.php';
+    ? window.SFMS_PUBLIC_URL('/maintenance-report-detail')
+    : '/maintenance-report-detail';
 
 function detailNotify(message, type = 'danger') {
     // UI_BROWSER_DIALOG_REPLACEMENT — Components/UI are always loaded (see

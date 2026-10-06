@@ -84,7 +84,7 @@ if ($utilityBarTitle === '') {
    header.php already computed for exactly that purpose (dashboard.php /
    maintenance-dashboard.php / staff-dashboard.php), so the crumb can never
    disagree with the sidebar about where a given role's home is. */
-$utilityBarHomeUrl   = $brandLink ?? public_url('/frontend/pages/dashboard.php');
+$utilityBarHomeUrl   = $brandLink ?? public_url('/dashboard');
 
 /* ---------------------------------------------------------------------------
  * SEMESTER
@@ -155,7 +155,7 @@ if ($utilityBarSchoolYear !== null && preg_match('/^\d{4}-\d{4}$/', $utilityBarS
  * duplicate renderNotifications()' markup and click signature to stay correct.
  * One renderer, in JS, is the point. */
 $utilityBarUnreadCount = isset($initialNotificationCount) ? (int) $initialNotificationCount : 0;
-$utilityBarCenterUrl   = public_url('/frontend/pages/notifications-center.php');
+$utilityBarCenterUrl   = public_url('/notifications');
 ?>
 <div class="utility-bar">
 

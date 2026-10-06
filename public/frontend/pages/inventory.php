@@ -1,4 +1,6 @@
 <?php
+// Clean URLs: public_url() is used below, before header.php loads settings.
+require_once __DIR__ . '/../../backend/config/settings.php';
 /**
  * Inventory Page
  */
@@ -14,14 +16,14 @@ if (session_status() === PHP_SESSION_NONE) {
 }
 
 if (!isset($_SESSION['user'])) {
-    header('Location: /School_Facility_Maintenance_System/frontend/pages/index.php');
+    header('Location: ' . public_url('/login'));
     exit;
 }
 
 $user = $_SESSION['user'];
 $allowedRoles = ['super_admin', 'maintenance_admin', 'maintenance_staff'];
 if (!in_array($user['role'] ?? '', $allowedRoles, true)) {
-    header('Location: /School_Facility_Maintenance_System/frontend/pages/dashboard.php');
+    header('Location: ' . public_url('/dashboard'));
     exit;
 }
 
@@ -63,7 +65,7 @@ include __DIR__ . '/../includes/header.php';
                          icon system, and each is aria-hidden so the button's
                          accessible name stays exactly its visible text. */ ?>
                 <div class="inventory-header-actions">
-                    <a href="/School_Facility_Maintenance_System/frontend/pages/replacement-tracking.php" class="btn btn-secondary inv-action inv-action-strong"><?php echo ui_icon('rotate-ccw', ['size' => 16, 'class' => 'inv-action-icon']); ?><span class="inv-action-label">Replacement Tracking</span></a>
+                    <a href="<?php echo public_url('/replacement-tracking'); ?>" class="btn btn-secondary inv-action inv-action-strong"><?php echo ui_icon('rotate-ccw', ['size' => 16, 'class' => 'inv-action-icon']); ?><span class="inv-action-label">Replacement Tracking</span></a>
                     <?php if ($canCreateInventoryEntries): ?>
                     <button type="button" class="btn btn-primary inv-action inv-action-soft" id="openInventoryEntryButton"><?php echo ui_icon('plus', ['size' => 16, 'class' => 'inv-action-icon']); ?><span class="inv-action-label">Inventory Entry</span></button>
                     <?php endif; ?>

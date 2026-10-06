@@ -689,9 +689,10 @@ async function loadDeployed() {
             + '<th scope="col">Deployment Type</th>'
             + '<th scope="col">Asset Code</th>'
             + '<th scope="col" class="deployment-tracking-table__qty">Qty Deployed</th>'
-            + '<th scope="col">Source OR</th>'
-            + '<th scope="col">Supplier</th>'
-            + '<th scope="col">Date Received</th>'
+            // The Source OR / Supplier / Date Received columns were removed
+            // from this table. The API still returns source_or /
+            // source_supplier / source_receipt_date; they are simply no
+            // longer displayed.
             + '<th scope="col">Room / Lab</th>'
             + '<th scope="col">Department</th>'
             + '<th scope="col">Dispatch Code</th>'
@@ -708,9 +709,6 @@ async function loadDeployed() {
             html += `<td>${dtDeploymentSourceBadge(row.deployment_source)}</td>`;
             html += `<td>${dtTextCell(row.asset_code, { variant: 'code' })}</td>`;
             html += `<td class="deployment-tracking-table__qty">${dtTextCell(row.dispatched_qty)}</td>`;
-            html += `<td>${dtTextCell(row.source_or, { variant: 'code' })}</td>`;
-            html += `<td>${dtTextCell(row.source_supplier, { variant: 'muted' })}</td>`;
-            html += `<td class="deployment-tracking-table__date-cell">${dtFormatDate(row.source_receipt_date)}</td>`;
             const roomCell = row.room_name
                 ? `<div class="deployment-tracking-location-cell">${dtEscapeHtml(row.room_name)}${row.room_note ? `<span>${dtEscapeHtml(row.room_note)}</span>` : ''}</div>`
                 : dtMutedDash();
@@ -1178,10 +1176,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     overflow: hidden;
 }
 
-/* TASK 36 PHASE 2 — deployed table has 11 columns (Deployment Type, Asset Code)
-   vs. the base rule's 9-column 1040px floor. */
+/* TASK 36 PHASE 2 — the deployed table used to have 11 columns and needed a
+   1280px floor. With Source OR / Supplier / Date Received removed it has 8,
+   so it uses the base rule's 1040px floor (9-column sizing) again. */
 .deployment-tracking-page .deployment-tracking-table--deployed {
-    min-width: 1280px;
+    min-width: 1040px;
 }
 
 .deployment-tracking-page .deployment-tracking-table thead,
@@ -1470,10 +1469,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         min-width: 980px;
     }
 
-    /* TASK 36 PHASE 2 — mobile counterpart to the desktop --deployed
-       min-width override above. */
+    /* TASK 36 PHASE 2 — tablet counterpart to the desktop --deployed rule
+       above; back to the base 980px now that the table has 8 columns. */
     .deployment-tracking-page .deployment-tracking-table--deployed {
-        min-width: 1180px;
+        min-width: 980px;
     }
 
     .deployment-tracking-page .deployment-tracking-table thead {

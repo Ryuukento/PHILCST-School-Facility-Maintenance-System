@@ -1,4 +1,6 @@
 <?php
+// Clean URLs: public_url() is used below, before header.php loads settings.
+require_once __DIR__ . '/../../backend/config/settings.php';
 if (session_status() === PHP_SESSION_NONE) {
     session_set_cookie_params(['lifetime'=>0,'path'=>'/','secure'=>false,'httponly'=>true,'samesite'=>'Lax']);
     if (!@session_start()) {
@@ -11,7 +13,7 @@ if (session_status() === PHP_SESSION_NONE) {
 }
 
 if (!isset($_SESSION['user']) && !isset($_SESSION['auth_user'])) {
-    header('Location: /School_Facility_Maintenance_System/frontend/pages/index.php');
+    header('Location: ' . public_url('/login'));
     exit;
 }
 
@@ -42,7 +44,7 @@ include __DIR__ . '/../includes/header.php';
         </div>
         <div class="dispatches-page__actions">
             <button type="button" id="dispatch-print-btn" class="btn dispatches-page__secondary-action">Print</button>
-            <button type="button" id="dispatch-print-labels-btn" class="btn dispatches-page__secondary-action" title="Print Dispatch Code stickers for every approved/released dispatch matching the current filters">Print All Labels</button>
+            <button type="button" id="dispatch-print-labels-btn" class="btn dispatches-page__secondary-action" title="Print stickers for every approved/released dispatch matching the current filters. Use Labels: Not yet printed to print only new ones.">Print All Labels</button>
             <?php if ($canCreateDispatch): ?>
             <a href="<?php echo htmlspecialchars(public_url('/dispatches/create')); ?>" class="btn dispatches-page__primary-action">+ Create Dispatch</a>
             <?php endif; ?>
@@ -63,6 +65,25 @@ include __DIR__ . '/../includes/header.php';
                     <option value="approved">Approved</option>
                     <option value="released">Released</option>
                 </select>
+            </div>
+            <!-- Label print tracking — "Not yet printed" shows only dispatches
+                 whose stickers have not been confirmed printed, so Print All
+                 Labels prints just the new ones. -->
+            <div class="dispatches-toolbar__filter">
+                <label class="dispatches-toolbar__label" for="dispatch-label-status">Labels</label>
+                <select id="dispatch-label-status" class="form-control dispatches-toolbar__control">
+                    <option value="">All Labels</option>
+                    <option value="not_printed">Not yet printed</option>
+                    <option value="printed">Printed</option>
+                </select>
+            </div>
+            <div class="dispatches-toolbar__filter">
+                <label class="dispatches-toolbar__label" for="dispatch-date-from">From</label>
+                <input type="date" id="dispatch-date-from" class="form-control dispatches-toolbar__control">
+            </div>
+            <div class="dispatches-toolbar__filter">
+                <label class="dispatches-toolbar__label" for="dispatch-date-to">To</label>
+                <input type="date" id="dispatch-date-to" class="form-control dispatches-toolbar__control">
             </div>
             <div class="dispatches-toolbar__action">
                 <button type="button" id="dispatch-filter-clear" class="btn dispatches-page__ghost-action">Clear Filters</button>
@@ -121,7 +142,7 @@ include __DIR__ . '/../includes/header.php';
 <script src="/School_Facility_Maintenance_System/frontend/assets/js/sfms-print.js?v=20260928-1"></script>
 <!-- Dispatch Code sticker labels (QR) used by the row "Labels" button. -->
 <script src="<?php echo htmlspecialchars(public_url('/frontend/assets/js/vendor/qrcode-generator.js?v=1.4.4')); ?>"></script>
-<script src="<?php echo htmlspecialchars(public_url('/frontend/assets/js/dispatch-labels.js?v=20260928-2')); ?>"></script>
+<script src="<?php echo htmlspecialchars(public_url('/frontend/assets/js/dispatch-labels.js?v=20261006-labels')); ?>"></script>
 <script>
 // "Prepared by" line on the printed Dispatch Report.
 const DSP_CURRENT_USER_NAME = <?php echo json_encode((string)($_dspUser['full_name'] ?? ''), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>;
@@ -241,6 +262,7 @@ function dspCodeCell(row) {
     return `
         <div class="dispatches-code-primary">${dspEscapeHtml(row.dispatch_code)}</div>
         <div class="dispatches-code-secondary">${secondary}</div>
+        ${dspLabelStatusLine(row)}
     `;
 }
 
@@ -406,6 +428,30 @@ const DSP_PRINT_ROLE_LABELS = {
 };
 const DSP_PRINT_STATUS_TONES = { pending: 'amber', approved: 'blue', released: 'green', cancelled: 'red' };
 
+// Label print tracking + date filter — the Labels / From / To filters are
+// applied in one place so the table, Print, and Print All Labels always agree.
+// date_from/date_to filter on the Date column (created_at), server-side.
+function dspApplyExtraFilters(params) {
+    const labelStatus = document.getElementById('dispatch-label-status')?.value || '';
+    const dateFrom = document.getElementById('dispatch-date-from')?.value || '';
+    const dateTo = document.getElementById('dispatch-date-to')?.value || '';
+    if (labelStatus) params.set('label_status', labelStatus);
+    if (dateFrom) params.set('date_from', dateFrom);
+    if (dateTo) params.set('date_to', dateTo);
+    return params;
+}
+
+// Small line under the dispatch code: whether this dispatch's stickers have
+// been confirmed printed. Only shown for dispatches that can have labels.
+function dspLabelStatusLine(row) {
+    if (!['approved', 'released'].includes(String(row.status || '').toLowerCase())) return '';
+    if (row.labels_printed_at) {
+        const { date } = dspFormatDateParts(row.labels_printed_at);
+        return `<div class="dispatches-label-status is-printed">Labels printed${date ? ` · ${dspEscapeHtml(date)}` : ''}</div>`;
+    }
+    return '<div class="dispatches-label-status">Labels not yet printed</div>';
+}
+
 async function fetchAllDispatchesForPrint() {
     const search = document.getElementById('dispatch-search').value.trim();
     const status = document.getElementById('dispatch-status').value;
@@ -415,6 +461,7 @@ async function fetchAllDispatchesForPrint() {
         const params = new URLSearchParams({ page: String(page), per_page: '100' });
         if (search) params.set('search', search);
         if (status) params.set('status', status);
+        dspApplyExtraFilters(params);
 
         const response = await fetch(`${DISPATCH_API_BASE}?${params.toString()}`, {
             credentials: 'same-origin',
@@ -520,10 +567,14 @@ async function printAllDispatchLabels() {
     const button = document.getElementById('dispatch-print-labels-btn');
     if (button) button.disabled = true;
     try {
+        // Label print tracking — after printing, the preview window asks
+        // whether the labels came out correctly; "Yes" marks these dispatches
+        // as printed and the table refreshes, so a "Not yet printed" view
+        // drops them immediately.
         await DispatchLabels.printMany(async () => {
             const { rows } = await fetchAllDispatchesForPrint();
             return rows.filter((row) => DispatchLabels.isPrintable(row.status)).map((row) => row.id);
-        }, DISPATCH_API_BASE);
+        }, DISPATCH_API_BASE, { trackPrinting: true, onMarked: () => loadDispatches() });
     } finally {
         if (button) button.disabled = false;
     }
@@ -539,6 +590,7 @@ async function loadDispatches() {
     const params = new URLSearchParams({ page: String(dispatchPage), per_page: '20' });
     if (search) params.set('search', search);
     if (status) params.set('status', status);
+    dspApplyExtraFilters(params);
 
     try {
         const fetcher = window.Components && typeof Components.fetchJson === 'function'
@@ -710,10 +762,34 @@ document.addEventListener('DOMContentLoaded', () => {
         loadDispatches();
     });
 
+    // Labels / From / To filters. Each date bounds the other so an
+    // impossible range (From after To) cannot be picked.
+    const dateFrom = document.getElementById('dispatch-date-from');
+    const dateTo = document.getElementById('dispatch-date-to');
+    document.getElementById('dispatch-label-status').addEventListener('change', () => {
+        dispatchPage = 1;
+        loadDispatches();
+    });
+    dateFrom.addEventListener('change', () => {
+        dateTo.min = dateFrom.value || '';
+        dispatchPage = 1;
+        loadDispatches();
+    });
+    dateTo.addEventListener('change', () => {
+        dateFrom.max = dateTo.value || '';
+        dispatchPage = 1;
+        loadDispatches();
+    });
+
     document.getElementById('dispatch-filter-clear').addEventListener('click', () => {
         clearTimeout(dispatchSearchDebounce);
         document.getElementById('dispatch-search').value = '';
         document.getElementById('dispatch-status').value = '';
+        document.getElementById('dispatch-label-status').value = '';
+        dateFrom.value = '';
+        dateTo.value = '';
+        dateFrom.max = '';
+        dateTo.min = '';
         dispatchPage = 1;
         loadDispatches();
     });
@@ -847,9 +923,11 @@ document.addEventListener('DOMContentLoaded', () => {
     overflow: hidden;
 }
 
+/* Search, Status, Labels, From, To, Clear — one row on wide screens; see the
+   1600px / 980px / 768px rules below for how it wraps. */
 .dispatches-toolbar {
     display: grid;
-    grid-template-columns: minmax(0, 1.8fr) minmax(190px, 0.8fr) auto;
+    grid-template-columns: minmax(0, 1.4fr) repeat(4, minmax(150px, 0.75fr)) auto;
     gap: 14px;
     padding: 22px 26px;
     border-bottom: 1px solid var(--dispatch-border);
@@ -921,6 +999,10 @@ document.addEventListener('DOMContentLoaded', () => {
 .dispatches-toolbar__action {
     display: flex;
     align-items: end;
+}
+
+.dispatches-toolbar__action .btn {
+    white-space: nowrap;
 }
 
 .dispatches-table-panel {
@@ -1091,6 +1173,35 @@ document.addEventListener('DOMContentLoaded', () => {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+}
+
+/* Label print tracking — "Labels printed · Oct 06, 2026" /
+   "Labels not yet printed" under the dispatch code. */
+.dispatches-label-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    margin-top: 6px;
+    font-size: 11.5px;
+    font-weight: 600;
+    color: var(--dispatch-text-faint);
+    white-space: nowrap;
+}
+
+.dispatches-label-status::before {
+    content: "";
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #cbd5e1;
+}
+
+.dispatches-label-status.is-printed {
+    color: #047857;
+}
+
+.dispatches-label-status.is-printed::before {
+    background: #10b981;
 }
 
 .dispatches-cell-icon-row {
@@ -1327,6 +1438,24 @@ document.addEventListener('DOMContentLoaded', () => {
     white-space: nowrap;
 }
 
+/* Label print tracking — the Labels/From/To filters made the toolbar six
+   controls wide; below 1600px Search takes its own row and the four filters
+   share the next one. */
+@media (max-width: 1600px) {
+    .dispatches-toolbar {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    .dispatches-toolbar__search,
+    .dispatches-toolbar__action {
+        grid-column: 1 / -1;
+    }
+
+    .dispatches-toolbar__action {
+        justify-content: flex-start;
+    }
+}
+
 @media (max-width: 980px) {
     .dispatches-page__header {
         flex-direction: column;
@@ -1337,7 +1466,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     .dispatches-toolbar {
-        grid-template-columns: minmax(0, 1fr) minmax(180px, 0.7fr);
+        grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
     .dispatches-toolbar__action {

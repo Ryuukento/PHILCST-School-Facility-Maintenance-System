@@ -35,13 +35,13 @@ require_once __DIR__ . '/../backend/config/settings.php';
 if (!empty($_SESSION['user'])) {
     $role = $_SESSION['user']['role'] ?? '';
     if ($role === 'maintenance_admin') {
-        header('Location: ' . public_url('/frontend/pages/maintenance-dashboard.php'), true, 302);
+        header('Location: ' . public_url('/dashboard'), true, 302);
     } elseif ($role === 'maintenance_staff') {
-        header('Location: ' . public_url('/frontend/pages/staff-dashboard.php'), true, 302);
+        header('Location: ' . public_url('/dashboard'), true, 302);
     } else {
-        header('Location: ' . public_url('/frontend/pages/dashboard.php'), true, 302);
+        header('Location: ' . public_url('/dashboard'), true, 302);
     }
 } else {
-    header('Location: ' . public_url('/frontend/pages/index.php'), true, 302);
+    header('Location: ' . public_url('/login'), true, 302);
 }
 exit;

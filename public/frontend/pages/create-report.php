@@ -1,4 +1,6 @@
 <?php
+// Clean URLs: public_url() is used below, before header.php loads settings.
+require_once __DIR__ . '/../../backend/config/settings.php';
 /**
  * Create New Maintenance Report
  */
@@ -15,7 +17,7 @@ if (session_status() === PHP_SESSION_NONE) {
 
 // Check if user is logged in
 if (!isset($_SESSION['user'])) {
-    header('Location: /School_Facility_Maintenance_System/frontend/pages/index.php');
+    header('Location: ' . public_url('/login'));
     exit;
 }
 
@@ -25,7 +27,7 @@ if (!isset($_SESSION['user'])) {
 // Maintenance Staff are the report submitters.
 $_crRole = $_SESSION['user']['role'] ?? '';
 if (!in_array($_crRole, ['maintenance_admin', 'maintenance_staff'], true)) {
-    header('Location: /School_Facility_Maintenance_System/frontend/pages/reports.php');
+    header('Location: ' . public_url('/reports'));
     exit;
 }
 
@@ -313,22 +315,21 @@ include __DIR__ . '/../includes/header.php';
                                     </span>
                                 </label>
                                 <div id="asset-wrap" class="need-change-wrap" style="display:none;">
-                                    <div class="asset-select-grid">
-                                        <div class="form-group">
-                                            <label for="asset-building-search" class="need-change-item-label">Building</label>
-                                            <input type="text" id="asset-building-search" class="form-control need-change-search" placeholder="Search building..." autocomplete="off">
-                                            <input type="hidden" id="asset-building-id" value="">
-                                        </div>
-                                        <div class="form-group">
-                                            <label for="asset-room-search" class="need-change-item-label">Room</label>
-                                            <input type="text" id="asset-room-search" class="form-control need-change-search" placeholder="Search room..." autocomplete="off" disabled>
-                                            <input type="hidden" id="asset-room-id" value="">
-                                        </div>
-                                        <div class="form-group">
-                                            <label for="asset-item-search" class="need-change-item-label">Equipment</label>
-                                            <input type="text" id="asset-item-search" class="form-control need-change-search" placeholder="Search equipment..." autocomplete="off" disabled>
-                                            <input type="hidden" id="asset-item-id" value="">
-                                        </div>
+                                    <!-- Asset tracking — one search across tracked assets (from
+                                         dispatches released with "Track as Assets") and legacy
+                                         room assets, by Asset Code, equipment, building or room.
+                                         Picking a result fills in its equipment, building and room,
+                                         so there is nothing to select separately that could
+                                         contradict it; the server resolves them again from the
+                                         asset itself. -->
+                                    <div class="form-group">
+                                        <label for="asset-search" class="need-change-item-label">Asset</label>
+                                        <input type="text" id="asset-search" class="form-control need-change-search" placeholder="Search by Asset Code, equipment, building, or room..." autocomplete="off">
+                                        <input type="hidden" id="asset-key" value="">
+                                        <input type="hidden" id="asset-deployed-id" value="">
+                                        <input type="hidden" id="asset-item-id" value="">
+                                        <input type="hidden" id="asset-room-id" value="">
+                                        <small class="text-muted d-block">Example: SFMS-2026-000001, "Desktop PC", or "Computer Laboratory 1".</small>
                                     </div>
                                     <div id="asset-selected" class="need-change-selected" style="display:none;"></div>
 
@@ -388,7 +389,7 @@ include __DIR__ . '/../includes/header.php';
                     <button type="submit" class="btn btn-primary" id="submit-btn">
                         Submit Report
                     </button>
-                    <a href="/School_Facility_Maintenance_System/frontend/pages/reports.php" class="btn btn-secondary">
+                    <a href="<?php echo public_url('/reports'); ?>" class="btn btn-secondary">
                         Cancel
                     </a>
                 </div>
@@ -614,6 +615,9 @@ document.getElementById('report-form').addEventListener('submit', async (e) => {
         need_change_item_id: null,
         item_id: null,
         room_id: null,
+        // Asset tracking — set only when a tracked asset (not a legacy room
+        // asset) is picked; the server resolves its item/room/dispatch.
+        deployed_asset_id: null,
         override_duplicate: false,
         // TASK 33 PHASE 7 — only populated when "Link to a Deployed Asset" is
         // checked (see assetToggle block below). Mirrors damage-report-create.php's
@@ -650,12 +654,16 @@ document.getElementById('report-form').addEventListener('submit', async (e) => {
 
     if (assetToggle?.checked) {
         if (!assetItemId?.value || !assetRoomId?.value) {
-            alertContainer.innerHTML = '<div class="alert alert-danger">Please select a Building, Room, and Equipment to link this report to an asset.</div>';
+            alertContainer.innerHTML = '<div class="alert alert-danger">Please search for and select the asset to link this report to.</div>';
             return;
         }
 
         formData.item_id = Number(assetItemId.value);
         formData.room_id = Number(assetRoomId.value);
+        const assetDeployedId = document.getElementById('asset-deployed-id')?.value || '';
+        if (assetDeployedId) {
+            formData.deployed_asset_id = Number(assetDeployedId);
+        }
 
         // TASK 33 PHASE 7 — Severity Level is required whenever an asset is
         // linked, same as it is on damage-report-create.php's form. Not an
@@ -714,7 +722,7 @@ document.getElementById('report-form').addEventListener('submit', async (e) => {
         return;
     }
 
-    if (formData.item_id && formData.room_id) {
+    if (formData.deployed_asset_id || (formData.item_id && formData.room_id)) {
         const duplicateAction = await checkAssetDuplicate(formData);
         if (duplicateAction === 'cancel') return;
         if (duplicateAction === 'override') formData.override_duplicate = true;
@@ -735,7 +743,7 @@ document.getElementById('report-form').addEventListener('submit', async (e) => {
             // Redirect after 1 second, include new report ID so we can highlight it on the list
             const newId = response.data && response.data.report_id ? response.data.report_id : '';
             setTimeout(() => {
-                let url = '/School_Facility_Maintenance_System/frontend/pages/reports.php';
+                let url = '<?php echo public_url('/reports'); ?>';
                 if (newId) url += '?new_id=' + encodeURIComponent(newId);
                 window.location.href = url;
             }, 1000);
@@ -873,86 +881,66 @@ async function initLocationPicker() {
 }
 initLocationPicker();
 
-let assetSelectsInitialized = false;
-let assetBuildingSelect = null;
-let assetRoomSelect = null;
-let assetItemSelect = null;
+let assetSelectInitialized = false;
 
-// TASK 44 — UX-only: captures the full API row (not just the id/name the
-// hidden inputs already store) for the currently selected room and asset, so
+// TASK 44 — UX-only: the full API row for the currently selected asset, so
 // the duplicate-warning modal can show Building/Floor/Room/Equipment/Asset
-// Code context without any new endpoint or backend field. These mirror
-// exactly what the user just picked, so they are guaranteed to describe the
+// Code context. It mirrors exactly what the user picked, so it describes the
 // same physical unit the duplicate check ran against.
-let selectedAssetRoom = null;
-let selectedAssetItem = null;
+let selectedAsset = null;
 
+// Asset tracking — one SearchableSelect over GET /api/deployed-assets, which
+// returns tracked assets AND (include_legacy=1) legacy room_asset items in a
+// single list. Each row already carries its item, room and building, so
+// selecting it fills every hidden field at once.
 function initAssetSelects() {
-    if (assetSelectsInitialized) return;
-    assetSelectsInitialized = true;
+    if (assetSelectInitialized) return;
+    assetSelectInitialized = true;
 
-    assetBuildingSelect = new Components.SearchableSelect({
-        inputId: 'asset-building-search',
-        hiddenId: 'asset-building-id',
-        endpoint: '/api/buildings',
+    new Components.SearchableSelect({
+        inputId: 'asset-search',
+        hiddenId: 'asset-key',
+        endpoint: '/api/deployed-assets?include_legacy=1',
         displayKey: 'name',
-        onSelect: () => {
-            resetAssetSelection('room');
-            const roomInput = document.getElementById('asset-room-search');
-            if (roomInput) roomInput.disabled = false;
-            const buildingId = document.getElementById('asset-building-id').value;
-            assetRoomSelect.endpoint = '/api/rooms?building_id=' + encodeURIComponent(buildingId);
-        }
+        onSelect: (asset) => applyAssetSelection(asset)
     });
 
-    assetRoomSelect = new Components.SearchableSelect({
-        inputId: 'asset-room-search',
-        hiddenId: 'asset-room-id',
-        endpoint: '/api/rooms',
-        displayKey: 'name',
-        onSelect: (room) => {
-            resetAssetSelection('item');
-            selectedAssetRoom = room;
-            const itemInput = document.getElementById('asset-item-search');
-            if (itemInput) itemInput.disabled = false;
-            const roomId = document.getElementById('asset-room-id').value;
-            assetItemSelect.endpoint = '/api/items?item_type=room_asset&room_id=' + encodeURIComponent(roomId);
-        }
-    });
-
-    assetItemSelect = new Components.SearchableSelect({
-        inputId: 'asset-item-search',
-        hiddenId: 'asset-item-id',
-        endpoint: '/api/items?item_type=room_asset',
-        displayKey: 'name',
-        onSelect: (item) => {
-            selectedAssetItem = item;
-            const selectedDisplay = document.getElementById('asset-selected');
-            if (!selectedDisplay) return;
-            selectedDisplay.style.display = 'block';
-            selectedDisplay.textContent = `Selected: ${item.name}${item.asset_code ? ' (Asset Code: ' + item.asset_code + ')' : ''}`;
-        }
+    // Typing again after a pick means the user is searching for something
+    // else, so the previous selection must not silently stay attached.
+    document.getElementById('asset-search')?.addEventListener('input', () => {
+        if (selectedAsset) resetAssetSelection();
     });
 }
 
-function resetAssetSelection(from) {
-    if (from === 'room' || from === 'item') {
-        const roomSearch = document.getElementById('asset-room-search');
-        const roomId = document.getElementById('asset-room-id');
-        if (from === 'room') {
-            if (roomSearch) { roomSearch.value = ''; roomSearch.disabled = true; }
-            if (roomId) roomId.value = '';
-            selectedAssetRoom = null;
-        }
-    }
-    const itemSearch = document.getElementById('asset-item-search');
-    const itemId = document.getElementById('asset-item-id');
-    if (itemSearch) { itemSearch.value = ''; itemSearch.disabled = true; }
-    if (itemId) itemId.value = '';
-    selectedAssetItem = null;
+function applyAssetSelection(asset) {
+    selectedAsset = asset;
+    document.getElementById('asset-deployed-id').value = asset.deployed_asset_id ? String(asset.deployed_asset_id) : '';
+    document.getElementById('asset-item-id').value = asset.item_id ? String(asset.item_id) : '';
+    document.getElementById('asset-room-id').value = asset.room_id ? String(asset.room_id) : '';
 
     const selectedDisplay = document.getElementById('asset-selected');
-    if (selectedDisplay) { selectedDisplay.style.display = 'none'; selectedDisplay.textContent = ''; }
+    if (!selectedDisplay) return;
+
+    const rows = [
+        ['Asset Code', asset.asset_code ? `<strong>${UI.escapeHtml(asset.asset_code)}</strong>` : 'No asset code'],
+        ['Equipment', UI.escapeHtml(asset.item_name || 'Not available')],
+        ['Building', UI.escapeHtml(asset.building_name || 'Not available')],
+        ['Room', UI.escapeHtml(asset.room_name || 'Not available')]
+    ].map(([label, value]) => `<div class="report-info-row"><dt>${UI.escapeHtml(label)}</dt><dd>${value}</dd></div>`).join('');
+
+    selectedDisplay.innerHTML = `<div style="font-weight:600;margin-bottom:6px;">Selected Asset</div><dl class="report-info-list">${rows}</dl>`;
+    selectedDisplay.style.display = 'block';
+}
+
+function resetAssetSelection() {
+    selectedAsset = null;
+    ['asset-key', 'asset-deployed-id', 'asset-item-id', 'asset-room-id'].forEach((id) => {
+        const el = document.getElementById(id);
+        if (el) el.value = '';
+    });
+
+    const selectedDisplay = document.getElementById('asset-selected');
+    if (selectedDisplay) { selectedDisplay.style.display = 'none'; selectedDisplay.innerHTML = ''; }
 }
 
 document.getElementById('asset-toggle')?.addEventListener('change', (event) => {
@@ -1006,6 +994,9 @@ async function checkAssetDuplicate(formData) {
             credentials: 'include',
             headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
             body: JSON.stringify({
+                // Asset tracking — a tracked asset is matched by its own id
+                // (exact unit); legacy assets keep the item/room/department rule.
+                deployed_asset_id: formData.deployed_asset_id || null,
                 item_id: formData.item_id,
                 room_id: formData.room_id,
                 department_id: formData.department_id,
@@ -1016,17 +1007,15 @@ async function checkAssetDuplicate(formData) {
         if (!result.success || !result.data?.has_duplicate) return 'submit';
 
         // TASK 44 — UX-only context so the warning modal can show which asset the
-        // match is against (two identical units in the same room, e.g. AI-R101-01
-        // vs AI-R101-02, must never look ambiguous). Built entirely from data the
-        // user already selected on this page — no new API call, no new field.
-        const buildingSearch = document.getElementById('asset-building-search');
-        const roomSearch = document.getElementById('asset-room-search');
+        // match is against (two identical units in the same room, e.g.
+        // SFMS-2026-000001 vs SFMS-2026-000002, must never look ambiguous). Built
+        // entirely from the row the user already selected on this page.
         const context = {
-            buildingName: buildingSearch ? buildingSearch.value : '',
-            floorName: selectedAssetRoom?.floor_name || '',
-            roomName: selectedAssetRoom?.name || (roomSearch ? roomSearch.value : ''),
-            equipmentName: selectedAssetItem?.name || '',
-            assetCode: selectedAssetItem?.asset_code || ''
+            buildingName: selectedAsset?.building_name || '',
+            floorName: selectedAsset?.floor_name || '',
+            roomName: selectedAsset?.room_name || '',
+            equipmentName: selectedAsset?.item_name || '',
+            assetCode: selectedAsset?.asset_code || ''
         };
 
         return await showDuplicateWarningModal(result.data.duplicate, context);

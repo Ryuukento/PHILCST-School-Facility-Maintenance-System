@@ -45,8 +45,8 @@ if (!function_exists('sfms_reject_stale_session')) {
 
         require_once __DIR__ . '/../../backend/config/settings.php';
         $target = function_exists('public_url')
-            ? public_url('/frontend/pages/index.php')
-            : '/frontend/pages/index.php';
+            ? public_url('/login')
+            : '/login';
 
         header('Location: ' . $target . '?session_expired=1');
         exit;
@@ -85,8 +85,8 @@ if (!function_exists('sfms_enforce_idle_timeout')) {
 
             require_once __DIR__ . '/../../backend/config/settings.php';
             $target = function_exists('public_url')
-                ? public_url('/frontend/pages/index.php')
-                : '/frontend/pages/index.php';
+                ? public_url('/login')
+                : '/login';
 
             header('Location: ' . $target . '?session_expired=1&reason=idle');
             exit;

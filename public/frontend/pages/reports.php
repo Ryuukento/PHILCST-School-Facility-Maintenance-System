@@ -1,4 +1,6 @@
 <?php
+// Clean URLs: public_url() is used below, before header.php loads settings.
+require_once __DIR__ . '/../../backend/config/settings.php';
 if (session_status() === PHP_SESSION_NONE) {
     session_set_cookie_params(['lifetime'=>0,'path'=>'/','secure'=>false,'httponly'=>true,'samesite'=>'Lax']);
     if (!@session_start()) {
@@ -11,7 +13,7 @@ if (session_status() === PHP_SESSION_NONE) {
 }
 
 if (!isset($_SESSION['user']) && !isset($_SESSION['auth_user'])) {
-    header('Location: /School_Facility_Maintenance_System/frontend/pages/index.php');
+    header('Location: ' . public_url('/login'));
     exit;
 }
 
@@ -88,7 +90,7 @@ include __DIR__ . '/../includes/header.php';
                      hides the action from roles that cannot submit, but it is
                      not the security boundary — EnsureRole on POST /api/reports
                      and create-report.php's redirect guard remain authoritative. -->
-                <a href="<?php echo htmlspecialchars(public_url('/frontend/pages/create-report.php')); ?>"
+                <a href="<?php echo htmlspecialchars(public_url('/create-report')); ?>"
                    id="create-report-btn"
                    class="btn btn-primary reports-header-btn reports-header-icon-btn">
                     + Report a Problem
@@ -306,7 +308,7 @@ include __DIR__ . '/../includes/header.php';
                         echo '<td>' . htmlspecialchars($r['creator_name'] ?? '') . '</td>';
                         echo '<td>' . $date . '</td>';
                         echo '<td>';
-                        echo '<a href="maintenance-report-detail.php?id=' . $r['report_id'] . '&back=all_reports" class="btn btn-sm btn-primary">View</a>';
+                        echo '<a href="' . htmlspecialchars(public_url('/maintenance-report-detail')) . '?id=' . $r['report_id'] . '&back=all_reports" class="btn btn-sm btn-primary">View</a>';
                         // TASK 9 — Role + Department Based Authorization: the Edit
                         // action is only rendered when the user may actually modify
                         // this report. Administrator is exempt from the department
@@ -1365,7 +1367,7 @@ function displayReports(reports) {
         html += `<td class="reports-cell-compact" data-label="Date">${createdAt}</td>`;
         html += `<td class="reports-cell-actions" data-label="Actions">
             <div class="reports-actions-buttons">
-            <a href="maintenance-report-detail.php?id=${reportId}&back=all_reports" class="btn btn-sm btn-primary">View</a>${canEditReport(report) ? `<button type="button" class="btn btn-sm btn-secondary" onclick="openEditReportModal(${reportId})">Edit</button>` : ''}
+            <a href="<?php echo htmlspecialchars(public_url('/maintenance-report-detail')); ?>?id=${reportId}&back=all_reports" class="btn btn-sm btn-primary">View</a>${canEditReport(report) ? `<button type="button" class="btn btn-sm btn-secondary" onclick="openEditReportModal(${reportId})">Edit</button>` : ''}
             </div>
         </td>`;
         html += '</tr>';

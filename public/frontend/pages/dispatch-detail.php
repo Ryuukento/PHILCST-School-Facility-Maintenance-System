@@ -1,4 +1,6 @@
 <?php
+// Clean URLs: public_url() is used below, before header.php loads settings.
+require_once __DIR__ . '/../../backend/config/settings.php';
 if (session_status() === PHP_SESSION_NONE) {
     session_set_cookie_params(['lifetime'=>0,'path'=>'/','secure'=>false,'httponly'=>true,'samesite'=>'Lax']);
     if (!@session_start()) {
@@ -11,7 +13,7 @@ if (session_status() === PHP_SESSION_NONE) {
 }
 
 if (!isset($_SESSION['user']) && !isset($_SESSION['auth_user'])) {
-    header('Location: /School_Facility_Maintenance_System/frontend/pages/index.php');
+    header('Location: ' . public_url('/login'));
     exit;
 }
 
@@ -23,14 +25,22 @@ $_ddRole = strtolower(trim((string)($_ddUser['role'] ?? '')));
 // belong to three different roles:
 //   $canApprove — Administrator decides approve/reject
 //   $canAssign  — Head Maintenance chooses/changes the Release Personnel
-//   $canRelease — Maintenance Staff performs the release, but ONLY for the
-//                 dispatch assigned to them. Role alone cannot express that,
-//                 so the identity check is completed in JS once the dispatch
-//                 payload arrives — and re-checked server-side, which is the
-//                 check that actually enforces it.
+//   $canRelease — the assigned Release Personnel performs the release, but
+//                 ONLY for the dispatch assigned to them. Role alone cannot
+//                 express that, so the identity check is completed in JS once
+//                 the dispatch payload arrives — and re-checked server-side,
+//                 which is the check that actually enforces it.
+//                 Head Maintenance is included: since TASK 57 a Head can be
+//                 chosen as Release Personnel, and
+//                 DispatchAuthorizationService::canReleaseDispatch() already
+//                 accepts maintenance_admin — but this gate was left at
+//                 maintenance_staff only, so a Head assigned to a dispatch
+//                 never got a Release button. A Head who is NOT the assignee
+//                 still sees no button (ddRenderActionButtons() requires the
+//                 identity match).
 $canApprove = ($_ddRole === 'super_admin');
 $canAssign  = ($_ddRole === 'maintenance_admin');
-$canRelease = ($_ddRole === 'maintenance_staff');
+$canRelease = in_array($_ddRole, ['maintenance_admin', 'maintenance_staff'], true);
 // Cancel keeps its pre-existing audience (Administrator + Head Maintenance).
 $canCancel  = in_array($_ddRole, ['super_admin', 'maintenance_admin'], true);
 // Any action section at all — used only to decide whether to render the
@@ -356,6 +366,132 @@ include __DIR__ . '/../includes/header.php';
     background: #f3e8ff !important;
     color: var(--text-primary, #111827) !important;
 }
+
+/* ============================================================
+   Asset tracking — "Track as Assets" controls in the Release
+   dialog and the read-only Tracked Assets card. Page-scoped like
+   every block above; colours/radii resolve to existing tokens.
+   ============================================================ */
+.dispatch-detail-page .dd-release-modal-content {
+    max-width: 640px;
+}
+
+.dispatch-detail-page .dd-release-modal-content .modal-body {
+    max-height: min(70vh, 640px);
+    overflow-y: auto;
+}
+
+.dispatch-detail-page .dd-asset-intro {
+    margin: 0 0 10px;
+    font-size: 13px;
+    color: var(--text-muted, #6b7280);
+}
+
+.dispatch-detail-page .dd-asset-lines {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 16px;
+}
+
+.dispatch-detail-page .dd-asset-line {
+    border: 1px solid var(--border, #e5e7eb);
+    border-radius: var(--radius-md, 10px);
+    background: var(--card-color, #ffffff);
+    padding: 12px 14px;
+}
+
+.dispatch-detail-page .dd-asset-line.is-tracked {
+    border-color: var(--primary, #7c3aed);
+    box-shadow: 0 0 0 3px var(--primary-bg, rgba(124, 58, 237, 0.08));
+}
+
+.dispatch-detail-page .dd-asset-line-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.dispatch-detail-page .dd-asset-line-name {
+    font-weight: 600;
+    color: var(--text-primary, #111827);
+}
+
+.dispatch-detail-page .dd-asset-line-qty {
+    display: block;
+    font-size: 12px;
+    color: var(--text-muted, #6b7280);
+    margin-top: 2px;
+}
+
+.dispatch-detail-page .dd-asset-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-primary, #111827);
+    cursor: pointer;
+    user-select: none;
+}
+
+.dispatch-detail-page .dd-asset-toggle input {
+    width: 16px;
+    height: 16px;
+    accent-color: var(--primary, #7c3aed);
+}
+
+.dispatch-detail-page .dd-asset-units {
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px dashed var(--border, #e5e7eb);
+}
+
+.dispatch-detail-page .dd-asset-hint {
+    margin: 0 0 10px;
+    font-size: 12px;
+    color: var(--text-muted, #6b7280);
+}
+
+.dispatch-detail-page .dd-asset-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 10px;
+}
+
+.dispatch-detail-page .dd-asset-field label {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-muted, #6b7280);
+    margin-bottom: 4px;
+}
+
+.dispatch-detail-page .dd-asset-field .form-control {
+    width: 100%;
+    text-transform: uppercase;
+}
+
+.dispatch-detail-page .dd-asset-field .form-control::placeholder {
+    text-transform: none;
+}
+
+.dispatch-detail-page .dd-asset-field .form-control.is-invalid {
+    border-color: #ef4444;
+}
+
+.dispatch-detail-page .dd-asset-code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+}
+
+.dispatch-detail-page .dd-tracked-assets-table td,
+.dispatch-detail-page .dd-tracked-assets-table th {
+    white-space: nowrap;
+}
 </style>
 
 <main class="container dispatch-detail-page" style="margin-top:16px;">
@@ -402,6 +538,21 @@ include __DIR__ . '/../includes/header.php';
         </div>
         <div class="card-body">
             <div id="dd-assignment-body"></div>
+        </div>
+    </div>
+
+    <!-- Section 1c: Tracked Assets — the asset codes registered when this
+         dispatch was released with "Track as Assets". Hidden unless at least
+         one unit was tracked. -->
+    <div class="card" id="dd-assets-card" style="margin-top:14px;display:none;">
+        <div class="card-header">
+            <h3 style="margin:0;">Tracked Assets</h3>
+            <p class="text-muted mb-0" style="font-size:13px;margin-top:2px;">
+                Units from this dispatch that have their own Asset Code. Use these codes when reporting a problem with a specific unit.
+            </p>
+        </div>
+        <div class="card-body">
+            <div id="dd-assets-body"></div>
         </div>
     </div>
 
@@ -454,6 +605,17 @@ include __DIR__ . '/../includes/header.php';
             </button>
             <?php endif; ?>
             <?php if ($canRelease): ?>
+            <?php /* Asset tracking — restores the Release entry point. The
+                     multi-personnel change (160247c) replaced this button
+                     with "Dispatch Item", whose script was never written, so
+                     the assigned staff member had no way to open the Release
+                     dialog. ddRenderActionButtons()/ddBind() already target
+                     this id; the Dispatch Item button below is unchanged. */ ?>
+            <button type="button" id="dd-release-btn"
+                    class="btn btn-primary"
+                    style="display:none;">
+                Release / Deploy Items
+            </button>
             <button type="button" id="dd-dispatch-item-btn"
                     class="btn btn-primary"
                     style="display:none;background:#2563eb;border-color:#2563eb;">
@@ -602,15 +764,21 @@ include __DIR__ . '/../includes/header.php';
     <?php endif; ?>
 
     <?php if ($canRelease): ?>
-    <!-- TASK 13 — Legacy Release Modal (kept for backward compatibility, hidden by default) -->
+    <!-- TASK 13 — Release Modal. Opened by the "Release / Deploy Items" button.
+         Asset tracking adds the per-line "Track as Assets" section. -->
     <div id="dd-release-modal" class="modal" style="display:none;" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="dd-release-modal-title">
-        <div class="modal-content" style="max-width:520px;">
+        <div class="modal-content dd-release-modal-content">
             <div class="modal-header">
                 <h3 class="modal-title" id="dd-release-modal-title">Release Dispatch Items</h3>
                 <button type="button" class="modal-close" id="dd-release-modal-close" aria-label="Close">&times;</button>
             </div>
             <div class="modal-body">
                 <p style="margin-bottom:12px;color:#374151;">This will deduct the listed items from inventory stock. This action cannot be undone.</p>
+                <p class="dd-asset-intro">
+                    <strong>Track as Assets</strong> — use asset tracking when each deployed unit needs its own asset identity for maintenance reporting.
+                    Leave it off for consumables and supplies.
+                </p>
+                <div id="dd-release-assets" class="dd-asset-lines"></div>
                 <label for="dd-release-remarks" style="font-weight:600;display:block;margin-bottom:6px;">Release Remarks <span style="color:#6b7280;font-weight:400;">(optional)</span></label>
                 <textarea id="dd-release-remarks" rows="3" class="form-control" placeholder="e.g. Handed over at the maintenance office front desk." style="width:100%;resize:vertical;"></textarea>
                 <p id="dd-release-error" style="color:#ef4444;font-size:13px;margin-top:10px;display:none;"></p>
@@ -626,7 +794,7 @@ include __DIR__ . '/../includes/header.php';
 </main>
 
 <script src="<?php echo htmlspecialchars(public_url('/frontend/assets/js/vendor/qrcode-generator.js?v=1.4.4')); ?>"></script>
-<script src="<?php echo htmlspecialchars(public_url('/frontend/assets/js/dispatch-labels.js?v=20260928')); ?>"></script>
+<script src="<?php echo htmlspecialchars(public_url('/frontend/assets/js/dispatch-labels.js?v=20261006-labels')); ?>"></script>
 <script>
 const DSP_ID      = <?php echo $dispatchId; ?>;
 const DSP_CAN_ACT = <?php echo $canAct ? 'true' : 'false'; ?>;
@@ -1349,6 +1517,9 @@ async function loadDispatchDetail() {
 
         renderDispatchTimeline(dispatch);
 
+        // Asset tracking — codes registered at release, if any.
+        ddLoadTrackedAssets(dispatch);
+
         // --- Action buttons ---------------------------------------------
         // TASK 13 — each button was already PHP role-gated (a role that may
         // not perform an action has no such button in the DOM at all), so this
@@ -1646,6 +1817,7 @@ async function doAssign() {
 function ddOpenReleaseModal() {
     document.getElementById('dd-release-remarks').value = '';
     document.getElementById('dd-release-error').style.display = 'none';
+    ddRenderReleaseAssets(DD_CURRENT_DISPATCH);
     ddOpenModal('dd-release-modal');
     setTimeout(() => document.getElementById('dd-release-remarks').focus(), 50);
 }
@@ -1654,16 +1826,220 @@ function ddCloseReleaseModal() {
     ddCloseModal('dd-release-modal');
 }
 
+// ---------------------------------------------------------------------------
+// Asset tracking — "Track as Assets" per dispatch line.
+//
+// Ticking the box for a line shows one Asset Code field per unit. A field
+// left blank gets an automatically generated SFMS code; a typed code is kept
+// exactly as the school's existing code. Everything checked here is a
+// convenience only — POST /release re-validates every rule server-side
+// (AssetRegistryService::buildReleasePlan()) and rejects the whole release
+// if anything is wrong.
+// ---------------------------------------------------------------------------
+
+// Mirrors AssetRegistryService so obvious mistakes are caught before submit.
+const DD_ASSET_CODE_PATTERN = /^[A-Z0-9]+(?:[ ._\/-][A-Z0-9]+)*$/;
+const DD_ASSET_MAX_UNITS = 500;
+
+function ddNormalizeAssetCode(value) {
+    return String(value || '').trim().replace(/\s+/g, ' ').toUpperCase();
+}
+
+function ddRenderReleaseAssets(dispatch) {
+    const container = document.getElementById('dd-release-assets');
+    if (!container) return;
+
+    const lines = Array.isArray(dispatch?.items) ? dispatch.items : [];
+    if (!lines.length) {
+        container.innerHTML = '';
+        return;
+    }
+
+    container.innerHTML = lines.map((line) => {
+        const lineId = Number(line.id);
+        const qty = Number(line.quantity) || 0;
+        const name = line.item?.name ?? 'Unknown item';
+        return `
+            <div class="dd-asset-line" data-line-id="${lineId}" data-qty="${qty}">
+                <div class="dd-asset-line-head">
+                    <div>
+                        <span class="dd-asset-line-name">${ddEscapeHtml(name)}</span>
+                        <span class="dd-asset-line-qty">Quantity: ${ddEscapeHtml(qty)}</span>
+                    </div>
+                    <label class="dd-asset-toggle">
+                        <input type="checkbox" class="dd-asset-track" data-line-id="${lineId}">
+                        Track as Assets
+                    </label>
+                </div>
+                <div class="dd-asset-units" hidden></div>
+            </div>`;
+    }).join('');
+
+    container.querySelectorAll('.dd-asset-track').forEach((checkbox) => {
+        checkbox.addEventListener('change', () => ddToggleAssetLine(checkbox));
+    });
+}
+
+function ddToggleAssetLine(checkbox) {
+    const lineEl = checkbox.closest('.dd-asset-line');
+    const units = lineEl?.querySelector('.dd-asset-units');
+    if (!lineEl || !units) return;
+
+    lineEl.classList.toggle('is-tracked', checkbox.checked);
+    if (!checkbox.checked) {
+        units.hidden = true;
+        units.innerHTML = '';
+        return;
+    }
+
+    const qty = Number(lineEl.dataset.qty) || 0;
+    const lineId = lineEl.dataset.lineId;
+    let fields = '';
+    for (let i = 1; i <= qty; i++) {
+        const inputId = `dd-asset-${lineId}-${i}`;
+        fields += `
+            <div class="dd-asset-field">
+                <label for="${inputId}">Asset ${i}</label>
+                <input type="text" id="${inputId}" class="form-control dd-asset-input" maxlength="50" autocomplete="off"
+                       placeholder="Existing Asset Code (optional)">
+            </div>`;
+    }
+
+    units.innerHTML = `
+        <p class="dd-asset-hint">Enter the unit's existing Asset Code if it already has one. Leave a field blank to <strong>automatically generate an SFMS asset code</strong>.</p>
+        <div class="dd-asset-grid">${fields}</div>`;
+    units.hidden = false;
+    units.querySelector('.dd-asset-input')?.focus();
+}
+
+// Returns { assets } on success or { error } with a user-facing message.
+function ddCollectReleaseAssets() {
+    const assets = {};
+    const seen = new Set();
+    let totalUnits = 0;
+
+    document.querySelectorAll('#dd-release-assets .dd-asset-line').forEach((el) => {
+        el.querySelectorAll('.dd-asset-input').forEach((input) => input.classList.remove('is-invalid'));
+    });
+
+    const trackedLines = Array.from(document.querySelectorAll('#dd-release-assets .dd-asset-track:checked'))
+        .map((checkbox) => checkbox.closest('.dd-asset-line'));
+
+    for (const lineEl of trackedLines) {
+        const inputs = Array.from(lineEl.querySelectorAll('.dd-asset-input'));
+        totalUnits += inputs.length;
+        if (totalUnits > DD_ASSET_MAX_UNITS) {
+            return { error: `At most ${DD_ASSET_MAX_UNITS} units can be tracked as assets in a single release.` };
+        }
+
+        const codes = [];
+        for (const input of inputs) {
+            const code = ddNormalizeAssetCode(input.value);
+            if (code === '') {
+                codes.push('');
+                continue;
+            }
+
+            let problem = null;
+            if (code.length < 3 || code.length > 50) {
+                problem = `Asset code "${code}" must be between 3 and 50 characters.`;
+            } else if (!DD_ASSET_CODE_PATTERN.test(code)) {
+                problem = `Asset code "${code}" may only contain letters, numbers, spaces, and - _ . / between them.`;
+            } else if (/^SFMS[ ._\/-]/.test(code)) {
+                problem = 'Asset codes starting with "SFMS-" are generated by the system. Leave the field blank to auto-generate one.';
+            } else if (seen.has(code)) {
+                problem = `Asset code "${code}" was entered more than once.`;
+            }
+
+            if (problem) {
+                input.classList.add('is-invalid');
+                input.focus();
+                return { error: problem };
+            }
+
+            seen.add(code);
+            codes.push(code);
+        }
+
+        assets[lineEl.dataset.lineId] = codes;
+    }
+
+    return { assets };
+}
+
 async function doRelease() {
     const remarks = document.getElementById('dd-release-remarks').value.trim();
+    const errEl = document.getElementById('dd-release-error');
+
+    const collected = ddCollectReleaseAssets();
+    if (collected.error) {
+        errEl.textContent = collected.error;
+        errEl.style.display = 'block';
+        return;
+    }
+
+    const body = { release_remarks: remarks || null };
+    // Only sent when at least one line is tracked, so an untracked release
+    // posts exactly the payload it always has.
+    if (Object.keys(collected.assets).length) {
+        body.assets = collected.assets;
+    }
 
     await ddSubmitAction(
         '/release',
-        { release_remarks: remarks || null },
+        body,
         'dd-release-confirm-btn',
         'dd-release-error',
         'Releasing...'
     );
+}
+
+// Tracked Assets card — lists the units registered for this dispatch.
+async function ddLoadTrackedAssets(dispatch) {
+    const card = document.getElementById('dd-assets-card');
+    const body = document.getElementById('dd-assets-body');
+    if (!card || !body) return;
+
+    if (String(dispatch?.status || '').toLowerCase() !== 'released') {
+        card.style.display = 'none';
+        return;
+    }
+
+    try {
+        const response = await fetch(
+            window.SFMS_PUBLIC_URL(`/api/deployed-assets?dispatch_id=${DSP_ID}&status=all&per_page=500`),
+            { credentials: 'same-origin', headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } }
+        );
+        const payload = await response.json();
+        const assets = response.ok && payload.success && Array.isArray(payload.data?.items) ? payload.data.items : [];
+
+        if (!assets.length) {
+            card.style.display = 'none';
+            return;
+        }
+
+        const statusLabels = { active: 'Active', returned: 'Returned', disposed: 'Disposed' };
+        const rows = assets.map((asset) => `
+            <tr>
+                <td><span class="dd-asset-code">${ddEscapeHtml(asset.asset_code)}</span></td>
+                <td>${ddEscapeHtml(asset.item_name || '—')}</td>
+                <td>${asset.code_source === 'existing' ? 'Existing Asset Code' : 'Auto-generated'}</td>
+                <td>${ddEscapeHtml(asset.room_name || '—')}</td>
+                <td>${ddEscapeHtml(statusLabels[asset.status] || asset.status || '—')}</td>
+            </tr>`).join('');
+
+        body.innerHTML = `
+            <div class="table-responsive">
+                <table class="table dd-tracked-assets-table">
+                    <thead><tr><th>Asset Code</th><th>Equipment</th><th>Code Type</th><th>Room</th><th>Status</th></tr></thead>
+                    <tbody>${rows}</tbody>
+                </table>
+            </div>`;
+        card.style.display = '';
+    } catch (err) {
+        // Supplementary information only — the rest of the page still works.
+        card.style.display = 'none';
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -1751,7 +2127,7 @@ document.addEventListener('DOMContentLoaded', () => {
     loadDispatchDetail();
 
     document.getElementById('dd-print-labels-btn').addEventListener('click', () => {
-        if (DD_CURRENT_DISPATCH && window.DispatchLabels) DispatchLabels.print(DD_CURRENT_DISPATCH);
+        if (DD_CURRENT_DISPATCH && window.DispatchLabels) DispatchLabels.print(DD_CURRENT_DISPATCH, { trackPrinting: true });
     });
 
     // TASK 13 — buttons and modals are now conditionally rendered per role, so

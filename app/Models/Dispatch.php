@@ -70,6 +70,10 @@ class Dispatch extends Model
             // TASK 13 — same treatment as approved_at so the timeline can
             // format it without JS-side date parsing special cases.
             'release_assigned_at' => 'datetime',
+            // Label print tracking — written only by
+            // DispatchController::markLabelsPrinted() (a direct query update),
+            // so it is deliberately not mass-assignable.
+            'labels_printed_at' => 'datetime',
         ];
     }
 

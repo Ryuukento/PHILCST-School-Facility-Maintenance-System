@@ -149,7 +149,7 @@ function initializeNavigation() {
     const user = Session.get('user');
     
     if (!user && window.location.pathname !== '/index.php' && !window.location.pathname.includes('login')) {
-        window.location.href = window.SFMS_PUBLIC_URL ? window.SFMS_PUBLIC_URL('/frontend/pages/index.php') : '/frontend/pages/index.php';
+        window.location.href = window.SFMS_PUBLIC_URL ? window.SFMS_PUBLIC_URL('/login') : '/login';
         return;
     }
     
@@ -170,7 +170,7 @@ function initializeNavigation() {
             // Ignore API failures and fall back to server-side logout.
         } finally {
             Session.clear();
-            window.location.href = window.SFMS_PUBLIC_URL ? window.SFMS_PUBLIC_URL('/frontend/pages/logout.php') : '/frontend/pages/logout.php';
+            window.location.href = window.SFMS_PUBLIC_URL ? window.SFMS_PUBLIC_URL('/logout') : '/logout';
         }
     }
 

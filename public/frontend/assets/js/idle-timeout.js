@@ -44,8 +44,8 @@
 
     function redirectToLogin() {
         window.location.href = window.SFMS_PUBLIC_URL
-            ? window.SFMS_PUBLIC_URL('/frontend/pages/index.php?session_expired=1&reason=idle')
-            : '/frontend/pages/index.php?session_expired=1&reason=idle';
+            ? window.SFMS_PUBLIC_URL('/login?session_expired=1&reason=idle')
+            : '/login?session_expired=1&reason=idle';
     }
 
     function showWarning() {

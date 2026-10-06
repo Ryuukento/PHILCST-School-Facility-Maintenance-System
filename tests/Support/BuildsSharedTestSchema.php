@@ -179,6 +179,8 @@ trait BuildsSharedTestSchema
             $table->dateTime('need_change_disposed_at')->nullable();
             $table->string('need_change_disposal_notes', 255)->nullable();
             $table->string('completion_proof_image')->nullable();
+            // Deployed Asset registry (2026_10_06_000100_create_deployed_assets_tables).
+            $table->unsignedBigInteger('deployed_asset_id')->nullable();
             $table->timestamps();
         });
     }
@@ -218,6 +220,10 @@ trait BuildsSharedTestSchema
             $table->unsignedInteger('purchase_receipt_id')->nullable();
             $table->string('status', 20)->default('pending');
             $table->text('notes')->nullable();
+            // Label print tracking
+            // (2026_10_06_000200_add_label_print_tracking_to_dispatches_table).
+            $table->timestamp('labels_printed_at')->nullable();
+            $table->unsignedInteger('labels_printed_by')->nullable();
             $table->timestamps();
         });
     }
@@ -229,6 +235,44 @@ trait BuildsSharedTestSchema
             $table->unsignedInteger('dispatch_id');
             $table->unsignedInteger('item_id');
             $table->integer('quantity');
+            // Multi-personnel dispatch
+            // (2026_10_04_000100_add_multi_personnel_dispatch_support):
+            // written by DispatchService::dispatchItem(). Nullable, so
+            // existing seeders that omit them are unaffected.
+            $table->unsignedInteger('dispatched_by')->nullable();
+            $table->timestamp('dispatched_at')->nullable();
+            $table->timestamps();
+        });
+    }
+
+    /**
+     * Deployed Asset registry
+     * (2026_10_06_000100_create_deployed_assets_tables). asset_code carries
+     * the same UNIQUE index as the real table, so duplicate-code races are
+     * exercised against the database constraint, not only the service check.
+     */
+    protected function createDeployedAssetsTable(): void
+    {
+        Schema::create('deployed_assets', function (Blueprint $table): void {
+            $table->bigIncrements('id');
+            $table->string('asset_code', 50)->unique();
+            $table->string('code_source', 20);
+            $table->unsignedInteger('item_id');
+            $table->unsignedBigInteger('dispatch_id')->nullable();
+            $table->unsignedBigInteger('dispatch_item_id')->nullable();
+            $table->unsignedInteger('room_id')->nullable();
+            $table->string('status', 20)->default('active');
+            $table->timestamp('deployed_at')->nullable();
+            $table->unsignedInteger('created_by')->nullable();
+            $table->timestamps();
+        });
+    }
+
+    protected function createAssetCodeSequencesTable(): void
+    {
+        Schema::create('asset_code_sequences', function (Blueprint $table): void {
+            $table->unsignedSmallInteger('year')->primary();
+            $table->unsignedInteger('last_value')->default(0);
             $table->timestamps();
         });
     }

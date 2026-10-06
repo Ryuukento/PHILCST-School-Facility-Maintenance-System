@@ -1,4 +1,6 @@
 <?php
+// Clean URLs: public_url() is used below, before header.php loads settings.
+require_once __DIR__ . '/../../backend/config/settings.php';
 if (session_status() === PHP_SESSION_NONE) {
     session_set_cookie_params(['lifetime'=>0,'path'=>'/','secure'=>false,'httponly'=>true,'samesite'=>'Lax']);
     if (!@session_start()) {
@@ -11,7 +13,7 @@ if (session_status() === PHP_SESSION_NONE) {
 }
 
 if (!isset($_SESSION['user']) && !isset($_SESSION['auth_user'])) {
-    header('Location: /School_Facility_Maintenance_System/frontend/pages/index.php');
+    header('Location: ' . public_url('/login'));
     exit;
 }
 
@@ -37,7 +39,7 @@ $currentUserDepartmentId = $user['department_id'] ?? null;
                 <h2 id="report-title">Loading...</h2>
                 <p class="text-muted mb-0">Report Details</p>
             </div>
-            <a href="/School_Facility_Maintenance_System/frontend/pages/reports.php" class="btn btn-secondary btn-sm" style="height: fit-content; margin-top: 0;">
+            <a href="<?php echo public_url('/reports'); ?>" class="btn btn-secondary btn-sm" style="height: fit-content; margin-top: 0;">
                 <?php echo ui_icon('arrow-left'); ?> Back to Reports
             </a>
         </div>
@@ -51,7 +53,7 @@ $currentUserDepartmentId = $user['department_id'] ?? null;
     <div class="card" style="margin-top: 20px;">
         <div class="card-body" style="display: flex; justify-content: flex-end;">
             <a id="assign-report-btn"
-               href="/School_Facility_Maintenance_System/frontend/pages/maintenance-report-detail.php?id=<?php echo intval($reportId); ?>&back=all_reports"
+               href="<?php echo public_url('/maintenance-report-detail'); ?>?id=<?php echo intval($reportId); ?>&back=all_reports"
                class="btn btn-primary">
                 Assign Report
             </a>

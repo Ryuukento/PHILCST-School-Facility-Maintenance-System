@@ -25,7 +25,10 @@ class DispatchService
         // was the one remaining ledger-mutating flow missing it, because it
         // relies entirely on InventoryTransactionObserver::created() for the
         // status mutation and never previously captured a "before" value.
-        private readonly InventoryLowStockNotifier $inventoryLowStockNotifier
+        private readonly InventoryLowStockNotifier $inventoryLowStockNotifier,
+        // Deployed Asset registry — per-unit asset codes for dispatch lines
+        // released with "Track as Assets" enabled (see releaseDispatch()).
+        private readonly AssetRegistryService $assetRegistryService
     ) {
     }
 
@@ -544,16 +547,27 @@ class DispatchService
      * InventoryTransactionObserver, exactly as before — no stock math is
      * duplicated in this service.
      *
-     * @return array{dispatch: Dispatch, transactions: Collection<int, InventoryTransaction>}
+     * Deployed Asset registry — $assets is the optional "Track as Assets"
+     * payload, keyed by dispatch_item_id, one entry per unit (an existing
+     * official code, or blank to auto-generate an SFMS code). It is validated
+     * against this dispatch's own lines BEFORE any stock moves, and the
+     * deployed_assets rows are written in this same transaction AFTER the
+     * deploy transactions, so an invalid or duplicate code rolls the entire
+     * release back (no stock deducted, status unchanged). An empty array is
+     * the untracked release, identical to the behaviour before this feature.
+     *
+     * @param  array<int|string, list<string|null>>  $assets
+     * @return array{dispatch: Dispatch, transactions: Collection<int, InventoryTransaction>, assets: Collection<int, \App\Models\DeployedAsset>}
      */
     public function releaseDispatch(
         Dispatch $dispatch,
         int $releasedBy,
         ?int $receiverUserId = null,
         ?int $actorUserId = null,
-        ?string $releaseRemarks = null
+        ?string $releaseRemarks = null,
+        array $assets = []
     ): array {
-        return DB::transaction(function () use ($dispatch, $releasedBy, $receiverUserId, $actorUserId, $releaseRemarks): array {
+        return DB::transaction(function () use ($dispatch, $releasedBy, $receiverUserId, $actorUserId, $releaseRemarks, $assets): array {
             $locked = Dispatch::query()->whereKey($dispatch->id)->lockForUpdate()->first();
 
             if (!$locked || $locked->status !== 'approved') {
@@ -631,6 +645,11 @@ class DispatchService
                 }
             }
 
+            // Deployed Asset registry — validated here, after the stock check
+            // and before the first InventoryTransaction, so a bad asset
+            // payload makes zero inventory changes.
+            $assetPlan = $this->assetRegistryService->buildReleasePlan($items, $assets);
+
             $releasedToName = User::query()->find($releasedBy)?->full_name ?? 'Unknown personnel';
 
             $transactions = collect();
@@ -653,6 +672,11 @@ class DispatchService
                     'performed_by' => $releasedBy,
                 ]));
             }
+
+            // Deployed Asset registry — one row per tracked unit, inside this
+            // transaction. Registering is attributed to the releasing staff
+            // member, the same person recorded as performed_by above.
+            $registeredAssets = $this->assetRegistryService->registerReleasePlan($locked, $assetPlan, $releasedBy);
 
             // TASK 52 — fires only on a genuine NORMAL -> LOW/OUT_OF_STOCK
             // transition, once per distinct item touched by this release
@@ -700,6 +724,8 @@ class DispatchService
                         'release_remarks' => $releaseRemarks,
                         'transaction_count' => $transactions->count(),
                         'transaction_ids' => $transactions->pluck('id')->all(),
+                        'tracked_asset_count' => $registeredAssets->count(),
+                        'asset_codes' => $registeredAssets->pluck('asset_code')->all(),
                     ],
                 ]);
             }
@@ -738,6 +764,7 @@ class DispatchService
             return [
                 'dispatch' => $locked->fresh('items.item'),
                 'transactions' => $transactions,
+                'assets' => $registeredAssets,
             ];
         });
     }
@@ -880,14 +907,26 @@ class DispatchService
      * Multi-Personnel Dispatch Support: Mark dispatch as released when all items are dispatched.
      *
      * This is called after an item is dispatched. If all items are now dispatched,
-     * update the dispatch status to 'released' if it's still 'approved'.
+     * the dispatch is released if it's still 'approved'.
+     *
+     * Deployed Asset registry fix — this used to write status='released'
+     * directly, which skipped everything releaseDispatch() does: no 'deploy'
+     * InventoryTransaction (so stock was never deducted), no stock check, no
+     * release notifications, and it would have bypassed asset registration.
+     * It now delegates to releaseDispatch(), so there is exactly one code path
+     * that releases a dispatch. Stock is deducted once, by that method's deploy
+     * transactions (its duplicate-release guard still applies), and any
+     * "Track as Assets" payload is validated and registered there.
+     *
+     * @param  array<int|string, list<string|null>>  $assets  same shape as releaseDispatch()
      */
     public function completeDispatchIfAllItemsDispatched(
         Dispatch $dispatch,
         ?int $releasedBy = null,
-        ?int $actorUserId = null
+        ?int $actorUserId = null,
+        array $assets = []
     ): Dispatch {
-        return DB::transaction(function () use ($dispatch, $releasedBy, $actorUserId): Dispatch {
+        return DB::transaction(function () use ($dispatch, $releasedBy, $actorUserId, $assets): Dispatch {
             $locked = Dispatch::query()->whereKey($dispatch->id)->lockForUpdate()->first();
 
             if (!$locked || $locked->status !== 'approved') {
@@ -899,13 +938,18 @@ class DispatchService
                 return $locked;
             }
 
-            // All items are dispatched - mark dispatch as released
-            $releasedByUser = $releasedBy ? User::query()->find($releasedBy)?->full_name : 'System';
+            // releaseDispatch() records who physically released the stock, so
+            // it needs a real person. Fall back to the assigned release
+            // personnel; with neither, the dispatch stays approved rather than
+            // being released without an accountable releaser.
+            $releasedBy = $releasedBy ?: ($locked->release_assigned_to !== null ? (int) $locked->release_assigned_to : null);
+            if (!$releasedBy) {
+                return $locked;
+            }
 
-            $locked->update([
-                'status' => 'released',
-                'released_by' => $releasedBy,
-            ]);
+            $releasedByUser = User::query()->find($releasedBy)?->full_name ?? 'Unknown personnel';
+
+            $this->releaseDispatch($locked, $releasedBy, null, $actorUserId, null, $assets);
 
             if ($actorUserId) {
                 $this->activityLogService->logFromSession([

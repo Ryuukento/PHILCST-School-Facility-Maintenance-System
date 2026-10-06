@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\ActivityLogController;
 use App\Http\Controllers\Api\DamageReportController;
+use App\Http\Controllers\Api\DeployedAssetController;
 use App\Http\Controllers\Api\EmailVerificationController;
 use App\Http\Controllers\Api\DeploymentTrackingController;
 use App\Http\Controllers\Api\DashboardController;
@@ -343,6 +344,11 @@ Route::prefix('api')->group(function (): void {
             // Same ordering rule the repairs group already relies on.
             Route::get('support/release-personnel', [\App\Http\Controllers\Api\DispatchController::class, 'releasePersonnel'])
                 ->middleware(\App\Http\Middleware\EnsureRole::class . ':maintenance_admin,super_admin');
+            // Label print tracking — marks dispatches whose stickers were
+            // confirmed printed. Any role that can print labels may call it;
+            // the controller limits it to dispatches the caller can see.
+            Route::post('labels-printed', [\App\Http\Controllers\Api\DispatchController::class, 'markLabelsPrinted'])
+                ->middleware(\App\Http\Middleware\EnsureRole::class . ':super_admin,maintenance_admin,maintenance_staff');
             Route::get('{dispatch}', [\App\Http\Controllers\Api\DispatchController::class, 'show']);
             Route::post('{dispatch}/assign-personnel', [\App\Http\Controllers\Api\DispatchController::class, 'assignPersonnel'])
                 ->middleware(\App\Http\Middleware\EnsureRole::class . ':maintenance_admin');
@@ -416,6 +422,14 @@ Route::prefix('api')->group(function (): void {
             Route::get('search', [DeploymentTrackingController::class, 'search']);
             Route::get('',       [DeploymentTrackingController::class, 'index']);
         });
+
+        // Deployed Asset registry — read-only lookup of tracked units (and,
+        // with include_legacy=1, legacy room_asset items) for the "Report
+        // Against a Specific Asset" picker. There is deliberately no write
+        // route: assets are created only by a dispatch release and their
+        // codes are immutable.
+        Route::get('deployed-assets', [DeployedAssetController::class, 'index'])
+            ->middleware(EnsureRole::class . ':super_admin,maintenance_admin,maintenance_staff');
 
         Route::get('replacement-tracking', [ReplacementTrackingController::class, 'index']);
         Route::post('replacement-tracking/{reportId}/dispose', [ReplacementTrackingController::class, 'dispose']);

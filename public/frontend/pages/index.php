@@ -17,7 +17,7 @@ require_once __DIR__ . '/../../backend/config/settings.php';
 
 // If already logged in, redirect to dashboard
 if (isset($_SESSION['auth_user']) || isset($_SESSION['user'])) {
-    header('Location: ' . public_url('/frontend/pages/dashboard.php'));
+    header('Location: ' . public_url('/dashboard'));
     exit;
 }
 ?>
@@ -790,13 +790,13 @@ document.getElementById('login-form').addEventListener('submit', async (e) => {
             setTimeout(() => {
                 const role = response.data.user.role;
                 if (role === 'super_admin') {
-                    window.location.href = '<?php echo htmlspecialchars(public_url('/frontend/pages/dashboard.php')); ?>';
+                    window.location.href = '<?php echo htmlspecialchars(public_url('/dashboard')); ?>';
                 } else if (role === 'maintenance_admin') {
-                    window.location.href = '<?php echo htmlspecialchars(public_url('/frontend/pages/maintenance-dashboard.php')); ?>';
+                    window.location.href = '<?php echo htmlspecialchars(public_url('/dashboard')); ?>';
                 } else if (role === 'maintenance_staff') {
-                    window.location.href = '<?php echo htmlspecialchars(public_url('/frontend/pages/staff-dashboard.php')); ?>';
+                    window.location.href = '<?php echo htmlspecialchars(public_url('/dashboard')); ?>';
                 } else {
-                    window.location.href = '<?php echo htmlspecialchars(public_url('/frontend/pages/dashboard.php')); ?>';
+                    window.location.href = '<?php echo htmlspecialchars(public_url('/dashboard')); ?>';
                 }
             }, 500);
         } else {

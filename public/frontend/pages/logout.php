@@ -1,4 +1,6 @@
 <?php
+// Clean URLs: public_url() is used below, before header.php loads settings.
+require_once __DIR__ . '/../../backend/config/settings.php';
 // Server-side logout helper — destroys session and redirects to login
 if (session_status() === PHP_SESSION_NONE) {
     session_set_cookie_params(['lifetime' => 0, 'path' => '/', 'secure' => false, 'httponly' => true, 'samesite' => 'Lax']);
@@ -26,5 +28,5 @@ session_destroy();
 // Clear any client-side storage redirect target may rely on
 // (client JS will also clear localStorage on login/logout flows)
 
-header('Location: /School_Facility_Maintenance_System/frontend/pages/index.php');
+header('Location: ' . public_url('/login'));
 exit;

@@ -1,4 +1,6 @@
 <?php
+// Clean URLs: public_url() is used below, before header.php loads settings.
+require_once __DIR__ . '/../../backend/config/settings.php';
 if (session_status() === PHP_SESSION_NONE) {
     session_set_cookie_params(['lifetime'=>0,'path'=>'/','secure'=>false,'httponly'=>true,'samesite'=>'Lax']);
     if (!@session_start()) {
@@ -11,7 +13,7 @@ if (session_status() === PHP_SESSION_NONE) {
 }
 
 if (!isset($_SESSION['user']) && !isset($_SESSION['auth_user'])) {
-    header('Location: /School_Facility_Maintenance_System/frontend/pages/index.php');
+    header('Location: ' . public_url('/login'));
     exit;
 }
 
@@ -1198,7 +1200,7 @@ async function pmLoadChecklist() {
         items.forEach((item) => {
             const isCompleted = item.item_status === 'completed';
             const reportLink = item.maintenance_report_id
-                ? `<div><a class="pm-report-link" href="maintenance-report-detail.php?id=${encodeURIComponent(item.maintenance_report_id)}">Report #${pmEscapeHtml(item.maintenance_report_id)} &rarr;</a></div>`
+                ? `<div><a class="pm-report-link" href="<?php echo htmlspecialchars(public_url('/maintenance-report-detail')); ?>?id=${encodeURIComponent(item.maintenance_report_id)}">Report #${pmEscapeHtml(item.maintenance_report_id)} &rarr;</a></div>`
                 : '';
             const completedCell = isCompleted
                 ? `${pmFormatDate(item.completed_date) || pmMutedDash()}${item.performed_by_name ? `<div class="pm-cell-secondary">by ${pmEscapeHtml(item.performed_by_name)}</div>` : ''}`
@@ -1702,7 +1704,7 @@ function pmHistoryRowMarkup(h) {
         if (h.maintenance_report_id) {
             const report = h.maintenance_report || {};
             const status = report.status ? ` · ${pmEscapeHtml(String(report.status).replace(/_/g, ' '))}` : '';
-            reportLine = `<a class="pm-report-link" href="maintenance-report-detail.php?id=${encodeURIComponent(h.maintenance_report_id)}">Repair report #${pmEscapeHtml(h.maintenance_report_id)}${status} &rarr;</a>`;
+            reportLine = `<a class="pm-report-link" href="<?php echo htmlspecialchars(public_url('/maintenance-report-detail')); ?>?id=${encodeURIComponent(h.maintenance_report_id)}">Repair report #${pmEscapeHtml(h.maintenance_report_id)}${status} &rarr;</a>`;
         } else if (pmHistoryRow && pmCanCompleteTask(pmHistoryRow)) {
             reportLine = `<button type="button" class="pm-action-btn pm-action-btn--complete" data-action="create-repair-report" data-history-id="${h.id}">Create repair report</button>`;
         } else {

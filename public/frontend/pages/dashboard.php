@@ -1,4 +1,6 @@
 <?php
+// Clean URLs: public_url() is used below, before header.php loads settings.
+require_once __DIR__ . '/../../backend/config/settings.php';
 if (session_status() === PHP_SESSION_NONE) {
     session_set_cookie_params(['lifetime'=>0,'path'=>'/','secure'=>false,'httponly'=>true,'samesite'=>'Lax']);
     if (!@session_start()) {
@@ -11,7 +13,7 @@ if (session_status() === PHP_SESSION_NONE) {
 }
 
 if (!isset($_SESSION['user']) && !isset($_SESSION['auth_user'])) {
-    header('Location: /School_Facility_Maintenance_System/frontend/pages/index.php');
+    header('Location: ' . public_url('/login'));
     exit;
 }
 
@@ -287,7 +289,7 @@ $user = $_SESSION['user'] ?? $_SESSION['auth_user'];
             <div id="academic-period-card-body" class="academic-period-card-body">
                 <span class="academic-period-skeleton">Loading semester…</span>
             </div>
-            <a href="<?php echo public_url('/frontend/pages/semester-settings.php'); ?>" id="school-settings-edit-btn" class="btn btn-sm btn-secondary academic-period-settings-btn" aria-label="Manage Academic Session">
+            <a href="<?php echo public_url('/semester-settings'); ?>" id="school-settings-edit-btn" class="btn btn-sm btn-secondary academic-period-settings-btn" aria-label="Manage Academic Session">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
                     <circle cx="12" cy="12" r="3"></circle>
                     <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-.33-1.82l-.06-.06a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33-1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09A1.65 1.65 0 0 0 19.4 15z"></path>
@@ -548,7 +550,7 @@ $user = $_SESSION['user'] ?? $_SESSION['auth_user'];
                          list, which is unchanged. -->
                     <h2>Today's Reports</h2>
                 </div>
-                <a href="/School_Facility_Maintenance_System/frontend/pages/reports.php" class="recent-reports-link">View All</a>
+                <a href="<?php echo public_url('/reports'); ?>" class="recent-reports-link">View All</a>
             </div>
             <div class="card-body recent-reports-body">
                 <!-- TASK 31.3 — no wrapper class here anymore: the icon-chip
@@ -629,7 +631,7 @@ $user = $_SESSION['user'] ?? $_SESSION['auth_user'];
                     </span>
                     <h2>Maintenance Activity Timeline</h2>
                 </div>
-                <a href="/School_Facility_Maintenance_System/frontend/pages/reports.php" class="recent-reports-link">View Full Timeline</a>
+                <a href="<?php echo public_url('/reports'); ?>" class="recent-reports-link">View Full Timeline</a>
             </div>
             <div class="card-body">
                 <div id="dashboardActivityTimeline" class="activity-timeline">
@@ -1927,7 +1929,7 @@ function refreshDashboardChartsForTheme() {
                         e.stopPropagation();
                         const idx = items[0].index;
                         const statuses = ['submitted', 'in_progress', 'completed'];
-                        window.location.href = window.SFMS_PUBLIC_URL('/frontend/pages/reports.php?status=' + statuses[idx]);
+                        window.location.href = window.SFMS_PUBLIC_URL('/reports?status=' + statuses[idx]);
                     }
                 },
                 plugins: {
@@ -2215,11 +2217,11 @@ function closeRoomModal() {
 
 function navigateToReportsCard(cardKey) {
     if (cardKey === 'low_stock') {
-        window.location.href = '/School_Facility_Maintenance_System/frontend/pages/inventory.php?status_filter=low_stock';
+        window.location.href = '<?php echo public_url('/inventory'); ?>?status_filter=low_stock';
         return;
     }
 
-    const targetUrl = new URL('/School_Facility_Maintenance_System/frontend/pages/reports.php', window.location.origin);
+    const targetUrl = new URL('<?php echo public_url('/reports'); ?>', window.location.origin);
 
     if (cardKey === 'today') {
         targetUrl.searchParams.set('date_scope', 'today');
@@ -2298,7 +2300,7 @@ function loadMockBuildings() {
         const notice = document.createElement('div');
         notice.className = 'setup-notice';
         notice.style.cssText = 'background: #8b2020; color: #ffcccc; padding: 12px; border-radius: 6px; margin-top: 12px; font-size: 12px;';
-        notice.innerHTML = (window.UIIcons ? window.UIIcons.svg('alert-triangle', { size: 14 }) : '') + ' No buildings found. <a href="/School_Facility_Maintenance_System/frontend/pages/buildings-overview.php" style="color: #ffb3b3; text-decoration: underline;">Add a building</a> first.';
+        notice.innerHTML = (window.UIIcons ? window.UIIcons.svg('alert-triangle', { size: 14 }) : '') + ' No buildings found. <a href="<?php echo public_url('/buildings-overview'); ?>" style="color: #ffb3b3; text-decoration: underline;">Add a building</a> first.';
         roomForm.appendChild(notice);
     }
 }
@@ -3352,7 +3354,7 @@ async function initDashboard() {
                                     e.stopPropagation();
                                     const idx = items[0].index;
                                     const statuses = ['submitted', 'in_progress', 'completed'];
-                                    window.location.href = window.SFMS_PUBLIC_URL('/frontend/pages/reports.php?status=' + statuses[idx]);
+                                    window.location.href = window.SFMS_PUBLIC_URL('/reports?status=' + statuses[idx]);
                                 }
                             },
                             plugins: {

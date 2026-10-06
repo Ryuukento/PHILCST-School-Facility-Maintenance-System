@@ -1,4 +1,6 @@
 <?php
+// Clean URLs: public_url() is used below, before header.php loads settings.
+require_once __DIR__ . '/../../backend/config/settings.php';
 /**
  * Maintenance Report Detail View
  */
@@ -11,7 +13,7 @@ if (session_status() === PHP_SESSION_NONE) {
 }
 
 if (!isset($_SESSION['user'])) {
-    header('Location: /School_Facility_Maintenance_System/frontend/pages/index.php');
+    header('Location: ' . public_url('/login'));
     exit;
 }
 
@@ -81,11 +83,11 @@ $assignmentPlaceholder = 'Select assignee...';
 $defaultAssignmentRoleFilter = 'maintenance_staff';
 $backContext = strtolower(trim((string)($_GET['back'] ?? '')));
 $backToReportsUrl = in_array($currentRole, ['super_admin', 'maintenance_admin'], true)
-    ? '/School_Facility_Maintenance_System/frontend/pages/reports.php'
-    : '/School_Facility_Maintenance_System/frontend/pages/reports.php';
+    ? public_url('/reports')
+    : public_url('/reports');
 
 if ($backContext === 'all_reports') {
-    $backToReportsUrl = '/School_Facility_Maintenance_System/frontend/pages/reports.php';
+    $backToReportsUrl = public_url('/reports');
 }
 
 if ($canAssignUser) {
@@ -925,11 +927,11 @@ async function loadReport() {
             html += '<dl class="report-info-list">';
             if (report.damage_report_id) {
                 const damageStatusLabel = String(report.damage_report_status || '').replace(/_/g, ' ').toUpperCase();
-                html += `<div class="report-info-row"><dt>Damage Report</dt><dd><a href="damage-report-detail.php?id=${report.damage_report_id}">${UI.escapeHtml(report.damage_report_code || ('#' + report.damage_report_id))}</a>${damageStatusLabel ? ` <span class="badge badge-info">${UI.escapeHtml(damageStatusLabel)}</span>` : ''}</dd></div>`;
+                html += `<div class="report-info-row"><dt>Damage Report</dt><dd><a href="<?php echo htmlspecialchars(public_url('/damage-report-detail')); ?>?id=${report.damage_report_id}">${UI.escapeHtml(report.damage_report_code || ('#' + report.damage_report_id))}</a>${damageStatusLabel ? ` <span class="badge badge-info">${UI.escapeHtml(damageStatusLabel)}</span>` : ''}</dd></div>`;
             }
             if (report.replacement_dispatch_id) {
                 const dispatchStatusLabel = String(report.replacement_dispatch_status || '').replace(/_/g, ' ').toUpperCase();
-                html += `<div class="report-info-row"><dt>Replacement Dispatch</dt><dd><a href="dispatch-detail.php?id=${report.replacement_dispatch_id}">${UI.escapeHtml(report.replacement_dispatch_code || ('#' + report.replacement_dispatch_id))}</a>${dispatchStatusLabel ? ` <span class="badge badge-info">${UI.escapeHtml(dispatchStatusLabel)}</span>` : ''}</dd></div>`;
+                html += `<div class="report-info-row"><dt>Replacement Dispatch</dt><dd><a href="<?php echo htmlspecialchars(public_url('/dispatch-detail')); ?>?id=${report.replacement_dispatch_id}">${UI.escapeHtml(report.replacement_dispatch_code || ('#' + report.replacement_dispatch_id))}</a>${dispatchStatusLabel ? ` <span class="badge badge-info">${UI.escapeHtml(dispatchStatusLabel)}</span>` : ''}</dd></div>`;
             }
             html += '</dl>';
             html += '</section>';

@@ -2,14 +2,17 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Exceptions\DuplicateDeploymentException;
 use App\Http\Controllers\Controller;
 use App\Models\Dispatch;
+use App\Models\DispatchItem;
 use App\Services\ActivityLogService;
 use App\Services\DispatchAuthorizationService;
 use App\Services\DispatchService;
 use App\Services\PersonnelDirectoryService;
 use App\Support\ApiResponder;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 class DispatchController extends Controller
@@ -41,6 +44,35 @@ class DispatchController extends Controller
     private function authUser(Request $request): array
     {
         return (array) $request->session()->get('auth_user', $request->session()->get('user', []));
+    }
+
+    /**
+     * Deployed Asset registry — shape-checks the optional `assets` payload
+     * (assets[dispatch_item_id][] = existing code or blank). Ownership,
+     * per-line counts, code format and duplicates are validated server-side
+     * by AssetRegistryService::buildReleasePlan() inside the release
+     * transaction; this only rejects structurally invalid input early.
+     *
+     * @return array<int|string, list<string|null>>
+     */
+    private function validatedAssetPayload(Request $request): array
+    {
+        $validated = $request->validate([
+            'assets'     => ['sometimes', 'nullable', 'array'],
+            'assets.*'   => ['array'],
+            'assets.*.*' => ['nullable', 'string', 'max:100'],
+        ], [
+            'assets.array'        => 'Asset details are invalid.',
+            'assets.*.array'      => 'Asset details are invalid.',
+            'assets.*.*.string'   => 'Each asset code must be text.',
+            'assets.*.*.max'      => 'Asset codes may not be longer than 50 characters.',
+        ]);
+
+        $assets = $validated['assets'] ?? [];
+
+        // A line whose list is empty was not tracked; dropping it here keeps
+        // "checkbox ticked, then unticked" payloads equivalent to omission.
+        return array_filter($assets, static fn ($entries) => is_array($entries) && $entries !== []);
     }
 
     public function index(Request $request)
@@ -112,16 +144,83 @@ class DispatchController extends Controller
         // project's established whereDate() convention (see AnalyticsService/
         // ReportController) so date-only comparisons stay correct against a
         // datetime column. Omitted by default so existing callers are unaffected.
-        if ($request->filled('date_from')) {
+        // Dispatches page date filter reuses these two parameters. A
+        // malformed date is ignored rather than passed to the database.
+        if ($request->filled('date_from') && strtotime((string) $request->input('date_from')) !== false) {
             $query->whereDate('created_at', '>=', $request->input('date_from'));
         }
-        if ($request->filled('date_to')) {
+        if ($request->filled('date_to') && strtotime((string) $request->input('date_to')) !== false) {
             $query->whereDate('created_at', '<=', $request->input('date_to'));
+        }
+
+        // Label print tracking — "Not yet printed" / "Printed" filter on the
+        // Dispatches page, also applied by Print All Labels. Any other value
+        // is ignored, so existing callers are unaffected.
+        $labelStatus = (string) $request->query('label_status', '');
+        if ($labelStatus === 'not_printed') {
+            $query->whereNull('labels_printed_at');
+        } elseif ($labelStatus === 'printed') {
+            $query->whereNotNull('labels_printed_at');
         }
 
         $dispatches = $query->orderByDesc('created_at')->paginate((int)$request->integer('per_page', 20));
 
         return $this->ok('Dispatches retrieved', $dispatches);
+    }
+
+    /**
+     * POST /api/dispatches/labels-printed — records that the stickers for the
+     * given dispatches were printed, after the user confirms the print came
+     * out correctly. Drives the "Not yet printed" filter so Print All Labels
+     * does not re-print stickers already on the equipment.
+     *
+     * Only dispatches the user can see (Maintenance Staff: their own assigned
+     * dispatches, same scoping as index()) and only printable ones
+     * (approved/released, the statuses DispatchLabels prints) are marked;
+     * any other id in the request is silently skipped. A reprint updates the
+     * timestamp to the latest print.
+     */
+    public function markLabelsPrinted(Request $request)
+    {
+        $validated = $request->validate([
+            'dispatch_ids'   => ['required', 'array', 'min:1', 'max:500'],
+            'dispatch_ids.*' => ['integer', 'distinct'],
+        ]);
+
+        $authUser = $this->authUser($request);
+        $userId = (int) ($authUser['user_id'] ?? 0);
+
+        $query = Dispatch::query()
+            ->whereIn('id', array_map('intval', $validated['dispatch_ids']))
+            ->whereIn('status', ['approved', 'released']);
+
+        if ($this->dispatchAuthorizationService->shouldScopeIndexToAssignments($authUser)) {
+            $query->where('release_assigned_to', $userId);
+        }
+
+        $ids = $query->pluck('id')->map(fn ($id) => (int) $id)->all();
+
+        if ($ids !== []) {
+            Dispatch::query()->whereIn('id', $ids)->update([
+                'labels_printed_at' => now(),
+                'labels_printed_by' => $userId > 0 ? $userId : null,
+            ]);
+
+            $this->activityLogService->logFromSession([
+                'user_id' => $userId,
+                'action' => 'MARK_DISPATCH_LABELS_PRINTED',
+                'module' => 'dispatch',
+                'entity_type' => 'dispatch',
+                'entity_id' => count($ids) === 1 ? $ids[0] : null,
+                'details' => 'Marked labels as printed for ' . count($ids) . ' dispatch' . (count($ids) === 1 ? '' : 'es') . '.',
+                'meta' => ['dispatch_ids' => $ids],
+            ]);
+        }
+
+        return $this->ok('Labels marked as printed', [
+            'marked_count' => count($ids),
+            'dispatch_ids' => $ids,
+        ]);
     }
 
     public function store(Request $request)
@@ -440,6 +539,15 @@ class DispatchController extends Controller
             return $this->fail('Only the assigned release personnel may release this dispatch.', 403);
         }
 
+        // Deployed Asset registry — optional "Track as Assets" payload,
+        // assets[dispatch_item_id][] = existing code or blank. Omitting it is
+        // the untracked release every existing client already sends.
+        try {
+            $assets = $this->validatedAssetPayload($request);
+        } catch (ValidationException $e) {
+            return $this->fail(collect($e->errors())->flatten()->first() ?: 'Invalid asset details.', 400);
+        }
+
         try {
             $this->dispatchService->releaseDispatch(
                 $dispatch,
@@ -450,14 +558,21 @@ class DispatchController extends Controller
                 (int) $authUser['user_id'],
                 isset($validated['receiver_user_id']) ? (int)$validated['receiver_user_id'] : null,
                 (int)$request->session()->get('user_id'),
-                $validated['release_remarks'] ?? null
+                $validated['release_remarks'] ?? null,
+                $assets
             );
+        } catch (ValidationException $e) {
+            return $this->fail(collect($e->errors())->flatten()->first() ?: 'Failed to release dispatch', 400);
+        } catch (DuplicateDeploymentException $e) {
+            // A fixed, user-facing sentence (no database detail) — surfaced
+            // exactly as this endpoint always has.
+            return $this->fail('Failed to release dispatch: ' . $e->getMessage(), 500);
         } catch (\Throwable $e) {
-            $code = $e instanceof ValidationException ? 400 : 500;
-            $message = $e instanceof ValidationException
-                ? (collect($e->errors())->flatten()->first() ?: 'Failed to release dispatch')
-                : 'Failed to release dispatch: ' . $e->getMessage();
-            return $this->fail($message, $code);
+            // Unexpected failures are logged, not echoed: the raw message can
+            // carry SQL and schema details. The transaction has already rolled
+            // back, so nothing was released.
+            report($e);
+            return $this->fail('Failed to release dispatch. No stock was deducted; please try again.', 500);
         }
 
         // Note: DispatchService::releaseDispatch() already writes the
@@ -551,10 +666,16 @@ class DispatchController extends Controller
      * Multi-Personnel Dispatch: Mark an item as dispatched by a personnel.
      * Called when a maintenance staff member physically dispatches an item.
      */
-    public function dispatchItem(Request $request, Dispatch $dispatch, DispatchItem $item)
+    public function dispatchItem(Request $request, Dispatch $dispatch, DispatchItem $dispatchItem)
     {
+        // The parameter name must match the route's {dispatchItem} segment for
+        // implicit model binding (with `$item` the model was never bound, so
+        // every call failed the ownership check below), and DispatchItem had
+        // no import, so the type-hint named a class that does not exist.
+        $item = $dispatchItem;
+
         // Verify the item belongs to this dispatch
-        if ($item->dispatch_id !== $dispatch->id) {
+        if ((int) $item->dispatch_id !== (int) $dispatch->id) {
             return $this->fail('This item does not belong to this dispatch.', 404);
         }
 
@@ -570,28 +691,57 @@ class DispatchController extends Controller
             return $this->fail('Only Maintenance Staff can dispatch items.', 403);
         }
 
+        // Deployed Asset registry — dispatching the final item now performs a
+        // real release (see DispatchService::completeDispatchIfAllItemsDispatched()),
+        // so a "Track as Assets" payload may accompany it. Registering assets
+        // is a release action: only the dispatch's assigned release personnel
+        // may submit one, exactly as on POST /release.
         try {
-            $this->dispatchService->dispatchItem(
-                $item,
-                (int) $validated['dispatched_by'],
-                $actorUserId
-            );
+            $assets = $this->validatedAssetPayload($request);
+        } catch (ValidationException $e) {
+            return $this->fail(collect($e->errors())->flatten()->first() ?: 'Invalid asset details.', 400);
+        }
 
-            // Check if all items are now dispatched and auto-complete if so
-            $this->dispatchService->completeDispatchIfAllItemsDispatched(
-                $dispatch,
-                (int) $validated['dispatched_by'],
-                $actorUserId
-            );
+        if ($assets !== [] && !$this->dispatchAuthorizationService->canReleaseDispatch($authUser, $dispatch)) {
+            return $this->fail('Only the assigned release personnel may register assets for this dispatch.', 403);
+        }
+
+        try {
+            // One transaction: if completing the dispatch fails (insufficient
+            // stock, invalid asset code), the item is not left marked as
+            // dispatched on an unreleased dispatch.
+            DB::transaction(function () use ($item, $dispatch, $validated, $actorUserId, $assets): void {
+                $this->dispatchService->dispatchItem(
+                    $item,
+                    (int) $validated['dispatched_by'],
+                    $actorUserId
+                );
+
+                $completed = $this->dispatchService->completeDispatchIfAllItemsDispatched(
+                    $dispatch,
+                    (int) $validated['dispatched_by'],
+                    $actorUserId,
+                    $assets
+                );
+
+                // Asset details are only consumed by the release that
+                // completes the dispatch; refuse them rather than silently
+                // dropping codes the user typed.
+                if ($assets !== [] && $completed->status !== 'released') {
+                    throw ValidationException::withMessages([
+                        'assets' => 'Asset codes can only be submitted when the dispatch is released.',
+                    ]);
+                }
+            });
 
             return $this->ok('Item dispatched successfully');
+        } catch (ValidationException $e) {
+            return $this->fail(collect($e->errors())->flatten()->first() ?: 'Unable to dispatch item', 400);
+        } catch (DuplicateDeploymentException $e) {
+            return $this->fail('Failed to dispatch item: ' . $e->getMessage(), 500);
         } catch (\Throwable $e) {
-            $code = $e instanceof ValidationException ? 400 : 500;
-            $message = $e instanceof ValidationException
-                ? (collect($e->errors())->flatten()->first() ?: 'Unable to dispatch item')
-                : 'Failed to dispatch item: ' . $e->getMessage();
-
-            return $this->fail($message, $code);
+            report($e);
+            return $this->fail('Failed to dispatch item. Please try again.', 500);
         }
     }
 }

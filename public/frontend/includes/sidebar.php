@@ -94,7 +94,7 @@ $current_page = basename($_SERVER['PHP_SELF']);
                 $showNotificationsCenter = !empty($user);
             ?>
             <li class="nav-item">
-                <a href="<?php echo htmlspecialchars(public_url('/frontend/pages/' . $dashLink)); ?>" class="nav-link <?php echo ($current_page === basename($dashLink)) ? 'active' : ''; ?>" data-page="dashboard">
+                <a href="<?php echo htmlspecialchars(public_url('/dashboard')); ?>" class="nav-link <?php echo ($current_page === basename($dashLink)) ? 'active' : ''; ?>" data-page="dashboard">
                     <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <rect x="3" y="3" width="18" height="18" rx="2"></rect>
                         <path d="M9 11H15V15H9Z"></path>
@@ -110,7 +110,7 @@ $current_page = basename($_SERVER['PHP_SELF']);
 
             <!-- All Reports -->
             <li class="nav-item">
-                <a href="<?php echo htmlspecialchars(public_url('/frontend/pages/' . $reportsLink)); ?>" class="nav-link <?php echo in_array($current_page, ['reports.php', 'maintenance-report-detail.php'], true) ? 'active' : ''; ?>" data-page="reports">
+                <a href="<?php echo htmlspecialchars(public_url('/reports')); ?>" class="nav-link <?php echo in_array($current_page, ['reports.php', 'maintenance-report-detail.php'], true) ? 'active' : ''; ?>" data-page="reports">
                     <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M14 2H6C4.9 2 4 2.9 4 4V20C4 21.1 4.9 22 6 22H18C19.1 22 20 21.1 20 20V8L14 2Z"></path>
                         <path d="M14 2V8H20"></path>
@@ -249,7 +249,7 @@ $current_page = basename($_SERVER['PHP_SELF']);
                          .nav-link: it must not be a rival for the .active class
                          that addActiveHighlight() strips and re-applies. */ ?>
                 <div class="nav-parent-row">
-                    <a href="<?php echo htmlspecialchars(public_url('/frontend/pages/' . $inventoryLink)); ?>"
+                    <a href="<?php echo htmlspecialchars(public_url('/inventory')); ?>"
                        class="nav-link nav-parent-link<?php echo $inventoryIsCurrent ? ' active' : ($inventorySectionOpen ? ' nav-parent-current' : ''); ?>"
                        data-page="inventory">
                         <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -420,7 +420,7 @@ $current_page = basename($_SERVER['PHP_SELF']);
 
             <?php if ($showUserManagement): ?>
             <li class="nav-item">
-                <a href="<?php echo htmlspecialchars(public_url('/frontend/pages/users.php')); ?>" class="nav-link <?php echo ($current_page === 'users.php') ? 'active' : ''; ?>" data-page="users">
+                <a href="<?php echo htmlspecialchars(public_url('/users')); ?>" class="nav-link <?php echo ($current_page === 'users.php') ? 'active' : ''; ?>" data-page="users">
                     <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M16 21V19C16 16.79 14.21 15 12 15H6C3.79 15 2 16.79 2 19V21"></path>
                         <circle cx="9" cy="7" r="4"></circle>
@@ -434,7 +434,7 @@ $current_page = basename($_SERVER['PHP_SELF']);
 
             <?php if ($showAuditLogs): ?>
             <li class="nav-item">
-                <a href="<?php echo htmlspecialchars(public_url('/frontend/pages/activity-log.php')); ?>" class="nav-link <?php echo in_array($current_page, ['activity-log.php', 'activity-log-detail.php'], true) ? 'active' : ''; ?>" data-page="activity-logs">
+                <a href="<?php echo htmlspecialchars(public_url('/activity-log')); ?>" class="nav-link <?php echo in_array($current_page, ['activity-log.php', 'activity-log-detail.php'], true) ? 'active' : ''; ?>" data-page="activity-logs">
                     <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20"></path>
                         <path d="M6.5 2H20V22H6.5A2.5 2.5 0 0 1 4 19.5V4.5A2.5 2.5 0 0 1 6.5 2Z"></path>
@@ -449,7 +449,7 @@ $current_page = basename($_SERVER['PHP_SELF']);
 
             <li class="nav-section-label"><span>Account</span></li>
             <li class="nav-item">
-                <a href="<?php echo htmlspecialchars(public_url('/frontend/pages/account.php')); ?>" class="nav-link <?php echo ($current_page === 'account.php') ? 'active' : ''; ?>" data-page="account">
+                <a href="<?php echo htmlspecialchars(public_url('/account')); ?>" class="nav-link <?php echo ($current_page === 'account.php') ? 'active' : ''; ?>" data-page="account">
                     <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M20 21V19C20 16.79 18.21 15 16 15H8C5.79 15 4 16.79 4 19V21"></path>
                         <circle cx="12" cy="7" r="4"></circle>

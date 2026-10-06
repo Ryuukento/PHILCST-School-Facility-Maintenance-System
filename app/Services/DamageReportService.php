@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Exceptions\DuplicateDamageReportException;
 use App\Models\DamageReport;
 use App\Models\DamageReportHistory;
+use App\Models\DeployedAsset;
 use App\Models\Dispatch;
 use App\Models\InventoryTransaction;
 use App\Models\Item;
@@ -46,7 +47,10 @@ class DamageReportService
         // branch of updateStatus() below. Mirrors the previousStatus-before/
         // handleStatusChange-after pattern Task 49 established elsewhere —
         // this was another 'deploy'-creating flow missing it.
-        private readonly InventoryLowStockNotifier $inventoryLowStockNotifier
+        private readonly InventoryLowStockNotifier $inventoryLowStockNotifier,
+        // Deployed Asset registry — access rule for linking a report to a
+        // tracked unit (see resolveDeployedAsset()).
+        private readonly AssetRegistryService $assetRegistryService
     ) {
     }
 
@@ -256,6 +260,20 @@ class DamageReportService
         $departmentId = (int)($data['department_id'] ?? 0);
         $sourceDispatchId = isset($data['source_dispatch_id']) && $data['source_dispatch_id'] !== '' ? (int)$data['source_dispatch_id'] : null;
 
+        // Deployed Asset registry — when a tracked unit is supplied, its own
+        // item/room/dispatch are authoritative. They replace (and must agree
+        // with) anything the client sent, so a report cannot be attached to an
+        // arbitrary asset by pairing its id with another item or room. The
+        // existing deployed-item validation below then runs on the resolved
+        // values unchanged.
+        $deployedAssetId = (int)($data['deployed_asset_id'] ?? 0);
+        if ($deployedAssetId > 0) {
+            $asset = $this->resolveDeployedAsset($deployedAssetId, $itemId, $roomId, $sourceDispatchId, $authUser);
+            $itemId = (int)$asset->item_id;
+            $roomId = (int)$asset->room_id;
+            $sourceDispatchId = $asset->dispatch_id !== null ? (int)$asset->dispatch_id : null;
+        }
+
         if ($itemId <= 0 || $roomId <= 0 || $departmentId <= 0) {
             throw ValidationException::withMessages([
                 'item_id' => 'Item, room, and department are required.',
@@ -272,17 +290,21 @@ class DamageReportService
             $imagePath = $this->storeImage($imageFile);
         }
 
-        return DB::transaction(function () use ($itemId, $roomId, $departmentId, $sourceDispatchId, $description, $overrideDuplicate, $data, $reporterId, $imagePath, $authUser): DamageReport {
+        return DB::transaction(function () use ($itemId, $roomId, $departmentId, $sourceDispatchId, $deployedAssetId, $description, $overrideDuplicate, $data, $reporterId, $imagePath, $authUser): DamageReport {
             // Row-locked (FOR UPDATE) so two concurrent submissions for the same
             // item/room/department can't both pass this check before either commits.
-            $duplicate = $this->findPotentialDuplicate($itemId, $roomId, $departmentId, $description, true);
+            $duplicate = $this->findPotentialDuplicate($itemId, $roomId, $departmentId, $description, true, $deployedAssetId ?: null);
             if ($duplicate !== null && !$overrideDuplicate) {
                 throw new DuplicateDamageReportException($this->formatDuplicate($duplicate));
             }
 
             $code = 'DMG-' . now()->format('YmdHis') . '-' . strtoupper(substr(bin2hex(random_bytes(3)), 0, 6));
 
-            $report = DamageReport::query()->create([
+            // Only written when a tracked unit was linked, so asset-less
+            // reports produce exactly the same INSERT as before this feature.
+            $assetLink = $deployedAssetId > 0 ? ['deployed_asset_id' => $deployedAssetId] : [];
+
+            $report = DamageReport::query()->create($assetLink + [
                 'damage_report_code' => $code,
                 'item_id' => $itemId,
                 'room_id' => $roomId,
@@ -311,7 +333,7 @@ class DamageReportService
                 ? $report->severity_level
                 : 'medium';
 
-            $maintenanceReport = MaintenanceReport::query()->create([
+            $maintenanceReport = MaintenanceReport::query()->create($assetLink + [
                 'title' => 'Damage Report: ' . ($item->name ?? ('Item #' . $itemId)),
                 'description' => $report->damage_description,
                 'priority' => $mappedPriority,
@@ -349,7 +371,7 @@ class DamageReportService
                     'severity_level' => $report->severity_level,
                     'source_dispatch_id' => $sourceDispatchId,
                     'report_id' => $maintenanceReport->report_id,
-                ],
+                ] + $assetLink,
             ], $authUser);
 
             $this->notifyAdmins(
@@ -614,6 +636,15 @@ class DamageReportService
         $departmentId = (int)($data['department_id'] ?? 0);
         $description = trim((string)($data['damage_description'] ?? ''));
 
+        // Deployed Asset registry — a tracked unit is matched by its own id,
+        // which needs neither item/room nor department.
+        $deployedAssetId = (int)($data['deployed_asset_id'] ?? 0);
+        if ($deployedAssetId > 0) {
+            $duplicate = $this->findPotentialDuplicate($itemId, $roomId, $departmentId, $description, false, $deployedAssetId);
+
+            return $duplicate !== null ? $this->formatDuplicate($duplicate) : null;
+        }
+
         if ($itemId <= 0 || $roomId <= 0 || $departmentId <= 0) {
             return null;
         }
@@ -624,20 +655,93 @@ class DamageReportService
     }
 
     /**
+     * Deployed Asset registry — loads the tracked unit a report is being filed
+     * against and refuses it unless it exists, is still active, is visible to
+     * this user, and agrees with any item/room/dispatch the client also sent.
+     */
+    private function resolveDeployedAsset(
+        int $deployedAssetId,
+        int $clientItemId,
+        int $clientRoomId,
+        ?int $clientSourceDispatchId,
+        array $authUser
+    ): DeployedAsset {
+        $asset = DeployedAsset::query()->find($deployedAssetId);
+        if (!$asset) {
+            throw ValidationException::withMessages([
+                'deployed_asset_id' => 'Selected asset does not exist.',
+            ]);
+        }
+
+        if (!$this->assetRegistryService->canAccess($authUser, $asset)) {
+            throw ValidationException::withMessages([
+                'deployed_asset_id' => 'You are not allowed to report against this asset.',
+            ]);
+        }
+
+        if ($asset->status !== DeployedAsset::STATUS_ACTIVE) {
+            throw ValidationException::withMessages([
+                'deployed_asset_id' => 'Asset ' . $asset->asset_code . ' is no longer active and cannot be reported.',
+            ]);
+        }
+
+        if ($asset->room_id === null) {
+            throw ValidationException::withMessages([
+                'deployed_asset_id' => 'Asset ' . $asset->asset_code . ' has no recorded room.',
+            ]);
+        }
+
+        $mismatch = ($clientItemId > 0 && $clientItemId !== (int)$asset->item_id)
+            || ($clientRoomId > 0 && $clientRoomId !== (int)$asset->room_id)
+            || ($clientSourceDispatchId !== null && $clientSourceDispatchId > 0
+                && $clientSourceDispatchId !== (int)($asset->dispatch_id ?? 0));
+        if ($mismatch) {
+            throw ValidationException::withMessages([
+                'deployed_asset_id' => 'The selected equipment or room does not match asset ' . $asset->asset_code . '.',
+            ]);
+        }
+
+        return $asset;
+    }
+
+    /**
      * Finds an active damage report for the same item+room+department whose
      * damage_description normalizes to the same (or highly similar) text —
      * i.e. the same reported issue, not just any other active report against
      * that item/room. Multiple distinct physical units of the same catalog
      * item can now be deployed to one room (Task 37 asset tracking), so two
      * genuinely different issues on two different units must not collide.
+     *
+     * Deployed Asset registry — when the report is against a tracked unit
+     * ($deployedAssetId), identity is exact, so the match is that unit's own
+     * active report, whatever its department or wording: SFMS-2026-000001
+     * matches only SFMS-2026-000001, and a second unit of the same item in the
+     * same room (SFMS-2026-000002) is never treated as the same asset. The
+     * reporter can still proceed with "Different Issue" (override_duplicate).
+     * Reports without a deployed asset keep the original item + room +
+     * department + description-similarity rule unchanged.
      */
     private function findPotentialDuplicate(
         int $itemId,
         int $roomId,
         int $departmentId,
         string $description,
-        bool $lock = false
+        bool $lock = false,
+        ?int $deployedAssetId = null
     ): ?DamageReport {
+        if ($deployedAssetId !== null && $deployedAssetId > 0) {
+            $assetQuery = DamageReport::query()
+                ->where('deployed_asset_id', $deployedAssetId)
+                ->whereIn('status', self::ACTIVE_STATUSES)
+                ->orderByDesc('created_at');
+
+            if ($lock) {
+                $assetQuery->lockForUpdate();
+            }
+
+            return $assetQuery->first();
+        }
+
         $query = DamageReport::query()
             ->where('item_id', $itemId)
             ->where('room_id', $roomId)

@@ -138,35 +138,18 @@ include __DIR__ . '/../includes/header.php';
                     </div>
                 </div>
 
+                <!-- The optional "Source & Notes" section (Source OR Number +
+                     Notes) was removed from this form. Both fields stay
+                     nullable on POST /api/dispatches, so the API is unchanged;
+                     existing dispatches that already carry notes still show
+                     them on Dispatch Detail. -->
+
                 <div class="form-section">
                     <div class="form-section-header">
                         <span class="form-section-index">2</span>
                         <div>
-                            <h3 class="form-section-title">Source &amp; Notes <span class="form-section-optional">(Optional)</span></h3>
-                            <p class="form-section-subtitle">Link a purchase receipt and add context for this dispatch.</p>
-                        </div>
-                    </div>
-                    <div class="form-section-body">
-                        <div class="form-group">
-                            <label for="dc-or-search">Source OR Number <span class="text-muted" style="font-weight:400;">(optional)</span></label>
-                            <input type="text" id="dc-or-search" class="form-control" placeholder="Search by OR number or supplier…">
-                            <input type="hidden" id="dc-or-id">
-                            <small class="text-muted">Links this dispatch to a purchase receipt for deployment tracking.</small>
-                        </div>
-
-                        <div class="form-group">
-                            <label for="dc-notes">Notes <span class="text-muted" style="font-weight:400;">(optional)</span></label>
-                            <textarea id="dc-notes" class="form-control" rows="4" style="resize:vertical;" placeholder="Purpose of dispatch, special instructions, etc."></textarea>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="form-section">
-                    <div class="form-section-header">
-                        <span class="form-section-index">3</span>
-                        <div>
                             <h3 class="form-section-title">Items to Dispatch</h3>
-                            <p class="form-section-subtitle">At least one item is required. Available stock shown in parentheses.</p>
+                            <p class="form-section-subtitle">At least one item is required. The number beside each item is its available stock.</p>
                         </div>
                     </div>
                     <div class="form-section-body">
@@ -374,13 +357,28 @@ async function loadItems() {
 // Dynamic item rows
 // ---------------------------------------------------------------------------
 
+// Dispatchable stock — the same quantity - reserved_quantity formula the server
+// checks at approval/release (DispatchService::assertStockCoversDispatch()), so
+// the number shown here is the number the server will accept.
+function dcAvailableStock(item) {
+    const onHand   = parseInt(item?.quantity, 10) || 0;
+    const reserved = parseInt(item?.reserved_quantity, 10) || 0;
+    return Math.max(0, onHand - reserved);
+}
+
+function dcFindItem(itemId) {
+    return dcItems.find((item) => String(item.id) === String(itemId)) || null;
+}
+
 function addItemRow() {
     dcRowCounter++;
 
     const row = document.createElement('div');
     row.className = 'dc-item-row';
 
-    // Item select
+    // Item select — "Name — 12" for items with stock (listed first), and
+    // "Name — Out of stock" for the rest, greyed out and not selectable,
+    // since the server would refuse to dispatch them anyway.
     const sel = document.createElement('select');
     sel.className = 'dc-item-select form-control';
     const placeholder = document.createElement('option');
@@ -388,23 +386,69 @@ function addItemRow() {
     placeholder.textContent = '— Select item —';
     sel.appendChild(placeholder);
 
-    dcItems.forEach((item) => {
-        const opt      = document.createElement('option');
-        opt.value      = item.id;
-        const avail    = (item.quantity != null)
-            ? ` (${item.quantity} in stock)`
-            : '';
-        opt.textContent = dcEscapeHtml(item.name) + avail;
+    const byName  = (a, b) => String(a.name || '').localeCompare(String(b.name || ''));
+    const inStock = dcItems.filter((item) => dcAvailableStock(item) > 0).sort(byName);
+    const noStock = dcItems.filter((item) => dcAvailableStock(item) <= 0).sort(byName);
+
+    inStock.forEach((item) => {
+        const opt = document.createElement('option');
+        opt.value = item.id;
+        // textContent never parses HTML, so the name is set as-is (escaping
+        // it here would show "&amp;" literally for a name containing "&").
+        opt.textContent = `${item.name} — ${dcAvailableStock(item)}`;
         sel.appendChild(opt);
     });
 
-    // Quantity input
+    if (inStock.length && noStock.length) {
+        const divider = document.createElement('option');
+        divider.disabled    = true;
+        divider.textContent = '──────────';
+        sel.appendChild(divider);
+    }
+
+    noStock.forEach((item) => {
+        const opt = document.createElement('option');
+        opt.value       = item.id;
+        opt.disabled    = true;
+        opt.textContent = `${item.name} — Out of stock`;
+        sel.appendChild(opt);
+    });
+
+    // Quantity input, with the selected item's available stock beneath it.
+    // Wrapped in one element so the row keeps the shared 3-column grid
+    // (enterprise-workflow.css .dc-item-row) without touching that stylesheet.
+    const qtyWrap = document.createElement('div');
+    qtyWrap.className = 'dc-qty-wrap';
+
     const qty = document.createElement('input');
     qty.type      = 'number';
     qty.className = 'dc-qty-input form-control';
     qty.min       = '1';
     qty.value     = '1';
     qty.setAttribute('aria-label', 'Quantity');
+
+    const availEl = document.createElement('small');
+    availEl.className     = 'dc-qty-available text-muted';
+    availEl.style.cssText = 'display:block;margin-top:4px;font-size:12px;';
+    availEl.setAttribute('aria-live', 'polite');
+
+    qtyWrap.appendChild(qty);
+    qtyWrap.appendChild(availEl);
+
+    sel.addEventListener('change', () => {
+        const item = dcFindItem(sel.value);
+        if (!item) {
+            availEl.textContent = '';
+            qty.removeAttribute('max');
+            return;
+        }
+        const available = dcAvailableStock(item);
+        availEl.textContent = `Available: ${available}`;
+        qty.max = String(available);
+        if ((parseInt(qty.value, 10) || 0) > available) {
+            qty.value = String(available);
+        }
+    });
 
     // Remove button
     const rem = document.createElement('button');
@@ -417,7 +461,7 @@ function addItemRow() {
     });
 
     row.appendChild(sel);
-    row.appendChild(qty);
+    row.appendChild(qtyWrap);
     row.appendChild(rem);
 
     document.getElementById('dc-items-rows').appendChild(row);
@@ -566,7 +610,6 @@ document.getElementById('dc-form').addEventListener('submit', async (e) => {
     // Multi-Department Selection: convert Set to array of department IDs
     const departmentIds = Array.from(dcSelectedDepartments);
     const roomId   = document.getElementById('dc-room-id').value;
-    const notes    = document.getElementById('dc-notes').value.trim();
 
     // TASK 60 — Room / Lab is now the sole, required location field (the
     // free-text room_note supplement was removed; see the field's comment
@@ -607,7 +650,14 @@ document.getElementById('dc-form').addEventListener('submit', async (e) => {
         return;
     }
 
-    const orId = parseInt(document.getElementById('dc-or-id').value || '0', 10) || null;
+    // Quantity cannot exceed the item's available stock. A convenience check
+    // only — the server re-checks stock at approval and release.
+    const overStock = items.find((it) => it.quantity > dcAvailableStock(dcFindItem(it.item_id)));
+    if (overStock) {
+        const item = dcFindItem(overStock.item_id);
+        dcShowError(`Only ${dcAvailableStock(item)} ${item?.name ?? 'unit(s)'} available. Please lower the quantity.`);
+        return;
+    }
 
     // Multi-Personnel Dispatch: Release Personnel is now optional. When using
     // multi-personnel dispatch, additional personnel are assigned via the
@@ -639,8 +689,6 @@ document.getElementById('dc-form').addEventListener('submit', async (e) => {
                 body: JSON.stringify({
                     department_ids:      departmentIds.length > 0 ? departmentIds : [],
                     room_id:             parseInt(roomId, 10),
-                    purchase_receipt_id: orId,
-                    notes:               notes  || null,
                     release_assigned_to: releaseAssignedTo,
                     items,
                 }),
@@ -687,16 +735,9 @@ document.getElementById('dc-form').addEventListener('submit', async (e) => {
 // ---------------------------------------------------------------------------
 
 document.addEventListener('DOMContentLoaded', async () => {
-    // OR number / Room / Release Personnel / Departments are all Components.SearchableSelect
+    // Room / Release Personnel / Departments are all Components.SearchableSelect
     // instances — raw path, resolveAppUrl adds base prefix
     if (window.Components && typeof Components.SearchableSelect === 'function') {
-        new Components.SearchableSelect({
-            inputId:    'dc-or-search',
-            hiddenId:   'dc-or-id',
-            endpoint:   '/api/purchase-receipts/search',
-            displayKey: 'name',   // name = or_number, code = supplier_name (shown as "OR — Supplier")
-        });
-
         // Multi-Department Selection for reporting purposes. Allows selecting
         // multiple departments for dispatch when personnel from different
         // departments are assigned.

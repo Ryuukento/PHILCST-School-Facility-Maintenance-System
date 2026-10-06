@@ -62,6 +62,56 @@ RewriteRule .* - [F,L]
 # Preserve old hardcoded URLs after removing the laravel_app subfolder.
 RewriteRule ^laravel_app/public/(.*)$ $1 [R=302,L,NC]
 
+# ---------------------------------------------------------------------------
+# Clean page URLs (2026-10-06). Pages are served at /dispatches, /reports,
+# /dashboard, ... instead of /frontend/pages/*.php. Works the same at the
+# domain root (Hostinger) and under /School_Facility_Maintenance_System
+# (XAMPP): every rule is relative to this directory.
+#
+# 1) Old URLs -> clean URLs, so bookmarks and links in old notifications and
+#    emails keep working. Matched against THE_REQUEST (the browser's original
+#    request line), never the rewritten path, so the internal rewrites in (2)
+#    cannot loop back into these redirects. GET/HEAD only: a POST is never
+#    redirected. %1 carries the install prefix (empty on the live domain) and
+#    the query string (e.g. ?id=123) is kept automatically. 302 (temporary)
+#    on purpose until the new URLs are settled in production.
+RewriteCond %{REQUEST_METHOD} ^(GET|HEAD)$
+RewriteCond %{THE_REQUEST} ^[A-Z]+\s(\S*?)/(?:public/)?frontend/pages/index\.php[\s?] [NC]
+RewriteRule ^ %1/login [R=302,L]
+
+RewriteCond %{REQUEST_METHOD} ^(GET|HEAD)$
+RewriteCond %{THE_REQUEST} ^[A-Z]+\s(\S*?)/(?:public/)?frontend/pages/(?:dashboard|maintenance-dashboard|staff-dashboard|super-admin-dashboard|role-dashboard)\.php[\s?] [NC]
+RewriteRule ^ %1/dashboard [R=302,L]
+
+RewriteCond %{REQUEST_METHOD} ^(GET|HEAD)$
+RewriteCond %{THE_REQUEST} ^[A-Z]+\s(\S*?)/(?:public/)?frontend/pages/notifications-center\.php[\s?] [NC]
+RewriteRule ^ %1/notifications [R=302,L]
+
+RewriteCond %{REQUEST_METHOD} ^(GET|HEAD)$
+RewriteCond %{THE_REQUEST} ^[A-Z]+\s(\S*?)/(?:public/)?frontend/pages/analytics-dashboard\.php[\s?] [NC]
+RewriteRule ^ %1/analytics [R=302,L]
+
+RewriteCond %{REQUEST_METHOD} ^(GET|HEAD)$
+RewriteCond %{THE_REQUEST} ^[A-Z]+\s(\S*?)/(?:public/)?frontend/pages/suppliers-manage\.php[\s?] [NC]
+RewriteRule ^ %1/suppliers [R=302,L]
+
+RewriteCond %{REQUEST_METHOD} ^(GET|HEAD)$
+RewriteCond %{THE_REQUEST} ^[A-Z]+\s(\S*?)/(?:public/)?frontend/pages/(logout|reports|create-report|report-detail|maintenance-report-detail|damage-reports|damage-report-detail|damage-report-update|buildings-overview|inventory|inventory-transactions|purchase-receipts|dispatches|dispatch-create|dispatch-detail|deployment-tracking|replacement-tracking|preventive-maintenance|users|activity-log|activity-log-detail|semester-settings|account|profile)\.php[\s?]
+RewriteRule ^ %1/%2 [R=302,L]
+
+# 2) Clean URL -> page file (internal; the address bar keeps the clean URL).
+#    The file-name rule is case-sensitive on purpose: Hostinger's filesystem
+#    is, so /Reports must not map to a missing Reports.php.
+#    /dashboard runs role-dashboard.php, which picks the Administrator, Head
+#    Maintenance, or Maintenance Staff dashboard for the signed-in user.
+RewriteRule ^login/?$ public/frontend/pages/index.php [L,QSA]
+RewriteRule ^dashboard/?$ public/frontend/pages/role-dashboard.php [L,QSA]
+RewriteRule ^notifications/?$ public/frontend/pages/notifications-center.php [L,QSA]
+RewriteRule ^analytics/?$ public/frontend/pages/analytics-dashboard.php [L,QSA]
+RewriteRule ^suppliers/?$ public/frontend/pages/suppliers-manage.php [L,QSA]
+RewriteRule ^(logout|reports|create-report|report-detail|maintenance-report-detail|damage-reports|damage-report-detail|damage-report-update|buildings-overview|inventory|inventory-transactions|purchase-receipts|dispatches|dispatch-create|dispatch-detail|deployment-tracking|replacement-tracking|preventive-maintenance|users|activity-log|activity-log-detail|semester-settings|account|profile)/?$ public/frontend/pages/$1.php [L,QSA]
+# ---------------------------------------------------------------------------
+
 # Serve legacy public assets and pages from the root project URL.
 RewriteRule ^frontend/(.*)$ public/frontend/$1 [L,NC]
 RewriteRule ^backend/(.*)$ public/backend/$1 [L,NC]

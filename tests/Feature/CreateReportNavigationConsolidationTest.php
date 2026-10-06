@@ -95,7 +95,8 @@ class CreateReportNavigationConsolidationTest extends TestCase
     {
         $anchor = $this->createReportAnchor($this->reportsPage());
 
-        $this->assertStringContainsString('/frontend/pages/create-report.php', $anchor);
+        // Clean URLs (2026-10-06): the page is now reached at /create-report.
+        $this->assertStringContainsString("public_url('/create-report')", $anchor);
         $this->assertStringContainsString('public_url(', $anchor, 'Use the shared URL helper the rest of the app uses.');
         $this->assertStringContainsString('htmlspecialchars(', $anchor, 'Match the escaping convention used by every other nav href.');
     }
@@ -127,7 +128,8 @@ class CreateReportNavigationConsolidationTest extends TestCase
             'The page-level role guard must remain exactly as it was.'
         );
         $this->assertStringContainsString(
-            'header(\'Location: /School_Facility_Maintenance_System/frontend/pages/reports.php\')',
+            // Clean URLs (2026-10-06): same redirect, now to the /reports URL.
+            "header('Location: ' . public_url('/reports'))",
             $markup,
             'Unauthorized direct access must still be redirected away.'
         );
@@ -191,7 +193,7 @@ class CreateReportNavigationConsolidationTest extends TestCase
             $markup = file_get_contents(base_path('public/frontend/pages/' . $page));
 
             $this->assertStringContainsString(
-                'create-report.php',
+                "public_url('/create-report')",
                 $markup,
                 "{$page}'s quick action to Create Report must keep working."
             );

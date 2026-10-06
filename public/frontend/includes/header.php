@@ -32,7 +32,7 @@ $currentPage = basename($_SERVER['PHP_SELF']);
 $publicPages = ['index.php', 'login.php'];
 
 if (!in_array($currentPage, $publicPages) && !isset($_SESSION['user'])) {
-    header('Location: ' . public_url('/frontend/pages/index.php'));
+    header('Location: ' . public_url('/login'));
     exit;
 }
 
@@ -61,7 +61,7 @@ $user = $_SESSION['user'] ?? null;
 $isForceProfileUpdate = !empty($user['force_profile_update']);
 
 if ($user && $isForceProfileUpdate && !in_array($currentPage, ['account.php', 'logout.php'], true)) {
-    header('Location: ' . public_url('/frontend/pages/account.php?setup=1'));
+    header('Location: ' . public_url('/account?setup=1'));
     exit;
 }
 
@@ -92,11 +92,11 @@ if (($user['role'] ?? '') === 'maintenance_admin') {
     $userTitle = $roleTitleMap[$user['role'] ?? ''] ?? 'User';
 }
 
-$brandLink = public_url('/frontend/pages/dashboard.php');
+$brandLink = public_url('/dashboard');
 if (!empty($user['role']) && $user['role'] === 'maintenance_admin') {
-    $brandLink = public_url('/frontend/pages/maintenance-dashboard.php');
+    $brandLink = public_url('/dashboard');
 } elseif (!empty($user['role']) && $user['role'] === 'maintenance_staff') {
-    $brandLink = public_url('/frontend/pages/staff-dashboard.php');
+    $brandLink = public_url('/dashboard');
 }
 
 $initialNotifications = [];

@@ -420,8 +420,12 @@ class ReportService
     {
         $damageReport = $this->damageReportService->createReport(
             [
-                'item_id' => $validated['item_id'],
-                'room_id' => $validated['room_id'],
+                // Deployed Asset registry — with deployed_asset_id set,
+                // DamageReportService resolves item/room/dispatch from the
+                // asset itself, so item_id/room_id may be absent here.
+                'deployed_asset_id' => $validated['deployed_asset_id'] ?? null,
+                'item_id' => $validated['item_id'] ?? null,
+                'room_id' => $validated['room_id'] ?? null,
                 'department_id' => $validated['department_id'] ?? ($authUser['department_id'] ?? 0),
                 'source_dispatch_id' => $validated['source_dispatch_id'] ?? null,
                 'damage_description' => $validated['damage_description'] ?? $validated['description'],

@@ -20,6 +20,9 @@ class DamageReport extends Model
         'room_id',
         'department_id',
         'source_dispatch_id',
+        // Deployed Asset registry — the exact tracked unit this report is
+        // against. Nullable: legacy and room_asset reports leave it NULL.
+        'deployed_asset_id',
         'damage_description',
         'severity_level',
         'reported_by',

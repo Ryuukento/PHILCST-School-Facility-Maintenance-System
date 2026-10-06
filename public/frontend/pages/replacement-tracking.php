@@ -1,4 +1,6 @@
 <?php
+// Clean URLs: public_url() is used below, before header.php loads settings.
+require_once __DIR__ . '/../../backend/config/settings.php';
 if (session_status() === PHP_SESSION_NONE) {
     session_set_cookie_params(['lifetime'=>0,'path'=>'/','secure'=>false,'httponly'=>true,'samesite'=>'Lax']);
     if (!@session_start()) {
@@ -11,14 +13,14 @@ if (session_status() === PHP_SESSION_NONE) {
 }
 
 if (!isset($_SESSION['user'])) {
-    header('Location: /School_Facility_Maintenance_System/frontend/pages/index.php');
+    header('Location: ' . public_url('/login'));
     exit;
 }
 
 $user = $_SESSION['user'];
 $allowedRoles = ['super_admin', 'maintenance_admin', 'maintenance_staff'];
 if (!in_array($user['role'] ?? '', $allowedRoles, true)) {
-    header('Location: /School_Facility_Maintenance_System/frontend/pages/dashboard.php');
+    header('Location: ' . public_url('/dashboard'));
     exit;
 }
 
@@ -51,7 +53,7 @@ include __DIR__ . '/../includes/header.php';
                     <p class="text-muted inventory-subtitle">Track item replacement requests from pending approval through disposal.</p>
                 </div>
                 <div class="inventory-header-actions">
-                    <a href="<?php echo htmlspecialchars(public_url('/frontend/pages/inventory.php')); ?>" class="btn btn-secondary">Back to Inventory</a>
+                    <a href="<?php echo htmlspecialchars(public_url('/inventory')); ?>" class="btn btn-secondary">Back to Inventory</a>
                 </div>
             </div>
         </div>

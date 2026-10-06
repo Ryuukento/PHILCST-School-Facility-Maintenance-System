@@ -293,7 +293,7 @@ class EmailService
         <tr><td style="padding:8px 0;color:#666;vertical-align:top;">Description</td><td style="padding:8px 0;color:#333;">$description</td></tr>
       </table>
       <div style="margin-top:28px;">
-        <a href="$appUrl/frontend/pages/report-detail.php?id=$reportId"
+        <a href="$appUrl/report-detail?id=$reportId"
            style="background:#1a3c5e;color:#fff;padding:12px 24px;border-radius:6px;text-decoration:none;font-weight:bold;">
           View Report →
         </a>
@@ -340,7 +340,7 @@ HTML;
       <p>Your report <strong>$title</strong> at <em>$location</em> has been updated.</p>
       <p>New Status: <strong style="color:#1a3c5e;">$statusLabel</strong></p>
       <div style="margin-top:28px;">
-        <a href="$appUrl/frontend/pages/report-detail.php?id=$reportId"
+        <a href="$appUrl/report-detail?id=$reportId"
            style="background:#1a3c5e;color:#fff;padding:12px 24px;border-radius:6px;text-decoration:none;font-weight:bold;">
           View Report →
         </a>

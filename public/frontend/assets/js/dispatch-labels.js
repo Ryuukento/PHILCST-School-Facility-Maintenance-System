@@ -74,8 +74,37 @@
             + `<rect width="${size}" height="${size}" fill="#fff"/><path d="${d}" fill="#000"/></svg>`;
     }
 
+    // Asset tracking — the per-unit Asset Codes registered when the dispatch
+    // was released with "Track as Assets". GET /api/deployed-assets returns
+    // them per line in registration order (Asset 1, Asset 2, ...), which is
+    // the order the labels below number "Unit 1 of N". Only released
+    // dispatches can have them. Any failure just prints labels without codes.
+    async function attachAssetCodes(dispatch) {
+        dispatch.__assetCodesByLine = {};
+        if (String(dispatch.status || '').toLowerCase() !== 'released') return dispatch;
+
+        try {
+            const url = publicUrl(`/api/deployed-assets?dispatch_id=${encodeURIComponent(dispatch.id)}&status=all&per_page=500`);
+            const response = await fetch(url, {
+                credentials: 'same-origin',
+                headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+            });
+            const payload = await response.json();
+            const assets = response.ok && payload.success && Array.isArray(payload.data?.items) ? payload.data.items : [];
+            assets.forEach((asset) => {
+                const lineId = String(asset.dispatch_item_id ?? '');
+                if (!lineId) return;
+                (dispatch.__assetCodesByLine[lineId] = dispatch.__assetCodesByLine[lineId] || []).push(asset.asset_code);
+            });
+        } catch (_) {
+            // Labels still print; they just carry no Asset Code line.
+        }
+        return dispatch;
+    }
+
     function buildLabels(dispatch) {
         const items = Array.isArray(dispatch.items) ? dispatch.items : [];
+        const assetCodesByLine = dispatch.__assetCodesByLine || {};
         const code = dispatch.dispatch_code || '';
         const qr = qrSvg(publicUrl(`/dispatches/${dispatch.id}`));
         const room = dispatch.room_name || dispatch.room?.name || '';
@@ -88,8 +117,14 @@
             const item = line.item || {};
             const qty = Math.max(0, parseInt(line.quantity, 10) || 0);
             const detail = [item.brand, item.model].filter(Boolean).join(' ');
+            const lineAssetCodes = assetCodesByLine[String(line.id)] || [];
 
             for (let n = 1; n <= qty; n++) {
+                // This unit's own Asset Code, if it was tracked. (The old
+                // `item.asset_code` line was removed: that column belongs to
+                // the warehouse row, which stands for many units, so it never
+                // identified the unit a sticker is stuck on.)
+                const assetCode = lineAssetCodes[n - 1] || '';
                 labels.push(`
                     <div class="label">
                         <div class="qr">${qr}</div>
@@ -97,9 +132,9 @@
                             <div class="brand"><img src="${escapeHtml(logo)}" alt="">PhilCST Property</div>
                             <div class="code">${escapeHtml(code)}</div>
                             <div class="unit">Unit ${n} of ${qty}</div>
+                            ${assetCode ? `<div class="asset">Asset: <span>${escapeHtml(assetCode)}</span></div>` : ''}
                             <div class="item">${escapeHtml(item.name || 'Unknown item')}</div>
                             ${detail ? `<div class="meta">${escapeHtml(detail)}</div>` : ''}
-                            ${item.asset_code ? `<div class="meta">Asset: ${escapeHtml(item.asset_code)}</div>` : ''}
                             <div class="meta">${escapeHtml([room, dept].filter(Boolean).join(' · ') || '—')}</div>
                             ${date ? `<div class="meta">Dispatched: ${escapeHtml(date)}</div>` : ''}
                         </div>
@@ -135,6 +170,10 @@
         .code { font-family: "Consolas", "Courier New", monospace; font-size: 8.5pt;
                 font-weight: 700; margin-top: .8mm; word-break: break-all; }
         .unit { font-size: 6.5pt; font-weight: 700; margin-bottom: .6mm; }
+        /* Never truncated: a cut-off code would make the sticker useless, so a
+           long official code wraps onto the next line instead. */
+        .asset { font-size: 6pt; font-weight: 700; margin: -.2mm 0 .6mm; word-break: break-all; }
+        .asset span { font-family: "Consolas", "Courier New", monospace; font-size: 7.5pt; }
         .item { font-size: 7.5pt; font-weight: 700; overflow: hidden;
                 display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
         .meta { font-size: 6pt; color: #333; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -151,12 +190,80 @@
             .label { outline: 1px dashed #c4b5fd; outline-offset: -1px; }
         }
         @media print { .toolbar { display: none; } }
+
+        /* Label print tracking — shown on screen after the print dialog
+           closes; never printed (it lives inside .toolbar). */
+        .mark-bar { flex-basis: 100%; margin-top: 8px; padding: 10px 12px; border-radius: 8px;
+                    background: #f5f3ff; border: 1px solid #ddd6fe; color: #3b0764;
+                    align-items: center; gap: 10px; flex-wrap: wrap; }
+        .mark-bar span { flex: 1 1 260px; }
+        .mark-bar .secondary { background: #fff; color: #4c1d95; border: 1px solid #c4b5fd; }
+        .mark-bar .error { color: #b91c1c; }
+        .toolbar { flex-wrap: wrap; }
     `;
+
+    // Label print tracking — records that the stickers for these dispatches
+    // were printed, so the Dispatches page's "Not yet printed" filter (and
+    // Print All Labels with it) skips them next time.
+    async function markPrinted(dispatchIds) {
+        const response = await fetch(publicUrl('/api/dispatches/labels-printed'), {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json', Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+            body: JSON.stringify({ dispatch_ids: dispatchIds }),
+        });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok || !payload.success) {
+            throw new Error(payload.message || 'Unable to mark the labels as printed.');
+        }
+        return payload.data || { marked_count: 0 };
+    }
+
+    // A browser cannot tell whether paper actually came out of the printer
+    // ("afterprint" fires even when the dialog is cancelled), so after the
+    // dialog closes the preview window asks, and only "Yes" marks anything.
+    function wireMarkPrinted(win, dispatchIds, options) {
+        const bar = win.document.getElementById('mark-bar');
+        if (!bar || !dispatchIds.length) return;
+
+        let settled = false;
+        win.addEventListener('afterprint', () => {
+            if (!settled) bar.style.display = 'flex';
+        });
+
+        bar.addEventListener('click', async (event) => {
+            const button = event.target.closest('button[data-mark]');
+            if (!button || settled) return;
+
+            if (button.dataset.mark === 'no') {
+                settled = true;
+                bar.innerHTML = '<span>Not marked. These dispatches stay under "Not yet printed" so you can print them again.</span>';
+                return;
+            }
+
+            bar.querySelectorAll('button').forEach((b) => { b.disabled = true; });
+            try {
+                const result = await markPrinted(dispatchIds);
+                settled = true;
+                const n = Number(result.marked_count) || 0;
+                bar.innerHTML = `<span>Done — ${n} dispatch${n === 1 ? '' : 'es'} marked as printed. You can close this window.</span>`;
+                if (options && typeof options.onMarked === 'function') options.onMarked(result);
+            } catch (error) {
+                bar.querySelectorAll('button').forEach((b) => { b.disabled = false; });
+                const message = bar.querySelector('.error') || bar.appendChild(win.document.createElement('span'));
+                message.className = 'error';
+                message.textContent = error.message || 'Unable to mark the labels as printed.';
+            }
+        });
+    }
 
     // Accepts one dispatch or an array of them. Labels from several dispatches
     // run on continuously, so a bulk print fills every sticker on each sheet.
-    function render(dispatches, win) {
+    // options.trackPrinting — ask after printing whether to mark these
+    // dispatches as printed; options.onMarked(result) — called once marked.
+    function render(dispatches, win, options) {
         const list = Array.isArray(dispatches) ? dispatches : [dispatches];
+        const trackPrinting = Boolean(options && options.trackPrinting);
         const labels = list.flatMap(buildLabels);
         if (!labels.length) {
             win.close();
@@ -186,12 +293,21 @@
 <div class="toolbar">
     <span><strong>${code}</strong> — ${labels.length} label${labels.length === 1 ? '' : 's'} on ${pages} A4 sheet${pages === 1 ? '' : 's'} (21 per sheet). Set printer scale to 100% / "Actual size".</span>
     <button type="button" onclick="window.print()">Print</button>
+    ${trackPrinting ? `<div class="mark-bar" id="mark-bar" style="display:none;">
+        <span>Did all labels print correctly? Marking them as printed hides ${list.length === 1 ? 'this dispatch' : `these ${list.length} dispatches`} from the "Not yet printed" filter.</span>
+        <button type="button" data-mark="yes">Yes, mark as printed</button>
+        <button type="button" data-mark="no" class="secondary">Not yet</button>
+    </div>` : ''}
 </div>
 ${sheets}
 </body>
 </html>`);
         win.document.close();
         win.focus();
+
+        if (trackPrinting) {
+            wireMarkPrinted(win, list.map((d) => Number(d.id)).filter((id) => id > 0), options);
+        }
 
         // Give the logo a moment to load so it is not missing from the print.
         let printed = false;
@@ -216,14 +332,16 @@ ${sheets}
         return win;
     }
 
-    function print(dispatch) {
+    async function print(dispatch, options) {
         if (!dispatch) return;
         if (!isPrintable(dispatch.status)) {
             notify('Labels can only be printed for approved or released dispatches.', 'warning');
             return;
         }
         const win = openWindow();
-        if (win) render(dispatch, win);
+        if (!win) return;
+        await attachAssetCodes(dispatch);
+        if (!win.closed) render(dispatch, win, options);
     }
 
     async function fetchDispatch(id, apiBase) {
@@ -244,7 +362,7 @@ ${sheets}
     // because the list endpoint carries no item lines. `ids` may be an array or
     // an async function returning one — the window opens first, inside the
     // click, so pop-up blockers allow it.
-    async function printMany(ids, apiBase) {
+    async function printMany(ids, apiBase, options) {
         const win = openWindow();
         if (!win) return;
         try {
@@ -271,7 +389,11 @@ ${sheets}
                 notify('There are no approved or released dispatches to print labels for.', 'warning');
                 return;
             }
-            render(printable, win);
+            for (let i = 0; i < printable.length; i += batchSize) {
+                await Promise.all(printable.slice(i, i + batchSize).map(attachAssetCodes));
+                if (win.closed) return;
+            }
+            render(printable, win, options);
         } catch (error) {
             win.close();
             notify(error.message || 'Unable to print labels.', 'danger');
@@ -280,7 +402,7 @@ ${sheets}
 
     // The window is opened synchronously (inside the click) so pop-up blockers
     // allow it, then filled once the dispatch has been fetched.
-    async function printById(id, apiBase) {
+    async function printById(id, apiBase, options) {
         const win = openWindow();
         if (!win) return;
         try {
@@ -290,7 +412,8 @@ ${sheets}
                 notify('Labels can only be printed for approved or released dispatches.', 'warning');
                 return;
             }
-            render(dispatch, win);
+            await attachAssetCodes(dispatch);
+            if (!win.closed) render(dispatch, win, options);
         } catch (error) {
             win.close();
             notify(error.message || 'Unable to print labels.', 'danger');

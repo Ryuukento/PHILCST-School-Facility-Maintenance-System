@@ -301,8 +301,9 @@ class DamageReportRoleRedesignTest extends TestCase
 
         // Phase 9: a clear route back to the primary report, pointing at the
         // EXISTING detail page rather than a parallel screen.
-        $this->assertStringContainsString('maintenance-report-detail.php', $list);
-        $this->assertStringContainsString('maintenance-report-detail.php', $detail);
+        // Clean URLs (2026-10-06): the detail page is now /maintenance-report-detail.
+        $this->assertStringContainsString("'/maintenance-report-detail'", $list);
+        $this->assertStringContainsString("'/maintenance-report-detail'", $detail);
         $this->assertStringContainsString('View Maintenance Report', $detail);
     }
 

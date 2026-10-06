@@ -27,17 +27,12 @@ if ($requestPath !== '/' && $requestPath !== '') {
     exit;
 }
 
-$role = $_SESSION['user']['role'] ?? '';
-
+// Clean URLs — "/" sends a signed-in user to /dashboard (which shows the
+// dashboard for their role, see public/frontend/pages/role-dashboard.php)
+// and everyone else to /login.
 if (!empty($_SESSION['user'])) {
-    if ($role === 'maintenance_admin') {
-        header('Location: ' . public_url('/frontend/pages/maintenance-dashboard.php'), true, 302);
-    } elseif ($role === 'maintenance_staff') {
-        header('Location: ' . public_url('/frontend/pages/staff-dashboard.php'), true, 302);
-    } else {
-        header('Location: ' . public_url('/frontend/pages/dashboard.php'), true, 302);
-    }
+    header('Location: ' . public_url('/dashboard'), true, 302);
 } else {
-    header('Location: ' . public_url('/frontend/pages/index.php'), true, 302);
+    header('Location: ' . public_url('/login'), true, 302);
 }
 exit;
