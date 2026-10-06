@@ -2177,14 +2177,19 @@ function renderItems(items, totalItems) {
         const threshold = resolveItemThreshold(item);
         const quantityValue = Number(item.quantity ?? 0);
         html += `<tr data-row-item-id="${Number(item.id)}">`;
-        html += `<td class="inventory-item-id">#${item.id ?? '-'}</td>`;
+        // Mobile-card mode (mobile-table-cards.css, <640px) right-aligns a
+        // cell's value by targeting its direct child element (`td > *`); a
+        // bare text node isn't selectable, so every value below is wrapped
+        // in a <span> to make sure that alignment reliably applies on phones
+        // instead of falling back to default (stretched) placement.
+        html += `<td class="inventory-item-id"><span>#${item.id ?? '-'}</span></td>`;
         html += `<td class="inventory-item-cell"><div class="inventory-item-name">${inventoryEscapeHtml(item.name || 'Unnamed Item')}</div>${item.brand ? `<div class="inventory-item-meta">Brand: ${inventoryEscapeHtml(item.brand)}</div>` : ''}${item.model ? `<div class="inventory-item-meta">Model: ${inventoryEscapeHtml(item.model)}</div>` : ''}${item.unit_type ? `<div class="inventory-item-meta">Unit: ${inventoryEscapeHtml(item.unit_type)}</div>` : ''}</td>`;
-        html += `<td class="inventory-table-cell-muted">${item.category_name || 'Uncategorized'}</td>`;
-        html += `<td class="inventory-table-cell-numeric">${quantityValue}</td>`;
-        html += `<td class="inventory-table-cell-numeric">${formatThreshold(threshold)}</td>`;
+        html += `<td class="inventory-table-cell-muted"><span>${item.category_name || 'Uncategorized'}</span></td>`;
+        html += `<td class="inventory-table-cell-numeric"><span>${quantityValue}</span></td>`;
+        html += `<td class="inventory-table-cell-numeric"><span>${formatThreshold(threshold)}</span></td>`;
         html += `<td><span class="badge inventory-status-badge ${statusClass}">${status}</span></td>`;
-        html += `<td class="inventory-table-cell-muted">${inventoryEscapeHtml(item.description || '-')}</td>`;
-        html += `<td class="inventory-table-cell-muted">${updated}</td>`;
+        html += `<td class="inventory-table-cell-muted"><span>${inventoryEscapeHtml(item.description || '-')}</span></td>`;
+        html += `<td class="inventory-table-cell-muted"><span>${updated}</span></td>`;
         // TASK 4 — when the user has more than one action available the row
         // actions collapse into a single ⋮ menu. Roles without CAN_ADD_ITEMS
         // only ever had History (Edit/Delete were never rendered for them),

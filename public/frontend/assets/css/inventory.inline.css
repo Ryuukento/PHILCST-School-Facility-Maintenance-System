@@ -425,6 +425,17 @@
 
 .inventory-modal-content {
     width: min(760px, 100%);
+    /* This content (header + form + the "Existing Categories" list in the
+       Manage Categories modal, also shared by Add/Edit Item and Item
+       History) had no height cap, so once it grew taller than a phone
+       screen, the whole block — including the title bar and the Save
+       button in the footer — overflowed past the viewport with no way to
+       scroll back to them. Capping the height and making only the body
+       scroll (same shell pattern already used by the Purchase Receipts
+       modal) keeps the header and footer always reachable. */
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
     border-radius: 18px;
     background: linear-gradient(180deg, #221634 0%, #171225 100%);
     border: 1px solid rgba(168, 139, 250, 0.26);
@@ -439,6 +450,7 @@
     justify-content: space-between;
     gap: 12px;
     padding: 18px 20px;
+    flex-shrink: 0;
 }
 
 .inventory-modal-header {
@@ -474,6 +486,9 @@
 
 .inventory-modal-body {
     padding: 20px;
+    overflow-y: auto;
+    flex: 1;
+    min-height: 0;
 }
 
 .inventory-form-grid {
@@ -1006,5 +1021,21 @@ main.inventory-page .table tbody tr:hover td {
     .inventory-modal-header,
     .inventory-modal-footer {
         padding: 16px;
+    }
+}
+
+/* mobile-table-cards.css (shared/global, loaded on every page) turns each
+   items-table row into its own bordered card below 640px, but that shared
+   rule only gives the card 4px of top/bottom padding against a 14px
+   border-radius — so the first field's value (ID, right at the top) and the
+   last field (right at the bottom, by Actions) sit inside the corner's
+   curve instead of clear of it. The rounded background arcs away from the
+   square content box there, so the value reads as if it's cut off by the
+   corner. Scoped to this page's own table (not the shared file) so it only
+   changes Inventory's cards: pad enough to clear the radius, plus a touch
+   more side room so right-aligned values don't end flush against the edge. */
+@media (max-width: 640px) {
+    main.inventory-page .inventory-items-table.m-cards > tbody > tr {
+        padding: 14px 18px !important;
     }
 }

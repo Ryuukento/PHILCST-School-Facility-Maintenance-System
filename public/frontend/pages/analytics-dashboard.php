@@ -1401,6 +1401,15 @@ function anRenderReportsByCategoryChart(data) {
     ];
     const colors = labels.map((_, i) => categoryColors[i] || categoryColors[categoryColors.length - 1]);
 
+    // On a phone, Chart.js's own auto-rotation guess for these category
+    // labels (several multi-word ones, e.g. "HVAC / Aircon") wasn't rotating
+    // them even though the narrow canvas gives each bar only ~60-70px of
+    // label width — the text just overflowed sideways into the neighboring
+    // label instead. Forcing rotation + a smaller font below this breakpoint
+    // guarantees each label gets a diagonal lane of its own instead of
+    // relying on that auto-fit guess. Desktop (plenty of width) is untouched.
+    const anCategoryIsMobile = window.matchMedia('(max-width: 640px)').matches;
+
     anChartReportsCategory = new Chart(canvas, {
         type: 'bar',
         data: {
@@ -1433,7 +1442,13 @@ function anRenderReportsByCategoryChart(data) {
                     grid: { color: 'rgba(0,0,0,0.05)' }
                 },
                 x: {
-                    grid: { display: false }
+                    grid: { display: false },
+                    ticks: {
+                        autoSkip: false,
+                        maxRotation: anCategoryIsMobile ? 45 : 50,
+                        minRotation: anCategoryIsMobile ? 45 : 0,
+                        font: { size: anCategoryIsMobile ? 10 : 12 }
+                    }
                 }
             }
         },
@@ -1588,6 +1603,15 @@ function anRenderSemesterComparisonChart(summaryData) {
 
     console.log('Semester Comparison Data:', { semesterComp, submittedData, completedData });
 
+    // Same issue as the Reports by Category chart below: these labels
+    // ("First Semester 2026-2027", "Second Semester 2025-2026") are long,
+    // and with only 2 bars sharing the canvas each one's centered label text
+    // is wide enough to reach past the midpoint and overlap the other on a
+    // phone screen — Chart.js wasn't rotating them to compensate. Forcing
+    // rotation + a smaller font below this breakpoint fixes it; desktop
+    // (which had room for these horizontally) is untouched.
+    const anSemesterIsMobile = window.matchMedia('(max-width: 640px)').matches;
+
     anChartSemesterCompare = new Chart(canvas, {
         type: 'bar',
         data: {
@@ -1627,7 +1651,15 @@ function anRenderSemesterComparisonChart(summaryData) {
                 }
             },
             scales: {
-                y: { beginAtZero: true, min: 0, max: Math.max(...submittedData, ...completedData, 10) }
+                y: { beginAtZero: true, min: 0, max: Math.max(...submittedData, ...completedData, 10) },
+                x: {
+                    ticks: {
+                        autoSkip: false,
+                        maxRotation: anSemesterIsMobile ? 45 : 0,
+                        minRotation: anSemesterIsMobile ? 45 : 0,
+                        font: { size: anSemesterIsMobile ? 10 : 12 }
+                    }
+                }
             }
         }
     });

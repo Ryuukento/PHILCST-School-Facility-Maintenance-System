@@ -1008,6 +1008,17 @@
     word-wrap: break-word;
 }
 
+/* NOTE: this used to be two separate `.pm-print-table` blocks declared back
+   to back — a first pass with 8px/12px cell padding, immediately followed by
+   a second pass (identical selectors, same specificity, later in the
+   cascade) that redeclared padding down to 4px/6px and so silently won,
+   leaving every cell's text sitting almost flush against its border. The
+   @media print block below made it worse still: its `* { padding: 0
+   !important }` reset outranks both of these (an !important rule always
+   beats a non-important one, regardless of specificity), so during an
+   actual print/PDF the cells had no padding at all. Consolidated into one
+   definition, and the @media print block now explicitly restores padding
+   with !important so it isn't zeroed out again. */
 .pm-print-table {
     width: 100%;
     border-collapse: collapse;
@@ -1018,7 +1029,7 @@
 .pm-print-table th,
 .pm-print-table td {
     border: 1px solid #333;
-    padding: 8px 12px;
+    padding: 8px 10px;
     text-align: center;
     font-weight: 500;
 }
@@ -1027,28 +1038,6 @@
     background: #f5f5f5;
     font-weight: 700;
     color: #000;
-}
-
-.pm-print-table td:nth-child(1),
-.pm-print-table td:nth-child(2),
-.pm-print-table td:nth-child(3),
-.pm-print-table th:nth-child(1),
-.pm-print-table th:nth-child(2),
-.pm-print-table th:nth-child(3) {
-    text-align: left;
-}
-
-.pm-print-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 11px;
-}
-
-.pm-print-table th,
-.pm-print-table td {
-    border: 1px solid #000;
-    padding: 4px 6px;
-    text-align: center;
 }
 
 .pm-print-table th:nth-child(1),
@@ -1065,6 +1054,14 @@
 
 @media print {
     * { margin: 0 !important; padding: 0 !important; }
+    /* The blanket reset above zeroes every element's padding, including the
+       schedule table's cells — restore it here (with !important, since
+       that's the only thing that can outrank the rule above) so the X marks
+       and labels get breathing room from the borders again. */
+    .pm-print-table th,
+    .pm-print-table td {
+        padding: 8px 10px !important;
+    }
     body.pm-printing { background: #fff; margin: 0 !important; padding: 0 !important; }
     body.pm-printing .sidebar,
     body.pm-printing .utility-bar,

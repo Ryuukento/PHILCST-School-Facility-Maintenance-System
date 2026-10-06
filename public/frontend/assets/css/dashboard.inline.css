@@ -3010,19 +3010,21 @@ main.container .dashboard-hero-panel .card-header.dashboard-hero-header {
         min-height: 118px;
     }
 
-    /* Mobile fix: the Low Stock illustration is sized/anchored (300x200,
-       vertically centered) for the wide desktop card. At this breakpoint's
-       narrower, shorter card it was taller than the card itself and bled
-       up into the title row, covering part of "Low stock items". Shrunk
-       and pinned to the bottom-right corner only (no vertical centering)
-       so it stays clear of the title/icon row above. */
+    /* Mobile fix take 2: shrinking the illustration to 120x80 and pinning it
+       to the bottom-right (previous attempt, kept here in history only)
+       still overlapped the card's content — at this breakpoint's
+       min-height (118px, 112px at 480px), an 80px-tall image anchored
+       10px from the bottom starts only ~28px from the top, which lands
+       inside the icon/title row, and its bottom half still crosses the
+       description text. The card is simply too short on a phone for this
+       300x200 decorative illustration to be shrunk into without
+       colliding with the real content on one end or the other.
+       It's purely decorative (aria-hidden, alt="", pointer-events:none,
+       not data-bound), so the safe fix is to not render it at all below
+       this breakpoint rather than keep chasing a size/position that fits
+       every card height. */
     .summary-card-illustration-boxes-img {
-        width: 120px;
-        height: 80px;
-        top: auto;
-        bottom: 10px;
-        right: 10px;
-        transform: none;
+        display: none;
     }
 
     /* Mobile fix: the Academic Session calendar illustration's `bottom: 80px`
