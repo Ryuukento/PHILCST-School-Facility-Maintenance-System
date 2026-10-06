@@ -733,7 +733,18 @@ include __DIR__ . '/../includes/header.php';
 
 @media (max-width: 640px) {
     #report-archive-banner.report-archive-banner { flex-wrap: wrap; }
-    #archive-picker-dropdown.report-archive-menu { right: auto; left: 0; }
+    /* The menu is anchored (position:absolute) to its own button, which on a
+       two-button header row can sit well right of center — a 340px-wide menu
+       anchored there runs off the right edge of a phone screen no matter which
+       side it opens from. Pin it to the viewport instead; initReportArchive()
+       below sets the matching inline `top` in px when the menu opens. */
+    #archive-picker-dropdown.report-archive-menu {
+        position: fixed;
+        left: 16px;
+        right: 16px;
+        width: auto;
+        max-width: none;
+    }
 }
 </style>
 
@@ -2747,6 +2758,16 @@ async function loadArchiveMenu() {
         const willOpen = menu.hidden;
         menu.hidden = !willOpen;
         button.setAttribute('aria-expanded', String(willOpen));
+        // On mobile the menu is `position:fixed` (see the max-width:640px rule
+        // above) so its `top` must be a real viewport px offset, not the
+        // percentage-based `top: calc(100% + 8px)` used for desktop's
+        // position:absolute case. Clearing the inline style on desktop lets
+        // that CSS rule apply normally again.
+        if (willOpen && window.matchMedia('(max-width: 640px)').matches) {
+            menu.style.top = (button.getBoundingClientRect().bottom + 8) + 'px';
+        } else {
+            menu.style.top = '';
+        }
     });
 
     list.addEventListener('click', (event) => {

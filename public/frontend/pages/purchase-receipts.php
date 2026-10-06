@@ -108,7 +108,7 @@ include __DIR__ . '/../includes/header.php';
             <div style="padding:24px;display:flex;flex-direction:column;gap:18px;">
 
                 <!-- Row 1: OR Number + Receipt Date -->
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+                <div class="pr-new-receipt-row" style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
                     <div>
                         <label style="display:block;margin-bottom:6px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;opacity:0.65;">OR Number <span style="color:#ef4444;">*</span></label>
                         <div style="position:relative;">
@@ -151,7 +151,7 @@ include __DIR__ . '/../includes/header.php';
                 </div>
 
                 <!-- Row 3: Department + Received By -->
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+                <div class="pr-new-receipt-row" style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
                     <div>
                         <label style="display:block;margin-bottom:6px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;opacity:0.65;">Department</label>
                         <div style="position:relative;">
@@ -209,6 +209,17 @@ include __DIR__ . '/../includes/header.php';
         </form>
     </div>
 </div>
+
+<style>
+/* The OR Number/Receipt Date and Department/Received By rows above are a
+   hardcoded 2-column grid with no responsive override, so on a phone-width
+   viewport the right-hand field (and its label) got pushed off-screen. */
+@media (max-width: 560px) {
+    .pr-new-receipt-row {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
 
 <?php else: ?>
 <!-- ================================================================

@@ -1026,6 +1026,15 @@
         align-items: stretch;
     }
 
+    /* .buildings-page-hero-copy's `flex: 1 1 520px` sets a 520px
+       *width* basis for the row layout above. Once flex-direction
+       flips to column here, that same basis is read as a *height*
+       minimum instead, forcing ~520px of mostly-empty space under
+       the hero text. Reset it so column mode sizes to content. */
+    .buildings-page-hero-copy {
+        flex-basis: auto;
+    }
+
     .buildings-page-hero-metrics {
         grid-template-columns: repeat(3, minmax(0, 1fr));
         min-width: 0;
@@ -1601,6 +1610,15 @@
     .building-toolbar {
         flex-direction: column;
         align-items: stretch;
+    }
+
+    /* Same issue as .buildings-page-hero-copy above: the 260px
+       `flex-basis` on .building-toolbar-search is a width basis for
+       the row layout. In column mode (mobile) it reads as a height
+       minimum, forcing each Search Building/Floor/Room box to ~260px
+       tall and leaving a big empty gap below each input. */
+    .building-toolbar-search {
+        flex-basis: auto;
     }
 
     .building-toolbar-controls {

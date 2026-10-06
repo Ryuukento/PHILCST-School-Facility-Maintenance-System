@@ -259,9 +259,45 @@ main.container {
     background: linear-gradient(135deg, #ffffff 0%, #fafbff 100%);
 }
 
-/* Better spacing for chart grids */
-[style*="display:grid;grid-template-columns:repeat(auto-fit,minmax(400px"] {
+/* Better spacing for chart grids. (Was an attribute selector on the grid's
+   inline style text; it targets the class now that the inline column rule
+   changed for the phone layout.) */
+.an-charts-grid {
     margin: 32px 0 24px 0 !important;
+}
+
+/* Reports by Status: donut beside its legend on wider screens... */
+.an-status-chart-body {
+    display: grid;
+    grid-template-columns: 1fr 180px;
+    gap: 20px;
+    align-items: center;
+}
+
+.an-status-chart-body > * {
+    min-width: 0;
+}
+
+/* ...and the legend below the donut on phones, where a fixed 180px legend
+   left the donut only ~100px. */
+@media (max-width: 640px) {
+    .an-status-chart-body {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Grid items default to min-width:auto, which floors their width at their
+   content's min-content size — here, the Chart.js canvases. That let each
+   chart panel (and everything in it, like the Semester Comparison bar
+   chart's axis labels) force the whole .an-charts-grid row wider than the
+   phone screen instead of shrinking to fit it. Unconditional (not just a
+   mobile breakpoint) since it's harmless at any width. overflow:hidden is
+   a second safety net so nothing can visually bleed past the card's
+   rounded border even if a chart briefly renders oversized before Chart.js
+   finishes its own resize pass. */
+.an-charts-grid .an-panel {
+    min-width: 0;
+    overflow: hidden;
 }
 
 /* Improve overall card appearance */
@@ -345,12 +381,16 @@ div[id*="-legend"]:not(#chart-reports-status-legend) strong {
             <div id="an-tab1" class="an-tab-content">
 
                 <!-- Charts Grid — Responsive layout (2 cols on desktop, 1 on tablet/mobile) -->
-                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(400px,1fr));gap:20px;margin:28px 0 20px;">
+                <!-- Phone layout: min(400px, 100%) keeps the 400px column floor on
+                     desktop but never lets a column grow wider than the screen
+                     (a plain 400px minimum overflowed every phone narrower than
+                     ~450px and clipped each chart panel on the right). -->
+                <div class="an-charts-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(400px,100%),1fr));gap:20px;margin:28px 0 20px;">
 
                     <!-- Chart 1: Reports by Status -->
                     <div class="an-panel" style="margin:0;padding:24px;">
                         <h3 style="font-size:13px;font-weight:700;color:#374151;margin:0 0 20px 0;text-transform:uppercase;letter-spacing:0.5px;">Reports by Status</h3>
-                        <div style="display:grid;grid-template-columns:1fr 180px;gap:20px;align-items:center;">
+                        <div class="an-status-chart-body">
                             <div style="height:280px;position:relative;display:flex;align-items:center;justify-content:center;">
                                 <canvas id="chart-reports-status" style="width:100%;height:100%;"></canvas>
                                 <div id="chart-reports-status-center" style="position:absolute;text-align:center;pointer-events:none;">
@@ -383,7 +423,7 @@ div[id*="-legend"]:not(#chart-reports-status-legend) strong {
                         <h3 style="font-size:13px;font-weight:700;color:#374151;margin:0 0 16px;text-transform:uppercase;letter-spacing:0.5px;">Inventory Status</h3>
                         <div style="height:300px;position:relative;margin-bottom:12px;">
                             <canvas id="chart-inventory-status" style="width:100%;height:100%;display:block;"></canvas>
-                            <div id="chart-inventory-status-center" style="position:absolute;top:50%;left:38%;transform:translate(-50%,-50%);pointer-events:none;">
+                            <div id="chart-inventory-status-center" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);pointer-events:none;">
                                 <div style="font-size:48px;font-weight:700;color:#1f2937;line-height:1;margin:0;padding:0;text-align:center;" id="chart-inventory-status-total">5</div>
                                 <div style="font-size:13px;color:#6b7280;font-weight:500;line-height:1.2;margin-top:6px;padding:0;text-align:center;white-space:nowrap;">Total Items</div>
                             </div>

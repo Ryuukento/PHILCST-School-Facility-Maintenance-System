@@ -77,7 +77,7 @@
     <script src="<?php echo htmlspecialchars(public_url('/frontend/assets/js/notification.js?v=20260804b')); ?>"></script>
     <script src="<?php echo htmlspecialchars(public_url('/frontend/assets/js/sidebar.js?v=20260521')); ?>"></script>
     <script src="<?php echo htmlspecialchars(public_url('/frontend/assets/js/network-indicator.js?v=20260521')); ?>"></script>
-    <script src="<?php echo htmlspecialchars(public_url('/frontend/assets/js/mobile-table-cards.js?v=20260926-4')); ?>"></script>
+    <script src="<?php echo htmlspecialchars(public_url('/frontend/assets/js/mobile-table-cards.js?v=20261006-pm')); ?>"></script>
     <!-- Idle-timeout auto-logout warning: reads window.SFMS_IDLE_TIMEOUT_MS
          (set just above, only when $user is present) and #idle-timeout-modal.
          New file, no prior cache-busted copy to worry about. -->

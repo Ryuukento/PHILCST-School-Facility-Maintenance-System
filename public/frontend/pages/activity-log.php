@@ -49,7 +49,9 @@ include __DIR__ . '/../includes/header.php';
                 <select id="activity-log-module" class="form-control">
                     <option value="">All Modules</option>
                 </select>
+                <label class="text-muted mb-0" for="activity-log-from" style="font-size:13px;">From date</label>
                 <input type="date" id="activity-log-from" class="form-control">
+                <label class="text-muted mb-0" for="activity-log-to" style="font-size:13px;">To date</label>
                 <input type="date" id="activity-log-to" class="form-control">
                 <button type="button" class="btn btn-secondary" id="activity-log-clear">Clear</button>
             </div>

@@ -3009,6 +3009,37 @@ main.container .dashboard-hero-panel .card-header.dashboard-hero-header {
     .summary-card {
         min-height: 118px;
     }
+
+    /* Mobile fix: the Low Stock illustration is sized/anchored (300x200,
+       vertically centered) for the wide desktop card. At this breakpoint's
+       narrower, shorter card it was taller than the card itself and bled
+       up into the title row, covering part of "Low stock items". Shrunk
+       and pinned to the bottom-right corner only (no vertical centering)
+       so it stays clear of the title/icon row above. */
+    .summary-card-illustration-boxes-img {
+        width: 120px;
+        height: 80px;
+        top: auto;
+        bottom: 10px;
+        right: 10px;
+        transform: none;
+    }
+
+    /* Mobile fix: the Academic Session calendar illustration's `bottom: 80px`
+       offset was tuned for the fixed-height desktop card. On narrow screens
+       the card's content height varies with how the date text wraps, so
+       that fixed offset no longer reliably clears the semester-progress
+       bar below it. Shrunk and moved to the top-right corner (behind the
+       header, which has open space) instead of bottom-anchoring, so it
+       can't drift into the dates/progress section no matter how the text
+       wraps. */
+    .academic-period-illustration {
+        top: 6px;
+        bottom: auto;
+        right: -8px;
+        width: 80px;
+        height: 80px;
+    }
 }
 
 @media (max-width: 640px) {

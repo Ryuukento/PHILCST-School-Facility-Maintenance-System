@@ -25,6 +25,13 @@
         '.inventory-page table.table',
         '[id^="an-"] table.table',
         '.ir-table',
+        // Preventive Maintenance plan list and monthly checklist. The
+        // schedule matrix (.pm-schedule-table) is deliberately NOT listed:
+        // its Frequency cell spans several rows (rowspan), which this
+        // column-counting labeller would mislabel, and a 12-month grid reads
+        // better scrolled sideways in its own container than as cards.
+        '.pm-plans-table',
+        '.pm-checklist-table',
         'table.m-cards'
     ].join(',');
 

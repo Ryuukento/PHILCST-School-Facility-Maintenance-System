@@ -1193,7 +1193,7 @@ async function pmLoadChecklist() {
 
         const periodLabel = `${PM_MONTH_NAMES[pmChecklistMonth - 1]} ${pmChecklistYear}`;
 
-        let html = '<div class="table-responsive"><table class="table pm-table ui-fade-in"><thead><tr>'
+        let html = '<div class="table-responsive"><table class="table pm-table pm-checklist-table ui-fade-in"><thead><tr>'
             + '<th>Equipment</th><th>Location</th><th>Frequency</th><th>Scheduled</th><th>Assigned Personnel</th><th>Status</th><th>Completed</th><th class="pm-table__action-head">Actions</th>'
             + '</tr></thead><tbody>';
 

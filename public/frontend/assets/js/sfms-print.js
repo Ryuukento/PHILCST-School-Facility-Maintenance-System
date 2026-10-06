@@ -66,7 +66,7 @@
             @bottom-right { content: "Page " counter(page) " of " counter(pages); font: 8pt Arial, sans-serif; color: #64748b; }
         }
         * { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-        html, body { margin: 0; padding: 0; }
+        html, body { margin: 0; padding: 0; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
         body { font-family: Arial, "Segoe UI", Helvetica, sans-serif; color: #1f2937; font-size: 9.5pt; background: #fff; }
         .sheet { width: 100%; }
 
@@ -144,6 +144,17 @@
         @media screen {
             body { background: #e5e7eb; }
             .sheet { max-width: 1100px; margin: 20px auto; background: #fff; padding: 28px 32px; box-shadow: 0 4px 18px rgba(0,0,0,0.12); }
+            /* Table keeps its real column widths and scrolls sideways instead
+               of being squeezed into a narrow phone screen, which is what was
+               causing the column text to overlap. */
+            .table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+            .table-scroll table { min-width: 820px; }
+        }
+        @media screen and (max-width: 700px) {
+            .sheet { max-width: 100%; margin: 0; padding: 14px; box-shadow: none; }
+            .letterhead { flex-wrap: wrap; }
+            .doc-meta { text-align: left; white-space: normal; margin-top: 8px; width: 100%; }
+            .stats { grid-template-columns: repeat(2, 1fr) !important; }
         }
     `;
 
@@ -176,6 +187,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>${escape(docTitle)}</title>
     <style>${STYLES.replace('__ORIENTATION__', orientation)}</style>
 </head>
@@ -205,11 +217,13 @@
 
         ${detailsHtml}
 
-        <table>
-            <colgroup>${columns.map((c) => `<col style="width: ${escape(c.width || 'auto')};">`).join('')}</colgroup>
-            <thead><tr>${columns.map((c) => `<th>${escape(c.label)}</th>`).join('')}</tr></thead>
-            <tbody>${o.rowsHtml || ''}</tbody>
-        </table>
+        <div class="table-scroll">
+            <table>
+                <colgroup>${columns.map((c) => `<col style="width: ${escape(c.width || 'auto')};">`).join('')}</colgroup>
+                <thead><tr>${columns.map((c) => `<th>${escape(c.label)}</th>`).join('')}</tr></thead>
+                <tbody>${o.rowsHtml || ''}</tbody>
+            </table>
+        </div>
 
         <section class="signoff">
             <div class="sign">

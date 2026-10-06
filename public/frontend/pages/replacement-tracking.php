@@ -112,8 +112,14 @@ include __DIR__ . '/../includes/header.php';
                 <select id="replacement-filter-status" class="form-control">
                     <option value="">All Statuses</option>
                 </select>
-                <input type="date" id="replacement-filter-date-from" class="form-control" title="From date">
-                <input type="date" id="replacement-filter-date-to" class="form-control" title="To date">
+                <div>
+                    <label class="text-muted mb-0" for="replacement-filter-date-from" style="display:block;font-size:11px;margin-bottom:4px;">From date</label>
+                    <input type="date" id="replacement-filter-date-from" class="form-control" title="From date">
+                </div>
+                <div>
+                    <label class="text-muted mb-0" for="replacement-filter-date-to" style="display:block;font-size:11px;margin-bottom:4px;">To date</label>
+                    <input type="date" id="replacement-filter-date-to" class="form-control" title="To date">
+                </div>
                 <button type="button" class="btn btn-secondary replacement-clear-btn" id="replacement-clear-filters">Clear Filters</button>
             </div>
         </div>
