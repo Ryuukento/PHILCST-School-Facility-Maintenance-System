@@ -316,12 +316,20 @@ class ReportProblemTypeTest extends TestCase
     }
 
     // =================================================================
-    // 4. The asset-linked create branch gets the same treatment. It is a
-    //    different method on the controller and a different service, so
-    //    it could easily have been missed.
+    // 4. item_id/room_id used to route this to a different controller
+    //    method and service (storeWithAssetDetails() ->
+    //    ReportService::createAssetReport()), so it could easily have been
+    //    missed. That branch was removed 2026-10-08 when the asset-picker
+    //    was retired as a Damage Report creator (see
+    //    ReportCreateAssetSeverityImageTest.php's class doc comment) —
+    //    item_id/room_id are now just ordinary, inert payload fields on the
+    //    single general-report path. Renamed from
+    //    test_an_asset_linked_report_also_stores_the_problem_type() and its
+    //    damage_reports assertion inverted accordingly; problem_type
+    //    storage itself is unaffected.
     // =================================================================
 
-    public function test_an_asset_linked_report_also_stores_the_problem_type(): void
+    public function test_a_report_with_item_id_and_room_id_still_stores_the_problem_type(): void
     {
         $deptId = $this->seedDepartment();
         $staffId = $this->seedUser(['role' => 'maintenance_staff', 'department_id' => $deptId]);
@@ -342,8 +350,9 @@ class ReportProblemTypeTest extends TestCase
             'HVAC / Aircon',
             DB::table('maintenance_reports')->first()->problem_type
         );
-        // The asset branch still does its own job unchanged.
-        $this->assertSame(1, DB::table('damage_reports')->count());
+        // item_id/room_id no longer create a damage_reports row — see the
+        // dated comment above this test.
+        $this->assertSame(0, DB::table('damage_reports')->count());
     }
 
     public function test_an_asset_linked_report_without_a_problem_type_is_rejected(): void

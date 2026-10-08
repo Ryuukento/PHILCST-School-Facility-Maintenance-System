@@ -150,7 +150,7 @@ include __DIR__ . '/../includes/header.php';
 
 <div id="settings-toast" class="settings-toast" aria-live="polite"></div>
 
-<link rel="stylesheet" href="/School_Facility_Maintenance_System/frontend/assets/css/settings.inline.css?v=20260921-2">
+<link rel="stylesheet" href="<?php echo htmlspecialchars(public_url('/frontend/assets/css/settings.inline.css?v=20260921-2')); ?>">
 
 <script>
 window.API = window.API || {

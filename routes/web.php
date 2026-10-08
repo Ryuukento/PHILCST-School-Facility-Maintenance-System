@@ -159,6 +159,14 @@ Route::prefix('api')->group(function (): void {
         // (maintenance_admin) and Maintenance Staff are the report submitters.
         Route::post('reports',         [ReportController::class, 'store'])
             ->middleware(EnsureRole::class . ':maintenance_admin,maintenance_staff');
+        // 2026-10-08 — General Report Duplicate Detection. Static segment, so
+        // it cannot collide with 'reports/{report}' below: Laravel only ever
+        // matches {report} for GET/PATCH/DELETE on this path, never POST, and
+        // this is the only other POST under plain 'reports/...' besides
+        // store() itself. Same role gate as store() — only the roles that can
+        // create a report need to pre-check for a duplicate of it.
+        Route::post('reports/check-duplicate', [ReportController::class, 'checkDuplicate'])
+            ->middleware(EnsureRole::class . ':maintenance_admin,maintenance_staff');
         Route::get('reports/recent',   [ReportController::class, 'recent']);
         Route::get('reports/{report}', [ReportController::class, 'show']);
         Route::patch('reports/{report}', [ReportController::class, 'update']);

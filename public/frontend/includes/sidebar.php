@@ -121,6 +121,27 @@ $current_page = basename($_SERVER['PHP_SELF']);
                 </a>
             </li>
 
+            <?php /* 2026-10-08 — the "Damage Reports" sidebar entry (added
+                     2026-10-08 to REVERSE TASK 99's "no standalone sidebar
+                     destination" call) is removed again here, by a second,
+                     later explicit user decision, now that the gap which
+                     forced that reversal is closed: ReportController::index()'s
+                     report_type classification/filter was widened the same
+                     day from "replaced outcome only" to "has a linked
+                     damage_reports row at all" (any status), so every
+                     Need-Change-auto-linked case is now reachable through the
+                     All Reports "Damage Reports" Report Type filter (and
+                     Export Reports, which reads the same filter) without a
+                     dedicated nav entry. See the report_type comment in
+                     ReportController::index() for the exact rule.
+
+                     The /damage-reports page, damage-report-detail.php and
+                     damage-report-update.php are NOT removed — same
+                     precedent as TASK 100's Create Report below: the
+                     page/route stays reachable (e.g. direct links, future
+                     notification links), only the sidebar destination is
+                     gone. */ ?>
+
             <?php /* TASK 100 — Create Report is no longer a standalone sidebar
                      module. Report creation is now reached from inside All
                      Reports, whose header carries the "+ Create Report" action
@@ -337,17 +358,17 @@ $current_page = basename($_SERVER['PHP_SELF']);
                 </ul>
             </li>
 
-            <?php /* TASK 99 — Damage Report is a report CLASSIFICATION, not a
-                     module, so it has no standalone sidebar destination. TASK
-                     45's nav entry, and its active-state list for the damage
-                     report detail/update pages, were removed here.
-
-                     Nothing behind it was deleted: the pages, the API and the
-                     data model are untouched, the detail page is still reached
-                     from notification deep links and from Create Report's
-                     duplicate warning, and the cases themselves are now
-                     surfaced through All Reports / Export Reports via the
-                     Report Type filter. */ ?>
+            <?php /* TASK 99 made Damage Report a report CLASSIFICATION (no
+                     standalone sidebar destination), removing TASK 45's nav
+                     entry. A same-day 2026-10-08 edit briefly reversed that
+                     call and then, later the same day, reversed it back —
+                     see the comment block right after the "All Reports" <li>
+                     near the top of this file for the full history and the
+                     widened report_type rule that made the second reversal
+                     possible. There is no Damage Reports <li> in this sidebar
+                     any more; this stale pointer comment is kept only so a
+                     future reader searching "TASK 99" here still finds the
+                     real explanation. */ ?>
 
             <?php /* TASK 12 — the Repair Requests nav entry was removed here,
                      along with its five-page active-state list

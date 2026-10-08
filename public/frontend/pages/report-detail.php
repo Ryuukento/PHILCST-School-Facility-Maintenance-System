@@ -89,8 +89,8 @@ $currentUserDepartmentId = $user['department_id'] ?? null;
     <?php endif; ?>
 </main>
 
-<link rel="stylesheet" href="/School_Facility_Maintenance_System/frontend/assets/css/report-detail.inline.css">
-<link rel="stylesheet" href="/School_Facility_Maintenance_System/frontend/assets/css/enterprise-reports.css?v=20260726-1">
+<link rel="stylesheet" href="<?php echo htmlspecialchars(public_url('/frontend/assets/css/report-detail.inline.css')); ?>">
+<link rel="stylesheet" href="<?php echo htmlspecialchars(public_url('/frontend/assets/css/enterprise-reports.css?v=20260726-1')); ?>">
 
 <script>
 const reportId = <?php echo intval($reportId); ?>;

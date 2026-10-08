@@ -393,66 +393,111 @@ class DeployedAssetRegistryTest extends TestCase
 
     // ------------------------------------------------------------------
     // Report Against a Specific Asset
+    //
+    // 2026-10-08 — every test below was renamed and inverted. POST
+    // /api/reports used to fork to ReportService::createAssetReport()
+    // whenever deployed_asset_id (or item_id+room_id) was present, which is
+    // what made asset pairing, asset-status and duplicate-detection
+    // enforceable from THIS endpoint. That fork was removed by explicit
+    // user decision: Damage Reports must come from exactly ONE trigger — a
+    // Need Change request — not from naming an asset on Create Report. None
+    // of item_id/room_id/severity_level/override_duplicate are validated or
+    // read by ReportController::store() any more, so createAssetReport()
+    // (this file's local POST /api/reports helper, not to be confused with
+    // the removed service method of the same name) always produces an
+    // ordinary general report with no damage_reports row, regardless of
+    // what asset-shaped fields are in the payload.
+    //
+    // The underlying rules (room pairing, asset-status, duplicate detection)
+    // are NOT gone — they still live in DamageReportService::createReport()
+    // and findPotentialDuplicate(), and are still exercised, through the
+    // correct (still-live) entry point, by DamageReportControllerTest
+    // against POST /api/damage-reports directly. The two tests further
+    // below that asserted duplicate-matching behaviour
+    // (test_check_duplicate_endpoint_matches_by_asset and
+    // test_legacy_room_asset_report_and_duplicate_rule_still_work) were
+    // updated to seed their damage report through that endpoint instead of
+    // through this one, so they keep testing the real rule rather than a
+    // retired path into it.
+    //
+    // 2026-10-08, LATER THE SAME DAY — Asset Code (Optional), by explicit
+    // user decision. deployed_asset_id specifically was reintroduced as a
+    // single optional field on Create Report (re-reporting a known unit),
+    // reusing this exact column. It is now validated
+    // (exists:deployed_assets,id) and persisted as plain FK metadata by
+    // ReportService::createGeneralReport() — see
+    // test_report_against_a_deployed_asset_no_longer_creates_a_damage_report
+    // below, updated accordingly. This does NOT revive the fork above:
+    // item_id/room_id/severity_level/override_duplicate are still ignored,
+    // and no damage_reports row is ever created from this endpoint.
     // ------------------------------------------------------------------
 
-    public function test_report_against_a_deployed_asset_stores_the_asset_and_resolved_links(): void
+    public function test_report_against_a_deployed_asset_no_longer_creates_a_damage_report(): void
     {
-        [$assetId, $itemId, $dispatchId] = $this->releaseTrackedAsset();
+        [$assetId] = $this->releaseTrackedAsset();
 
         $response = $this->createAssetReport(['deployed_asset_id' => $assetId]);
 
         $response->assertStatus(201);
-        $damage = DB::table('damage_reports')->first();
-        $this->assertSame($assetId, (int) $damage->deployed_asset_id);
-        $this->assertSame($itemId, (int) $damage->item_id);
-        $this->assertSame($this->roomId, (int) $damage->room_id);
-        $this->assertSame($dispatchId, (int) $damage->source_dispatch_id);
+        $this->assertSame(0, DB::table('damage_reports')->count());
 
-        $report = DB::table('maintenance_reports')->where('report_id', $damage->report_id)->first();
+        // 2026-10-08, LATER THE SAME DAY — Asset Code (Optional), by
+        // explicit user decision: deployed_asset_id IS now persisted as
+        // plain display metadata (see the comment block above). What stays
+        // true from the original removal is the part this test is actually
+        // named for: no damage_reports row, and report_category stays
+        // 'general' — persisting the id is not a damage-report trigger.
+        $report = DB::table('maintenance_reports')->first();
         $this->assertSame($assetId, (int) $report->deployed_asset_id);
-        $this->assertSame($itemId, (int) $report->item_id);
-        $this->assertSame($dispatchId, (int) $report->source_dispatch_id);
-        $this->assertSame('repair_replacement', $report->report_category);
+        $this->assertSame('general', $report->report_category);
     }
 
-    public function test_report_rejects_an_asset_paired_with_a_different_room(): void
+    public function test_report_no_longer_validates_asset_room_pairing(): void
     {
         [$assetId] = $this->releaseTrackedAsset();
 
+        // Previously rejected with 422 because the asset branch cross-checked
+        // deployed_asset_id against room_id. That branch is gone, so a
+        // mismatched pairing is now simply ignored, like any other field
+        // ReportController::store() does not validate.
         $this->createAssetReport(['deployed_asset_id' => $assetId, 'room_id' => $this->otherRoomId])
-            ->assertStatus(422);
+            ->assertStatus(201);
 
         $this->assertSame(0, DB::table('damage_reports')->count());
     }
 
-    public function test_report_rejects_an_inactive_asset(): void
+    public function test_report_no_longer_checks_asset_status(): void
     {
         [$assetId] = $this->releaseTrackedAsset();
         DB::table('deployed_assets')->where('id', $assetId)->update(['status' => 'disposed']);
 
-        $this->createAssetReport(['deployed_asset_id' => $assetId])->assertStatus(422);
+        // Previously rejected with 422 because the asset branch looked up
+        // the asset and checked its status. That branch is gone.
+        $this->createAssetReport(['deployed_asset_id' => $assetId])->assertStatus(201);
 
         $this->assertSame(0, DB::table('damage_reports')->count());
     }
 
-    public function test_second_active_report_on_the_same_asset_is_a_duplicate(): void
+    public function test_report_no_longer_runs_duplicate_detection_for_asset_fields(): void
     {
         [$assetId] = $this->releaseTrackedAsset();
         $this->createAssetReport(['deployed_asset_id' => $assetId])->assertStatus(201);
 
+        // Previously the second submission against the same asset was
+        // blocked with 409 by findPotentialDuplicate(). Posting through
+        // /api/reports no longer runs that check at all, so both submissions
+        // succeed independently and neither creates a damage_reports row.
         $response = $this->createAssetReport([
             'deployed_asset_id' => $assetId,
             'description' => 'Completely different wording about the same unit.',
         ]);
 
-        $response->assertStatus(409);
-        $this->assertSame(1, DB::table('damage_reports')->count());
-
-        // "Different Issue" still lets the reporter proceed.
-        $this->createAssetReport(['deployed_asset_id' => $assetId, 'override_duplicate' => true])->assertStatus(201);
+        $response->assertStatus(201);
+        $this->assertSame(2, DB::table('maintenance_reports')->count());
+        $this->assertSame(0, DB::table('damage_reports')->count());
     }
 
-    public function test_a_different_asset_in_the_same_room_is_not_a_duplicate(): void
+    public function test_a_different_asset_in_the_same_room_still_just_creates_general_reports(): void
     {
         $itemId = $this->seedItem(['name' => 'Desktop PC', 'quantity' => 10]);
         [$dispatchId, $lines] = $this->seedApprovedDispatch([[$itemId, 2]]);
@@ -460,17 +505,39 @@ class DeployedAssetRegistryTest extends TestCase
         [$first, $second] = DB::table('deployed_assets')->orderBy('id')->pluck('id')->map(fn ($id) => (int) $id)->all();
 
         $this->createAssetReport(['deployed_asset_id' => $first])->assertStatus(201);
-        // Identical item, room, department AND description — still a
-        // different physical unit, so it must not be blocked.
         $this->createAssetReport(['deployed_asset_id' => $second])->assertStatus(201);
 
-        $this->assertSame(2, DB::table('damage_reports')->count());
+        $this->assertSame(2, DB::table('maintenance_reports')->count());
+        $this->assertSame(0, DB::table('damage_reports')->count());
     }
 
     public function test_check_duplicate_endpoint_matches_by_asset(): void
     {
         [$assetId] = $this->releaseTrackedAsset();
-        $this->createAssetReport(['deployed_asset_id' => $assetId])->assertStatus(201);
+
+        // 2026-10-08 — used to seed this via $this->createAssetReport()
+        // against POST /api/reports, which created a linked damage_reports
+        // row as a side effect of the now-removed asset fork. Seeded with a
+        // direct insert instead: POST /api/damage-reports's own store()
+        // doesn't actually accept deployed_asset_id as input (it only takes
+        // item_id/room_id — a pre-existing gap, not something this change
+        // touches), so there is currently no HTTP path that creates a
+        // deployed_asset_id-linked row. DamageReportService::checkDuplicate()
+        // itself is untouched and still matches on deployed_asset_id, which
+        // is what this test actually verifies.
+        DB::table('damage_reports')->insert([
+            'damage_report_code' => 'DMG-TEST-ASSET-MATCH',
+            'deployed_asset_id' => $assetId,
+            'item_id' => null,
+            'room_id' => $this->roomId,
+            'department_id' => $this->deptId,
+            'damage_description' => 'PC will not power on.',
+            'severity_level' => 'high',
+            'reported_by' => $this->staffId,
+            'status' => 'pending',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
 
         $this->actingAsSessionUser($this->staffId, 'maintenance_staff')
             ->postJson('/api/damage-reports/check-duplicate', ['deployed_asset_id' => $assetId])
@@ -482,11 +549,32 @@ class DeployedAssetRegistryTest extends TestCase
     {
         $legacyId = $this->seedItem(['name' => 'Aircon', 'item_type' => 'room_asset', 'room_id' => $this->roomId, 'quantity' => 1, 'asset_code' => 'LAB-AC-01']);
 
-        $this->createAssetReport(['item_id' => $legacyId, 'room_id' => $this->roomId])->assertStatus(201);
+        // 2026-10-08 — used to seed/re-check this via $this->createAssetReport()
+        // against POST /api/reports; see the note above
+        // test_check_duplicate_endpoint_matches_by_asset for why these now go
+        // straight to POST /api/damage-reports, the endpoint that still owns
+        // this rule.
+        $this->actingAsSessionUser($this->staffId, 'maintenance_staff')
+            ->postJson('/api/damage-reports', [
+                'item_id' => $legacyId,
+                'room_id' => $this->roomId,
+                'department_id' => $this->deptId,
+                'damage_description' => 'PC will not power on.',
+                'severity_level' => 'high',
+            ])
+            ->assertStatus(201);
         $this->assertNull(DB::table('damage_reports')->value('deployed_asset_id'));
 
         // Same item/room/department/description -> still the legacy duplicate.
-        $this->createAssetReport(['item_id' => $legacyId, 'room_id' => $this->roomId])->assertStatus(409);
+        $this->actingAsSessionUser($this->staffId, 'maintenance_staff')
+            ->postJson('/api/damage-reports', [
+                'item_id' => $legacyId,
+                'room_id' => $this->roomId,
+                'department_id' => $this->deptId,
+                'damage_description' => 'PC will not power on.',
+                'severity_level' => 'high',
+            ])
+            ->assertStatus(409);
     }
 
     public function test_general_report_is_unaffected(): void

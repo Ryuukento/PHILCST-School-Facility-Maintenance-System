@@ -2,10 +2,8 @@
 
 namespace App\Services;
 
-use App\Models\DamageReport;
 use App\Models\MaintenanceReport;
 use App\Models\User;
-use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
@@ -40,8 +38,12 @@ use Illuminate\Validation\ValidationException;
  *     Need Change approval remains owned by NeedChangeService (TASK 49,
  *     including its own service-level authorization check — untouched by this
  *     task). Asset-damage creation remains owned by DamageReportService
- *     (TASK 45); createAssetReport() below calls it in exactly the same order,
- *     with exactly the same payload, as ReportController did.
+ *     (TASK 45). This class used to also call it, through createAssetReport()
+ *     (SPRINT 5/TASK 50), whenever /api/reports carried asset fields; that
+ *     method was removed 2026-10-08 (see its retirement comment below) when
+ *     the asset-picker was removed as a Damage Report creator. The only
+ *     remaining call into DamageReportService from this class is
+ *     createGeneralReport()'s attachNeedChangeAsDamageReport() call.
  *
  *   - It is NOT a "god service". Read paths (index/recent/show) stay in the
  *     controller: they are query construction feeding a JSON response shape,
@@ -80,9 +82,14 @@ class ReportService
     public function __construct(
         private readonly ActivityLogService $activityLogService,
         // SPRINT 5 / TASK 45 — asset-damage creation stays owned by this
-        // service; createAssetReport() only translates /api/reports' input
-        // shape into it, exactly as ReportController::storeWithAssetDetails()
-        // did.
+        // service. createAssetReport() used to translate /api/reports' asset
+        // fields into a call into it, exactly as
+        // ReportController::storeWithAssetDetails() did; that method was
+        // removed 2026-10-08 when the asset-picker was removed as a Damage
+        // Report creator (see the retirement comment further down this
+        // file). The only remaining call into DamageReportService from this
+        // class is createGeneralReport()'s attachNeedChangeAsDamageReport()
+        // call.
         private readonly DamageReportService $damageReportService,
         // TASK 20 — Assignment Notification Scoping: the same single
         // notification insert path used by DispatchService / RepairService /
@@ -290,6 +297,134 @@ class ReportService
     }
 
     /**
+     * 2026-10-08 — General Report Duplicate Detection (user decision).
+     *
+     * BACKGROUND: the asset-picker's own duplicate check (checkAssetDuplicate()
+     * in create-report.php, removed earlier the same day) was the ONLY
+     * pre-submit duplicate warning the Create Report page ever had, and it
+     * only ever covered the asset-linked sub-form that is now gone. The
+     * general report path — the one every reporter actually uses — never had
+     * any duplicate detection at all. This fills that gap.
+     *
+     * MATCH RULE, BY EXPLICIT USER DECISION: same department, same calendar
+     * day, exact (case-insensitive) title match, exact derived location
+     * string match, and exact problem_type match. "Same items" was considered
+     * and deliberately dropped — the asset/item picker that could have
+     * supplied it is gone, and the one remaining item-like field (the
+     * optional Need Change search box) is unrelated to what a duplicate
+     * REPORT is about, so Problem Type was chosen as the third signal instead.
+     *
+     * SCOPE, BY EXPLICIT USER DECISION: matched across the WHOLE department,
+     * not just the current reporter's own submissions — two different staff
+     * members reporting the same broken AC in the same room on the same day
+     * is exactly the case this exists to catch.
+     *
+     * THIS IS INFORMATIONAL ONLY. Unlike DamageReportService::createReport()'s
+     * DuplicateDamageReportException (which can reject a request outright,
+     * subject to override_duplicate), this method never blocks anything by
+     * itself — by explicit user decision the UX is a dismissible warning
+     * ("Submit Anyway"), not a hard gate. createGeneralReport() does not call
+     * this and is not touched by it; the one and only caller is
+     * ReportController::checkDuplicate(), a separate pre-submit endpoint the
+     * frontend queries before the real POST /api/reports call.
+     *
+     * $validated is expected to already carry a resolved 'location' string —
+     * callers should run it through resolveStructuredLocation() first (same
+     * as store() does), so "same location" here means exactly what store()
+     * would persist, not a second, differently-shaped notion of location.
+     *
+     * 2026-10-08 — Asset Code signal (user decision). When the reporter
+     * supplied a registered deployed_asset_id (the optional "Asset Code"
+     * field on Create Report, validated against the deployed_assets
+     * registry), that is checked FIRST and takes priority over the
+     * title/location/problem_type/day rule below: it mirrors
+     * DamageReportService::findPotentialDuplicate()'s established pattern of
+     * matching ANY existing report against the SAME deployed_asset_id,
+     * regardless of wording, as long as that report is not yet finished
+     * (ReportArchiveService::FINAL_STATUSES — completed/closed/cancelled are
+     * excluded, since a finished report about that unit is history, not a
+     * conflicting duplicate). Still informational-only, same as the rule
+     * below — this method never blocks store().
+     *
+     * @return array{report_id:int,title:string,location:?string,problem_type:?string,reported_by:?string,created_at:?string}|null
+     */
+    public function findPotentialDuplicate(array $validated, array $authUser): ?array
+    {
+        $deployedAssetId = $validated['deployed_asset_id'] ?? null;
+
+        if ($deployedAssetId !== null && (int) $deployedAssetId > 0) {
+            $assetRow = DB::table('maintenance_reports AS r')
+                ->select([
+                    'r.report_id',
+                    'r.title',
+                    'r.location',
+                    'r.problem_type',
+                    'r.created_at',
+                    DB::raw('creator.full_name AS reporter_name'),
+                ])
+                ->leftJoin('users AS creator', 'r.created_by', '=', 'creator.user_id')
+                ->where('r.deployed_asset_id', (int) $deployedAssetId)
+                ->whereNotIn('r.status', ReportArchiveService::FINAL_STATUSES)
+                ->orderByDesc('r.created_at')
+                ->first();
+
+            if ($assetRow) {
+                return [
+                    'report_id' => (int) $assetRow->report_id,
+                    'title' => (string) $assetRow->title,
+                    'location' => $assetRow->location,
+                    'problem_type' => $assetRow->problem_type,
+                    'reported_by' => $assetRow->reporter_name,
+                    'created_at' => $assetRow->created_at,
+                ];
+            }
+        }
+
+        $title = trim((string) ($validated['title'] ?? ''));
+        $location = trim((string) ($validated['location'] ?? ''));
+        $problemType = trim((string) ($validated['problem_type'] ?? ''));
+        $departmentId = $validated['department_id'] ?? ($authUser['department_id'] ?? null);
+
+        // Any of these missing means there is nothing meaningful to compare
+        // against — matching on partial criteria would risk false positives
+        // (e.g. every report in the department sharing a blank location).
+        if ($title === '' || $location === '' || $problemType === '' || $departmentId === null) {
+            return null;
+        }
+
+        $row = DB::table('maintenance_reports AS r')
+            ->select([
+                'r.report_id',
+                'r.title',
+                'r.location',
+                'r.problem_type',
+                'r.created_at',
+                DB::raw('creator.full_name AS reporter_name'),
+            ])
+            ->leftJoin('users AS creator', 'r.created_by', '=', 'creator.user_id')
+            ->whereRaw('LOWER(r.title) = ?', [mb_strtolower($title)])
+            ->where('r.location', $location)
+            ->where('r.problem_type', $problemType)
+            ->where('r.department_id', (int) $departmentId)
+            ->whereDate('r.created_at', now()->toDateString())
+            ->orderByDesc('r.created_at')
+            ->first();
+
+        if (!$row) {
+            return null;
+        }
+
+        return [
+            'report_id' => (int) $row->report_id,
+            'title' => (string) $row->title,
+            'location' => $row->location,
+            'problem_type' => $row->problem_type,
+            'reported_by' => $row->reporter_name,
+            'created_at' => $row->created_at,
+        ];
+    }
+
+    /**
      * Problem Type — decides what belongs in maintenance_reports.problem_type_other.
      *
      * THE RULE, IN ONE PLACE: the free-text "Please specify the problem type"
@@ -361,6 +496,14 @@ class ReportService
             'assigned_to' => $canAssignAtCreation ? ($validated['assigned_to'] ?? null) : null,
             'department_id' => $validated['department_id'] ?? ($authUser['department_id'] ?? null),
             'due_date' => $validated['due_date'] ?? null,
+            // 2026-10-08 — Asset Code (user decision). Optional registered
+            // deployed_assets.id, reused from the pre-existing
+            // deployed_asset_id column (never a new migration). Plain FK
+            // only: this does NOT revive the removed asset sub-form, and
+            // does not create/touch any damage_reports row — see the
+            // 2026-10-08 comment block below for the thing this is
+            // deliberately NOT doing.
+            'deployed_asset_id' => !empty($validated['deployed_asset_id']) ? (int)$validated['deployed_asset_id'] : null,
             // NEW: Support Need Change request during creation
             'need_change_item_id' => !empty($validated['need_change_item_id']) ? (int)$validated['need_change_item_id'] : null,
             'need_change_quantity' => !empty($validated['need_change_quantity']) ? max(1, (int)$validated['need_change_quantity']) : 1,
@@ -387,106 +530,39 @@ class ReportService
 
         $this->notifyAdminsOfNewReport($report, $validated, $submitterName);
 
+        // 2026-10-08 — user decision: a report created with a Need Change
+        // request must also be visible on the Damage Reports page from the
+        // moment it's created, not only when later edited. $validated still
+        // carries the raw location_room_id here (store()'s structured-location
+        // resolution above only overwrote $validated['location'] with the
+        // derived display string; the raw id is untouched) — passed straight
+        // through so the auto-created damage_reports row knows which room the
+        // reporter actually selected. A no-op when need_change_item_id is empty.
+        $this->damageReportService->attachNeedChangeAsDamageReport(
+            $report,
+            $authUser,
+            isset($validated['location_room_id']) ? (int) $validated['location_room_id'] : null
+        );
+
         return $report;
     }
 
     /**
-     * SPRINT 5 — the asset-specific branch of report creation. Delegates
-     * entirely to DamageReportService::createReport(), which (per Sprint 4)
-     * already creates both the compatibility-layer DamageReport row AND its
-     * paired MaintenanceReport row in one atomic transaction. This method's
-     * only job is translating this endpoint's general-purpose input shape
-     * (title/description/etc.) into that service's expected input, then
-     * layering the caller's own title/description/location/assigned_to/
-     * due_date onto the resulting MaintenanceReport (DamageReportService
-     * always auto-derives a title from the item, since damage reports have
-     * no title field of their own — /api/reports callers get to supply
-     * theirs instead, same as the general path above).
+     * 2026-10-08 — createAssetReport() (SPRINT 5/TASK 50) used to live here:
+     * the asset-specific branch of /api/reports creation, delegating to
+     * DamageReportService::createReport() to create a paired DamageReport +
+     * MaintenanceReport whenever deployed_asset_id or item_id+room_id were
+     * supplied. It was removed, by explicit user decision, because Damage
+     * Reports must come from exactly ONE trigger — a Need Change request —
+     * not from picking an asset on Create Report. ReportController::store()
+     * no longer has a fork that calls this method.
      *
-     * No business logic is duplicated: deployed-item validation,
-     * duplicate-active-report prevention, image handling, history, activity
-     * logging, and admin notification are all still performed exactly once,
-     * inside DamageReportService::createReport() — this method does not
-     * send its own "New Maintenance Report Submitted" notification for this
-     * branch, to avoid double-notifying admins for the same event.
-     *
-     * TASK 50 — moved from ReportController::storeWithAssetDetails(). The one
-     * structural change is that it now returns the DamageReport instead of a
-     * JsonResponse, and lets DuplicateDamageReportException propagate: the
-     * controller still catches it and still answers 409 with the same
-     * ['duplicate' => ...] payload. Response shaping is an HTTP concern and
-     * stays at the HTTP boundary.
-     *
-     * @throws \App\Exceptions\DuplicateDamageReportException
+     * Nothing it delegated to was touched: DamageReportService::createReport()
+     * still exists and still backs the standalone POST /api/damage-reports
+     * endpoint (DamageReportController::store()), and the Deployed Asset
+     * registry itself is unrelated application state that this removal does
+     * not affect. Only the /api/reports entry point into that method is gone.
      */
-    public function createAssetReport(array $validated, array $authUser, ?UploadedFile $damageImage = null): DamageReport
-    {
-        $damageReport = $this->damageReportService->createReport(
-            [
-                // Deployed Asset registry — with deployed_asset_id set,
-                // DamageReportService resolves item/room/dispatch from the
-                // asset itself, so item_id/room_id may be absent here.
-                'deployed_asset_id' => $validated['deployed_asset_id'] ?? null,
-                'item_id' => $validated['item_id'] ?? null,
-                'room_id' => $validated['room_id'] ?? null,
-                'department_id' => $validated['department_id'] ?? ($authUser['department_id'] ?? 0),
-                'source_dispatch_id' => $validated['source_dispatch_id'] ?? null,
-                'damage_description' => $validated['damage_description'] ?? $validated['description'],
-                'severity_level' => $validated['severity_level'] ?? $validated['priority'] ?? 'medium',
-                'repair_notes' => $validated['repair_notes'] ?? null,
-                'override_duplicate' => $validated['override_duplicate'] ?? false,
-            ],
-            $authUser,
-            $damageImage
-        );
-
-        $report = MaintenanceReport::query()->find($damageReport->report_id);
-        if ($report) {
-            $report->update([
-                'title' => $validated['title'],
-                'description' => $validated['description'],
-                // Problem Type reaches the asset-linked branch the same way
-                // title/description do: DamageReportService::createReport()
-                // knows nothing about it (damage reports have no such field),
-                // so it is layered on here. An asset-linked report is still a
-                // maintenance report submitted through the same form, so it
-                // carries the same required category.
-                'problem_type' => $validated['problem_type'] ?? $report->problem_type,
-                'problem_type_other' => $this->resolveProblemTypeOther(
-                    $validated['problem_type'] ?? $report->problem_type,
-                    $validated['problem_type_other'] ?? null
-                ),
-                'location' => $validated['location'] ?? $report->location,
-                'assigned_to' => $validated['assigned_to'] ?? $report->assigned_to,
-                'due_date' => $validated['due_date'] ?? $report->due_date,
-            ]);
-
-            // HIGH PRIORITY FIX 1 (Audit Trail) — this branch's underlying
-            // maintenance_reports row is created inside
-            // DamageReportService::createReport() (which already logs its
-            // own CREATE_DAMAGE_REPORT entry for entity_type=damage_report).
-            // That is a different entity_type/entity_id, so this is not a
-            // duplicate: it is the one MaintenanceReport-specific entry this
-            // fix is scoped to add, mirroring RepairService::fulfillReplacement()
-            // logging both a 'dispatch' entry (via DispatchService) and its
-            // own 'repair_request' entry for a single business event.
-            $this->activityLogService->logFromSession([
-                'user_id' => (int)($authUser['user_id'] ?? 0),
-                'user_role' => $authUser['role'] ?? null,
-                'action' => 'CREATE_REPORT',
-                'module' => 'report',
-                'entity_type' => 'report',
-                'entity_id' => $report->report_id,
-                'details' => 'Created maintenance report "' . $report->title . '" (Report #' . $report->report_id . ') from asset damage details.',
-                'meta' => [
-                    'status' => $report->status,
-                    'damage_report_id' => $damageReport->id,
-                ],
-            ], $authUser);
-        }
-
-        return $damageReport;
-    }
 
     /**
      * TASK 50 — the tail of ReportController::update(), moved verbatim.
@@ -510,7 +586,8 @@ class ReportService
         array $changes,
         array $authUser,
         string $previousStatus,
-        ?int $previousAssignedTo
+        ?int $previousAssignedTo,
+        ?int $locationRoomId = null
     ): void {
         $userId = (int) ($authUser['user_id'] ?? 0);
 
@@ -635,6 +712,15 @@ class ReportService
                 }
             }
         }
+
+        // 2026-10-08 — user decision: any report carrying a Need Change
+        // request must also be visible on the Damage Reports page.
+        // attachNeedChangeAsDamageReport() is itself idempotent (checks for
+        // an existing linked row first) and a no-op when need_change_item_id
+        // is empty, so this is safe to call on every update unconditionally
+        // — it only ever does something the first time a given report
+        // acquires a Need Change request.
+        $this->damageReportService->attachNeedChangeAsDamageReport($report, $authUser, $locationRoomId);
     }
 
     /**
@@ -666,10 +752,14 @@ class ReportService
 
     /**
      * Notifies every active administrator role that a new report was
-     * submitted. Called only from the general creation path — see
-     * createAssetReport()'s doc comment for why the asset path deliberately
-     * does not call this (DamageReportService::createReport() already
-     * notifies admins on its own terms).
+     * submitted. Called only from the general creation path. The asset
+     * picker's creation path (createAssetReport(), removed 2026-10-08 — see
+     * the retirement comment above) deliberately never called this, because
+     * DamageReportService::createReport() already notifies admins on its own
+     * terms; that distinction is now moot for /api/reports since the asset
+     * path no longer exists, but DamageReportService::createReport() remains
+     * reachable through the standalone POST /api/damage-reports endpoint and
+     * still notifies admins the same way.
      */
     private function notifyAdminsOfNewReport(MaintenanceReport $report, array $validated, string $submitterName): void
     {

@@ -63,7 +63,7 @@ try {
 }
 $pageTitle = 'Staff Dashboard - School Facility Maintenance System';
 $pageStylesheets = [
-    '/School_Facility_Maintenance_System/frontend/assets/css/maintenance-dashboard.css',
+    public_url('/frontend/assets/css/maintenance-dashboard.css'),
 ];
 // chart-lite.js loaded by header.php — do not load again here
 ?>
@@ -235,15 +235,15 @@ $pageStylesheets = [
 
 </main>
 
-<link rel="stylesheet" href="/School_Facility_Maintenance_System/frontend/assets/css/staff-dashboard.inline.css?v=20260921-2">
-<link rel="stylesheet" href="/School_Facility_Maintenance_System/frontend/assets/css/enterprise-dashboard.css?v=20260726-1">
+<link rel="stylesheet" href="<?php echo htmlspecialchars(public_url('/frontend/assets/css/staff-dashboard.inline.css?v=20260921-2')); ?>">
+<link rel="stylesheet" href="<?php echo htmlspecialchars(public_url('/frontend/assets/css/enterprise-dashboard.css?v=20260726-1')); ?>">
 <!-- Reports by Status / Priority ring + breakdown component, shared with
      maintenance-dashboard.php. -->
-<link rel="stylesheet" href="/School_Facility_Maintenance_System/frontend/assets/css/dashboard-overview.css?v=20260926-1">
+<link rel="stylesheet" href="<?php echo htmlspecialchars(public_url('/frontend/assets/css/dashboard-overview.css?v=20260926-1')); ?>">
 <!-- TASK — Subtle purple card-border accent. One shared stylesheet for all
      three dashboards; recolours existing 1px borders only, so no card
      changes size. Loaded last. -->
-<link rel="stylesheet" href="/School_Facility_Maintenance_System/frontend/assets/css/dashboard-card-accent.css?v=20260921-2">
+<link rel="stylesheet" href="<?php echo htmlspecialchars(public_url('/frontend/assets/css/dashboard-card-accent.css?v=20260921-2')); ?>">
 
 <!-- TASK 13.2 §4 — "Latest Assignment" line on the My Pending Releases card.
      Page-scoped block; the .stat-card component itself is untouched. The line
@@ -310,7 +310,7 @@ $pageStylesheets = [
 
 <?php include __DIR__ . '/../includes/footer.php'; ?>
 <!-- renderDonut() / setBreakdownRow() for the Reports by Status / Priority cards. -->
-<script src="/School_Facility_Maintenance_System/frontend/assets/js/dashboard-overview.js?v=20260926-1"></script>
+<script src="<?php echo htmlspecialchars(public_url('/frontend/assets/js/dashboard-overview.js?v=20260926-1')); ?>"></script>
 
 <script>
 

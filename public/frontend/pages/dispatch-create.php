@@ -36,8 +36,8 @@ $_dcIsAdmin = ($_dcRole === 'super_admin');
 
 $pageTitle = 'Create Dispatch - SFMS';
 $pageStylesheets = [
-    '/School_Facility_Maintenance_System/frontend/assets/css/enterprise-reports.css?v=20260726-1',
-    '/School_Facility_Maintenance_System/frontend/assets/css/enterprise-workflow.css?v=20260726-1',
+    public_url('/frontend/assets/css/enterprise-reports.css?v=20260726-1'),
+    public_url('/frontend/assets/css/enterprise-workflow.css?v=20260726-1'),
 ];
 include __DIR__ . '/../includes/header.php';
 ?>

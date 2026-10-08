@@ -295,17 +295,32 @@ class ReportLocationValidationTest extends TestCase
     // 4. The asset-linked branch gets the same treatment.
     // =================================================================
 
-    public function test_an_asset_linked_report_also_stores_the_derived_location(): void
+    // 2026-10-08 — renamed from
+    // test_an_asset_linked_report_also_stores_the_derived_location(). item_id
+    // + room_id used to route POST /api/reports to
+    // ReportController::storeWithAssetDetails() -> ReportService::
+    // createAssetReport(), which created a damage_reports row alongside the
+    // maintenance_reports row. That method was removed when the asset-picker
+    // was retired as a Damage Report creator (see
+    // ReportCreateAssetSeverityImageTest.php's class doc comment for the
+    // full rationale): item_id/room_id are now just ordinary, inert payload
+    // fields on the single general-report path, so this request creates a
+    // maintenance_reports row only. The location-derivation behaviour this
+    // test exists to cover is unchanged — only the damage_reports side
+    // effect it used to incidentally also prove is gone.
+    public function test_a_report_with_item_id_and_room_id_still_stores_the_derived_location(): void
     {
         $fixture = $this->seedBuildingsOverview();
         $deptId = $this->seedDepartment();
         $staffId = $this->seedUser(['role' => 'maintenance_staff', 'department_id' => $deptId]);
         $itemId = $this->seedItem(['item_type' => 'room_asset', 'room_id' => $fixture['room_102']]);
 
-        // room_id (the asset's room) and location_room_id (where the issue
-        // is) are deliberately separate parameters — room_id + item_id is
-        // what routes this request to storeWithAssetDetails(), so reusing it
-        // for the location would have changed which branch runs.
+        // room_id and location_room_id (where the issue is) are deliberately
+        // separate parameters — this used to also matter for routing
+        // (item_id + room_id used to select storeWithAssetDetails()); that
+        // routing fork no longer exists, but keeping the parameters distinct
+        // still proves location derivation doesn't accidentally fall back to
+        // the asset's room.
         $this
             ->actingAsSessionUser($staffId, 'maintenance_staff')
             ->postJson('/api/reports', $this->reportPayload($deptId, [
@@ -320,9 +335,9 @@ class ReportLocationValidationTest extends TestCase
 
         $report = DB::table('maintenance_reports')->first();
         $this->assertSame('Building 1 / 2nd Floor / Room 102', $report->location);
-        // The asset branch itself is untouched — it still created its
-        // damage_reports row exactly as before.
-        $this->assertSame(1, DB::table('damage_reports')->count());
+        // item_id/room_id no longer create a damage_reports row — see the
+        // dated comment above this test.
+        $this->assertSame(0, DB::table('damage_reports')->count());
     }
 
     public function test_an_asset_linked_report_with_an_invalid_location_is_rejected_before_any_damage_row_is_written(): void

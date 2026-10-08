@@ -337,6 +337,15 @@ class ReportsDefaultDateScopeTest extends TestCase
      * 3, 4, 5, 8 = Priority, Status, Resolution, Date — the short, fixed-
      * vocabulary badge/date columns. Report, Department, Assigned To and
      * Location are left to wrap normally.
+     *
+     * 2026-10-08 — the fallback table's own ID column was dropped too (see
+     * reports.php and the matching comment in reports.inline1.css), by
+     * explicit user decision: the "#NN" label "doesn't look nice" on the
+     * list, in both the JS table (already ID-less, unaffected by this) and
+     * this no-JS fallback (which still had a standalone ID column until
+     * now). Its nowrap list is re-indexed from the original (1, 3, 4, 7, 8)
+     * down to (2, 3, 6, 7) — Location, Priority, Date, Actions — the same
+     * columns as before, minus the now-gone ID slot.
      */
     public function test_the_column_width_rules_were_reindexed_for_the_removed_column(): void
     {
@@ -357,16 +366,22 @@ class ReportsDefaultDateScopeTest extends TestCase
             'Column 7 is Location in the current 9-column layout and must not carry a stale nowrap rule.'
         );
 
-        // The no-JS fallback table never had a Lifecycle column, so its own
-        // rules must be unchanged — including slot 8 (Actions), which is what
+        // The no-JS fallback table lost its ID column on 2026-10-08, so its
+        // nowrap rule is now re-indexed to (2, 3, 6, 7) — Location, Priority,
+        // Date, Actions — in the new 7-column layout. Actions(7) is what
         // keeps the View/Edit buttons on one line.
-        foreach ([1, 3, 4, 7, 8] as $n) {
+        foreach ([2, 3, 6, 7] as $n) {
             $this->assertStringContainsString(
                 ".reports-page-container .reports-fallback-table td:nth-child({$n})",
                 $css,
-                "The fallback table must keep its original nowrap rule on column {$n}."
+                "The fallback table must keep its re-indexed nowrap rule on column {$n}."
             );
         }
+        $this->assertStringNotContainsString(
+            '.reports-page-container .reports-fallback-table td:nth-child(1)',
+            $css,
+            'Column 1 is Title in the current 7-column fallback layout (ID was dropped) and must not carry a stale nowrap rule meant for the old ID column.'
+        );
     }
 
     /**

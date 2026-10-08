@@ -123,10 +123,10 @@ $pageTitle = 'Report Details - School Facility Maintenance System';
 // carries its own duplicate copy now that it shares a single document shell. header.php's
 // own <body> tag also already sets data-user-role from the same $user['role'] value.
 $pageStylesheets = [
-    '/School_Facility_Maintenance_System/frontend/assets/css/maintenance-dashboard.css',
-    '/School_Facility_Maintenance_System/frontend/assets/css/light-mode-polish.css?v=20260921-2',
-    '/School_Facility_Maintenance_System/frontend/assets/css/enterprise-reports.css?v=20260726-1',
-    '/School_Facility_Maintenance_System/frontend/assets/css/enterprise-workflow.css?v=20260726-1',
+    public_url('/frontend/assets/css/maintenance-dashboard.css'),
+    public_url('/frontend/assets/css/light-mode-polish.css?v=20260921-2'),
+    public_url('/frontend/assets/css/enterprise-reports.css?v=20260726-1'),
+    public_url('/frontend/assets/css/enterprise-workflow.css?v=20260726-1'),
 ];
 ?>
 <?php include __DIR__ . '/../includes/header.php'; ?>
@@ -345,12 +345,12 @@ $pageStylesheets = [
 }
 </style>
 
-<link rel="stylesheet" href="/School_Facility_Maintenance_System/frontend/assets/css/maintenance-report-detail.inline.css?v=20260921-2">
+<link rel="stylesheet" href="<?php echo htmlspecialchars(public_url('/frontend/assets/css/maintenance-report-detail.inline.css?v=20260921-2')); ?>">
 <!-- Problem Type. This page only uses the read-only .problem-type-chip rule at
      the end of the file; the card/grid rules above it match nothing here. It is
      still the same stylesheet rather than a copied chip rule, so the chip and
      the selected card cannot drift apart in colour. -->
-<link rel="stylesheet" href="/School_Facility_Maintenance_System/frontend/assets/css/problem-type-selector.css?v=20260920-2">
+<link rel="stylesheet" href="<?php echo htmlspecialchars(public_url('/frontend/assets/css/problem-type-selector.css?v=20260920-2')); ?>">
 
 <?php include __DIR__ . '/../includes/footer.php'; ?>
 
@@ -853,6 +853,14 @@ async function loadReport() {
         // together is how a maintenance person triages the report.
         html += `<div class="report-info-row"><dt>Problem Type</dt><dd>${renderProblemType(report)}</dd></div>`;
         html += `<div class="report-info-row"><dt>Location</dt><dd>${UI.escapeHtml(report.location)}</dd></div>`;
+        // 2026-10-08 — Asset Code (Optional), by explicit user decision. Only
+        // rendered when the reporter actually picked a registered unit on
+        // Create Report (deployed_asset_id set); report.asset_code comes
+        // from ReportController::show()'s leftJoin onto deployed_assets, so
+        // this is purely a display row — no behaviour change if absent.
+        if (report.deployed_asset_id) {
+            html += `<div class="report-info-row"><dt>Asset Code</dt><dd>${UI.escapeHtml(report.asset_code) || ('#' + report.deployed_asset_id)}</dd></div>`;
+        }
         html += `<div class="report-info-row"><dt>Priority</dt><dd>${renderPriorityBadge(report.priority)}</dd></div>`;
         html += `<div class="report-info-row"><dt>Status</dt><dd>${renderStatusBadge(report.status)}</dd></div>`;
         if (report.need_change_item_id || report.need_change_item_name) {
@@ -894,6 +902,16 @@ async function loadReport() {
         html += '<dl class="report-info-list">';
         html += `<div class="report-info-row"><dt>Created By</dt><dd>${UI.escapeHtml(report.creator_name)} ${report.creator_email ? `(${UI.escapeHtml(report.creator_email)})` : ''}</dd></div>`;
         html += `<div class="report-info-row"><dt>Assigned To</dt><dd>${report.assigned_name ? `${UI.escapeHtml(report.assigned_name)} ${report.assigned_email ? `(${UI.escapeHtml(report.assigned_email)})` : ''}` : '<span class="report-unassigned">Not assigned yet</span>'}</dd></div>`;
+        // 2026-10-08 — "Performed by": who actually clicked Mark as
+        // Completed (report.completed_by_name, from
+        // ReportController::show()'s LEFT JOIN users AS completer) — can
+        // differ from Assigned To above (e.g. Head Maintenance completing a
+        // report directly). Shown only once the report is actually
+        // Completed; by explicit design this row is absent for every other
+        // status rather than rendering an empty/"not yet" placeholder.
+        if (String(report.status || '').toLowerCase() === 'completed' && report.completed_by_name) {
+            html += `<div class="report-info-row"><dt>Performed By</dt><dd>${UI.escapeHtml(report.completed_by_name)}</dd></div>`;
+        }
         html += '</dl>';
         html += '</section>';
 

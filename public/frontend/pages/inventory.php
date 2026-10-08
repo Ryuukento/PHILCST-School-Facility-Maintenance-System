@@ -38,10 +38,10 @@ $pageTitle = 'Inventory - SFMS';
 include __DIR__ . '/../includes/header.php';
 ?>
 
-<link rel="stylesheet" href="/School_Facility_Maintenance_System/frontend/assets/css/maintenance-dashboard.css">
-<link rel="stylesheet" href="/School_Facility_Maintenance_System/frontend/assets/css/maintenance-dashboard.inline.css?v=20260921-2">
-<link rel="stylesheet" href="/School_Facility_Maintenance_System/frontend/assets/css/inventory.inline.css?v=20260921-2">
-<link rel="stylesheet" href="/School_Facility_Maintenance_System/frontend/assets/css/inventory-redesign.css?v=20260926-1">
+<link rel="stylesheet" href="<?php echo htmlspecialchars(public_url('/frontend/assets/css/maintenance-dashboard.css')); ?>">
+<link rel="stylesheet" href="<?php echo htmlspecialchars(public_url('/frontend/assets/css/maintenance-dashboard.inline.css?v=20260921-2')); ?>">
+<link rel="stylesheet" href="<?php echo htmlspecialchars(public_url('/frontend/assets/css/inventory.inline.css?v=20260921-2')); ?>">
+<link rel="stylesheet" href="<?php echo htmlspecialchars(public_url('/frontend/assets/css/inventory-redesign.css?v=20260926-1')); ?>">
 
 <main class="container maintenance-admin-dashboard-page inventory-page">
     <div class="card inventory-page-header-card">

@@ -42,7 +42,7 @@ $pageTitle = 'Maintenance Dashboard - School Facility Maintenance System';
 // Theme is applied by the inline script in header.php's own <head>; this page no longer
 // carries its own duplicate copy now that it shares a single document shell.
 $pageStylesheets = [
-    '/School_Facility_Maintenance_System/frontend/assets/css/maintenance-dashboard.css?v=20260415-3',
+    public_url('/frontend/assets/css/maintenance-dashboard.css?v=20260415-3'),
 ];
 // chart-lite.js loaded by header.php — do not load again here
 ?>
@@ -212,20 +212,20 @@ $pageStylesheets = [
 
 </main>
 
-<link rel="stylesheet" href="/School_Facility_Maintenance_System/frontend/assets/css/maintenance-dashboard.inline.css?v=20260921-2">
-<link rel="stylesheet" href="/School_Facility_Maintenance_System/frontend/assets/css/hd-dashboard.css?v=20260926-4">
+<link rel="stylesheet" href="<?php echo htmlspecialchars(public_url('/frontend/assets/css/maintenance-dashboard.inline.css?v=20260921-2')); ?>">
+<link rel="stylesheet" href="<?php echo htmlspecialchars(public_url('/frontend/assets/css/hd-dashboard.css?v=20260926-4')); ?>">
 <!-- Priority Overview / Reports by Status ring + breakdown component, shared
      with staff-dashboard.php. -->
-<link rel="stylesheet" href="/School_Facility_Maintenance_System/frontend/assets/css/dashboard-overview.css?v=20260926-1">
+<link rel="stylesheet" href="<?php echo htmlspecialchars(public_url('/frontend/assets/css/dashboard-overview.css?v=20260926-1')); ?>">
 <!-- TASK — Subtle purple card-border accent. One shared stylesheet for all
      three dashboards; recolours existing 1px borders only, so no card
      changes size. Loaded last. -->
-<link rel="stylesheet" href="/School_Facility_Maintenance_System/frontend/assets/css/dashboard-card-accent.css?v=20260921-2">
+<link rel="stylesheet" href="<?php echo htmlspecialchars(public_url('/frontend/assets/css/dashboard-card-accent.css?v=20260921-2')); ?>">
 
 <?php include __DIR__ . '/../includes/footer.php'; ?>
 <!-- utils.js and api.js loaded by footer.php — do not load again here -->
 <!-- renderDonut() / setBreakdownRow() for the overview cards. -->
-<script src="/School_Facility_Maintenance_System/frontend/assets/js/dashboard-overview.js?v=20260926-1"></script>
+<script src="<?php echo htmlspecialchars(public_url('/frontend/assets/js/dashboard-overview.js?v=20260926-1')); ?>"></script>
 
 <script>
 // TASK 6D BUG FIX. `api.js` (loaded earlier via footer.php) ends with an

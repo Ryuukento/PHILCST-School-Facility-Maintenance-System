@@ -10,22 +10,36 @@ use Tests\Support\InteractsWithLegacySession;
 use Tests\TestCase;
 
 /**
- * TASK 33 PHASE 7 — Unified Create Report Capability Completion.
+ * TASK 33 PHASE 7/9 — Unified Create Report Capability Completion (RETIRED).
  *
- * Additive coverage for the unified Create Report page's asset sub-form
- * ("Report Against a Specific Asset") now sending severity_level and
- * damage_image, same as damage-report-create.php already did. Both fields
- * were already accepted end-to-end by ReportController::store() ->
- * storeWithAssetDetails() -> DamageReportService::createReport() before this
- * phase (see ReportController.php validation and Sprint 5's doc comment on
- * storeWithAssetDetails()) — this suite exercises that existing branch
- * through the exact POST /api/reports contract the frontend now uses, since
- * no prior test file posted item_id+room_id+severity_level (or an image)
- * to /api/reports specifically (DamageReportControllerTest only covers the
- * separate /api/damage-reports endpoint).
+ * This suite used to pin that the unified Create Report page's asset
+ * sub-form ("Report Against a Specific Asset") could send item_id+room_id
+ * plus severity_level, damage_image and repair_notes to POST /api/reports,
+ * and that ReportController::store()'s asset-linked fork
+ * (storeWithAssetDetails() / later ReportService::createAssetReport()) ->
+ * DamageReportService::createReport() accepted and persisted all of it.
  *
- * No production behavior changed by this phase — these tests prove existing
- * behavior, they do not pin down new behavior.
+ * 2026-10-08 — that fork was removed from ReportController::store(), by
+ * explicit user decision: Damage Reports must come from exactly ONE trigger
+ * — a Need Change request — not from naming an asset on Create Report. The
+ * "Report Against a Specific Asset" sub-form (and every field unique to it:
+ * item_id, room_id, deployed_asset_id, severity_level, damage_image,
+ * repair_notes, override_duplicate) was removed from create-report.php at
+ * the same time. None of those fields are validated or read by
+ * ReportController::store() any more — POST /api/reports now always takes
+ * the general-report path, and any of these keys sent in the body are
+ * silently ignored.
+ *
+ * Nothing this suite exercised was deleted outright:
+ * DamageReportService::createReport(), severity_level/damage_image/
+ * repair_notes validation, and image storage all still exist and are still
+ * covered by DamageReportControllerTest against the standalone
+ * POST /api/damage-reports endpoint. Only this endpoint's reachability into
+ * that logic is gone, which is what the tests below now pin.
+ *
+ * The two tests that were never about the asset fork at all — the plain
+ * general-report path and the Need Change path — are unchanged; they
+ * already expected zero damage_reports rows and remain accurate.
  */
 class ReportCreateAssetSeverityImageTest extends TestCase
 {
@@ -71,10 +85,16 @@ class ReportCreateAssetSeverityImageTest extends TestCase
     }
 
     // ---------------------------------------------------------------
-    // 2. Asset report accepts valid severity
+    // 2. Asset fields are now inert — severity_level
     // ---------------------------------------------------------------
 
-    public function test_asset_linked_report_accepts_a_valid_severity_level(): void
+    // 2026-10-08 — renamed and inverted (was
+    // test_asset_linked_report_accepts_a_valid_severity_level). item_id/
+    // room_id/severity_level no longer route this through the removed
+    // asset fork; they are unvalidated, unread extra fields, and the
+    // request is created as an ordinary general report with no
+    // damage_reports row.
+    public function test_severity_level_on_report_creation_is_now_ignored(): void
     {
         $deptId = $this->seedDepartment();
         $staffId = $this->seedUser(['role' => 'maintenance_staff', 'department_id' => $deptId]);
@@ -97,24 +117,30 @@ class ReportCreateAssetSeverityImageTest extends TestCase
 
         $response->assertStatus(201);
         $response->assertJsonPath('success', true);
-        $response->assertJsonPath('data.damage_report_id', fn ($v) => $v !== null);
+        // No damage_report_id in the payload any more — there is no damage
+        // report to reference.
+        $this->assertArrayNotHasKey('damage_report_id', $response->json('data'));
 
-        $this->assertSame(1, DB::table('damage_reports')->count());
-        $damageRow = DB::table('damage_reports')->first();
-        $this->assertSame('critical', $damageRow->severity_level);
-
-        // The linked maintenance_reports row keeps the caller's own title,
-        // per storeWithAssetDetails()'s doc comment.
+        $this->assertSame(0, DB::table('damage_reports')->count());
         $this->assertSame(1, DB::table('maintenance_reports')->count());
         $reportRow = DB::table('maintenance_reports')->first();
         $this->assertSame('Aircon not cooling', $reportRow->title);
+        $this->assertSame('general', $reportRow->report_category);
     }
 
     // ---------------------------------------------------------------
-    // 3. Invalid severity is rejected
+    // 3. Asset fields are now inert — an "invalid" severity is no longer
+    //    validated at all, since severity_level is no longer a validated
+    //    field on this endpoint.
     // ---------------------------------------------------------------
 
-    public function test_asset_linked_report_rejects_an_invalid_severity_level(): void
+    // 2026-10-08 — renamed and inverted (was
+    // test_asset_linked_report_rejects_an_invalid_severity_level). A bogus
+    // severity_level value used to 422 because the asset fork validated it
+    // with 'in:low,medium,high,critical'. That validation rule is gone from
+    // ReportController::store(), so the exact same payload now succeeds —
+    // the field is simply never looked at.
+    public function test_severity_level_is_no_longer_validated_at_all(): void
     {
         $deptId = $this->seedDepartment();
         $staffId = $this->seedUser(['role' => 'maintenance_staff', 'department_id' => $deptId]);
@@ -135,16 +161,21 @@ class ReportCreateAssetSeverityImageTest extends TestCase
                 'severity_level' => 'catastrophic', // not one of low/medium/high/critical
             ]);
 
-        $response->assertStatus(422);
+        $response->assertStatus(201);
         $this->assertSame(0, DB::table('damage_reports')->count());
-        $this->assertSame(0, DB::table('maintenance_reports')->count());
+        $this->assertSame(1, DB::table('maintenance_reports')->count());
     }
 
     // ---------------------------------------------------------------
-    // 4. Image upload works (backend already supports it)
+    // 4. Asset fields are now inert — damage_image
     // ---------------------------------------------------------------
 
-    public function test_asset_linked_report_accepts_a_valid_image_and_persists_its_path(): void
+    // 2026-10-08 — renamed and inverted (was
+    // test_asset_linked_report_accepts_a_valid_image_and_persists_its_path).
+    // damage_image is no longer a validated field on ReportController::
+    // store(); the file is never read or stored, and the request is created
+    // as an ordinary general report.
+    public function test_damage_image_on_report_creation_is_now_ignored(): void
     {
         $deptId = $this->seedDepartment();
         $staffId = $this->seedUser(['role' => 'maintenance_staff', 'department_id' => $deptId]);
@@ -167,18 +198,17 @@ class ReportCreateAssetSeverityImageTest extends TestCase
             ]);
 
         $response->assertStatus(201);
-        $damageRow = DB::table('damage_reports')->first();
-        $this->assertNotNull($damageRow->image_path);
-        $this->assertStringStartsWith('/frontend/uploads/damage-reports/', $damageRow->image_path);
-
-        $absolutePath = public_path(ltrim($damageRow->image_path, '/'));
-        $this->assertFileExists($absolutePath);
-        // Test-only cleanup — DamageReportService::storeImage() hardcodes
-        // public_path(), same as DamageReportControllerTest's own image test.
-        @unlink($absolutePath);
+        $this->assertSame(0, DB::table('damage_reports')->count());
+        $this->assertSame(1, DB::table('maintenance_reports')->count());
     }
 
-    public function test_asset_linked_report_rejects_a_disallowed_file_extension_for_the_image(): void
+    // 2026-10-08 — renamed and inverted (was
+    // test_asset_linked_report_rejects_a_disallowed_file_extension_for_the_image).
+    // A disallowed extension used to 422 because the asset fork validated
+    // damage_image with 'mimes:jpg,jpeg,png,webp,gif'. That rule is gone
+    // from ReportController::store(), so the exact same payload now
+    // succeeds — the field is simply never looked at.
+    public function test_damage_image_extension_is_no_longer_validated_at_all(): void
     {
         $deptId = $this->seedDepartment();
         $staffId = $this->seedUser(['role' => 'maintenance_staff', 'department_id' => $deptId]);
@@ -199,24 +229,20 @@ class ReportCreateAssetSeverityImageTest extends TestCase
                 'severity_level' => 'high',
                 'damage_image' => \Illuminate\Http\UploadedFile::fake()->create('malware.exe', 100),
             ])
-            ->assertStatus(422);
+            ->assertStatus(201);
 
         $this->assertSame(0, DB::table('damage_reports')->count());
     }
 
     // ---------------------------------------------------------------
-    // TASK 33 PHASE 9 — Repair Notes, the last page-level capability gap
-    // identified by Phase 8's equivalence verification against
-    // damage-report-create.php. repair_notes was already accepted end-to-end
-    // by ReportController::store() -> storeWithAssetDetails() ->
-    // DamageReportService::createReport() before this phase (the same
-    // pre-existing 'repair_notes' => ['nullable', 'string'] validation rule
-    // used for severity_level/damage_image in Phase 7's tests above) — only
-    // the frontend field was missing. These tests prove the existing backend
-    // behavior through the same /api/reports contract the frontend now uses.
+    // TASK 33 PHASE 9 — Repair Notes. Asset fields are now inert.
     // ---------------------------------------------------------------
 
-    public function test_asset_linked_report_accepts_repair_notes_and_persists_it(): void
+    // 2026-10-08 — renamed and inverted (was
+    // test_asset_linked_report_accepts_repair_notes_and_persists_it).
+    // repair_notes is no longer a validated field on ReportController::
+    // store() and there is no damage_reports row for it to be persisted to.
+    public function test_repair_notes_on_report_creation_is_now_ignored(): void
     {
         $deptId = $this->seedDepartment();
         $staffId = $this->seedUser(['role' => 'maintenance_staff', 'department_id' => $deptId]);
@@ -239,42 +265,14 @@ class ReportCreateAssetSeverityImageTest extends TestCase
             ]);
 
         $response->assertStatus(201);
-        $this->assertSame(1, DB::table('damage_reports')->count());
-        $damageRow = DB::table('damage_reports')->first();
-        $this->assertSame('Compressor may need replacing; checked filter first.', $damageRow->repair_notes);
-        // Severity Level, sent in the same request, must still work unaffected.
-        $this->assertSame('high', $damageRow->severity_level);
+        $this->assertSame(0, DB::table('damage_reports')->count());
+        $this->assertSame(1, DB::table('maintenance_reports')->count());
     }
 
-    public function test_asset_linked_report_without_repair_notes_stores_null_matching_legacy_optional_behavior(): void
-    {
-        $deptId = $this->seedDepartment();
-        $staffId = $this->seedUser(['role' => 'maintenance_staff', 'department_id' => $deptId]);
-        $roomId = $this->seedRoom();
-        $itemId = $this->seedItem(['item_type' => 'room_asset', 'room_id' => $roomId]);
-
-        // No repair_notes key at all — mirrors damage-report-create.php's
-        // own submit handler, which only appends repair_notes to its
-        // FormData when the trimmed value is non-empty (see
-        // damage-report-create.php: `if (repairNotes) formData.append(...)`).
-        $response = $this
-            ->actingAsSessionUser($staffId, 'maintenance_staff')
-            ->postJson('/api/reports', [
-                'problem_type' => 'HVAC / Aircon',
-                'title' => 'Aircon not cooling',
-                'description' => 'Unit runs but no cold air.',
-                'location' => 'Room 204',
-                'priority' => 'high',
-                'department_id' => $deptId,
-                'item_id' => $itemId,
-                'room_id' => $roomId,
-                'severity_level' => 'medium',
-            ]);
-
-        $response->assertStatus(201);
-        $damageRow = DB::table('damage_reports')->first();
-        $this->assertNull($damageRow->repair_notes);
-    }
+    // 2026-10-08 — the paired "without repair_notes" case from before this
+    // change is no longer meaningful on its own (there is no damage_reports
+    // row either way now), so it was folded into the single test above
+    // rather than kept as a separate no-op duplicate.
 
     // ---------------------------------------------------------------
     // 5. Existing report categories are unaffected — need_change path
@@ -282,6 +280,18 @@ class ReportCreateAssetSeverityImageTest extends TestCase
     //    severity_level/damage_image entirely.
     // ---------------------------------------------------------------
 
+    // 2026-10-08 — corrected to match current behavior. This test's
+    // assertions were written when ReportController::store()'s general
+    // branch did not persist need_change_item_id at all (only update() did).
+    // A separate, already-approved change made earlier in this same session
+    // ("a report created with a Need Change request must also be visible on
+    // the Damage Reports page from the moment it's created") made
+    // ReportService::createGeneralReport() persist need_change_item_id and
+    // call DamageReportService::attachNeedChangeAsDamageReport() right at
+    // creation time — see createGeneralReport()'s own 2026-10-08 comment.
+    // That is unrelated to, and unaffected by, the asset-picker removal this
+    // suite is otherwise about; it is fixed here because this test's old
+    // assertions no longer matched reality.
     public function test_need_change_report_creation_is_unaffected_by_the_new_fields(): void
     {
         $deptId = $this->seedDepartment();
@@ -302,27 +312,29 @@ class ReportCreateAssetSeverityImageTest extends TestCase
 
         $response->assertStatus(201);
         $this->assertSame(1, DB::table('maintenance_reports')->count());
-        // The general (non-asset) path never touches damage_reports — this
-        // confirms the new severity_level/damage_image handling added to
-        // storeWithAssetDetails() has no bearing on this branch at all.
-        $this->assertSame(0, DB::table('damage_reports')->count());
 
-        // NOTE: ReportController::store()'s general branch does not persist
-        // need_change_item_id itself (that field is only validated/applied
-        // by update(), not store() — pre-existing behavior, unrelated to
-        // and unchanged by this phase). This test only asserts that
-        // supplying it alongside the new fields doesn't error or leak into
-        // damage_reports, not that it's stored at creation time.
+        // need_change_item_id is persisted at creation, and the auto-link
+        // creates exactly one damage_reports row for it — this is the ONE
+        // trigger into damage_reports that still exists after the
+        // asset-picker removal.
         $reportRow = DB::table('maintenance_reports')->first();
-        $this->assertNull($reportRow->need_change_item_id);
+        $this->assertSame($stockItemId, (int) $reportRow->need_change_item_id);
+        $this->assertSame(1, DB::table('damage_reports')->count());
     }
 
     // ---------------------------------------------------------------
-    // 6. Existing RBAC remains unchanged — the asset-linked branch is
-    //    gated by the exact same EnsureRole middleware as the general path.
+    // 6. Existing RBAC remains unchanged — POST /api/reports is still
+    //    gated by the exact same EnsureRole middleware regardless of what
+    //    fields are in the body (it never was specific to the asset fork;
+    //    see routes/web.php's EnsureRole::class . ':maintenance_admin,
+    //    maintenance_staff' on this route).
     // ---------------------------------------------------------------
 
-    public function test_super_admin_cannot_create_an_asset_linked_report(): void
+    // 2026-10-08 — renamed (was test_super_admin_cannot_create_an_asset_linked_report).
+    // The "asset-linked" framing was never accurate for what this pins:
+    // super_admin is blocked from POSTing to /api/reports at all, asset
+    // fields or not.
+    public function test_super_admin_cannot_create_a_report(): void
     {
         $deptId = $this->seedDepartment();
         $adminId = $this->seedUser(['role' => 'super_admin', 'department_id' => $deptId]);
@@ -348,7 +360,13 @@ class ReportCreateAssetSeverityImageTest extends TestCase
         $this->assertSame(0, DB::table('maintenance_reports')->count());
     }
 
-    public function test_maintenance_admin_can_create_an_asset_linked_report(): void
+    // 2026-10-08 — renamed and inverted (was
+    // test_maintenance_admin_can_create_an_asset_linked_report). The RBAC
+    // allow-case still holds (maintenance_admin may still POST
+    // /api/reports), but the asset fields in the body no longer produce a
+    // damage_reports row — see
+    // test_severity_level_on_report_creation_is_now_ignored above for why.
+    public function test_maintenance_admin_can_create_a_report(): void
     {
         $deptId = $this->seedDepartment();
         $adminId = $this->seedUser(['role' => 'maintenance_admin', 'department_id' => $deptId]);
@@ -370,7 +388,8 @@ class ReportCreateAssetSeverityImageTest extends TestCase
             ])
             ->assertStatus(201);
 
-        $this->assertSame(1, DB::table('damage_reports')->count());
+        $this->assertSame(0, DB::table('damage_reports')->count());
+        $this->assertSame(1, DB::table('maintenance_reports')->count());
     }
 
     // ---------------------------------------------------------------
@@ -510,6 +529,9 @@ class ReportCreateAssetSeverityImageTest extends TestCase
      * extension. A minimal, valid, real 1x1 JPEG is written to a temp file
      * and wrapped as a test UploadedFile instead — copied verbatim from
      * DamageReportControllerTest::makeRealJpegUploadedFile().
+     *
+     * 2026-10-08 — still used by test_damage_image_on_report_creation_is_now_ignored
+     * to prove the upload is harmlessly ignored, not that it is stored.
      */
     private function makeRealJpegUploadedFile(): \Illuminate\Http\UploadedFile
     {

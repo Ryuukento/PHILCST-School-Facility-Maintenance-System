@@ -224,6 +224,55 @@
     font-size: 12px;
 }
 
+/* 2026-10-08 — Asset Code (Optional), by explicit user decision. Mirrors
+   the .need-change-* block directly above (same panel/label/search/
+   selected/results/note shapes), just under its own class names since this
+   is a separate field, not a Replacement Item. The individual result
+   buttons and the "no match" state intentionally reuse
+   .need-change-result-item / .need-change-empty as-is (plain, unscoped
+   selectors — see the block above) rather than duplicating identical rules
+   under a new name. */
+.asset-code-panel {
+    border: 1px solid var(--border, #e5e7eb);
+    border-radius: 12px;
+    background: var(--surface, #ffffff);
+    padding: 14px;
+}
+
+.asset-code-item-label {
+    display: block;
+    margin-bottom: 6px;
+    color: #374151;
+    font-size: 13px;
+    font-weight: 500;
+}
+
+.asset-code-search {
+    margin-bottom: 10px;
+}
+
+.asset-code-selected {
+    margin-bottom: 10px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    border: 1px solid var(--color-primary-200, #ddd6fe);
+    background: var(--color-primary-50, #f5f3ff);
+    color: var(--color-primary-700, #6d28d9);
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.asset-code-results {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.asset-code-note {
+    margin-top: 8px;
+    font-size: 12px;
+}
+
 @media (max-width: 992px) {
     .create-report-page {
         width: calc(100% - var(--sidebar-width-collapsed));

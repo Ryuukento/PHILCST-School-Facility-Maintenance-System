@@ -328,7 +328,7 @@ $user = $_SESSION['user'] ?? $_SESSION['auth_user'];
                  SVG/currentColor-specific and unrelated card code may
                  still reference the shared base class pattern. -->
             <img class="summary-card-illustration summary-card-illustration-boxes-img"
-                 src="/School_Facility_Maintenance_System/frontend/assets/images/low-stock-illustration.png"
+                 src="<?php echo htmlspecialchars(public_url('/frontend/assets/images/low-stock-illustration.png')); ?>"
                  alt="" aria-hidden="true">
 
             <!-- TASK 31.12 — icon moved before the title into a shared head
@@ -1282,17 +1282,17 @@ main.maintenance-admin-dashboard-page #school-settings-widget .academic-period-i
 }
 </style>
 
-<link rel="stylesheet" href="/School_Facility_Maintenance_System/frontend/assets/css/dashboard.inline.css?v=20260930-2">
-<link rel="stylesheet" href="/School_Facility_Maintenance_System/frontend/assets/css/enterprise-dashboard.css?v=20260726-1">
+<link rel="stylesheet" href="<?php echo htmlspecialchars(public_url('/frontend/assets/css/dashboard.inline.css?v=20260930-2')); ?>">
+<link rel="stylesheet" href="<?php echo htmlspecialchars(public_url('/frontend/assets/css/enterprise-dashboard.css?v=20260726-1')); ?>">
 <!-- TASK — Technician Workload. New, self-contained stylesheet, loaded last
      so it needs no !important and edits no shared stylesheet. Same file the
      Head Maintenance dashboard loads, so both cards look identical. -->
-<link rel="stylesheet" href="/School_Facility_Maintenance_System/frontend/assets/css/technician-workload.css?v=20260921-1">
+<link rel="stylesheet" href="<?php echo htmlspecialchars(public_url('/frontend/assets/css/technician-workload.css?v=20260921-1')); ?>">
 <!-- TASK — Subtle purple card-border accent. One shared stylesheet for all
      three dashboards; recolours existing 1px borders only, so no card
      changes size. Loaded last. -->
-<link rel="stylesheet" href="/School_Facility_Maintenance_System/frontend/assets/css/dashboard-card-accent.css?v=20260921-2">
-<script src="/School_Facility_Maintenance_System/frontend/assets/js/technician-workload.js?v=20260921-1"></script>
+<link rel="stylesheet" href="<?php echo htmlspecialchars(public_url('/frontend/assets/css/dashboard-card-accent.css?v=20260921-2')); ?>">
+<script src="<?php echo htmlspecialchars(public_url('/frontend/assets/js/technician-workload.js?v=20260921-1')); ?>"></script>
 
 <script>
 
@@ -1333,7 +1333,7 @@ let _lastDashboardStats = null;
 // initDashboard()); the caption itself is re-rendered on an interval purely
 // to age the "Xm ago" text — it never re-fetches data on its own.
 let _statusChartUpdatedAt = null;
-const LARAVEL_API_BASE = '/School_Facility_Maintenance_System/api';
+const LARAVEL_API_BASE = window.SFMS_PUBLIC_URL('/api');
 const DASHBOARD_MONTH_STORAGE_KEY = 'sfms:dashboardMonthSelection';
 let selectedMonth = (new Date().getMonth() + 1);
 let selectedYear = new Date().getFullYear();

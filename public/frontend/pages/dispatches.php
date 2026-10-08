@@ -139,7 +139,7 @@ include __DIR__ . '/../includes/header.php';
 </main>
 
 <!-- Shared branded printout (logo letterhead) used by printDispatchReport(). -->
-<script src="/School_Facility_Maintenance_System/frontend/assets/js/sfms-print.js?v=20260928-1"></script>
+<script src="<?php echo htmlspecialchars(public_url('/frontend/assets/js/sfms-print.js?v=20260928-1')); ?>"></script>
 <!-- Dispatch Code sticker labels (QR) used by the row "Labels" button. -->
 <script src="<?php echo htmlspecialchars(public_url('/frontend/assets/js/vendor/qrcode-generator.js?v=1.4.4')); ?>"></script>
 <script src="<?php echo htmlspecialchars(public_url('/frontend/assets/js/dispatch-labels.js?v=20261006-labels')); ?>"></script>

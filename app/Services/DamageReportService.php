@@ -14,6 +14,7 @@ use App\Models\User;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\ValidationException;
 
 class DamageReportService
@@ -386,6 +387,131 @@ class DamageReportService
             $this->sendDepartmentHeadEmailForDamageReport($report, $maintenanceReport, $submitterName);
 
             return $report;
+        });
+    }
+
+    /**
+     * 2026-10-08 — user decision: a report with a Need Change request
+     * (replacement item requested via the normal Create Report / Edit Report
+     * flow) must automatically also be visible on the Damage Reports page.
+     * Before this method existed, "Need Change" and "Damage Reports" were
+     * two independent systems: Need Change is a handful of columns
+     * (need_change_item_id/quantity/status/...) on maintenance_reports,
+     * written by the general report-creation path, while the Damage Reports
+     * page reads exclusively from the separate damage_reports table, which
+     * (pre-2026-10-08) was only ever populated by the dedicated
+     * item+room "asset" path (createReport() above, via
+     * ReportService::createAssetReport()). A report that only set a Need
+     * Change request therefore never got a damage_reports row and silently
+     * never appeared on that page.
+     *
+     * Unlike createReport(), this does NOT create a second MaintenanceReport
+     * row — the report already exists (it is either being created right now
+     * by the general path, or edited later to add/change a Need Change
+     * request) — it only creates the linked damage_reports row, stamping
+     * report_id directly, and reuses whatever location room the caller
+     * already resolved for this request (nullable: damage_reports.room_id
+     * allows NULL, and an edit that touches need_change_item_id without also
+     * resending location fields simply leaves room unset rather than failing).
+     *
+     * Idempotent by design: damage_reports.report_id is UNIQUE, and this
+     * checks for an existing row first, so calling this twice for the same
+     * report (e.g. the Need Change item is edited again later) never creates
+     * a duplicate — it just leaves the first linked row as-is. Also a no-op
+     * if the report has no need_change_item_id at all, so callers can call
+     * this unconditionally after any report create/update without checking
+     * first themselves.
+     */
+    public function attachNeedChangeAsDamageReport(MaintenanceReport $report, array $authUser, ?int $locationRoomId = null): ?DamageReport
+    {
+        if (empty($report->need_change_item_id)) {
+            return null;
+        }
+
+        // Mirrors the Schema::hasTable('damage_reports') guard
+        // ReportController already uses around this table in several places:
+        // some test suites build a deliberately trimmed schema that never
+        // creates damage_reports (e.g. NeedChangeAdministratorAlertTest's
+        // BuildsSharedTestSchema), so this method must degrade to a no-op
+        // rather than fail requests that are only exercising Need Change
+        // notification behaviour and never touch Damage Reports.
+        if (!Schema::hasTable('damage_reports')) {
+            return null;
+        }
+
+        $existing = DamageReport::query()->where('report_id', $report->report_id)->first();
+        if ($existing !== null) {
+            return $existing;
+        }
+
+        $item = Item::query()->find($report->need_change_item_id);
+        if (!$item) {
+            return null;
+        }
+
+        $severity = in_array($report->priority, ['low', 'medium', 'high', 'critical'], true)
+            ? $report->priority
+            : 'medium';
+
+        return DB::transaction(function () use ($report, $item, $severity, $locationRoomId, $authUser): DamageReport {
+            // Row-locked re-check: two concurrent edits to the same report
+            // (e.g. a double-submit of the Edit Report form) must not both
+            // pass the existence check above and then both try to insert —
+            // report_id is UNIQUE, so the loser would fail with a DB error
+            // instead of a clean no-op without this.
+            $raceCheck = DamageReport::query()
+                ->where('report_id', $report->report_id)
+                ->lockForUpdate()
+                ->first();
+            if ($raceCheck !== null) {
+                return $raceCheck;
+            }
+
+            $code = 'DMG-' . now()->format('YmdHis') . '-' . strtoupper(substr(bin2hex(random_bytes(3)), 0, 6));
+
+            $damageReport = DamageReport::query()->create([
+                'damage_report_code' => $code,
+                'report_id' => $report->report_id,
+                'item_id' => (int) $item->id,
+                'room_id' => $locationRoomId,
+                'department_id' => $report->department_id,
+                'damage_description' => (string) $report->description,
+                'severity_level' => $severity,
+                'reported_by' => (int) $report->created_by,
+                'status' => 'pending',
+            ]);
+
+            $changedBy = (int) ($authUser['user_id'] ?? $report->created_by);
+
+            $this->recordHistory($damageReport->id, 'created', null, 'pending', 'Auto-linked from Need Change request on Report #' . $report->report_id . '.', [
+                'auto_linked_from_need_change' => true,
+                'need_change_item_id' => $item->id,
+            ], $changedBy);
+
+            // Deliberately NO notifyAdmins() call here: the Need Change
+            // request this is derived from already triggers its own admin
+            // notification (ReportService::notifyAdministratorsOfNeedChangeRequestAfterCreate()
+            // / notifyAdministratorsOfNeedChangeRequest()) — a second "New
+            // Damage Report Submitted" notification for the exact same event
+            // would just double-notify the same admins, same reasoning
+            // createAssetReport() already documents for its own branch.
+            $this->activityLogService->logFromSession([
+                'user_id' => $changedBy,
+                'user_role' => $authUser['role'] ?? null,
+                'action' => 'CREATE_DAMAGE_REPORT',
+                'module' => 'damage_reporting',
+                'entity_type' => 'damage_report',
+                'entity_id' => $damageReport->id,
+                'details' => 'Auto-created damage report ' . $damageReport->damage_report_code
+                    . ' from Need Change request on Report #' . $report->report_id . '.',
+                'meta' => [
+                    'report_id' => $report->report_id,
+                    'need_change_item_id' => $item->id,
+                    'auto_linked' => true,
+                ],
+            ], $authUser);
+
+            return $damageReport;
         });
     }
 

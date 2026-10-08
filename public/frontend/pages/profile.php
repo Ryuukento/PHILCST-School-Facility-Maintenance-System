@@ -64,13 +64,13 @@ include __DIR__ . '/../includes/header.php';
         </div>
 </main>
 
-<script src="/School_Facility_Maintenance_System/frontend/assets/js/utils.js"></script>
-<script src="/School_Facility_Maintenance_System/frontend/assets/js/api.js"></script>
+<script src="<?php echo htmlspecialchars(public_url('/frontend/assets/js/utils.js')); ?>"></script>
+<script src="<?php echo htmlspecialchars(public_url('/frontend/assets/js/api.js')); ?>"></script>
 
 <script>
 // Ensure API and Session are defined globally
 window.API = window.API || {
-    baseURL: '/School_Facility_Maintenance_System/backend/api',
+    baseURL: window.SFMS_PUBLIC_URL('/backend/api'),
     async logout() {
         const response = await fetch(`${this.baseURL}/auth.php?action=logout`);
         const data = await response.json();

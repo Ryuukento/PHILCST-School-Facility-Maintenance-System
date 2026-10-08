@@ -104,7 +104,7 @@ include __DIR__ . '/../includes/header.php';
     </div>
 </main>
 
-<link rel="stylesheet" href="/School_Facility_Maintenance_System/frontend/assets/css/settings.inline.css?v=20260921-2">
+<link rel="stylesheet" href="<?php echo htmlspecialchars(public_url('/frontend/assets/css/settings.inline.css?v=20260921-2')); ?>">
 
 <script>
 function formatSemesterDate(dateStr) {

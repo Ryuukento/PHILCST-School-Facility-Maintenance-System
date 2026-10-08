@@ -14,28 +14,40 @@ use Tests\TestCase;
  * TASK 99 — Damage Report as a report CLASSIFICATION of Maintenance Report.
  *
  * Damage Report is no longer a sidebar module. It is a classification that a
- * Maintenance Report acquires from its repair OUTCOME, and it is reached
- * through the Report Type filter on All Reports / Export Reports.
+ * Maintenance Report acquires, and it is reached through the Report Type
+ * filter on All Reports / Export Reports.
  *
- * The classification is read from the EXISTING damage_reports lifecycle, no
- * new column and no migration:
+ * 2026-10-08 — the predicate was WIDENED by explicit user decision. TASK 99
+ * originally scoped "Damage Report" to the replacement OUTCOME only
+ * (damage_reports.status = 'replaced', or a non-null replaced_at):
  *
  *   REPAIRABLE      — the item could still be fixed. damage_reports.status
- *                     ends at 'repaired'. Stays a normal Maintenance Report.
+ *                     ends at 'repaired'. Stayed a normal Maintenance Report.
  *   NOT REPAIRABLE  — the item had to be replaced. RepairService::
  *                     fulfillReplacement() writes status = 'replaced' and
  *                     stamps replaced_at / replaced_by / replacement_item_id.
  *                     Classified as a Damage Report.
  *
- * What these tests deliberately pin down:
+ * That left a gap: Need Change requests auto-link into a damage_reports row
+ * at EVERY status (pending, under_review, repairing, repaired, replaced,
+ * closed — see DamageReportService::attachNeedChangeAsDamageReport()), and
+ * those were invisible to the replaced-only filter, which for a while forced
+ * a dedicated "Damage Reports" sidebar entry back in as the only way to see
+ * them (see DamageReportRoleRedesignTest's history of that reversal). The
+ * rule is now simply "this report has a linked damage_reports row at all"
+ * (ReportController::index()'s `dr.report_id IS NOT NULL`), which makes every
+ * such case reachable through this filter and lets the sidebar entry stay
+ * retired for good.
  *
- *  - The predicate is the replacement OUTCOME, not the mere presence of a
- *    damage_reports row, not report_category, and not any text match on
+ * What these tests now pin down:
+ *
+ *  - The predicate is "a linked damage_reports row exists", regardless of its
+ *    status or outcome — not report_category, and not any text match on
  *    title/description. A report about a damaged asset that was successfully
- *    repaired must NOT be classified as a Damage Report.
- *  - replaced_at is honoured as well as status, because a replaced case may
- *    later transition 'replaced' -> 'closed'; the classification must survive
- *    that, since the replacement stamps are never cleared.
+ *    repaired (and never replaced) IS still classified as a Damage Report,
+ *    because the linkage itself is what matters now, not the outcome.
+ *  - Wording and report_category alone, with NO linked damage_reports row,
+ *    still do not classify a report as Damage.
  *  - The filter composes with the controller's role scoping instead of
  *    replacing it, so it cannot be used to reach a report the caller is not
  *    authorized to see. Export reads this same authorized response, so the
@@ -70,7 +82,7 @@ class ReportTypeClassificationFilterTest extends TestCase
         $this->assertContains($scenario['closed_after_replacement_id'], $ids);
     }
 
-    public function test_report_type_damage_returns_only_replacement_outcome_reports(): void
+    public function test_report_type_damage_returns_any_linked_damage_case(): void
     {
         $scenario = $this->seedClassificationScenario();
 
@@ -82,20 +94,20 @@ class ReportTypeClassificationFilterTest extends TestCase
             $ids,
             'Closing a replaced case must not erase its Damage classification.'
         );
-
-        $this->assertNotContains(
+        $this->assertContains(
             $scenario['repaired_id'],
             $ids,
-            'A successfully repaired asset stays a Maintenance Report.'
+            '2026-10-08: any linked damage_reports row counts, including a repaired (non-replaced) outcome.'
         );
+
         $this->assertNotContains(
             $scenario['plain_id'],
             $ids,
-            'A report with no damage case at all is never a Damage Report.'
+            'A report with no linked damage_reports row at all is never a Damage Report.'
         );
     }
 
-    public function test_report_type_maintenance_excludes_replacement_outcome_reports(): void
+    public function test_report_type_maintenance_excludes_any_linked_damage_case(): void
     {
         $scenario = $this->seedClassificationScenario();
 
@@ -106,12 +118,12 @@ class ReportTypeClassificationFilterTest extends TestCase
             $ids,
             'A general report has no damage_reports row; NULL must not drop it from the Maintenance set.'
         );
-        $this->assertContains(
+
+        $this->assertNotContains(
             $scenario['repaired_id'],
             $ids,
-            'REPAIRABLE outcome remains a normal Maintenance Report.'
+            '2026-10-08: a repaired outcome still has a linked damage_reports row, so it is Damage now, not Maintenance.'
         );
-
         $this->assertNotContains($scenario['replaced_id'], $ids);
         $this->assertNotContains($scenario['closed_after_replacement_id'], $ids);
     }
@@ -162,7 +174,9 @@ class ReportTypeClassificationFilterTest extends TestCase
         $rows = collect($this->reportRowsFor($scenario['viewer_id']))->keyBy('report_id');
 
         $this->assertSame('maintenance', $rows[$scenario['plain_id']]['report_type']);
-        $this->assertSame('maintenance', $rows[$scenario['repaired_id']]['report_type']);
+        // 2026-10-08: repaired now classifies as 'damage' too — any linked
+        // damage_reports row counts, not just the 'replaced' outcome.
+        $this->assertSame('damage', $rows[$scenario['repaired_id']]['report_type']);
         $this->assertSame('damage', $rows[$scenario['replaced_id']]['report_type']);
         $this->assertSame('damage', $rows[$scenario['closed_after_replacement_id']]['report_type']);
 
@@ -174,10 +188,20 @@ class ReportTypeClassificationFilterTest extends TestCase
     }
 
     /**
-     * The Dean's rule, stated as a test: "broken", "damaged" or an attached
-     * asset do not make a Damage Report — only the outcome does.
+     * The Dean's original rule, stated as a test: "broken", "damaged" or a
+     * repair_replacement category alone do not make a Damage Report.
+     *
+     * 2026-10-08 — this test used to insert an actual damage_reports row
+     * (status='under_review') for the wordy report and assert it stayed
+     * 'maintenance', to prove the OUTCOME mattered, not the wording. Now
+     * that any linked damage_reports row counts as 'damage' (see the file
+     * docblock), that setup would correctly classify as damage — the
+     * linkage itself, not the wording, is what the new rule reacts to. This
+     * test is narrowed to what it can still honestly prove: wording and
+     * report_category, with NO linked damage_reports row at all, never
+     * classify a report as Damage.
      */
-    public function test_wording_and_asset_linkage_alone_do_not_classify_a_report_as_damage(): void
+    public function test_wording_and_category_alone_with_no_linked_damage_row_do_not_classify_as_damage(): void
     {
         $deptId = $this->seedDepartment();
         $viewerId = $this->seedUser(['role' => 'super_admin']);
@@ -190,16 +214,43 @@ class ReportTypeClassificationFilterTest extends TestCase
             'report_category' => 'repair_replacement',
         ]);
 
-        DB::table('damage_reports')->insert($this->damageReportRow([
-            'report_id' => $wordyId,
-            'status' => 'under_review',
-        ]));
+        // Deliberately no damage_reports row at all for this report.
 
         $damageIds = $this->reportIdsFor($viewerId, ['report_type' => 'damage']);
         $maintenanceIds = $this->reportIdsFor($viewerId, ['report_type' => 'maintenance']);
 
         $this->assertNotContains($wordyId, $damageIds);
         $this->assertContains($wordyId, $maintenanceIds);
+    }
+
+    /**
+     * 2026-10-08 — the counterpart to the test above: once an actual
+     * damage_reports row IS linked, status/outcome no longer matters. Even
+     * an early-lifecycle status like 'under_review' (the shape a fresh Need
+     * Change auto-link arrives in) is enough to classify as Damage.
+     */
+    public function test_any_linked_damage_row_classifies_as_damage_regardless_of_status(): void
+    {
+        $deptId = $this->seedDepartment();
+        $viewerId = $this->seedUser(['role' => 'super_admin']);
+
+        $linkedId = $this->seedReport([
+            'created_by' => $viewerId,
+            'department_id' => $deptId,
+            'title' => 'Classroom chair needs replacement part',
+            'report_category' => 'general',
+        ]);
+
+        DB::table('damage_reports')->insert($this->damageReportRow([
+            'report_id' => $linkedId,
+            'status' => 'under_review',
+        ]));
+
+        $damageIds = $this->reportIdsFor($viewerId, ['report_type' => 'damage']);
+        $maintenanceIds = $this->reportIdsFor($viewerId, ['report_type' => 'maintenance']);
+
+        $this->assertContains($linkedId, $damageIds);
+        $this->assertNotContains($linkedId, $maintenanceIds);
     }
 
     /**

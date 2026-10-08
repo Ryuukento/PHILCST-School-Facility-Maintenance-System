@@ -17,13 +17,22 @@ use Tests\TestCase;
  * workflow. The behaviour this suite pins down is therefore mostly about what
  * must *stay true* while the view changes:
  *
- *   - creation still happens through exactly ONE path (POST /api/reports),
- *     which creates a maintenance report and its paired damage row 1:1;
  *   - the damage list/detail can now resolve the linked maintenance report,
  *     its assignee and the asset's building, so the UI can present the case in
  *     context instead of as a standalone record;
  *   - assignment, authorization and the Task 44 cross-department warning stay
  *     exclusively on the maintenance-report side and are not duplicated here.
+ *
+ * 2026-10-08 — the "creation happens through exactly ONE path (POST
+ * /api/reports), which creates a maintenance report and its paired damage row
+ * 1:1" bullet that used to be here described ReportService::createAssetReport()
+ * (SPRINT 5/TASK 50), which forked on item_id/room_id/deployed_asset_id. That
+ * fork was removed by explicit user decision: Damage Reports must come from
+ * exactly ONE trigger — a Need Change request — not from naming an asset on
+ * Create Report. POST /api/reports no longer creates a damage_reports row at
+ * all; the only remaining path into damage_reports is
+ * DamageReportService::attachNeedChangeAsDamageReport(), driven by
+ * need_change_item_id. Tests 1 and 5-6 below were updated accordingly.
  *
  * A note on the schema used below. Unlike DamageReportControllerTest's fixture,
  * `rooms` here is created WITH `building_id` and a real `buildings` table,
@@ -55,10 +64,20 @@ class DamageReportRoleRedesignTest extends TestCase
     }
 
     // -----------------------------------------------------------------
-    // 1-2. Creation: asset reports link, non-asset reports stay valid
+    // 1-2. Creation: asset fields are now inert, non-asset reports stay valid
     // -----------------------------------------------------------------
 
-    public function test_asset_related_maintenance_report_still_creates_the_damage_relationship(): void
+    // 2026-10-08 — renamed and inverted. This used to pin that item_id/
+    // room_id/damage_description/severity_level on POST /api/reports made
+    // ReportController::store() fork to ReportService::createAssetReport(),
+    // pairing a damage_reports row with the maintenance report 1:1 (TASK
+    // 45/SPRINT 5). That fork was removed, by explicit user decision: Damage
+    // Reports must come from exactly ONE trigger — a Need Change request —
+    // not from naming an asset on Create Report. None of these fields are
+    // validated or read by ReportController::store() any more; they are
+    // silently ignored and the report is created as an ordinary general
+    // report with no damage relationship at all.
+    public function test_asset_fields_on_report_creation_no_longer_create_a_damage_relationship(): void
     {
         [$deptId, $staffId, $roomId, $itemId] = $this->seedAssetContext();
 
@@ -79,15 +98,9 @@ class DamageReportRoleRedesignTest extends TestCase
         $response->assertStatus(201);
 
         $this->assertSame(1, DB::table('maintenance_reports')->count());
-        $this->assertSame(1, DB::table('damage_reports')->count());
-
-        $damage = DB::table('damage_reports')->first();
-        $report = DB::table('maintenance_reports')->first();
-
-        // The 1:1 link is the whole point of the unified flow.
-        $this->assertNotNull($damage->report_id);
-        $this->assertSame((int) $report->report_id, (int) $damage->report_id);
-        $this->assertSame('repair_replacement', $report->report_category);
+        // The asset fields above are now inert on this endpoint.
+        $this->assertSame(0, DB::table('damage_reports')->count());
+        $this->assertSame('general', DB::table('maintenance_reports')->first()->report_category);
     }
 
     public function test_non_asset_maintenance_report_remains_valid_and_creates_no_damage_row(): void
@@ -214,6 +227,12 @@ class DamageReportRoleRedesignTest extends TestCase
     // 5-6. No duplicate records
     // -----------------------------------------------------------------
 
+    // 2026-10-08 — the "asset report" framing in this name is stale (see the
+    // note above test_asset_fields_on_report_creation_no_longer_create_a_damage_relationship),
+    // but the assertion itself still holds, for an unrelated reason: a single
+    // POST to /api/reports always creates exactly one maintenance report,
+    // asset fields or not. Left in place rather than removed so this
+    // invariant stays pinned.
     public function test_creating_one_asset_report_does_not_produce_duplicate_maintenance_reports(): void
     {
         [$deptId, $staffId, $roomId, $itemId] = $this->seedAssetContext();
@@ -225,7 +244,15 @@ class DamageReportRoleRedesignTest extends TestCase
         $this->assertSame(1, DB::table('maintenance_reports')->count());
     }
 
-    public function test_creating_one_asset_report_does_not_produce_duplicate_damage_reports(): void
+    // 2026-10-08 — renamed and inverted. This used to pin that a single
+    // asset-linked submission produced exactly one damage_reports row, not
+    // two, guarding against a double-insert bug in createAssetReport()'s
+    // paired create (TASK 45/SPRINT 5). ReportService::createAssetReport()
+    // was removed, by explicit user decision, so POST /api/reports no longer
+    // creates ANY damage_reports row from these fields — see
+    // test_asset_fields_on_report_creation_no_longer_create_a_damage_relationship
+    // above for the full explanation.
+    public function test_asset_fields_on_report_creation_produce_no_damage_reports_at_all(): void
     {
         [$deptId, $staffId, $roomId, $itemId] = $this->seedAssetContext();
 
@@ -233,11 +260,7 @@ class DamageReportRoleRedesignTest extends TestCase
             ->postJson('/api/reports', $this->assetReportPayload($deptId, $itemId, $roomId))
             ->assertStatus(201);
 
-        $this->assertSame(1, DB::table('damage_reports')->count());
-
-        // And the damage row points at exactly one maintenance report.
-        $reportIds = DB::table('damage_reports')->pluck('report_id')->filter()->unique();
-        $this->assertCount(1, $reportIds);
+        $this->assertSame(0, DB::table('damage_reports')->count());
     }
 
     public function test_the_damage_view_never_writes_a_second_damage_row_for_the_same_report(): void
@@ -496,36 +519,38 @@ class DamageReportRoleRedesignTest extends TestCase
     }
 
     /**
-     * TASK 99 supersedes TASK 45 Phase 16 here.
+     * 2026-10-08 supersedes TASK 99 and this file's own prior reversal here.
      *
-     * Phase 16 deliberately KEPT the Damage Reports sidebar entry and only
-     * clarified its tooltip ("do not remove it yet"). System checking then
-     * established the opposite requirement: Damage Report is a CLASSIFICATION
-     * of a Maintenance Report (the item could not be repaired and had to be
-     * replaced), reached through the All Reports / Export Reports Report Type
-     * filter, so it must have no standalone sidebar destination.
+     * Earlier the same day, this test asserted the OPPOSITE: that the
+     * sidebar DID need a standalone "Damage Reports" entry, because TASK 99's
+     * All Reports / Export Reports Report Type filter only matched the
+     * 'replaced' outcome (`dr.status = 'replaced'` or a non-null
+     * `replaced_at`), leaving every other-status Need-Change-auto-linked
+     * damage_reports row permanently unreachable without a dedicated nav
+     * entry back to /damage-reports.
      *
-     * The assertion is therefore inverted rather than deleted or relaxed —
-     * this file remains the regression gate for the sidebar's Damage Report
-     * treatment, and it now pins the requirement that replaced the old one.
-     * Everything Phase 16 protected BESIDES the nav entry is still asserted
-     * below, and the pages/API/model behind Damage Reports stay on disk (see
-     * test_damage_report_backend_is_left_in_place()).
+     * By a second, later explicit user decision the same day, that gap is
+     * closed a different way instead: ReportController::index()'s
+     * report_type classification/filter was widened from "replaced outcome
+     * only" to "has a linked damage_reports row at all" (any status — see
+     * the comment above the report_type SELECT there). Every
+     * Need-Change-auto-linked case is now reachable through the existing All
+     * Reports "Damage Reports" Report Type filter, so the standalone sidebar
+     * entry that worked around the old gap is removed again. The
+     * /damage-reports page itself, and damage-report-detail.php /
+     * damage-report-update.php, are NOT removed — only the sidebar
+     * destination is gone, same precedent as TASK 100's Create Report.
      *
-     * TASK 12 update: the "Repair Requests stays in the sidebar" clause of the
-     * paragraph above no longer holds. Task 12 retires the user-facing Repair
-     * Request module, so that nav entry is now asserted ABSENT alongside
-     * Damage Reports. The All Reports entry — the primary workflow's entry
-     * point — is still asserted present, which is what actually guards against
-     * a removal that over-reaches into neighbouring navigation.
+     * The TASK 12 Repair Requests retirement is untouched and still asserted
+     * absent below — this file remains the regression gate for both.
      */
     public function test_damage_reports_have_no_standalone_sidebar_destination(): void
     {
         $sidebar = file_get_contents(__DIR__ . '/../../public/frontend/includes/sidebar.php');
 
-        // Comments in this file still MENTION damage-reports.php to explain the
-        // removal, so the assertion has to look at what the sidebar actually
-        // renders — an <a href> nav entry — not at the documentation around it.
+        // Comments in this file discuss damage-reports.php at length, so the
+        // assertion has to look at what the sidebar actually renders — an
+        // <a href> nav entry — not at the documentation around it.
         $rendered = $this->stripComments($sidebar);
 
         $this->assertStringNotContainsString(
@@ -541,10 +566,10 @@ class DamageReportRoleRedesignTest extends TestCase
         $this->assertStringNotContainsString(
             'damage-report-detail.php',
             $rendered,
-            'The removed nav entry\'s active-state list must go with it.'
+            'The removed nav entry\'s active-state list must be gone with it.'
         );
 
-        // TASK 12 — the Repair Requests nav entry is retired too.
+        // TASK 12 — the Repair Requests nav entry remains retired.
         $this->assertStringNotContainsString(
             'repair-requests.php',
             $rendered,
@@ -552,7 +577,7 @@ class DamageReportRoleRedesignTest extends TestCase
         );
 
         // Neighbouring navigation is untouched: All Reports, the entry point of
-        // the primary workflow, must survive both removals.
+        // the primary workflow, must still be present.
         $this->assertStringContainsString('reports.php', $rendered);
     }
 

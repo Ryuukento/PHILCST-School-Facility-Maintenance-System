@@ -29,9 +29,9 @@ if (!isset($_SESSION['user']) || $_SESSION['user']['role'] !== 'super_admin') {
 
 $pageTitle = 'System Administration Dashboard';
 $pageStylesheets = [
-    '../assets/css/maintenance-dashboard.css',
-    '/School_Facility_Maintenance_System/frontend/assets/css/super-admin-dashboard.inline.css?v=20260921-2',
-    '/School_Facility_Maintenance_System/frontend/assets/css/enterprise-dashboard.css?v=20260726-1',
+    public_url('/frontend/assets/css/maintenance-dashboard.css'),
+    public_url('/frontend/assets/css/super-admin-dashboard.inline.css?v=20260921-2'),
+    public_url('/frontend/assets/css/enterprise-dashboard.css?v=20260726-1'),
 ];
 // chart-lite.js loaded by header.php — do not load again here
 ?>

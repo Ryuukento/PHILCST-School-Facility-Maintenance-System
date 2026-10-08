@@ -711,7 +711,7 @@ function createBuildingCard(building, itemCount) {
     icon.className = 'building-card-icon';
     const illustration = document.createElement('img');
     illustration.className = 'building-card-illustration';
-    illustration.src = '/School_Facility_Maintenance_System/frontend/assets/images/buildings-illustration.png';
+    illustration.src = window.SFMS_PUBLIC_URL('/frontend/assets/images/buildings-illustration.png');
     illustration.alt = '';
     illustration.setAttribute('aria-hidden', 'true');
     icon.appendChild(illustration);

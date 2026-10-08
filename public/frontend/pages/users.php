@@ -80,7 +80,7 @@ include __DIR__ . '/../includes/header.php';
     </section>
 </main>
 
-<link rel="stylesheet" href="/School_Facility_Maintenance_System/frontend/assets/css/users.inline.css?v=20260926-1">
+<link rel="stylesheet" href="<?php echo htmlspecialchars(public_url('/frontend/assets/css/users.inline.css?v=20260926-1')); ?>">
 
 <script>
 window.API = window.API || {};

@@ -296,11 +296,18 @@ include __DIR__ . '/../includes/header.php';
 
                 if (!empty($phpReports)) {
                     echo '<table class="table reports-fallback-table">';
-                    echo '<thead><tr><th>ID</th><th>Title</th><th>Location</th><th>Priority</th><th>Status</th><th>Created By</th><th>Date</th><th>Actions</th></tr></thead><tbody>';
+                    // 2026-10-08 — the ID column is dropped here to match the
+                    // JS-rendered table (see renderReportsTable() in this same
+                    // file): the "#NN" label was removed by explicit user
+                    // decision because it doesn't look nice on the list. This
+                    // is the no-JS fallback for the same table, so it stays in
+                    // step. report_id is still selected in the SQL above and
+                    // still used below for the View/Edit links — only the
+                    // visible column is gone.
+                    echo '<thead><tr><th>Title</th><th>Location</th><th>Priority</th><th>Status</th><th>Created By</th><th>Date</th><th>Actions</th></tr></thead><tbody>';
                     foreach ($phpReports as $r) {
                         $date = date('M d, Y', strtotime($r['created_at']));
                         echo '<tr>';
-                        echo '<td>#' . htmlspecialchars($r['report_id']) . '</td>';
                         echo '<td><strong>' . htmlspecialchars($r['title']) . '</strong></td>';
                         echo '<td>' . htmlspecialchars($r['location']) . '</td>';
                         echo '<td>' . strtoupper(htmlspecialchars($r['priority'])) . '</td>';
@@ -544,7 +551,7 @@ include __DIR__ . '/../includes/header.php';
     </div>
 </div>
 
-<link rel="stylesheet" href="/School_Facility_Maintenance_System/frontend/assets/css/design-system-components.css?v=20260726-1">
+<link rel="stylesheet" href="<?php echo htmlspecialchars(public_url('/frontend/assets/css/design-system-components.css?v=20260726-1')); ?>">
 <!-- Cache-buster bumped 20260913 -> 20260916 because reports.inline1.css's
      column-width rules were re-indexed for the removed Lifecycle column. This
      bump is not cosmetic: those rules address columns BY POSITION, so a
@@ -582,19 +589,19 @@ include __DIR__ . '/../includes/header.php';
      stylesheet has no rule for that new div (it would sit unstyled, inline,
      with no gap) and would still apply the old 9% Actions column against
      the new markup, so the bump is required, not cosmetic. -->
-<link rel="stylesheet" href="/School_Facility_Maintenance_System/frontend/assets/css/reports.inline1.css?v=20260922-2">
-<link rel="stylesheet" href="/School_Facility_Maintenance_System/frontend/assets/css/enterprise-reports.css?v=20260726-1">
+<link rel="stylesheet" href="<?php echo htmlspecialchars(public_url('/frontend/assets/css/reports.inline1.css?v=20260922-2')); ?>">
+<link rel="stylesheet" href="<?php echo htmlspecialchars(public_url('/frontend/assets/css/enterprise-reports.css?v=20260726-1')); ?>">
 <!-- TASK 29 — Need Change (Edit Report): reuses create-report.php's existing
      .need-change-* component styles wholesale (unscoped rules, lines 29-172
      of create-report.inline.css) so the Edit Report modal's Replacement Item
      section is visually identical to Create Report, with zero duplicated
      CSS. Only create-report.php's own .create-report-page-scoped rules are
      irrelevant here and are simply not matched by anything in this page. -->
-<link rel="stylesheet" href="/School_Facility_Maintenance_System/frontend/assets/css/create-report.inline.css">
+<link rel="stylesheet" href="<?php echo htmlspecialchars(public_url('/frontend/assets/css/create-report.inline.css')); ?>">
 <!-- Problem Type card selector — the same stylesheet create-report.php loads,
      so the grid in the Edit Report modal is the identical component rather
      than a second copy of its rules in reports.inline1.css. -->
-<link rel="stylesheet" href="/School_Facility_Maintenance_System/frontend/assets/css/problem-type-selector.css?v=20260920-2">
+<link rel="stylesheet" href="<?php echo htmlspecialchars(public_url('/frontend/assets/css/problem-type-selector.css?v=20260920-2')); ?>">
 
 <!-- A page-local <style> block for the date-scope summary line lived here
      (.reports-scope-notice / -chip / -chip-active / -warn, plus their
@@ -750,7 +757,7 @@ include __DIR__ . '/../includes/header.php';
 
 <?php include __DIR__ . '/../includes/footer.php'; ?>
 <!-- Shared branded printout (logo letterhead) used by renderPrintWindow(). -->
-<script src="/School_Facility_Maintenance_System/frontend/assets/js/sfms-print.js?v=20260927-1"></script>
+<script src="<?php echo htmlspecialchars(public_url('/frontend/assets/js/sfms-print.js?v=20260927-1')); ?>"></script>
 
 <script>
 let allReports = [];
@@ -1368,12 +1375,31 @@ function displayReports(reports) {
         // unlabelled horizontally-scrolling table. creatorName is still
         // computed above (still used by the View Report detail page's own
         // data) even though it is no longer a column in this table.
-        html += `<td class="reports-cell-report" data-label="Report"><span class="reports-id">#${reportId}</span><span class="reports-title">${title}</span>${archiveTagHtml(report)}</td>`;
+        //
+        // 2026-10-08 \u2014 the "#${reportId}" label itself (the .reports-id
+        // span) is removed from this cell by explicit user decision: it
+        // "doesn't look nice" on the list. UI ONLY \u2014 reportId is still the
+        // <tr>'s data-id, still drives the View/Edit links and row lookups
+        // below, and the API still returns report_id on every row; only the
+        // visible "#NN" text in front of the title is gone. The now-unused
+        // .reports-id CSS rule is left in place (see reports.inline1.css) in
+        // case the label is ever reinstated.
+        html += `<td class="reports-cell-report" data-label="Report"><span class="reports-title">${title}</span>${archiveTagHtml(report)}</td>`;
         html += `<td data-label="Department">${deptName}</td>`;
         html += `<td data-label="Priority"><span class="badge ${priorityClass}">${priority.toUpperCase()}</span></td>`;
         html += `<td data-label="Status"><span class="badge ${statusClass}">${statusLabel}</span></td>`;
         html += `<td data-label="Resolution"><span class="badge ${resolutionClass}">${resolutionLabel}</span></td>`;
-        html += `<td class="reports-cell-compact" data-label="Assigned To">${report.assigned_name ? escapeHtml(report.assigned_name) : '<span class="report-unassigned">Unassigned</span>'}</td>`;
+        // 2026-10-08 — when a report has no assignee (assigned_to is null —
+        // e.g. Head Maintenance created and/or completed it directly without
+        // ever assigning it to Staff), fall back to whoever most recently
+        // marked it Completed (completed_by_name, from
+        // ReportController::index()'s LEFT JOIN users AS completer) instead
+        // of showing a bare "Unassigned". Only a genuinely never-assigned,
+        // never-completed report still shows "Unassigned".
+        const assignedToDisplay = report.assigned_name
+            ? escapeHtml(report.assigned_name)
+            : (report.completed_by_name ? escapeHtml(report.completed_by_name) : '<span class="report-unassigned">Unassigned</span>');
+        html += `<td class="reports-cell-compact" data-label="Assigned To">${assignedToDisplay}</td>`;
         html += `<td class="reports-cell-location" data-label="Location"><span class="reports-location-text" title="${location}">${location}</span></td>`;
         html += `<td class="reports-cell-compact" data-label="Date">${createdAt}</td>`;
         html += `<td class="reports-cell-actions" data-label="Actions">
@@ -2630,6 +2656,17 @@ function dayBefore(dateKey) {
     return formatLocalDate(new Date(y, m - 1, d - 1));
 }
 
+// 2026-10-08 — used only by the "Last year's reports" archive menu item
+// below. Exactly one calendar year back from the given date, by explicit
+// user decision: the system only started being used in 2026, so the
+// "earlier records" bucket never needs to reach further back than one year
+// before the first recorded school year — it replaces an open-ended
+// '2000-01-01' floor that had no real meaning for this deployment.
+function yearBefore(dateKey) {
+    const [y, m, d] = String(dateKey).split('-').map(Number);
+    return formatLocalDate(new Date(y - 1, m - 1, d));
+}
+
 function setArchiveSelection(selection) {
     reportArchiveSelection = selection;
     const banner = document.getElementById('report-archive-banner');
@@ -2729,12 +2766,17 @@ async function loadArchiveMenu() {
 
         if (hasEarlier && earliestStart) {
             const firstLabel = schoolYears.length ? schoolYears[schoolYears.length - 1].label : 'the first recorded school year';
+            // 2026-10-08 — by explicit user decision, this bucket is bounded to
+            // exactly one calendar year before the earliest recorded school year
+            // (not an open-ended floor like the old '2000-01-01'), since the
+            // system itself only started being used in 2026. Relabeled from the
+            // generic "Earlier records" to "Last year's reports" to match.
             html += `
                 <section class="ra-group">
-                    <div class="ra-group-head"><span class="ra-group-name">Before recorded school years</span></div>
+                    <div class="ra-group-head"><span class="ra-group-name">Last year's reports</span></div>
                     ${archiveMenuItemHtml({
-                        from: '2000-01-01', to: dayBefore(earliestStart), label: `Earlier records (before ${firstLabel})`,
-                        title: 'Earlier records', dates: `Filed before ${formatArchiveDate(earliestStart)}`, icon: 'clock'
+                        from: yearBefore(earliestStart), to: dayBefore(earliestStart), label: `Last year's reports (before ${firstLabel})`,
+                        title: "Last Year's Reports", dates: range(yearBefore(earliestStart), dayBefore(earliestStart)), icon: 'clock'
                     })}
                 </section>`;
         }

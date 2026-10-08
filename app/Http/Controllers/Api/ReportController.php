@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Exceptions\DuplicateDamageReportException;
 use App\Http\Controllers\Controller;
 use App\Models\MaintenanceReport;
 use App\Services\ActivityLogService;
@@ -84,6 +83,13 @@ class ReportController extends Controller
         // was removed with the repair_requests join it protected; see below.
         $hasDamageReports = Schema::hasTable('damage_reports');
         $hasReportCategory = Schema::hasColumn('maintenance_reports', 'report_category');
+        // 2026-10-08 — "Performed by": who actually clicked Mark as
+        // Completed, surfaced so the All Reports list can fall back to this
+        // name in the Assigned To column when a report has no assignee (see
+        // reports.php). Guarded the same way as $hasReportCategory above —
+        // some Feature tests build a minimal custom schema predating this
+        // column.
+        $hasCompletedBy = Schema::hasColumn('maintenance_reports', 'completed_by');
 
         $query = MaintenanceReport::query()
             ->select([
@@ -116,36 +122,46 @@ class ReportController extends Controller
             $query->addSelect(['maintenance_reports.report_category']);
         }
 
+        if ($hasCompletedBy) {
+            $query->addSelect([
+                'maintenance_reports.completed_by',
+                DB::raw('completer.full_name AS completed_by_name'),
+            ])->leftJoin('users AS completer', 'maintenance_reports.completed_by', '=', 'completer.user_id');
+        }
+
         // TASK 99 — the classification the Report Type filter below selects on,
         // surfaced as a field so the list/export UI renders it from the same
         // single source of truth the filter uses, instead of re-deriving
         // "is this a Damage Report" in JavaScript.
         //
-        // WHY THIS PREDICATE: damage_reports.status already distinguishes the
-        // two repair OUTCOMES this classification is about — 'repaired' (the
-        // item could still be fixed) versus 'replaced' (it could not and had to
-        // be replaced). A
-        // linked damage_reports row on its own means only "this report is about
-        // a damaged asset", which is NOT the same question, so report_category
-        // / item_id are deliberately not used here.
+        // 2026-10-08 — WIDENED by explicit user decision. TASK 99 originally
+        // scoped this to the 'replaced' OUTCOME only (repaired-in-place items
+        // stayed 'maintenance'). That left a gap: Need Change requests
+        // auto-link into a damage_reports row at EVERY status (pending,
+        // under_review, repairing, repaired, replaced, closed — see
+        // DamageReportService::attachNeedChangeAsDamageReport(), called from
+        // ReportService), so those cases were invisible under the "Damage
+        // Reports" filter/export and the sidebar's dedicated "Damage Reports"
+        // nav entry became the only way to see them (see the TASK 99 reversal
+        // comment that used to sit in sidebar.php).
         //
-        // replaced_at is OR'd in because it is permanent: a replaced case may
-        // later transition 'replaced' -> 'closed' (DamageReportService's
-        // transition map), which would otherwise erase the classification from
-        // status alone. replacement_item_id/replaced_by/replaced_at are only
-        // ever written together, at replacement time, and never cleared.
-        $hasDamageReplacedAt = $hasDamageReports && Schema::hasColumn('damage_reports', 'replaced_at');
-
+        // The rule is now simply "this report has a linked damage_reports row
+        // at all" (any status), which is exactly what the auto-link creates.
+        // This restores TASK 99's original intent (Damage Report as a
+        // classification visible through the All Reports / Export Reports
+        // filter, not a separate module) because the gap that forced the
+        // sidebar entry back in is now closed: the sidebar entry is removed
+        // again below, but the /damage-reports page/route itself is left
+        // intact (same precedent as TASK 100's Create Report) since it is
+        // still reachable directly (e.g. notification links) and remains the
+        // compatibility layer's own detail/update UI.
         if ($hasDamageReports) {
-            $damageOutcomeSql = 'dr.status = \'replaced\''
-                . ($hasDamageReplacedAt ? ' OR dr.replaced_at IS NOT NULL' : '');
-
             $query->addSelect([
                 DB::raw('dr.status AS damage_report_status'),
-                // A report with no damage_reports row yields NULL on both
-                // sides, so the CASE falls through to 'maintenance' in both
-                // MySQL and SQLite.
-                DB::raw("CASE WHEN ({$damageOutcomeSql}) THEN 'damage' ELSE 'maintenance' END AS report_type"),
+                // A report with no damage_reports row yields NULL, so the
+                // CASE falls through to 'maintenance' in both MySQL and
+                // SQLite.
+                DB::raw("CASE WHEN dr.report_id IS NOT NULL THEN 'damage' ELSE 'maintenance' END AS report_type"),
             ])->leftJoin('damage_reports AS dr', 'dr.report_id', '=', 'maintenance_reports.report_id');
         } else {
             $query->addSelect([DB::raw("'maintenance' AS report_type")]);
@@ -224,34 +240,21 @@ class ReportController extends Controller
         // classification. The two branches are mutually exclusive and together
         // cover the whole base set, so 'maintenance' + 'damage' always sums to
         // the unfiltered total.
+        //
+        // 2026-10-08 — widened to match the report_type CASE above: "damage"
+        // is now any report with a linked damage_reports row at all (any
+        // status), not just a 'replaced' outcome. See the comment above the
+        // report_type SELECT for why.
         if ($reportType === 'damage') {
             if (!$hasDamageReports) {
-                // No compatibility table means no report can carry a
-                // replacement outcome, so the correct answer is "none" — not
-                // "everything".
+                // No compatibility table means no report can be linked, so
+                // the correct answer is "none" — not "everything".
                 $query->whereRaw('1 = 0');
             } else {
-                $query->where(function ($b) use ($hasDamageReplacedAt): void {
-                    $b->where('dr.status', 'replaced');
-                    if ($hasDamageReplacedAt) {
-                        $b->orWhereNotNull('dr.replaced_at');
-                    }
-                });
+                $query->whereNotNull('dr.report_id');
             }
         } elseif ($reportType === 'maintenance' && $hasDamageReports) {
-            // Written as an explicit positive condition rather than NOT(...):
-            // for a report with no damage_reports row dr.status is NULL, and
-            // NOT (NULL = 'replaced') is NULL, which SQL treats as false and
-            // would silently drop every general report from the result.
-            $query->where(function ($b) use ($hasDamageReplacedAt): void {
-                $b->where(function ($c): void {
-                    $c->whereNull('dr.status')
-                      ->orWhere('dr.status', '<>', 'replaced');
-                });
-                if ($hasDamageReplacedAt) {
-                    $b->whereNull('dr.replaced_at');
-                }
-            });
+            $query->whereNull('dr.report_id');
         }
 
         if ($request->filled('search')) {
@@ -315,12 +318,13 @@ class ReportController extends Controller
             'location' => ['nullable', 'string', 'max:255'],
             // TASK 38 — Create Report location validation against Buildings
             // Overview. See ReportService::resolveStructuredLocation() for why
-            // these are deliberately named location_* rather than reusing
-            // room_id: room_id already means "the room this damaged ASSET sits
-            // in" and, together with item_id, routes this request to
-            // ReportService::createAssetReport(). These three describe where
-            // the ISSUE is, which is a different question, so they must not
-            // collide.
+            // these are deliberately named location_* rather than room_id:
+            // room_id used to mean "the room this damaged ASSET sits in" back
+            // when the asset sub-form (SPRINT 5/TASK 50) still existed. That
+            // sub-form is gone (see the 2026-10-08 note below), but the
+            // location_* naming is kept as-is since it was never actually
+            // about that collision in the first place — it describes where
+            // the ISSUE is.
             'location_building_id' => ['nullable', 'integer', 'exists:buildings,id'],
             'location_floor_id' => ['nullable', 'integer', 'exists:floors,id'],
             'location_room_id' => ['nullable', 'integer'],
@@ -330,31 +334,36 @@ class ReportController extends Controller
             // TASK 19 — Target Maintenance Department: the reporter now picks
             // which department is responsible for fixing the issue, so this
             // must resolve to an active department, never a client-trusted
-            // free value. Stays nullable (not required) so the asset/damage
-            // path below, which still derives department_id from the
-            // reporter when none is supplied, is unaffected.
+            // free value. Stays nullable (not required) so createGeneralReport(),
+            // which still derives department_id from the reporter when none
+            // is supplied, is unaffected.
             'department_id' => ['nullable', 'integer', Rule::exists('departments', 'department_id')->where('status', 'active')],
             'due_date' => ['nullable', 'date'],
-            // SPRINT 5 — optional asset/damage fields, mirroring
-            // DamageReportController::store()'s own validation. When item_id
-            // + room_id are both supplied, this Maintenance Report concerns a
-            // specific deployed asset and is delegated to
-            // DamageReportService::createReport() (reused wholesale,
-            // not duplicated) so /api/reports can now serve as the primary
-            // entry point for the full repair/replacement lifecycle, not
-            // just general (non-asset) reports.
-            'item_id' => ['nullable', 'integer', 'exists:items,id'],
-            'room_id' => ['nullable', 'integer', 'exists:rooms,id'],
-            // Deployed Asset registry — the exact tracked unit (from a
-            // dispatch released with "Track as Assets"). Its item, room and
-            // source dispatch are resolved server-side from the asset.
+            // 2026-10-08 — the "Report Against a Specific Asset" sub-form
+            // (item_id/room_id/deployed_asset_id/severity_level/
+            // source_dispatch_id/damage_description/repair_notes/
+            // damage_image/override_duplicate) was retired here, by explicit
+            // user decision: Damage Reports must come from exactly ONE
+            // trigger — a Need Change request — not from picking an asset on
+            // Create Report. SPRINT 5/TASK 50's delegation to
+            // ReportService::createAssetReport() -> DamageReportService::
+            // createReport() is removed below along with this validation.
+            // Nothing on the /api/damage-reports side was touched: that
+            // standalone endpoint, DamageReportService::createReport() and
+            // the Deployed Asset registry itself are untouched, they are
+            // simply no longer reachable from this endpoint.
+            //
+            // 2026-10-08 — Asset Code (Optional), reintroduced LATER THE SAME
+            // DAY, by explicit user decision. This is NOT the sub-form above:
+            // it is a single optional field ("enter asset code" on Create
+            // Report) that the reporter can fill in when re-reporting a
+            // known unit. It is validated against the registered
+            // deployed_assets registry (never free text — user decision) and
+            // is persisted as plain FK metadata on the maintenance_reports
+            // row by createGeneralReport(). It never calls
+            // createAssetReport() and never creates/touches a damage_reports
+            // row — the ONE-trigger rule above is unaffected.
             'deployed_asset_id' => ['nullable', 'integer', 'exists:deployed_assets,id'],
-            'severity_level' => ['nullable', 'string', 'in:low,medium,high,critical'],
-            'source_dispatch_id' => ['nullable', 'integer', 'exists:dispatches,id'],
-            'damage_description' => ['nullable', 'string', 'min:5'],
-            'repair_notes' => ['nullable', 'string'],
-            'damage_image' => ['nullable', 'file', 'image', 'mimes:jpg,jpeg,png,webp,gif', 'max:5120'],
-            'override_duplicate' => ['nullable', 'boolean'],
             // Need Change fields - allow setting replacement request during creation
             'need_change_item_id' => ['nullable', 'integer', 'exists:items,id'],
             'need_change_quantity' => ['nullable', 'integer', 'min:1'],
@@ -373,13 +382,12 @@ class ReportController extends Controller
             true
         );
 
-        // TASK 38 — resolved BEFORE the asset fork so both creation branches
-        // (general and createAssetReport(), which reads
-        // $validated['location']) get the same server-derived, verified
-        // location string. A client-supplied 'location' is overwritten, never
+        // TASK 38 — a client-supplied 'location' is overwritten, never
         // trusted, whenever the structured triple is present: that is what
         // makes a hand-crafted request unable to claim a room it did not
-        // actually pass validation for.
+        // actually pass validation for. (Until 2026-10-08 this also had to
+        // run before a second creation branch, createAssetReport(); that
+        // branch is gone, but the resolution itself is still needed here.)
         // TASK 50 — the resolution rule itself moved to ReportService; it is
         // still called at exactly this point, still uncaught, so an invalid
         // triple still surfaces as Laravel's standard 422 validation response.
@@ -388,31 +396,12 @@ class ReportController extends Controller
             $validated['location'] = $structuredLocation;
         }
 
-        // SPRINT 5 — when item_id + room_id are both supplied this Maintenance
-        // Report concerns a specific deployed asset, and creation is delegated
-        // to DamageReportService (via ReportService::createAssetReport()) so
-        // the /api/damage-reports validation, duplicate prevention, image
-        // handling, history and notification behaviour are reused wholesale
-        // rather than duplicated.
-        // Deployed Asset registry — a report against a tracked unit takes the
-        // same asset branch even though item_id/room_id come from the asset.
-        if (!empty($validated['deployed_asset_id']) || (!empty($validated['item_id']) && !empty($validated['room_id']))) {
-            try {
-                $damageReport = $this->reportService->createAssetReport(
-                    $validated,
-                    $authUser,
-                    $request->file('damage_image')
-                );
-            } catch (DuplicateDamageReportException $e) {
-                return $this->fail($e->getMessage(), 409, ['duplicate' => $e->getDuplicate()]);
-            }
-
-            return $this->ok('Report created successfully', [
-                'report_id' => $damageReport->report_id,
-                'damage_report_id' => $damageReport->id,
-            ], 201);
-        }
-
+        // 2026-10-08 — the asset fork that used to live here (delegating to
+        // ReportService::createAssetReport() when deployed_asset_id or
+        // item_id+room_id were supplied) was removed. Every /api/reports
+        // submission now goes through createGeneralReport(); the only path
+        // into damage_reports is the Need Change auto-link inside it (see
+        // DamageReportService::attachNeedChangeAsDamageReport()).
         $report = $this->reportService->createGeneralReport(
             $validated,
             $authUser,
@@ -426,6 +415,52 @@ class ReportController extends Controller
         }
 
         return $this->ok('Report created successfully', ['report_id' => $report->report_id], 201);
+    }
+
+    /**
+     * 2026-10-08 — General Report Duplicate Detection (user decision). See
+     * ReportService::findPotentialDuplicate()'s doc comment for the full
+     * match rule and why this is informational-only (never blocks store()).
+     *
+     * Called by create-report.php right before the real POST /api/reports
+     * submission, with the same location_* triple and problem_type the
+     * reporter is about to submit. Reuses resolveStructuredLocation() —
+     * the exact same derivation store() runs — so "same location" here
+     * means exactly what store() would persist, not a second, looser
+     * check. A location triple that is present but invalid surfaces the
+     * same 422 store() would have given anyway, which is accurate early
+     * feedback rather than a new failure mode.
+     *
+     * 2026-10-08 — Asset Code signal (user decision). Also accepts the same
+     * optional deployed_asset_id the real submission will carry, so the
+     * pre-submit check can run ReportService::findPotentialDuplicate()'s
+     * asset-linked branch (checked first, any wording) exactly as store()
+     * would have persisted it.
+     */
+    public function checkDuplicate(Request $request): JsonResponse
+    {
+        $authUser = $request->session()->get('auth_user', []);
+
+        $validated = $request->validate(array_merge($this->problemTypeRules(false), [
+            'title' => ['required', 'string', 'max:255'],
+            'location_building_id' => ['nullable', 'integer', 'exists:buildings,id'],
+            'location_floor_id' => ['nullable', 'integer', 'exists:floors,id'],
+            'location_room_id' => ['nullable', 'integer'],
+            'department_id' => ['nullable', 'integer', Rule::exists('departments', 'department_id')->where('status', 'active')],
+            'deployed_asset_id' => ['nullable', 'integer', 'exists:deployed_assets,id'],
+        ]), $this->problemTypeMessages());
+
+        $structuredLocation = $this->reportService->resolveStructuredLocation($validated);
+        if ($structuredLocation !== null) {
+            $validated['location'] = $structuredLocation;
+        }
+
+        $duplicate = $this->reportService->findPotentialDuplicate($validated, $authUser);
+
+        return $this->ok('Duplicate check complete', [
+            'duplicate' => $duplicate,
+            'has_duplicate' => $duplicate !== null,
+        ]);
     }
 
     public function recent(Request $request): JsonResponse
@@ -508,6 +543,16 @@ class ReportController extends Controller
         // TASK 13 (Repair retirement) — the parallel $hasRepairRequests guard
         // was removed with the repair_requests block it protected; see below.
         $hasDamageReports = Schema::hasTable('damage_reports');
+        // 2026-10-08 — Asset Code (Optional). Guarded the same way as
+        // $hasDamageReports above: some Feature tests build a minimal custom
+        // schema that does not include deployed_assets, so the join/select
+        // below must stay conditional or those tests fail with "no such
+        // table: deployed_assets".
+        $hasDeployedAssets = Schema::hasTable('deployed_assets');
+        // 2026-10-08 — "Performed by". Guarded the same way as the two
+        // flags above: some Feature tests build a minimal custom
+        // maintenance_reports schema that predates this column.
+        $hasCompletedBy = Schema::hasColumn('maintenance_reports', 'completed_by');
 
         $reportQuery = DB::table('maintenance_reports AS r')
             ->select([
@@ -535,6 +580,7 @@ class ReportController extends Controller
                 'r.need_change_approved_by',
                 'r.need_change_approved_at',
                 'r.need_change_deducted_at',
+                'r.deployed_asset_id',
                 DB::raw('creator.full_name  AS creator_name'),
                 DB::raw('creator.email      AS creator_email'),
                 DB::raw('assignee.full_name AS assigned_name'),
@@ -547,6 +593,26 @@ class ReportController extends Controller
             ->leftJoin('users AS assignee',   'r.assigned_to',         '=', 'assignee.user_id')
             ->leftJoin('departments AS dept', 'r.department_id',       '=', 'dept.department_id')
             ->leftJoin('items AS nc_item',    'r.need_change_item_id', '=', 'nc_item.id');
+
+        if ($hasDeployedAssets) {
+            // 2026-10-08 — Asset Code (Optional), for display only. See
+            // ReportService::createGeneralReport()'s comment: plain FK
+            // metadata, no damage_reports coupling.
+            $reportQuery->addSelect([
+                DB::raw('da.asset_code AS asset_code'),
+            ])->leftJoin('deployed_assets AS da', 'r.deployed_asset_id', '=', 'da.id');
+        }
+
+        if ($hasCompletedBy) {
+            // "Performed by" — the detail page shows this only while
+            // status === 'completed' (see maintenance-report-detail.php);
+            // selecting it here unconditionally is harmless for every other
+            // status since it is simply left unrendered.
+            $reportQuery->addSelect([
+                'r.completed_by',
+                DB::raw('completer.full_name AS completed_by_name'),
+            ])->leftJoin('users AS completer', 'r.completed_by', '=', 'completer.user_id');
+        }
 
         if ($hasDamageReports) {
             $reportQuery->addSelect([
@@ -629,6 +695,14 @@ class ReportController extends Controller
         // from an idempotent resubmission of the same assignee.
         $previousAssignedTo = $report->assigned_to !== null ? (int) $report->assigned_to : null;
         $changes = [];
+        // 2026-10-08 — Need Change auto-link to Damage Reports: captured only
+        // when CASE A below actually resolves a structured location on THIS
+        // request, so applyUpdate() can pass it through to
+        // DamageReportService::attachNeedChangeAsDamageReport(). An edit that
+        // sets/changes need_change_item_id without resending location fields
+        // leaves this null, which the service treats as "room unknown" rather
+        // than failing (damage_reports.room_id is nullable).
+        $locationRoomId = null;
 
         // CASE D/E — need-change approval/rejection (super_admin only)
         //
@@ -772,6 +846,15 @@ class ReportController extends Controller
             if (in_array($newStatus, ['completed', 'closed'], true)) {
                 $changes['completed_date'] = $caseBValidated['completed_date'] ?? now()->toDateString();
             }
+            // 2026-10-08 — "Performed by": the actor who actually clicked
+            // Mark as Completed, which can differ from assigned_to (e.g.
+            // Head Maintenance completing an unassigned or someone-else's
+            // report directly). Recorded only on the completed transition
+            // itself, not on the later completed -> closed transition, so it
+            // keeps meaning "who completed it" rather than "who closed it".
+            if ($newStatus === 'completed' && $newStatus !== $fromStatus) {
+                $changes['completed_by'] = $userId;
+            }
             if (array_key_exists('due_date', $caseBValidated)) {
                 $changes['due_date'] = $caseBValidated['due_date'] ?: null;
             }
@@ -892,6 +975,9 @@ class ReportController extends Controller
             $structuredLocation = $this->reportService->resolveStructuredLocation($caseAValidated);
             if ($structuredLocation !== null) {
                 $caseAValidated['location'] = $structuredLocation;
+                $locationRoomId = isset($caseAValidated['location_room_id'])
+                    ? (int) $caseAValidated['location_room_id']
+                    : null;
             }
 
             foreach ($caseAFields as $field) {
@@ -933,7 +1019,8 @@ class ReportController extends Controller
             $changes,
             $authUser,
             $previousStatus,
-            $previousAssignedTo
+            $previousAssignedTo,
+            $locationRoomId
         );
 
         return $this->ok('Report updated successfully');

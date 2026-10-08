@@ -45,6 +45,9 @@ class MaintenanceReport extends Model
         'department_id',
         'due_date',
         'completed_date',
+        // "Performed by" — whoever actually clicked Mark as Completed; see
+        // 2026_10_08_000200_add_completed_by_to_maintenance_reports_table.
+        'completed_by',
         'need_change_item_id',
         'need_change_quantity',
         'need_change_status',
@@ -97,6 +100,11 @@ class MaintenanceReport extends Model
     public function assignee(): BelongsTo
     {
         return $this->belongsTo(User::class, 'assigned_to', 'user_id');
+    }
+
+    public function completer(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'completed_by', 'user_id');
     }
 
     public function department(): BelongsTo

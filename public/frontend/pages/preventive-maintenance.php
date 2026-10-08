@@ -501,7 +501,7 @@ include __DIR__ . '/../includes/header.php';
     <div id="pm-print-container" class="pm-print-only"></div>
 </main>
 
-<link rel="stylesheet" href="/School_Facility_Maintenance_System/frontend/assets/css/preventive-maintenance.inline.css?v=20260927-5">
+<link rel="stylesheet" href="<?php echo htmlspecialchars(public_url('/frontend/assets/css/preventive-maintenance.inline.css?v=20260927-5')); ?>">
 
 <script>
 const PM_CURRENT_USER = {
@@ -1967,7 +1967,7 @@ function pmBuildPrintView(notes = '') {
 
     return `
         <div class="pm-print-letterhead">
-            <img src="/School_Facility_Maintenance_System/frontend/assets/images/logo-seal.svg" alt="School Logo" class="pm-print-logo" />
+            <img src="${window.SFMS_PUBLIC_URL('/frontend/assets/images/logo-seal.svg')}" alt="School Logo" class="pm-print-logo" />
             <div class="pm-print-school">
                 <div class="pm-print-school-name">Philippine College of Science and Technology</div>
                 <div class="pm-print-school-sub">Calasiao, Pangasinan</div>

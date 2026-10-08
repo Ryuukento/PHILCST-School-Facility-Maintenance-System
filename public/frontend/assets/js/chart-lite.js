@@ -379,6 +379,14 @@
             const colors = dataset.backgroundColor || [];
             const horizontal = this.options.indexAxis === 'y';
             const maxValue = Math.max(1, ...values.map(toNumber));
+            // Rotation is opt-in: only charts that explicitly set
+            // scales.x.ticks.minRotation (currently Reports by Category and
+            // Semester Comparison on analytics-dashboard.php, both only on
+            // mobile) get rotated labels. Every other bar chart's minRotation
+            // is undefined/0, so this is a no-op there — identical to the
+            // previous unrotated rendering.
+            const xTicksConfig = (this.options?.scales?.x?.ticks) || {};
+            const xTickRotationDeg = Number(xTicksConfig.minRotation) || 0;
             const chartArea = horizontal ? {
                 left: Math.min(160, Math.max(96, width * 0.28)),
                 right: 24,
@@ -388,7 +396,7 @@
                 left: 48,
                 right: 20,
                 top: 20,
-                bottom: 54
+                bottom: xTickRotationDeg > 0 ? 72 : 54
             };
             const plotWidth = width - chartArea.left - chartArea.right;
             const plotHeight = height - chartArea.top - chartArea.bottom;
@@ -494,14 +502,34 @@
                         height: Math.max(2, barHeight)
                     });
 
-                    ctx.fillStyle = textColorX;
-                    ctx.textAlign = 'center';
-                    ctx.textBaseline = 'top';
-                    ctx.fillText(formatLabel(label), x + barWidth / 2, baseY + 8);
+                    const tickCenterX = x + barWidth / 2;
+                    if (xTickRotationDeg > 0) {
+                        // Rotated lane per tick: right-align the label's end at
+                        // the tick position and rotate counter-clockwise, same
+                        // visual convention real Chart.js uses for maxRotation
+                        // — each label reads diagonally from lower-left up to
+                        // its own tick instead of overflowing into neighbors.
+                        const tickFontSize = resolveFontSize(xTicksConfig.font, 12);
+                        ctx.save();
+                        ctx.font = `500 ${tickFontSize}px Segoe UI, Arial, sans-serif`;
+                        ctx.fillStyle = textColorX;
+                        ctx.textAlign = 'right';
+                        ctx.textBaseline = 'middle';
+                        ctx.translate(tickCenterX, baseY + 10);
+                        ctx.rotate(-(xTickRotationDeg * Math.PI) / 180);
+                        ctx.fillText(formatLabel(label), 0, 0);
+                        ctx.restore();
+                    } else {
+                        ctx.fillStyle = textColorX;
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'top';
+                        ctx.fillText(formatLabel(label), tickCenterX, baseY + 8);
+                    }
 
                     ctx.fillStyle = datalabelColor;
+                    ctx.textAlign = 'center';
                     ctx.textBaseline = 'bottom';
-                    ctx.fillText(String(value), x + barWidth / 2, y - 8);
+                    ctx.fillText(String(value), tickCenterX, y - 8);
                 });
             }
 

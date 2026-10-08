@@ -173,6 +173,8 @@ trait BuildsSharedTestSchema
             $table->unsignedInteger('department_id')->nullable();
             $table->date('due_date')->nullable();
             $table->date('completed_date')->nullable();
+            // "Performed by" (2026_10_08_000200_add_completed_by_to_maintenance_reports_table).
+            $table->unsignedInteger('completed_by')->nullable();
             $table->unsignedInteger('need_change_item_id')->nullable();
             $table->integer('need_change_quantity')->default(1);
             $table->string('need_change_status', 50)->nullable();

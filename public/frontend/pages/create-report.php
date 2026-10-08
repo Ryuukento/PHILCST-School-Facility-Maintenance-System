@@ -218,6 +218,33 @@ include __DIR__ . '/../includes/header.php';
                             <small class="text-muted d-block" id="location-hint">Pick the exact room from Buildings Overview. If a room is missing here, ask an administrator to register it first.</small>
                         </div>
 
+                        <!--
+                            2026-10-08 — Asset Code (Optional), by explicit user
+                            decision. NOT a revival of the removed "Report
+                            Against a Specific Asset" sub-form (see the comment
+                            further below where that sub-form used to be): this
+                            is a single optional lookup, offered for the case
+                            where the reporter is re-reporting a specific
+                            already-registered unit. Selecting one only sets
+                            deployed_asset_id as plain metadata on this report
+                            — it does not create or link a damage_reports row,
+                            and does not change anything else about how the
+                            report is created. Validated server-side against
+                            the deployed_assets registry (exists:deployed_assets,id)
+                            — a code typed here that is not actually registered
+                            is rejected at submit, same as any other field.
+                        -->
+                        <div class="form-group asset-code-group">
+                            <div class="asset-code-panel">
+                                <label for="asset-code-search" class="asset-code-item-label">Asset Code <span class="form-section-optional">(Optional)</span></label>
+                                <input type="text" id="asset-code-search" class="form-control asset-code-search" placeholder="Type asset code, equipment, or room to search..." autocomplete="off">
+                                <input type="hidden" id="asset-code-id" value="">
+                                <div id="asset-code-selected" class="asset-code-selected" style="display:none;"></div>
+                                <div id="asset-code-results" class="asset-code-results" style="display:none;"></div>
+                                <small class="text-muted d-block asset-code-note">Only fill this in if you are re-reporting a specific registered unit (e.g. SFMS-2026-000123). Leave blank if unsure.</small>
+                            </div>
+                        </div>
+
                         <div class="form-row-2">
                             <div class="form-group">
                                 <label for="priority">Priority *</label>
@@ -296,94 +323,22 @@ include __DIR__ . '/../includes/header.php';
                     </div>
                 </div>
 
-                <div class="form-section">
-                    <div class="form-section-header">
-                        <span class="form-section-index">4</span>
-                        <div>
-                            <h3 class="form-section-title">Report Against a Specific Asset <span class="form-section-optional">(Optional)</span></h3>
-                            <p class="form-section-subtitle">Only needed if this report concerns a specific deployed item — enables duplicate-report detection.</p>
-                        </div>
-                    </div>
-                    <div class="form-section-body">
-                        <div class="form-group need-change-group">
-                            <div class="need-change-panel">
-                                <label for="asset-toggle" class="need-change-toggle-label">
-                                    <input type="checkbox" id="asset-toggle">
-                                    <span class="need-change-toggle-text">
-                                        <strong>Link to a Deployed Asset</strong>
-                                        <small>Enable this if you're reporting damage on a specific tracked item.</small>
-                                    </span>
-                                </label>
-                                <div id="asset-wrap" class="need-change-wrap" style="display:none;">
-                                    <!-- Asset tracking — one search across tracked assets (from
-                                         dispatches released with "Track as Assets") and legacy
-                                         room assets, by Asset Code, equipment, building or room.
-                                         Picking a result fills in its equipment, building and room,
-                                         so there is nothing to select separately that could
-                                         contradict it; the server resolves them again from the
-                                         asset itself. -->
-                                    <div class="form-group">
-                                        <label for="asset-search" class="need-change-item-label">Asset</label>
-                                        <input type="text" id="asset-search" class="form-control need-change-search" placeholder="Search by Asset Code, equipment, building, or room..." autocomplete="off">
-                                        <input type="hidden" id="asset-key" value="">
-                                        <input type="hidden" id="asset-deployed-id" value="">
-                                        <input type="hidden" id="asset-item-id" value="">
-                                        <input type="hidden" id="asset-room-id" value="">
-                                        <small class="text-muted d-block">Example: SFMS-2026-000001, "Desktop PC", or "Computer Laboratory 1".</small>
-                                    </div>
-                                    <div id="asset-selected" class="need-change-selected" style="display:none;"></div>
+                <?php /* 2026-10-08 — the "Report Against a Specific Asset"
+                         sub-form (asset-toggle / asset-search / asset-severity /
+                         asset-image / asset-repair-notes) was removed here, by
+                         explicit user decision: Damage Reports must come from
+                         exactly ONE trigger — a Need Change request (the
+                         section above) — not from picking an asset on Create
+                         Report. ReportController::store() no longer has a fork
+                         for item_id/room_id/deployed_asset_id/severity_level/
+                         damage_image/repair_notes, so these fields have no
+                         backend to receive them any more.
 
-                                    <!-- TASK 33 PHASE 7 — Severity Level + Image Upload, ported from
-                                         damage-report-create.php's own asset-damage form so the unified
-                                         Create Report workflow can carry the same capabilities. Same
-                                         exact severity vocabulary (low/medium/high/critical) already used
-                                         by DamageReport::severity_level and by this page's own Priority
-                                         field. Only meaningful (and only sent) when "Link to a Deployed
-                                         Asset" is enabled, since severity_level/damage_image are damage-
-                                         report-specific fields consumed by
-                                         ReportController::storeWithAssetDetails() ->
-                                         DamageReportService::createReport(), not by the general report
-                                         path. No new backend field, no new API endpoint, no new DB column.
-                                    -->
-                                    <div class="asset-select-grid" style="margin-top:12px;">
-                                        <div class="form-group">
-                                            <label for="asset-severity" class="need-change-item-label">Severity Level *</label>
-                                            <select id="asset-severity" class="form-control">
-                                                <option value="">Select severity</option>
-                                                <option value="low">Low</option>
-                                                <option value="medium">Medium</option>
-                                                <option value="high">High</option>
-                                                <option value="critical">Critical</option>
-                                            </select>
-                                        </div>
-                                        <div class="form-group">
-                                            <label for="asset-image" class="need-change-item-label">Image Upload</label>
-                                            <input type="file" id="asset-image" class="form-control" accept="image/jpeg,image/png,image/webp,image/gif">
-                                            <small class="text-muted">Allowed: JPG, PNG, WEBP, GIF (max 5MB)</small>
-                                        </div>
-                                    </div>
-                                    <div id="asset-image-preview" style="margin-top:10px;"></div>
-
-                                    <!-- TASK 33 PHASE 9 — Repair Notes, ported verbatim from
-                                         damage-report-create.php's own #damage-repair-notes field
-                                         (same label, placeholder, optional behavior, and repair_notes
-                                         API parameter name) so the unified Create Report workflow closes
-                                         the last page-level capability gap identified in Phase 8's
-                                         equivalence verification. Already accepted and persisted by
-                                         ReportController::store()/storeWithAssetDetails() ->
-                                         DamageReportService::createReport() — no backend change needed.
-                                    -->
-                                    <div class="form-group" style="margin-top:12px;">
-                                        <label for="asset-repair-notes" class="need-change-item-label">Repair Notes (optional)</label>
-                                        <textarea id="asset-repair-notes" class="form-control" rows="3" placeholder="Initial notes or findings..."></textarea>
-                                    </div>
-
-                                    <small class="text-muted d-block need-change-note">Picking an asset here checks for a matching report already open on that item before you submit.</small>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                         Nothing it pointed at was deleted: the Deployed Asset
+                         registry, DamageReportService::createReport() and the
+                         standalone POST /api/damage-reports endpoint are all
+                         still there, just no longer reachable from this
+                         page. */ ?>
 
                 <div class="create-report-actions d-flex gap-sm">
                     <button type="submit" class="btn btn-primary" id="submit-btn">
@@ -399,12 +354,12 @@ include __DIR__ . '/../includes/header.php';
     </div>
 </main>
 
-<link rel="stylesheet" href="/School_Facility_Maintenance_System/frontend/assets/css/create-report.inline.css?v=20260922-4">
-<link rel="stylesheet" href="/School_Facility_Maintenance_System/frontend/assets/css/enterprise-reports.css?v=20260726-1">
+<link rel="stylesheet" href="<?php echo htmlspecialchars(public_url('/frontend/assets/css/create-report.inline.css?v=20261008-1')); ?>">
+<link rel="stylesheet" href="<?php echo htmlspecialchars(public_url('/frontend/assets/css/enterprise-reports.css?v=20260726-1')); ?>">
 <!-- Problem Type card selector. Its own stylesheet rather than an addition to
      create-report.inline.css, because the identical grid is also rendered by
      the Edit Report modal in reports.php — one file, two consumers. -->
-<link rel="stylesheet" href="/School_Facility_Maintenance_System/frontend/assets/css/problem-type-selector.css?v=20260920-2">
+<link rel="stylesheet" href="<?php echo htmlspecialchars(public_url('/frontend/assets/css/problem-type-selector.css?v=20260920-2')); ?>">
 
 <script>
 /* ===================================================================
@@ -426,9 +381,9 @@ function problemTypeInputs() {
 }
 
 // The selected category, or null when nothing has been chosen yet. Null is
-// deliberate rather than '': buildReportFormData() and the JSON path both
-// drop null keys, so an unselected value never reaches the API as an empty
-// string that the backend would have to special-case.
+// deliberate rather than '': JSON.stringify() drops null keys, so an
+// unselected value never reaches the API as an empty string that the
+// backend would have to special-case.
 function selectedProblemType() {
     const checked = problemTypeInputs().find((input) => input.checked);
     return checked ? checked.value : null;
@@ -514,28 +469,19 @@ document.addEventListener('DOMContentLoaded', () => {
 // Ensure API and Session are defined globally
 window.API = window.API || {
     async createReport(data) {
-        // TASK 33 PHASE 7 — damage_image (when present) is a File, which
-        // cannot travel inside a JSON body. Every other report submission
-        // (no asset linked, or asset linked without an image) is completely
-        // unaffected and still POSTs the exact same JSON body as before.
-        // ReportController::store() already validates/accepts both content
-        // types via $request->validate(), so no backend change was needed.
-        const hasImage = data.damage_image instanceof File;
-        const requestInit = hasImage
-            ? {
-                method: 'POST',
-                credentials: 'include',
-                headers: { 'Accept': 'application/json' },
-                body: buildReportFormData(data)
-            }
-            : {
-                method: 'POST',
-                credentials: 'include',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(data)
-            };
-
-        const response = await fetch(window.SFMS_PUBLIC_URL('/api/reports'), requestInit);
+        // 2026-10-08 — this used to branch on data.damage_image (a File
+        // object can't travel inside a JSON body) and multipart-encode the
+        // request via buildReportFormData() when an image was attached.
+        // That was TASK 33 PHASE 7's upload for the asset-picker sub-form's
+        // #asset-image field. The sub-form is gone and /api/reports no
+        // longer accepts an image at all, so every submission is plain JSON
+        // now.
+        const response = await fetch(window.SFMS_PUBLIC_URL('/api/reports'), {
+            method: 'POST',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
 
         const raw = await response.text();
         let result;
@@ -550,6 +496,31 @@ window.API = window.API || {
         if (!result.success) throw new Error(result.message || 'Failed to create report');
         return result;
     },
+    // 2026-10-08 — General Report Duplicate Detection (user decision). See
+    // ReportService::findPotentialDuplicate()'s doc comment for the match
+    // rule. Informational only: the caller decides whether to still submit.
+    async checkReportDuplicate(data) {
+        const response = await fetch(window.SFMS_PUBLIC_URL('/api/reports/check-duplicate'), {
+            method: 'POST',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+
+        const raw = await response.text();
+        let result;
+
+        try {
+            result = JSON.parse(raw);
+        } catch (parseError) {
+            // Fails open: a broken duplicate check must never block
+            // submission, so the caller treats a parse failure the same as
+            // "no duplicate found" rather than surfacing an error here.
+            return { success: false, data: { has_duplicate: false } };
+        }
+
+        return result;
+    },
     async logout() {
         const response = await fetch(window.SFMS_PUBLIC_URL('/api/auth/logout'), {
             method: 'POST',
@@ -560,20 +531,11 @@ window.API = window.API || {
     }
 };
 
-// TASK 33 PHASE 7 — builds the multipart body for the one case that needs
-// it (an asset-linked report with an image attached). Skips null/undefined/
-// empty-string values so optional fields the general path already omits
-// (need_change_item_id, item_id, room_id, severity_level, damage_image)
-// aren't sent as literal "null" strings; File values append normally.
-function buildReportFormData(data) {
-    const fd = new FormData();
-    Object.keys(data).forEach((key) => {
-        const value = data[key];
-        if (value === null || value === undefined || value === '') return;
-        fd.append(key, value);
-    });
-    return fd;
-}
+// 2026-10-08 — buildReportFormData() used to live here: a FormData builder
+// for the asset-linked sub-form's multipart image upload. The sub-form (and
+// createReport()'s multipart branch that called this) are both gone, so
+// every /api/reports submission is plain JSON.stringify() now and this
+// helper has no remaining caller.
 
 let needChangeItemsCache = [];
 let selectedNeedChangeItem = null;
@@ -597,8 +559,8 @@ document.getElementById('report-form').addEventListener('submit', async (e) => {
     const formData = {
         // Problem Type. `problem_type_other` is only ever sent alongside the
         // "Other" category — problemTypeOtherValue() returns null otherwise, and
-        // buildReportFormData()/the JSON path both drop null keys, so a report
-        // in any other category posts exactly the payload it always did.
+        // JSON.stringify() drops null keys, so a report in any other category
+        // posts exactly the payload it always did.
         problem_type: selectedProblemType(),
         problem_type_other: problemTypeOtherValue(),
         title: document.getElementById('title').value.trim(),
@@ -613,26 +575,17 @@ document.getElementById('report-form').addEventListener('submit', async (e) => {
         description: document.getElementById('description').value.trim(),
         department_id: document.getElementById('department').value || null,
         need_change_item_id: null,
-        item_id: null,
-        room_id: null,
-        // Asset tracking — set only when a tracked asset (not a legacy room
-        // asset) is picked; the server resolves its item/room/dispatch.
-        deployed_asset_id: null,
-        override_duplicate: false,
-        // TASK 33 PHASE 7 — only populated when "Link to a Deployed Asset" is
-        // checked (see assetToggle block below). Mirrors damage-report-create.php's
-        // own field names/values exactly; both are consumed server-side by
-        // the same storeWithAssetDetails() -> DamageReportService::createReport()
-        // path that already existed for item_id/room_id.
-        severity_level: null,
-        damage_image: null,
-        // TASK 33 PHASE 9 — only populated when "Link to a Deployed Asset" is
-        // checked (see assetToggle block below), same optional behavior as
-        // damage-report-create.php's #damage-repair-notes (only sent if
-        // non-empty). Already accepted by the backend (repair_notes is
-        // 'nullable' on ReportController::store() and is passed through to
-        // DamageReportService::createReport() by storeWithAssetDetails()).
-        repair_notes: null
+        // 2026-10-08 — item_id/room_id/severity_level/damage_image/
+        // repair_notes/override_duplicate were removed from here along with
+        // the "Report Against a Specific Asset" sub-form. ReportController::
+        // store() no longer accepts any of them.
+        //
+        // deployed_asset_id is NOT part of that removed sub-form — it is the
+        // new, separate, optional Asset Code lookup above. null unless the
+        // reporter actually picked a registered unit.
+        deployed_asset_id: document.getElementById('asset-code-id')?.value
+            ? Number(document.getElementById('asset-code-id').value)
+            : null
     };
 
     const needChangeToggle = document.getElementById('need-change-toggle');
@@ -648,54 +601,10 @@ document.getElementById('report-form').addEventListener('submit', async (e) => {
         formData.need_change_item_id = Number(needChangeSelect.value);
     }
 
-    const assetToggle = document.getElementById('asset-toggle');
-    const assetItemId = document.getElementById('asset-item-id');
-    const assetRoomId = document.getElementById('asset-room-id');
-
-    if (assetToggle?.checked) {
-        if (!assetItemId?.value || !assetRoomId?.value) {
-            alertContainer.innerHTML = '<div class="alert alert-danger">Please search for and select the asset to link this report to.</div>';
-            return;
-        }
-
-        formData.item_id = Number(assetItemId.value);
-        formData.room_id = Number(assetRoomId.value);
-        const assetDeployedId = document.getElementById('asset-deployed-id')?.value || '';
-        if (assetDeployedId) {
-            formData.deployed_asset_id = Number(assetDeployedId);
-        }
-
-        // TASK 33 PHASE 7 — Severity Level is required whenever an asset is
-        // linked, same as it is on damage-report-create.php's form. Not an
-        // HTML5 "required" attribute (the field is inside a hidden, opt-in
-        // panel until the toggle is checked, same pattern already used for
-        // item_id/room_id above), so it's enforced here instead.
-        const assetSeverity = document.getElementById('asset-severity')?.value || '';
-        if (!assetSeverity) {
-            alertContainer.innerHTML = '<div class="alert alert-danger">Please select a Severity Level for the linked asset.</div>';
-            return;
-        }
-        formData.severity_level = assetSeverity;
-
-        // Image is optional, matching damage-report-create.php (no required
-        // attribute there either).
-        const assetImageFile = document.getElementById('asset-image')?.files?.[0] || null;
-        if (assetImageFile) {
-            formData.damage_image = assetImageFile;
-        }
-
-        // TASK 33 PHASE 9 — Repair Notes is optional, matching
-        // damage-report-create.php's own submit handler (only appended when
-        // non-empty after trim()). buildReportFormData() already skips
-        // null/undefined/empty-string values, so leaving this null when
-        // blank keeps the multipart path's payload identical to the legacy
-        // page's, and the JSON path simply omits the key the same way every
-        // other unset optional field already does.
-        const assetRepairNotes = document.getElementById('asset-repair-notes')?.value.trim() || '';
-        if (assetRepairNotes) {
-            formData.repair_notes = assetRepairNotes;
-        }
-    }
+    // 2026-10-08 — the "Link to a Deployed Asset" toggle block that used to
+    // sit here (reading #asset-item-id/#asset-room-id/#asset-deployed-id/
+    // #asset-severity/#asset-image/#asset-repair-notes) was removed along
+    // with the sub-form itself.
 
     // Problem Type is checked before the generic "fill in all required fields"
     // block below so the user gets the specific sentence the brief asks for
@@ -722,10 +631,50 @@ document.getElementById('report-form').addEventListener('submit', async (e) => {
         return;
     }
 
-    if (formData.deployed_asset_id || (formData.item_id && formData.room_id)) {
-        const duplicateAction = await checkAssetDuplicate(formData);
-        if (duplicateAction === 'cancel') return;
-        if (duplicateAction === 'override') formData.override_duplicate = true;
+    // 2026-10-08 — the OLD pre-submit duplicate check that used to run here
+    // (checkAssetDuplicate(), against formData.deployed_asset_id/item_id/
+    // room_id) was removed along with the asset-picker sub-form, since those
+    // fields no longer exist on formData.
+    //
+    // General Report Duplicate Detection (user decision) replaces it: same
+    // department, same calendar day, same title, same derived location, same
+    // Problem Type — see ReportService::findPotentialDuplicate()'s doc
+    // comment for the full rule. This is a WARNING, not a gate: the reporter
+    // can always choose "Submit Anyway", because two different people really
+    // can independently report the same broken thing on the same day. A
+    // failed/slow check never blocks submission either (checkReportDuplicate()
+    // fails open), so this can only make submission slower, never impossible.
+    //
+    // 2026-10-08 — Asset Code signal (user decision). deployed_asset_id is
+    // sent too, so the backend's asset-linked branch (checked first, any
+    // wording, same unit) can catch a duplicate re-report of the SAME
+    // registered unit even when the title/location happen to differ.
+    try {
+        const dupCheck = await window.API.checkReportDuplicate({
+            title: formData.title,
+            problem_type: formData.problem_type,
+            problem_type_other: formData.problem_type_other,
+            location_building_id: formData.location_building_id,
+            location_floor_id: formData.location_floor_id,
+            location_room_id: formData.location_room_id,
+            department_id: formData.department_id,
+            deployed_asset_id: formData.deployed_asset_id
+        });
+
+        if (dupCheck.success && dupCheck.data && dupCheck.data.has_duplicate) {
+            const dup = dupCheck.data.duplicate || {};
+            const who = dup.reported_by ? ` by ${UI.escapeHtml(dup.reported_by)}` : '';
+            const proceed = await UI.systemConfirm(
+                `A report with the same title, location, and problem type was already submitted today${who} (Report #${dup.report_id ?? ''}). Submit this one anyway?`,
+                'Submit Anyway',
+                'Cancel',
+                'warning'
+            );
+            if (!proceed) return;
+        }
+    } catch (dupError) {
+        // Fails open — see the comment above checkReportDuplicate().
+        console.error('Duplicate check error:', dupError);
     }
 
     // Show loading
@@ -881,211 +830,22 @@ async function initLocationPicker() {
 }
 initLocationPicker();
 
-let assetSelectInitialized = false;
-
-// TASK 44 — UX-only: the full API row for the currently selected asset, so
-// the duplicate-warning modal can show Building/Floor/Room/Equipment/Asset
-// Code context. It mirrors exactly what the user picked, so it describes the
-// same physical unit the duplicate check ran against.
-let selectedAsset = null;
-
-// Asset tracking — one SearchableSelect over GET /api/deployed-assets, which
-// returns tracked assets AND (include_legacy=1) legacy room_asset items in a
-// single list. Each row already carries its item, room and building, so
-// selecting it fills every hidden field at once.
-function initAssetSelects() {
-    if (assetSelectInitialized) return;
-    assetSelectInitialized = true;
-
-    new Components.SearchableSelect({
-        inputId: 'asset-search',
-        hiddenId: 'asset-key',
-        endpoint: '/api/deployed-assets?include_legacy=1',
-        displayKey: 'name',
-        onSelect: (asset) => applyAssetSelection(asset)
-    });
-
-    // Typing again after a pick means the user is searching for something
-    // else, so the previous selection must not silently stay attached.
-    document.getElementById('asset-search')?.addEventListener('input', () => {
-        if (selectedAsset) resetAssetSelection();
-    });
-}
-
-function applyAssetSelection(asset) {
-    selectedAsset = asset;
-    document.getElementById('asset-deployed-id').value = asset.deployed_asset_id ? String(asset.deployed_asset_id) : '';
-    document.getElementById('asset-item-id').value = asset.item_id ? String(asset.item_id) : '';
-    document.getElementById('asset-room-id').value = asset.room_id ? String(asset.room_id) : '';
-
-    const selectedDisplay = document.getElementById('asset-selected');
-    if (!selectedDisplay) return;
-
-    const rows = [
-        ['Asset Code', asset.asset_code ? `<strong>${UI.escapeHtml(asset.asset_code)}</strong>` : 'No asset code'],
-        ['Equipment', UI.escapeHtml(asset.item_name || 'Not available')],
-        ['Building', UI.escapeHtml(asset.building_name || 'Not available')],
-        ['Room', UI.escapeHtml(asset.room_name || 'Not available')]
-    ].map(([label, value]) => `<div class="report-info-row"><dt>${UI.escapeHtml(label)}</dt><dd>${value}</dd></div>`).join('');
-
-    selectedDisplay.innerHTML = `<div style="font-weight:600;margin-bottom:6px;">Selected Asset</div><dl class="report-info-list">${rows}</dl>`;
-    selectedDisplay.style.display = 'block';
-}
-
-function resetAssetSelection() {
-    selectedAsset = null;
-    ['asset-key', 'asset-deployed-id', 'asset-item-id', 'asset-room-id'].forEach((id) => {
-        const el = document.getElementById(id);
-        if (el) el.value = '';
-    });
-
-    const selectedDisplay = document.getElementById('asset-selected');
-    if (selectedDisplay) { selectedDisplay.style.display = 'none'; selectedDisplay.innerHTML = ''; }
-}
-
-document.getElementById('asset-toggle')?.addEventListener('change', (event) => {
-    const wrap = document.getElementById('asset-wrap');
-    if (wrap) {
-        wrap.style.display = event.target.checked ? 'block' : 'none';
-        if (event.target.checked) initAssetSelects();
-    }
-});
-
-// TASK 33 PHASE 7 — same 5MB client-side guard and FileReader preview
-// pattern as damage-report-create.php's setupImagePreview(), scoped to this
-// page's own #asset-image field instead of duplicating a shared component.
-function setupAssetImagePreview() {
-    const input = document.getElementById('asset-image');
-    const preview = document.getElementById('asset-image-preview');
-    if (!input || !preview) return;
-
-    input.addEventListener('change', () => {
-        preview.innerHTML = '';
-        const file = input.files && input.files[0] ? input.files[0] : null;
-        if (!file) return;
-
-        const maxBytes = 5 * 1024 * 1024;
-        if (file.size > maxBytes) {
-            const alertContainer = document.getElementById('alert-container');
-            if (alertContainer) alertContainer.innerHTML = '<div class="alert alert-danger">Image must be 5MB or smaller.</div>';
-            input.value = '';
-            return;
-        }
-
-        const reader = new FileReader();
-        reader.onload = () => {
-            preview.innerHTML = `<img src="${reader.result}" alt="Asset damage preview" style="max-width:280px;border:1px solid rgba(148,163,184,.3);border-radius:8px;">`;
-        };
-        reader.readAsDataURL(file);
-    });
-}
-setupAssetImagePreview();
-
-/**
- * Pre-submit duplicate check against TASK 37.3's check-duplicate endpoint.
- * Returns 'submit' (no duplicate, or user confirmed it's a different issue),
- * 'override' (same as 'submit' but flags override_duplicate=true so the
- * backend's own re-check at submit time doesn't re-block it), or 'cancel'.
- */
-async function checkAssetDuplicate(formData) {
-    try {
-        const response = await fetch(window.SFMS_PUBLIC_URL('/api/damage-reports/check-duplicate'), {
-            method: 'POST',
-            credentials: 'include',
-            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-            body: JSON.stringify({
-                // Asset tracking — a tracked asset is matched by its own id
-                // (exact unit); legacy assets keep the item/room/department rule.
-                deployed_asset_id: formData.deployed_asset_id || null,
-                item_id: formData.item_id,
-                room_id: formData.room_id,
-                department_id: formData.department_id,
-                damage_description: formData.description
-            })
-        });
-        const result = await response.json();
-        if (!result.success || !result.data?.has_duplicate) return 'submit';
-
-        // TASK 44 — UX-only context so the warning modal can show which asset the
-        // match is against (two identical units in the same room, e.g.
-        // SFMS-2026-000001 vs SFMS-2026-000002, must never look ambiguous). Built
-        // entirely from the row the user already selected on this page.
-        const context = {
-            buildingName: selectedAsset?.building_name || '',
-            floorName: selectedAsset?.floor_name || '',
-            roomName: selectedAsset?.room_name || '',
-            equipmentName: selectedAsset?.item_name || '',
-            assetCode: selectedAsset?.asset_code || ''
-        };
-
-        return await showDuplicateWarningModal(result.data.duplicate, context);
-    } catch (error) {
-        console.error('Duplicate check failed:', error);
-        return 'submit';
-    }
-}
-
-function showDuplicateWarningModal(duplicate, context) {
-    return new Promise((resolve) => {
-        const existing = document.getElementById('asset-duplicate-modal');
-        if (existing) existing.remove();
-
-        context = context || {};
-        const viewUrl = window.SFMS_PUBLIC_URL ? window.SFMS_PUBLIC_URL('/damage-reports/' + duplicate.id) : '/damage-reports/' + duplicate.id;
-        const code = duplicate.damage_report_code || ('#' + duplicate.id);
-        const statusLabel = String(duplicate.status || '').replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()) || 'Unknown';
-        const locationParts = [context.buildingName, context.floorName, context.roomName].filter(Boolean);
-        const locationText = locationParts.length ? locationParts.join(' / ') : 'Not available';
-        const reportedText = duplicate.reported_at ? UI.formatDate(duplicate.reported_at, 'full') : 'Not available';
-
-        // TASK 44 — .report-info-list / .report-info-row is the existing,
-        // theme-token-driven definition-list pattern already used on the report
-        // detail pages (see report-detail.php); reused here instead of inventing
-        // a new layout. This block is purely additional context — it does not
-        // change what the duplicate check matched on (item_id + room_id), only
-        // what is shown to the user about that match.
-        const infoRows = [
-            ['Report Code', UI.escapeHtml(code)],
-            ['Equipment', context.equipmentName ? UI.escapeHtml(context.equipmentName) : 'Not available'],
-            ['Asset Code', context.assetCode ? `<strong>${UI.escapeHtml(context.assetCode)}</strong>` : 'Not available'],
-            ['Location', UI.escapeHtml(locationText)],
-            ['Existing Issue', duplicate.damage_description ? UI.escapeHtml(duplicate.damage_description) : 'Not available'],
-            ['Status', UI.escapeHtml(statusLabel)],
-            ['Reported', UI.escapeHtml(reportedText)]
-        ].map(([label, value]) => `<div class="report-info-row"><dt>${UI.escapeHtml(label)}</dt><dd>${value}</dd></div>`).join('');
-
-        const modal = document.createElement('div');
-        modal.id = 'asset-duplicate-modal';
-        modal.className = 'system-modal-overlay';
-        modal.setAttribute('role', 'alertdialog');
-        modal.setAttribute('aria-modal', 'true');
-        modal.innerHTML = `
-            <div class="system-modal-card system-modal-warning">
-                <!-- TASK 7.1 — was the entity-encoded '&#9888;' warning emoji. Uses the
-                     same registry icon UI.systemConfirm's 'warning' variant now uses, so
-                     this page-local modal stays visually identical to the shared one. -->
-                <div class="system-modal-icon" aria-hidden="true">${window.UIIcons ? window.UIIcons.svg('alert-triangle', { size: 26 }) : ''}</div>
-                <div class="system-modal-message">
-                    A similar active report already exists for this asset in this room.
-                </div>
-                <dl class="report-info-list">${infoRows}</dl>
-                <div class="system-modal-actions">
-                    <button id="dupCancel" class="btn btn-secondary">Cancel</button>
-                    <button id="dupDifferent" class="btn btn-warning">Different Issue</button>
-                    <button id="dupView" class="btn btn-primary">View Existing Report</button>
-                </div>
-            </div>
-        `;
-        document.body.appendChild(modal);
-
-        const finish = (result) => { modal.remove(); resolve(result); };
-
-        document.getElementById('dupView').onclick = () => { window.open(viewUrl, '_blank'); finish('cancel'); };
-        document.getElementById('dupDifferent').onclick = () => finish('override');
-        document.getElementById('dupCancel').onclick = () => finish('cancel');
-        modal.addEventListener('click', (e) => { if (e.target === modal) finish('cancel'); });
-    });
-}
+// 2026-10-08 — this is where the asset-picker sub-form's JS used to live:
+// assetSelectInitialized/selectedAsset state, initAssetSelects()/
+// applyAssetSelection()/resetAssetSelection() (wired to a SearchableSelect
+// over GET /api/deployed-assets), the #asset-toggle show/hide handler,
+// setupAssetImagePreview() (TASK 33 PHASE 7's 5MB guard + FileReader
+// preview for #asset-image), and checkAssetDuplicate()/
+// showDuplicateWarningModal() (TASK 37.3/TASK 44's pre-submit duplicate
+// check and warning modal). All of it was removed along with the "Report
+// Against a Specific Asset" sub-form, by explicit user decision: Damage
+// Reports must come from exactly ONE trigger — a Need Change request — not
+// from picking an asset on Create Report.
+//
+// Nothing it called was deleted: GET /api/deployed-assets, POST
+// /api/damage-reports/check-duplicate and the Deployed Asset registry are
+// all still there and still used elsewhere (e.g. the standalone Damage
+// Report creation surface) — this page just no longer calls them.
 
 async function loadNeedChangeItems() {
     const hiddenInput = document.getElementById('need-change-item');
@@ -1201,6 +961,120 @@ document.addEventListener('click', (e) => {
         const results = document.getElementById('need-change-results');
         if (results) results.style.display = 'none';
     }
+    if (!e.target.closest('.asset-code-panel')) {
+        const assetResults = document.getElementById('asset-code-results');
+        if (assetResults) assetResults.style.display = 'none';
+    }
+});
+
+/**
+ * 2026-10-08 — Asset Code (Optional) search, by explicit user decision.
+ *
+ * Mirrors the Replacement Item search pattern above (search box -> results
+ * dropdown -> selected display -> hidden input), but queries the server
+ * (GET /api/deployed-assets, already role-gated to maintenance_admin /
+ * maintenance_staff — the only two roles that can reach this page) instead
+ * of filtering a client-side cache, since the registry can be large.
+ * Debounced so every keystroke does not fire a request. include_legacy is
+ * deliberately NOT passed — see memory on why items.asset_code is not used
+ * for per-unit identity; only real deployed_assets rows (which always carry
+ * a deployed_asset_id) are offered here.
+ */
+let assetCodeSearchTimer = null;
+let selectedAssetCode = null;
+let assetCodeRowsCache = [];
+
+async function searchAssetCodes(keyword) {
+    const results = document.getElementById('asset-code-results');
+    if (!results) return;
+
+    if (!keyword) {
+        results.style.display = 'none';
+        results.innerHTML = '';
+        return;
+    }
+
+    try {
+        const response = await fetch(
+            window.SFMS_PUBLIC_URL('/api/deployed-assets') + '?status=active&per_page=20&q=' + encodeURIComponent(keyword),
+            { credentials: 'include', headers: { 'Accept': 'application/json' } }
+        );
+        const result = await response.json();
+        const rows = result?.data?.items ?? [];
+
+        if (!result.success || !Array.isArray(rows)) {
+            throw new Error(result.message || 'Failed to load asset codes');
+        }
+
+        assetCodeRowsCache = rows;
+        renderAssetCodeOptions(rows);
+    } catch (error) {
+        results.innerHTML = '<div class="need-change-empty">Unable to load asset codes</div>';
+        results.style.display = 'block';
+        console.error('Failed to search asset codes:', error);
+    }
+}
+
+function renderAssetCodeOptions(rows) {
+    const results = document.getElementById('asset-code-results');
+    if (!results) return;
+
+    if (!rows.length) {
+        results.innerHTML = '<div class="need-change-empty">No matching registered asset</div>';
+        results.style.display = 'block';
+        return;
+    }
+
+    results.innerHTML = rows.map((row) => {
+        const isActive = selectedAssetCode && String(selectedAssetCode.deployed_asset_id) === String(row.deployed_asset_id);
+        return `<button type="button" class="need-change-result-item${isActive ? ' active' : ''}" data-asset-id="${row.deployed_asset_id}">${UI.escapeHtml(row.asset_code || '')} <span>(${UI.escapeHtml(row.name || '')})</span></button>`;
+    }).join('');
+    results.style.display = 'block';
+}
+
+function updateAssetCodeSelection(row) {
+    const hiddenInput = document.getElementById('asset-code-id');
+    const selectedDisplay = document.getElementById('asset-code-selected');
+    const searchInput = document.getElementById('asset-code-search');
+    if (!hiddenInput || !selectedDisplay) return;
+
+    selectedAssetCode = row || null;
+    hiddenInput.value = row ? String(row.deployed_asset_id) : '';
+
+    if (row) {
+        selectedDisplay.style.display = 'block';
+        selectedDisplay.textContent = `Selected: ${row.asset_code} (${row.name || ''})`;
+        if (searchInput) searchInput.value = row.asset_code || '';
+        const results = document.getElementById('asset-code-results');
+        if (results) { results.style.display = 'none'; results.innerHTML = ''; }
+    } else {
+        selectedDisplay.style.display = 'none';
+        selectedDisplay.textContent = '';
+    }
+}
+
+document.getElementById('asset-code-search')?.addEventListener('input', (event) => {
+    // Typing after a selection means the reporter is changing their mind —
+    // clear the stale hidden id so a half-edited search box cannot silently
+    // keep submitting the OLD selected asset.
+    if (selectedAssetCode && event.target.value !== selectedAssetCode.asset_code) {
+        updateAssetCodeSelection(null);
+    }
+
+    const keyword = event.target.value.trim();
+    clearTimeout(assetCodeSearchTimer);
+    assetCodeSearchTimer = setTimeout(() => searchAssetCodes(keyword), 300);
+});
+
+document.getElementById('asset-code-results')?.addEventListener('click', (event) => {
+    const button = event.target.closest('[data-asset-id]');
+    if (!button) return;
+
+    const assetId = String(button.getAttribute('data-asset-id') || '');
+    const row = assetCodeRowsCache.find((r) => String(r.deployed_asset_id) === assetId);
+    if (!row) return;
+
+    updateAssetCodeSelection(row);
 });
 </script>
 

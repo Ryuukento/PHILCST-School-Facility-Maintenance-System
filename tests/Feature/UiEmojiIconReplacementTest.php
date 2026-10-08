@@ -528,7 +528,15 @@ class UiEmojiIconReplacementTest extends TestCase
             'public/frontend/pages/staff-dashboard.php'    => 'stat-icon-chip',
             'public/frontend/pages/super-admin-dashboard.php' => 'stat-icon-chip',
             'public/frontend/assets/js/utils.js'           => 'system-modal-icon',
-            'public/frontend/pages/create-report.php'      => 'system-modal-icon',
+            // create-report.php's only .system-modal-icon element lived inside
+            // showDuplicateWarningModal(), the asset-picker duplicate-check
+            // modal. That whole function (and the asset-picker sub-form it
+            // belonged to) was removed 2026-10-08 when the asset-picker was
+            // retired as a Damage Report creator — see
+            // ReportCreateAssetSeverityImageTest.php's class doc comment for
+            // the full rationale. utils.js's shared .system-modal-icon
+            // renderer above is untouched and still covered by every other
+            // caller that uses it.
         ];
 
         $offenders = [];
