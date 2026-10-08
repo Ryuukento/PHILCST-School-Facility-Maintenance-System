@@ -93,7 +93,10 @@ class ReportService
         // cross-department assignment in the audit trail. This class never
         // asks it an allow/deny question: authorization happens in the
         // controller, before any of these methods are reached.
-        private readonly ReportAuthorizationService $reportAuthorizationService
+        private readonly ReportAuthorizationService $reportAuthorizationService,
+        // Administrator Need Change alert (System + Email + SMS) — SMS leg
+        // only. Reused, not reimplemented: see notifyAdministratorsOfNeedChangeRequest().
+        private readonly SmsService $smsService
     ) {
     }
 
@@ -628,7 +631,7 @@ class ReportService
             if ($newNeedChangeItemId !== null && $newNeedChangeItemId !== $previousNeedChangeItemId) {
                 // Only send if this is a NEW request or changed request (not rejected/approved)
                 if (!in_array($report->need_change_status, ['rejected', 'approved', 'deducted'], true)) {
-                    $this->sendNeedChangeEmailToAdmins($report, $authUser);
+                    $this->notifyAdministratorsOfNeedChangeRequest($report, $authUser);
                 }
             }
         }
@@ -786,82 +789,175 @@ class ReportService
     }
 
     /**
-     * Public wrapper for sending Need Change emails (called from controller during creation).
+     * Public wrapper for the Administrator Need Change alert (called from
+     * the controller right after report creation). See
+     * notifyAdministratorsOfNeedChangeRequest() for what actually fires.
      */
-    public function sendNeedChangeEmailToAdminsAfterCreate(MaintenanceReport $report, array $authUser): void
+    public function notifyAdministratorsOfNeedChangeRequestAfterCreate(MaintenanceReport $report, array $authUser): void
     {
-        $this->sendNeedChangeEmailToAdmins($report, $authUser);
+        $this->notifyAdministratorsOfNeedChangeRequest($report, $authUser);
     }
 
     /**
-     * Send email to all administrators when a Need Change request is created/modified.
+     * Administrator Need Change alert — In-system + Email + SMS.
+     *
+     * TRIGGER: unchanged from the original email-only version of this
+     * method. Called from exactly two existing, already-guarded call
+     * sites — ReportController::store() right after a report is created
+     * with a non-empty need_change_item_id, and applyUpdate() below, only
+     * when need_change_item_id is present in $changes, its value actually
+     * differs from getOriginal('need_change_item_id'), AND
+     * need_change_status is not already a terminal value ('rejected',
+     * 'approved', 'deducted'). That guard is NOT duplicated here — this
+     * method itself fires unconditionally once called; "is this a genuine
+     * new/still-open Need Change request" is answered exactly once, by the
+     * caller, so email/in-system/SMS can never drift apart on when they
+     * fire, and an unrelated edit, a quantity-only edit, or a re-save of the
+     * same item id never re-triggers any of the three channels.
+     *
+     * Priority is NOT a factor — this fires for every priority
+     * (low/medium/high/urgent/critical) identically; a new Need Change
+     * request is the only trigger.
+     *
+     * Recipients are every active super_admin — Administrator only. Staff
+     * and Head are never contacted by this method. Their own pre-existing
+     * notification flows (assignment, completion, the generic "New Report
+     * Submitted" broadcast in notifyAdminsOfNewReport(), and
+     * NeedChangeService::approve()'s "Replacement Approved" notification)
+     * are untouched and continue to fire independently of this.
+     *
+     * Each of the three channels below is isolated in its own try/catch (and
+     * SMS additionally per-recipient): a failure in one — missing phone
+     * number, SMTP down, Semaphore unreachable, a bad row — never prevents
+     * either of the other two, and never bubbles up to fail the report
+     * create/update request itself.
      */
-    private function sendNeedChangeEmailToAdmins(MaintenanceReport $report, array $authUser): void
+    private function notifyAdministratorsOfNeedChangeRequest(MaintenanceReport $report, array $authUser): void
     {
+        $admins = $this->activeSuperAdminRecipients();
+        if (empty($admins)) {
+            return;
+        }
+
+        $itemName = 'Replacement Item';
+        if (!empty($report->need_change_item_id)) {
+            $item = DB::table('items')->where('id', $report->need_change_item_id)->value('name');
+            if ($item) {
+                $itemName = $item;
+            }
+        }
+
+        $submitterName = optional(User::find((int)($authUser['user_id'] ?? 0)))->full_name ?? 'A staff member';
+
+        // CHANNEL 1 — In-system notification, via the same NotificationService
+        // every other feature in this app uses.
+        try {
+            $title = 'New Need Change Request — Report #' . $report->report_id;
+            $message = $submitterName . ' requested a replacement ("' . $itemName . '", qty: '
+                . (int)$report->need_change_quantity . ') on Report #' . $report->report_id
+                . ' (' . $report->title . '). Please review and approve or reject.';
+
+            foreach ($admins as $admin) {
+                $this->notificationService->notify(
+                    (int)$admin['user_id'],
+                    $title,
+                    $message,
+                    'report',
+                    $report->report_id
+                );
+            }
+        } catch (\Throwable $e) {
+            Log::warning('Need Change in-system admin notification error', [
+                'report_id' => (int)$report->report_id,
+                'error' => $e->getMessage(),
+            ]);
+        }
+
+        // CHANNEL 2 — Email. Unchanged behavior from the original
+        // email-only version of this method: same template, same
+        // valid-email recipient filter, same EmailService.
         try {
             $emailServicePath = base_path('public/backend/services/EmailService.php');
-            if (!file_exists($emailServicePath)) {
-                return;
-            }
+            if (file_exists($emailServicePath)) {
+                require_once $emailServicePath;
+                if (class_exists('EmailService')) {
+                    $emailRecipients = array_values(array_filter(
+                        $admins,
+                        static fn (array $admin): bool => $admin['email'] !== ''
+                            && filter_var($admin['email'], FILTER_VALIDATE_EMAIL) !== false
+                    ));
 
-            require_once $emailServicePath;
-            if (!class_exists('EmailService')) {
-                return;
-            }
+                    if (!empty($emailRecipients)) {
+                        $payload = [
+                            'report_id' => (int)$report->report_id,
+                            'title' => (string)$report->title,
+                            'description' => (string)$report->description,
+                            'location' => (string)($report->location ?? ''),
+                            'priority' => (string)$report->priority,
+                            'submitted_by' => $submitterName,
+                            'creator_name' => $submitterName,
+                        ];
 
-            // Get all active super_admins to send the Need Change approval request
-            $superAdmins = DB::table('users')
-                ->select(['user_id', 'email', 'verified_email', 'full_name'])
-                ->whereRaw("LOWER(TRIM(role)) = 'super_admin'")
-                ->where('status', 'active')
-                ->get()
-                ->map(static function ($row): array {
-                    $emailToUse = strtolower(trim((string)($row->verified_email ?? $row->email ?? '')));
-                    return [
-                        'user_id' => (int)($row->user_id ?? 0),
-                        'email' => $emailToUse,
-                        'full_name' => (string)($row->full_name ?? 'Administrator'),
-                    ];
-                })
-                ->filter(static function (array $row): bool {
-                    return $row['email'] !== '' && filter_var($row['email'], FILTER_VALIDATE_EMAIL) !== false;
-                })
-                ->values()
-                ->all();
-
-            if (empty($superAdmins)) {
-                return;
-            }
-
-            // Get the item name if need_change_item_id is set
-            $itemName = 'Replacement Item';
-            if (!empty($report->need_change_item_id)) {
-                $item = DB::table('items')
-                    ->where('id', $report->need_change_item_id)
-                    ->value('name');
-                if ($item) {
-                    $itemName = $item;
+                        // Use generic "New Report Notification" template but
+                        // prefix subject/message to indicate it's a Need
+                        // Change request.
+                        \EmailService::sendNewReportNotification($payload, $emailRecipients);
+                    }
                 }
             }
-
-            $payload = [
-                'report_id' => (int)$report->report_id,
-                'title' => (string)$report->title,
-                'description' => (string)$report->description,
-                'location' => (string)($report->location ?? ''),
-                'priority' => (string)$report->priority,
-                'submitted_by' => optional(User::find((int)($authUser['user_id'] ?? 0)))->full_name ?? 'A staff member',
-                'creator_name' => optional(User::find((int)($authUser['user_id'] ?? 0)))->full_name ?? 'A staff member',
-            ];
-
-            // Use generic "New Report Notification" template but prefix subject/message to indicate it's a Need Change request
-            \EmailService::sendNewReportNotification($payload, $superAdmins);
         } catch (\Throwable $e) {
             Log::warning('Need Change request email notification error', [
                 'report_id' => (int)$report->report_id,
                 'error' => $e->getMessage(),
             ]);
         }
+
+        // CHANNEL 3 — SMS (Semaphore, via SmsService). Isolated per
+        // recipient as well as per channel: one admin's missing/invalid
+        // phone number, or one failed send, must not stop the others from
+        // being attempted. SmsService::send() itself already never throws
+        // (logs and returns false instead), so this try/catch is a
+        // deliberate second layer, not a substitute for that guarantee.
+        $smsMessage = 'SFMS Alert: New Need Change request on Report #' . $report->report_id
+            . ' (' . $report->title . '). Item: ' . $itemName . '. Please review in the system.';
+        foreach ($admins as $admin) {
+            try {
+                $this->smsService->send($admin['phone'] ?? null, $smsMessage);
+            } catch (\Throwable $e) {
+                Log::warning('Need Change SMS admin notification error', [
+                    'report_id' => (int)$report->report_id,
+                    'user_id' => (int)($admin['user_id'] ?? 0),
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
+    }
+
+    /**
+     * All active super_admin users, with every field needed by any channel
+     * of the Administrator Need Change alert (email, in-system, SMS) — the
+     * single recipient query the three channels above share, so "who counts
+     * as Administrator" can never drift between them. Deliberately includes
+     * admins with no usable email and/or no phone number (those channels
+     * simply skip that one admin; see activeSuperAdminRecipients() callers).
+     */
+    private function activeSuperAdminRecipients(): array
+    {
+        return DB::table('users')
+            ->select(['user_id', 'email', 'verified_email', 'full_name', 'phone'])
+            ->whereRaw("LOWER(TRIM(role)) = 'super_admin'")
+            ->where('status', 'active')
+            ->get()
+            ->map(static function ($row): array {
+                return [
+                    'user_id' => (int)($row->user_id ?? 0),
+                    'email' => strtolower(trim((string)($row->verified_email ?? $row->email ?? ''))),
+                    'full_name' => (string)($row->full_name ?? 'Administrator'),
+                    'phone' => trim((string)($row->phone ?? '')),
+                ];
+            })
+            ->values()
+            ->all();
     }
 
     /**

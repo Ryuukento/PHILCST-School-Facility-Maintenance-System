@@ -35,4 +35,24 @@ return [
         ],
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Semaphore (SMS)
+    |--------------------------------------------------------------------------
+    |
+    | Used by App\Services\SmsService to send the Administrator Need Change
+    | SMS alert. Credentials come from the environment ONLY — never hardcode
+    | a real API key or sender name here or anywhere else in source control.
+    | SmsService already no-ops safely (logs and returns false) when
+    | SEMAPHORE_API_KEY is unset, so leaving these blank in a fresh .env is
+    | always safe and never breaks report creation/update.
+    |
+    */
+
+    'semaphore' => [
+        'api_key' => env('SEMAPHORE_API_KEY'),
+        'sender_name' => env('SEMAPHORE_SENDER_NAME'),
+        'api_url' => env('SEMAPHORE_API_URL', 'https://api.semaphore.co/api/v4/messages'),
+    ],
+
 ];

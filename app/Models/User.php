@@ -31,6 +31,10 @@ class User extends Authenticatable
         'username',
         'email',
         'verified_email',
+        // Administrator Need Change SMS alert — see
+        // 2026_10_08_000100_add_phone_to_users_table. Nullable; SmsService
+        // skips the SMS leg (logs and no-ops) for any recipient without one.
+        'phone',
         'password',
         'role',
         'department_id',

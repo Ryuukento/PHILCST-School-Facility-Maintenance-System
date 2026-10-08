@@ -93,6 +93,12 @@ class AuthController extends Controller
             'status'               => $user->status,
             'department_id'        => $user->department_id,
             'avatar'               => $user->avatar,
+            // Administrator Need Change SMS alert — carried in the session
+            // purely for display/edit convenience in the account settings UI.
+            // SmsService reads the phone number fresh from the database at
+            // send time, so a stale session value here can never cause a
+            // wrong number to be texted.
+            'phone'                => $user->phone,
             // TASK 54 — without this, header.php's forced-setup redirect
             // (which reads $_SESSION['user']['force_profile_update']) never
             // actually engages: this key simply never existed in the session

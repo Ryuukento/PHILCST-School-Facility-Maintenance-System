@@ -422,7 +422,7 @@ class ReportController extends Controller
 
         // If Need Change request was set during creation, send admin notification
         if (!empty($validated['need_change_item_id'])) {
-            $this->reportService->sendNeedChangeEmailToAdminsAfterCreate($report, $authUser);
+            $this->reportService->notifyAdministratorsOfNeedChangeRequestAfterCreate($report, $authUser);
         }
 
         return $this->ok('Report created successfully', ['report_id' => $report->report_id], 201);

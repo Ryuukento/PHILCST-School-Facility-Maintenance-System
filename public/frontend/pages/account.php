@@ -47,6 +47,12 @@ include __DIR__ . '/../includes/header.php';
                                 </div>
 
                                 <div class="settings-form-group">
+                                    <label for="phone" class="settings-label">Phone Number</label>
+                                    <input type="text" id="phone" name="phone" class="form-control settings-input" placeholder="e.g. 09171234567" value="<?php echo htmlspecialchars($user['phone'] ?? ''); ?>" autocomplete="tel">
+                                    <small style="color:#64748b;font-size:12px;">Optional. Used only to send you an SMS alert when a new Need Change request is submitted.</small>
+                                </div>
+
+                                <div class="settings-form-group">
                                     <label for="current_password" class="settings-label">Current Password</label>
                                     <div class="password-input-wrap">
                                         <input type="password" id="current_password" name="current_password" class="form-control settings-input" placeholder="Enter current password">
@@ -66,6 +72,49 @@ include __DIR__ . '/../includes/header.php';
                                     </div>
                                 </div>
 
+                                <!-- Email Verification Section — placed beside New Password to use
+                                     the empty grid cell instead of its own full-width row below. -->
+                                <div class="settings-form-group">
+                                    <label class="settings-label" style="display: flex; align-items: center; gap: 8px;">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 18px; height: 18px;"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M2 6l10 7 10-7"/></svg>
+                                        Email Address
+                                    </label>
+
+                                    <!-- Card wrapper so this (multi-control) group reads as one cohesive
+                                         block beside the plain New Password input, instead of a loose
+                                         stack of mismatched-height elements. -->
+                                    <div style="border: 1px solid #e2e8f0; border-radius: 10px; background: #f8fafc; padding: 14px;">
+                                        <div id="email-display" style="margin-bottom: 12px;">
+                                            <p style="font-size: 13px; color: #64748b; margin: 0;">
+                                                Verified Email: <strong id="verified-email-display" style="color: #1e293b;">Not set</strong>
+                                            </p>
+                                        </div>
+
+                                        <!-- Email Input and Send OTP Button -->
+                                        <div id="email-form" style="display: flex; gap: 8px;">
+                                            <input type="email" id="new-email" class="form-control settings-input" placeholder="Enter your email address" style="flex: 1; background: #fff;">
+                                            <button type="button" id="send-otp-btn" class="btn btn-secondary" style="white-space: nowrap;">Send Code</button>
+                                        </div>
+
+                                        <!-- OTP Verification Form (Hidden initially) -->
+                                        <div id="otp-form" style="display: none; background: #fff; padding: 14px; border-radius: 8px; border: 1px solid #e2e8f0; margin-top: 12px;">
+                                            <p style="font-size: 13px; color: #64748b; margin: 0 0 12px 0;">Enter the 6-digit code sent to <strong id="otp-email-display"></strong></p>
+                                            <div style="display: flex; gap: 8px; margin-bottom: 12px;">
+                                                <input type="text" id="otp-code" class="form-control settings-input" placeholder="000000" maxlength="6" inputmode="numeric" style="flex: 1; letter-spacing: 4px; font-size: 18px; text-align: center;">
+                                                <button type="button" id="verify-otp-btn" class="btn btn-primary">Verify</button>
+                                            </div>
+                                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                                <p id="otp-timer" style="font-size: 12px; color: #64748b; margin: 0;"></p>
+                                                <button type="button" id="resend-otp-btn" class="btn btn-link" style="font-size: 12px; padding: 0; display: none;">Resend Code</button>
+                                                <button type="button" id="cancel-otp-btn" class="btn btn-link" style="font-size: 12px; padding: 0; color: #ef4444;">Cancel</button>
+                                            </div>
+                                        </div>
+
+                                        <!-- Status Messages -->
+                                        <div id="email-status" class="alert" style="display: none; margin-top: 12px;"></div>
+                                    </div>
+                                </div>
+
                                 <div class="settings-form-group settings-span-2">
                                     <label for="profile_picture" class="settings-label">Profile Picture</label>
                                     <input type="file" id="profile_picture" name="profile_picture" class="form-control settings-input" accept="image/*">
@@ -77,42 +126,6 @@ include __DIR__ . '/../includes/header.php';
                                         <?php endif; ?>
                                         <span class="settings-help-text">Upload JPG, PNG, WEBP, or GIF (max 3MB)</span>
                                     </div>
-                                </div>
-
-                                <!-- Email Verification Section -->
-                                <div class="settings-form-group settings-span-2" style="border-top: 1px solid #e2e8f0; padding-top: 24px; margin-top: 24px;">
-                                    <label class="settings-label" style="display: flex; align-items: center; gap: 8px;">
-                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 18px; height: 18px;"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M2 6l10 7 10-7"/></svg>
-                                        Email Address
-                                    </label>
-                                    <div id="email-display" style="margin-bottom: 16px;">
-                                        <p style="font-size: 13px; color: #64748b; margin: 0;">
-                                            Verified Email: <strong id="verified-email-display" style="color: #1e293b;">Not set</strong>
-                                        </p>
-                                    </div>
-
-                                    <!-- Email Input and Send OTP Button -->
-                                    <div id="email-form" style="display: flex; gap: 8px; margin-bottom: 16px;">
-                                        <input type="email" id="new-email" class="form-control settings-input" placeholder="Enter your email address" style="flex: 1;">
-                                        <button type="button" id="send-otp-btn" class="btn btn-secondary" style="white-space: nowrap;">Send Code</button>
-                                    </div>
-
-                                    <!-- OTP Verification Form (Hidden initially) -->
-                                    <div id="otp-form" style="display: none; background: #f8fafc; padding: 16px; border-radius: 8px; border: 1px solid #e2e8f0;">
-                                        <p style="font-size: 13px; color: #64748b; margin: 0 0 12px 0;">Enter the 6-digit code sent to <strong id="otp-email-display"></strong></p>
-                                        <div style="display: flex; gap: 8px; margin-bottom: 12px;">
-                                            <input type="text" id="otp-code" class="form-control settings-input" placeholder="000000" maxlength="6" inputmode="numeric" style="flex: 1; letter-spacing: 4px; font-size: 18px; text-align: center;">
-                                            <button type="button" id="verify-otp-btn" class="btn btn-primary">Verify</button>
-                                        </div>
-                                        <div style="display: flex; justify-content: space-between; align-items: center;">
-                                            <p id="otp-timer" style="font-size: 12px; color: #64748b; margin: 0;"></p>
-                                            <button type="button" id="resend-otp-btn" class="btn btn-link" style="font-size: 12px; padding: 0; display: none;">Resend Code</button>
-                                            <button type="button" id="cancel-otp-btn" class="btn btn-link" style="font-size: 12px; padding: 0; color: #ef4444;">Cancel</button>
-                                        </div>
-                                    </div>
-
-                                    <!-- Status Messages -->
-                                    <div id="email-status" class="alert" style="display: none; margin-top: 12px;"></div>
                                 </div>
                             </div>
 

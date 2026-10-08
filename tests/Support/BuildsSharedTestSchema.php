@@ -29,6 +29,11 @@ trait BuildsSharedTestSchema
             // that actually completes a POST /api/users fail with an SQLite
             // integrity-constraint error instead of exercising the endpoint.
             $table->string('email')->nullable()->unique();
+            // Administrator Need Change SMS alert (2026-10-08 migration
+            // 2026_10_08_000100_add_phone_to_users_table) — nullable, matches
+            // the real schema. Needed so tests can seed a super_admin with
+            // (or deliberately without) a phone number for SmsService.
+            $table->string('phone', 30)->nullable();
             $table->string('password');
             $table->string('role', 50)->default('maintenance_admin');
             $table->unsignedInteger('department_id')->nullable();
