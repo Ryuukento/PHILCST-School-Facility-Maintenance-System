@@ -11,6 +11,7 @@ use App\Http\Controllers\Api\DepartmentController;
 use App\Http\Controllers\Api\BuildingController;
 use App\Http\Controllers\Api\InventoryCategoryController;
 use App\Http\Controllers\Api\NotificationController;
+use App\Http\Controllers\Api\PhoneVerificationController;
 use App\Http\Controllers\Api\PreventiveMaintenanceController;
 use App\Http\Controllers\Api\PurchaseReceiptController;
 use App\Http\Controllers\Api\ReplacementTrackingController;
@@ -267,6 +268,16 @@ Route::prefix('api')->group(function (): void {
             Route::post('verify-otp',   [EmailVerificationController::class, 'verifyOtp']);
             Route::post('resend-otp',   [EmailVerificationController::class, 'resendOtp']);
             Route::get('status',        [EmailVerificationController::class, 'getStatus']);
+        });
+
+        // Phone Number OTP verification (mirrors email-verification above) —
+        // proves a Phone Number is actually reachable by SMS before it is
+        // trusted and saved to users.phone.
+        Route::prefix('phone-verification')->group(function (): void {
+            Route::post('initiate',     [PhoneVerificationController::class, 'initiate']);
+            Route::post('verify-otp',   [PhoneVerificationController::class, 'verifyOtp']);
+            Route::post('resend-otp',   [PhoneVerificationController::class, 'resendOtp']);
+            Route::get('status',        [PhoneVerificationController::class, 'getStatus']);
         });
 
         Route::get('items', [ItemController::class, 'index']);

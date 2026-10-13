@@ -20,6 +20,35 @@ $pageTitle = 'Account - SFMS';
 $currentUser = $user ?? ($_SESSION['user'] ?? []);
 $forceProfileUpdate = !empty($currentUser['force_profile_update']);
 include __DIR__ . '/../includes/header.php';
+
+// BUG FIX (2026-10-13): header.php sets $user from $_SESSION['user'], which
+// is only refreshed at login. UserController::updateProfile() (the Save
+// Changes handler for this very page) updates the database correctly but
+// only writes the result back into Laravel's own session store, never into
+// this native $_SESSION — so after a save, this page kept rendering
+// whatever phone/username/avatar/verified_email/force_profile_update the
+// session had at the LAST LOGIN, making a just-saved Phone Number (and the
+// Verified Email badge) appear blank again the moment you navigate away and
+// back. Re-reading the row fresh from the database here, every load, makes
+// this page always show what's actually saved regardless of session age.
+if (!empty($user['user_id'])) {
+    require_once __DIR__ . '/../../backend/config/database.php';
+    $pdo = getDBConnection();
+    $stmt = $pdo->prepare(
+        'SELECT user_id, email, full_name, username, phone, avatar, role, department_id, verified_email, force_profile_update FROM users WHERE user_id = ? LIMIT 1'
+    );
+    $stmt->execute([(int) $user['user_id']]);
+    $freshUser = $stmt->fetch(PDO::FETCH_ASSOC);
+    if ($freshUser) {
+        $user = array_merge($user, $freshUser);
+        $_SESSION['user'] = $user;
+        if (isset($_SESSION['auth_user'])) {
+            $_SESSION['auth_user'] = array_merge((array) $_SESSION['auth_user'], $freshUser);
+        }
+    }
+}
+$currentUser = $user;
+$forceProfileUpdate = !empty($currentUser['force_profile_update']);
 ?>
 
 <main class="container settings-page <?php echo $forceProfileUpdate ? 'force-profile-setup' : ''; ?>">
@@ -46,10 +75,49 @@ include __DIR__ . '/../includes/header.php';
                                     <small style="color:#64748b;font-size:12px;">3-50 characters, lowercase letters, numbers, underscores only.</small>
                                 </div>
 
+                                <!-- Phone Verification Section (2026-10-13) — mirrors the Email
+                                     Address card below: a phone number is no longer accepted as
+                                     free text on "Save Changes". It must be proven reachable via
+                                     a 6-digit SMS code before it is trusted and saved to
+                                     users.phone, the same way a new email must be OTP-verified
+                                     before users.verified_email trusts it. -->
                                 <div class="settings-form-group">
-                                    <label for="phone" class="settings-label">Phone Number</label>
-                                    <input type="text" id="phone" name="phone" class="form-control settings-input" placeholder="e.g. 09171234567" value="<?php echo htmlspecialchars($user['phone'] ?? ''); ?>" autocomplete="tel">
-                                    <small style="color:#64748b;font-size:12px;">Optional. Used only to send you an SMS alert when a new Need Change request is submitted.</small>
+                                    <label class="settings-label" style="display: flex; align-items: center; gap: 8px;">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 18px; height: 18px;"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                                        Phone Number
+                                    </label>
+
+                                    <div style="border: 1px solid #e2e8f0; border-radius: 10px; background: #f8fafc; padding: 14px;">
+                                        <div id="phone-display" style="margin-bottom: 12px;">
+                                            <p style="font-size: 13px; color: #64748b; margin: 0;">
+                                                Phone Number: <strong id="verified-phone-display" style="color: #1e293b;"><?php echo !empty($user['phone']) ? htmlspecialchars($user['phone']) : 'Not set'; ?></strong>
+                                            </p>
+                                            <p style="font-size: 12px; color: #94a3b8; margin: 4px 0 0 0;">Used to send you an SMS alert for new reports / Need Change requests assigned to you.</p>
+                                        </div>
+
+                                        <!-- Phone Input and Send OTP Button -->
+                                        <div id="phone-form" style="display: flex; gap: 8px;">
+                                            <input type="text" id="new-phone" class="form-control settings-input" placeholder="e.g. 09171234567" style="flex: 1; background: #fff;" inputmode="tel" autocomplete="tel">
+                                            <button type="button" id="send-phone-otp-btn" class="btn btn-secondary" style="white-space: nowrap;">Send Code</button>
+                                        </div>
+
+                                        <!-- OTP Verification Form (Hidden initially) -->
+                                        <div id="phone-otp-form" style="display: none; background: #fff; padding: 14px; border-radius: 8px; border: 1px solid #e2e8f0; margin-top: 12px;">
+                                            <p style="font-size: 13px; color: #64748b; margin: 0 0 12px 0;">Enter the 6-digit code sent via SMS to <strong id="phone-otp-number-display"></strong></p>
+                                            <div style="display: flex; gap: 8px; margin-bottom: 12px;">
+                                                <input type="text" id="phone-otp-code" class="form-control settings-input" placeholder="000000" maxlength="6" inputmode="numeric" style="flex: 1; letter-spacing: 4px; font-size: 18px; text-align: center;">
+                                                <button type="button" id="verify-phone-otp-btn" class="btn btn-primary">Verify</button>
+                                            </div>
+                                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                                <p id="phone-otp-timer" style="font-size: 12px; color: #64748b; margin: 0;"></p>
+                                                <button type="button" id="resend-phone-otp-btn" class="btn btn-link" style="font-size: 12px; padding: 0; display: none;">Resend Code</button>
+                                                <button type="button" id="cancel-phone-otp-btn" class="btn btn-link" style="font-size: 12px; padding: 0; color: #ef4444;">Cancel</button>
+                                            </div>
+                                        </div>
+
+                                        <!-- Status Messages -->
+                                        <div id="phone-status" class="alert" style="display: none; margin-top: 12px;"></div>
+                                    </div>
                                 </div>
 
                                 <div class="settings-form-group">
@@ -86,7 +154,7 @@ include __DIR__ . '/../includes/header.php';
                                     <div style="border: 1px solid #e2e8f0; border-radius: 10px; background: #f8fafc; padding: 14px;">
                                         <div id="email-display" style="margin-bottom: 12px;">
                                             <p style="font-size: 13px; color: #64748b; margin: 0;">
-                                                Verified Email: <strong id="verified-email-display" style="color: #1e293b;">Not set</strong>
+                                                Verified Email: <strong id="verified-email-display" style="color: #1e293b;"><?php echo !empty($user['verified_email']) ? htmlspecialchars($user['verified_email']) : 'Not set'; ?></strong>
                                             </p>
                                         </div>
 
@@ -397,23 +465,13 @@ const otpTimerDiv = document.getElementById('otp-timer');
 const otpEmailDisplay = document.getElementById('otp-email-display');
 const verifiedEmailDisplay = document.getElementById('verified-email-display');
 
-// Load current verified email on page load
-async function loadVerifiedEmail() {
-    try {
-        const response = await fetch(window.SFMS_PUBLIC_URL('/api/users/profile'), {
-            method: 'GET',
-            credentials: 'include'
-        });
-        if (response.ok) {
-            const data = await response.json();
-            if (data.data?.verified_email) {
-                verifiedEmailDisplay.textContent = data.data.verified_email;
-            }
-        }
-    } catch (err) {
-        console.error('Failed to load verified email:', err);
-    }
-}
+// NOTE (2026-10-13): the current verified email used to be loaded here via
+// fetch('/api/users/profile'), but no GET route for that URI has ever been
+// registered (routes/web.php only registers PATCH users/profile) — so this
+// request always 404ed and silently left the "Not set" placeholder on
+// screen even when an email was verified. The PHP markup above now renders
+// $user['verified_email'] directly from a fresh database read on every page
+// load, so no client-side fetch is needed for the initial display.
 
 // Show status message
 function showEmailStatus(message, isError = false) {
@@ -651,8 +709,214 @@ otpCodeInput.addEventListener('keypress', (e) => {
     }
 });
 
-// Load verified email on page load
-document.addEventListener('DOMContentLoaded', loadVerifiedEmail);
+// ═════════════════════════════════════════════════════════════════════════════
+// Phone Number Verification Flow (2026-10-13) — mirrors the Email
+// Verification Flow above, but sends the code via SMS (IPROG, through
+// SmsService/PhoneVerificationService) instead of email, and never echoes
+// the OTP back in the API response (there is no "testing mode" leak here
+// the way the email flow still has one).
+// ═════════════════════════════════════════════════════════════════════════════
+
+let phoneOtpTimer = null;
+let phoneOtpExpiresAt = null;
+
+const phoneForm = document.getElementById('phone-form');
+const phoneOtpForm = document.getElementById('phone-otp-form');
+const sendPhoneOtpBtn = document.getElementById('send-phone-otp-btn');
+const verifyPhoneOtpBtn = document.getElementById('verify-phone-otp-btn');
+const resendPhoneOtpBtn = document.getElementById('resend-phone-otp-btn');
+const cancelPhoneOtpBtn = document.getElementById('cancel-phone-otp-btn');
+const newPhoneInput = document.getElementById('new-phone');
+const phoneOtpCodeInput = document.getElementById('phone-otp-code');
+const phoneStatusDiv = document.getElementById('phone-status');
+const phoneOtpTimerDiv = document.getElementById('phone-otp-timer');
+const phoneOtpNumberDisplay = document.getElementById('phone-otp-number-display');
+const verifiedPhoneDisplay = document.getElementById('verified-phone-display');
+
+function showPhoneStatus(message, isError = false) {
+    phoneStatusDiv.textContent = message;
+    phoneStatusDiv.className = 'alert ' + (isError ? 'alert-error' : 'alert-success');
+    phoneStatusDiv.style.display = 'block';
+}
+
+function hidePhoneStatus() {
+    phoneStatusDiv.style.display = 'none';
+}
+
+function startPhoneOtpTimer(expiresAt) {
+    phoneOtpExpiresAt = expiresAt;
+    clearInterval(phoneOtpTimer);
+
+    function updateTimer() {
+        const now = Date.now();
+        const remaining = Math.max(0, expiresAt - now);
+        const minutes = Math.floor(remaining / 60000);
+        const seconds = Math.floor((remaining % 60000) / 1000);
+
+        if (remaining <= 0) {
+            phoneOtpTimerDiv.textContent = 'Code expired';
+            resendPhoneOtpBtn.style.display = 'block';
+            verifyPhoneOtpBtn.disabled = true;
+            clearInterval(phoneOtpTimer);
+        } else {
+            phoneOtpTimerDiv.textContent = `Expires in ${minutes}:${seconds.toString().padStart(2, '0')}`;
+            verifyPhoneOtpBtn.disabled = false;
+        }
+    }
+
+    updateTimer();
+    phoneOtpTimer = setInterval(updateTimer, 1000);
+}
+
+// Send OTP via SMS
+sendPhoneOtpBtn.addEventListener('click', async () => {
+    const phone = newPhoneInput.value.trim();
+
+    if (!phone) {
+        showPhoneStatus('Please enter a phone number', true);
+        return;
+    }
+
+    if (!/^[0-9+()\-\s]{7,30}$/.test(phone)) {
+        showPhoneStatus('Phone number may only contain digits, spaces, and + ( ) - , and must be 7-30 characters', true);
+        return;
+    }
+
+    sendPhoneOtpBtn.disabled = true;
+    sendPhoneOtpBtn.textContent = 'Sending...';
+
+    try {
+        const response = await fetch(window.SFMS_PUBLIC_URL('/api/phone-verification/initiate'), {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ phone })
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+            hidePhoneStatus();
+            phoneForm.style.display = 'none';
+            phoneOtpForm.style.display = 'block';
+            phoneOtpNumberDisplay.textContent = phone;
+            phoneOtpCodeInput.focus();
+
+            const expiresAt = Date.now() + (5 * 60 * 1000);
+            startPhoneOtpTimer(expiresAt);
+        } else {
+            showPhoneStatus(data.message || 'Failed to send code', true);
+        }
+    } catch (err) {
+        console.error('Phone OTP send error:', err);
+        showPhoneStatus('Failed to send code. Please try again.', true);
+    } finally {
+        sendPhoneOtpBtn.disabled = false;
+        sendPhoneOtpBtn.textContent = 'Send Code';
+    }
+});
+
+// Verify OTP
+verifyPhoneOtpBtn.addEventListener('click', async () => {
+    const phone = newPhoneInput.value.trim();
+    const otp = phoneOtpCodeInput.value.trim();
+
+    if (!otp || otp.length !== 6) {
+        showPhoneStatus('Please enter a 6-digit code', true);
+        return;
+    }
+
+    verifyPhoneOtpBtn.disabled = true;
+    verifyPhoneOtpBtn.textContent = 'Verifying...';
+
+    try {
+        const response = await fetch(window.SFMS_PUBLIC_URL('/api/phone-verification/verify-otp'), {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ phone, otp })
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+            hidePhoneStatus();
+            phoneOtpForm.style.display = 'none';
+            phoneForm.style.display = 'flex';
+            newPhoneInput.value = '';
+            phoneOtpCodeInput.value = '';
+            verifiedPhoneDisplay.textContent = phone;
+
+            showSettingsToast('Phone number verified successfully!', 'success');
+            clearInterval(phoneOtpTimer);
+        } else {
+            showPhoneStatus(data.message || 'Verification failed', true);
+        }
+    } catch (err) {
+        console.error('Phone OTP verification error:', err);
+        showPhoneStatus('Verification failed. Please try again.', true);
+    } finally {
+        verifyPhoneOtpBtn.disabled = false;
+        verifyPhoneOtpBtn.textContent = 'Verify';
+    }
+});
+
+// Resend OTP
+resendPhoneOtpBtn.addEventListener('click', async () => {
+    const phone = newPhoneInput.value.trim();
+
+    resendPhoneOtpBtn.disabled = true;
+    resendPhoneOtpBtn.textContent = 'Resending...';
+
+    try {
+        const response = await fetch(window.SFMS_PUBLIC_URL('/api/phone-verification/resend-otp'), {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ phone })
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+            phoneOtpCodeInput.value = '';
+            phoneOtpCodeInput.focus();
+            resendPhoneOtpBtn.style.display = 'none';
+
+            const expiresAt = Date.now() + (5 * 60 * 1000);
+            startPhoneOtpTimer(expiresAt);
+
+            showSettingsToast('New code sent', 'success');
+        } else {
+            showPhoneStatus(data.message || 'Failed to resend code', true);
+        }
+    } catch (err) {
+        console.error('Resend phone OTP error:', err);
+        showPhoneStatus('Failed to resend code. Please try again.', true);
+    } finally {
+        resendPhoneOtpBtn.disabled = false;
+        resendPhoneOtpBtn.textContent = 'Resend Code';
+    }
+});
+
+// Cancel OTP verification
+cancelPhoneOtpBtn.addEventListener('click', () => {
+    phoneOtpForm.style.display = 'none';
+    phoneForm.style.display = 'flex';
+    newPhoneInput.value = '';
+    phoneOtpCodeInput.value = '';
+    hidePhoneStatus();
+    clearInterval(phoneOtpTimer);
+    newPhoneInput.focus();
+});
+
+// Allow Enter key to submit phone OTP
+phoneOtpCodeInput.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+        verifyPhoneOtpBtn.click();
+    }
+});
+
 </script>
 
 <?php include __DIR__ . '/../includes/footer.php'; ?>

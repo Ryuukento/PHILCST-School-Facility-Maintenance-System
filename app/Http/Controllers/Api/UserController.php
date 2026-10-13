@@ -415,19 +415,9 @@ class UserController extends Controller
         // that mismatch.
         $newPassword     = (string)$request->input('new_password', '');
         $isForcedSetup   = !empty($currentUser->force_profile_update);
-        // Administrator Need Change SMS alert — optional phone number so
-        // SmsService has a number to send to. Nullable: an Administrator who
-        // leaves this blank simply has the SMS leg skipped (logged, never
-        // blocking) for them; every other profile field is unaffected.
-        $phoneProvided   = $request->has('phone');
-        $phone           = $phoneProvided ? trim((string)$request->input('phone', '')) : null;
 
         if ($fullName === '') {
             return $this->fail('Full name is required', 422);
-        }
-
-        if ($phoneProvided && $phone !== '' && !preg_match('/^[0-9+()\-\s]{7,30}$/', $phone)) {
-            return $this->fail('Phone number may only contain digits, spaces, and + ( ) - , and must be 7-30 characters', 422);
         }
 
         if ($username !== '' && !preg_match('/^[a-z0-9_]{3,50}$/', $username)) {
@@ -503,12 +493,13 @@ class UserController extends Controller
         if ($passwordHash) {
             $updates['password'] = $passwordHash;
         }
-        if ($phoneProvided) {
-            // Empty string means "clear the phone number" — stored as NULL,
-            // same as an account that never had one; SmsService already
-            // treats both identically (skip + log, never blocks).
-            $updates['phone'] = $phone !== '' ? $phone : null;
-        }
+        // Phone number is deliberately NOT accepted here. (2026-10-13) It now
+        // only changes through the OTP-verified flow in
+        // PhoneVerificationController/PhoneVerificationService — the user
+        // asked for the number to be proven reachable by SMS before it's
+        // trusted, the same way Email Address already requires a code
+        // before users.verified_email is trusted. Accepting a raw 'phone'
+        // field here would let it bypass that verification entirely.
 
         DB::table('users')->where('user_id', $userId)->update($updates);
 
@@ -516,9 +507,6 @@ class UserController extends Controller
             'full_name' => $fullName,
             'avatar'    => $avatarPath,
         ]);
-        if ($phoneProvided) {
-            $updatedAuthUser['phone'] = $updates['phone'];
-        }
         $request->session()->put('auth_user', $updatedAuthUser);
         $request->session()->put('user', $updatedAuthUser);
 
@@ -528,7 +516,7 @@ class UserController extends Controller
                 'full_name'            => $fullName,
                 'avatar'               => $avatarPath,
                 'force_profile_update' => 0,
-                'phone'                => $phoneProvided ? $updates['phone'] : ($currentUser->phone ?? null),
+                'phone'                => $currentUser->phone ?? null,
             ],
         ]);
     }
