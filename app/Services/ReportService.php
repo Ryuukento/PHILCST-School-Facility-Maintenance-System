@@ -306,18 +306,30 @@ class ReportService
      * general report path — the one every reporter actually uses — never had
      * any duplicate detection at all. This fills that gap.
      *
-     * MATCH RULE, BY EXPLICIT USER DECISION: same department, same calendar
-     * day, exact (case-insensitive) title match, exact derived location
-     * string match, and exact problem_type match. "Same items" was considered
-     * and deliberately dropped — the asset/item picker that could have
-     * supplied it is gone, and the one remaining item-like field (the
-     * optional Need Change search box) is unrelated to what a duplicate
-     * REPORT is about, so Problem Type was chosen as the third signal instead.
+     * MATCH RULE, BY EXPLICIT USER DECISION: same department, exact
+     * (case-insensitive) title match, exact derived location string match,
+     * and exact problem_type match. "Same items" was considered and
+     * deliberately dropped — the asset/item picker that could have supplied
+     * it is gone, and the one remaining item-like field (the optional Need
+     * Change search box) is unrelated to what a duplicate REPORT is about,
+     * so Problem Type was chosen as the third signal instead.
+     *
+     * 2026-10-12 — same-calendar-day restriction REMOVED (user decision).
+     * Originally this rule only matched a report created the same day. The
+     * user pointed out the obvious hole: re-reporting the same broken AC a
+     * week later, while yesterday's report about it is still sitting
+     * unresolved, is still a duplicate — "today" was never the point, "is
+     * this already being handled" was. So the match now spans ANY date, but
+     * — mirroring the asset-linked branch below — excludes reports that are
+     * already finished (ReportArchiveService::FINAL_STATUSES:
+     * completed/closed/cancelled). Once the existing report reaches a final
+     * status, a new report about the same thing is no longer a "duplicate
+     * of an open issue," it's a fresh issue, so it stops being flagged.
      *
      * SCOPE, BY EXPLICIT USER DECISION: matched across the WHOLE department,
      * not just the current reporter's own submissions — two different staff
-     * members reporting the same broken AC in the same room on the same day
-     * is exactly the case this exists to catch.
+     * members reporting the same broken AC in the same room while it's
+     * still unresolved is exactly the case this exists to catch.
      *
      * THIS IS INFORMATIONAL ONLY. Unlike DamageReportService::createReport()'s
      * DuplicateDamageReportException (which can reject a request outright,
@@ -406,7 +418,7 @@ class ReportService
             ->where('r.location', $location)
             ->where('r.problem_type', $problemType)
             ->where('r.department_id', (int) $departmentId)
-            ->whereDate('r.created_at', now()->toDateString())
+            ->whereNotIn('r.status', ReportArchiveService::FINAL_STATUSES)
             ->orderByDesc('r.created_at')
             ->first();
 

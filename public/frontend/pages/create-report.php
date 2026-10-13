@@ -665,7 +665,7 @@ document.getElementById('report-form').addEventListener('submit', async (e) => {
             const dup = dupCheck.data.duplicate || {};
             const who = dup.reported_by ? ` by ${UI.escapeHtml(dup.reported_by)}` : '';
             const proceed = await UI.systemConfirm(
-                `A report with the same title, location, and problem type was already submitted today${who} (Report #${dup.report_id ?? ''}). Submit this one anyway?`,
+                `A report with the same title, location, and problem type was already submitted${who} and is still unresolved (Report #${dup.report_id ?? ''}). Submit this one anyway?`,
                 'Submit Anyway',
                 'Cancel',
                 'warning'

@@ -291,6 +291,26 @@ class BuildingsRbacTest extends TestCase
             ->assertJson(['success' => true]);
     }
 
+    /**
+     * 2026-10-12 — updateFloor() (rename), added on user request. Mirrors
+     * test_super_admin_can_update_room() above; same EnsureRole:'super_admin'
+     * gate as the other 7 mutating routes in this file.
+     */
+    public function test_super_admin_can_update_floor(): void
+    {
+        $adminId = $this->seedUser(['role' => 'super_admin']);
+        $buildingId = $this->seedBuilding();
+        $floorId = $this->seedFloor($buildingId, ['name' => 'Old Floor']);
+
+        $this
+            ->actingAsSessionUser($adminId, 'super_admin')
+            ->patchJson("/api/buildings/{$buildingId}/floors/{$floorId}", ['name' => 'New Floor'])
+            ->assertOk()
+            ->assertJson(['success' => true]);
+
+        $this->assertSame('New Floor', DB::table('floors')->where('id', $floorId)->value('name'));
+    }
+
     public function test_super_admin_can_delete_floor(): void
     {
         $adminId = $this->seedUser(['role' => 'super_admin']);
@@ -398,6 +418,20 @@ class BuildingsRbacTest extends TestCase
             ->actingAsSessionUser($headId, 'maintenance_admin')
             ->postJson("/api/buildings/{$buildingId}/floors", ['name' => 'Unauthorized Floor'])
             ->assertStatus(403);
+    }
+
+    public function test_head_maintenance_cannot_update_floor(): void
+    {
+        $headId = $this->seedUser(['role' => 'maintenance_admin']);
+        $buildingId = $this->seedBuilding();
+        $floorId = $this->seedFloor($buildingId, ['name' => 'Untouched Floor']);
+
+        $this
+            ->actingAsSessionUser($headId, 'maintenance_admin')
+            ->patchJson("/api/buildings/{$buildingId}/floors/{$floorId}", ['name' => 'Hacked Floor'])
+            ->assertStatus(403);
+
+        $this->assertSame('Untouched Floor', DB::table('floors')->where('id', $floorId)->value('name'));
     }
 
     public function test_head_maintenance_cannot_delete_floor(): void
@@ -509,6 +543,20 @@ class BuildingsRbacTest extends TestCase
             ->actingAsSessionUser($staffId, 'maintenance_staff')
             ->postJson("/api/buildings/{$buildingId}/floors", ['name' => 'Unauthorized Floor'])
             ->assertStatus(403);
+    }
+
+    public function test_maintenance_staff_cannot_update_floor(): void
+    {
+        $staffId = $this->seedUser(['role' => 'maintenance_staff']);
+        $buildingId = $this->seedBuilding();
+        $floorId = $this->seedFloor($buildingId, ['name' => 'Untouched Floor']);
+
+        $this
+            ->actingAsSessionUser($staffId, 'maintenance_staff')
+            ->patchJson("/api/buildings/{$buildingId}/floors/{$floorId}", ['name' => 'Hacked Floor'])
+            ->assertStatus(403);
+
+        $this->assertSame('Untouched Floor', DB::table('floors')->where('id', $floorId)->value('name'));
     }
 
     public function test_maintenance_staff_cannot_delete_floor(): void

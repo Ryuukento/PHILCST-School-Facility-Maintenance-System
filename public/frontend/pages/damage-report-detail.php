@@ -170,7 +170,7 @@ async function loadDamageDetail() {
 
         const assetSection = `
             <h3 style="margin:0 0 8px;">Damage / Asset Information</h3>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+            <div class="detail-grid-2col">
                 <div><strong>Item:</strong> ${escapeHtml(report.item?.name || 'Unknown')}</div>
                 <div><strong>Room/Laboratory:</strong> ${escapeHtml(report.room?.name || 'N/A')}</div>
                 <div><strong>Building:</strong> ${escapeHtml(report.room?.building?.name || 'N/A')}</div>
@@ -185,7 +185,7 @@ async function loadDamageDetail() {
         const maintenanceSection = linkedId
             ? `
             <h3 style="margin:18px 0 8px;">Maintenance Report</h3>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+            <div class="detail-grid-2col">
                 <div><strong>Report Code:</strong> <a href="${MAINTENANCE_REPORT_DETAIL_BASE}?id=${encodeURIComponent(linkedId)}">#${escapeHtml(linkedId)}</a></div>
                 <div><strong>Title:</strong> ${escapeHtml(linked?.title || 'N/A')}</div>
                 <div><strong>Department:</strong> ${escapeHtml(linked?.department?.name || 'N/A')}</div>
@@ -209,7 +209,7 @@ async function loadDamageDetail() {
         const assignmentSection = linkedId
             ? `
             <h3 style="margin:18px 0 8px;">Assignment</h3>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+            <div class="detail-grid-2col">
                 <div><strong>Assigned Personnel:</strong> ${escapeHtml(linked?.assignee?.full_name || 'Unassigned')}</div>
                 <div><strong>Personnel Department:</strong> ${escapeHtml(linked?.assignee?.department?.name || 'N/A')}</div>
                 <div><strong>Assignment Status:</strong> ${escapeHtml(linked?.assigned_to ? formatStatus(linked?.status) : 'Not yet assigned')}</div>
@@ -220,7 +220,7 @@ async function loadDamageDetail() {
 
         const repairSection = `
             <h3 style="margin:18px 0 8px;">Repair / Resolution</h3>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+            <div class="detail-grid-2col">
                 <div><strong>Damage Status:</strong> ${statusBadge(report.status)}</div>
                 <div><strong>Replacement:</strong> ${report.replacement_item_id ? `${escapeHtml(report.replacement_item?.name || 'Unknown Item')} (Qty ${escapeHtml(report.replacement_quantity || 1)})` : 'Not yet replaced'}</div>
             </div>

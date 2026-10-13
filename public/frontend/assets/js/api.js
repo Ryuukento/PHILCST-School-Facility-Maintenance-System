@@ -207,6 +207,50 @@ const API = {
     },
     
     /**
+     * 2026-10-12 — General Report Duplicate Detection pre-submit check.
+     *
+     * THE BUG THIS FIXES: this method used to live ONLY inside
+     * create-report.php's own `window.API = window.API || { ... }` block.
+     * That block runs BEFORE this file loads (header.php includes the page
+     * body, including that inline script, before footer.php's
+     * `<script src=".../api.js">`), so at the moment it ran, `window.API`
+     * was still unset and the guard let it through. But api.js's own
+     * `window.API = API;` a few lines later in page load order (see the
+     * TASK 98.2 comment above) OVERWRITES window.API unconditionally — and
+     * this shared object never had a checkReportDuplicate method, so the
+     * page-local one was silently discarded every time, for every user, on
+     * every browser (confirmed: not a caching issue — reproduced in a brand
+     * new Incognito session). create-report.php's try/catch around the call
+     * is deliberately fail-open (a broken duplicate check must never block
+     * submission), so the missing method just threw, was swallowed by the
+     * catch, and nobody ever saw the warning. Defining it here, on the
+     * object that actually wins, fixes that regardless of script order.
+     *
+     * See ReportService::findPotentialDuplicate()'s doc comment for the
+     * match rule. Informational only — the caller decides whether to still
+     * submit.
+     */
+    async checkReportDuplicate(data) {
+        const response = await fetch(`${this.baseURL}/reports/check-duplicate`, {
+            method: 'POST',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+
+        const raw = await response.text();
+
+        try {
+            return JSON.parse(raw);
+        } catch (parseError) {
+            // Fails open: see the comment above — a parse failure (e.g. an
+            // HTML error page instead of JSON) must read as "no duplicate
+            // found", never as an error surfaced to the reporter.
+            return { success: false, data: { has_duplicate: false } };
+        }
+    },
+
+    /**
      * Update report
      */
     async updateReport(reportData) {

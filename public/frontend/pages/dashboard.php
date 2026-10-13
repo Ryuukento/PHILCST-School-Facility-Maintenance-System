@@ -1619,7 +1619,17 @@ function renderPriorityLegendHtml(low, medium, high, critical) {
             + ';--priority-bg:' + hexToRgba(it.color, 0.16)
             + ';--priority-border:' + hexToRgba(it.color, 0.35)
             + ';--priority-glow:' + hexToRgba(it.color, 0.55);
-        return '<div class="priority-summary-card">'
+        // Clicking a priority row jumps to All Reports pre-filtered to that
+        // priority — same navigate-on-click pattern already used by the
+        // Reports by Status donut (see its chart `onClick` below, which goes
+        // to /reports?status=...). data-priority carries the exact value
+        // reports.php's own `?priority=` URL param expects (low/medium/high/
+        // critical — see <select id="filter-priority"> there), so no new
+        // mapping is introduced. role="button" + tabindex make it keyboard
+        // operable; the click/keydown wiring lives in
+        // initPriorityLegendNavigation() below, delegated on the container
+        // since this innerHTML is rebuilt on every refresh.
+        return '<div class="priority-summary-card" data-priority="' + it.key + '" role="button" tabindex="0" aria-label="View ' + it.label + ' priority reports">'
             + '<span class="priority-summary-icon" style="' + iconStyle + '"><span class="priority-summary-dot"></span></span>'
             + '<div class="priority-summary-body">'
             + '<span class="priority-summary-name">' + it.label + '</span>'
@@ -1631,6 +1641,33 @@ function renderPriorityLegendHtml(low, medium, high, critical) {
             + '</div>'
             + '</div>';
     }).join('');
+}
+
+// Delegated click/keydown handler for the priority summary cards above.
+// Delegated (rather than bound per-card) because renderPriorityLegendHtml()
+// replaces #reportsPriorityLegend's innerHTML on every data refresh / month
+// change, which would otherwise drop any listeners attached directly to the
+// cards. Called once at page init (see DOMContentLoaded below); the
+// container element itself is never replaced, only its contents.
+function initPriorityLegendNavigation() {
+    const container = document.getElementById('reportsPriorityLegend');
+    if (!container) return;
+    const navigate = (card) => {
+        const priority = card.getAttribute('data-priority');
+        if (!priority) return;
+        window.location.href = window.SFMS_PUBLIC_URL('/reports?priority=' + priority);
+    };
+    container.addEventListener('click', (event) => {
+        const card = event.target.closest('.priority-summary-card');
+        if (card) navigate(card);
+    });
+    container.addEventListener('keydown', (event) => {
+        if (event.key !== 'Enter' && event.key !== ' ') return;
+        const card = event.target.closest('.priority-summary-card');
+        if (!card) return;
+        event.preventDefault();
+        navigate(card);
+    });
 }
 
 // TASK 35 — compact "Total Reports" card for the right column, below the
@@ -3838,6 +3875,7 @@ document.addEventListener('DOMContentLoaded', () => {
     themeObserver.observe(root, { attributes: true, attributeFilter: ['data-theme-resolved'] });
 
     initializeClickableCards();
+    initPriorityLegendNavigation();
 
     // TASK — Technician Workload. One aggregated request, rendered by the
     // shared widget in assets/js/technician-workload.js (the same file the

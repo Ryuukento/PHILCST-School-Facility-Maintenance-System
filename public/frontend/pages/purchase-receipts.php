@@ -1232,7 +1232,7 @@ async function loadReceiptDetail() {
         const createdAt  = receipt.created_at ? new Date(receipt.created_at).toLocaleString() : '—';
 
         document.getElementById('receipt-header-container').innerHTML = `
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+            <div class="detail-grid-2col">
                 <div><strong>OR Number:</strong> ${prEscapeHtml(receipt.or_number)}</div>
                 <div><strong>Receipt Date:</strong> ${prEscapeHtml(date)}</div>
                 <div><strong>Supplier:</strong> ${prEscapeHtml(receipt.supplier_name)}</div>

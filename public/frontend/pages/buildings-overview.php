@@ -202,6 +202,17 @@ include __DIR__ . '/../includes/header.php';
         </div>
         <div class="modal-body">
             <form id="floorForm">
+                <!-- 2026-10-12 — Building selector added on user request so this
+                     modal can be opened from the top-level unified Add menu
+                     (Buildings view), where no building is already selected.
+                     Mirrors roomModal's own Building select; populated by
+                     loadBuildingsForFloorModal() below. -->
+                <div class="form-group">
+                    <label for="floorBuildingSelect">Building *</label>
+                    <select id="floorBuildingSelect" class="form-control" required>
+                        <option value="">Choose a building</option>
+                    </select>
+                </div>
                 <div class="form-group">
                     <label for="floorNameInput">Floor Name *</label>
                     <input type="text" id="floorNameInput" class="form-control" placeholder="e.g., 1st Floor" required>
@@ -319,6 +330,30 @@ include __DIR__ . '/../includes/header.php';
     </div>
 </div>
 
+<!-- 2026-10-12 — Edit Floor modal (rename only), added on user request.
+     Mirrors editRoomModal exactly: floors have no reassignable parent here
+     either (a floor's building is fixed), so only the name field applies. -->
+<div id="editFloorModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Edit Floor</h2>
+            <span class="modal-close" onclick="closeEditFloorModal()">&times;</span>
+        </div>
+        <div class="modal-body">
+            <form id="editFloorForm">
+                <div class="form-group">
+                    <label for="editFloorNameInput">Floor Name *</label>
+                    <input type="text" id="editFloorNameInput" class="form-control" required>
+                </div>
+            </form>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeEditFloorModal()">Cancel</button>
+            <button class="btn btn-primary" onclick="saveEditFloor()">Save Changes</button>
+        </div>
+    </div>
+</div>
+
 <div id="itemModal" class="modal">
     <div class="modal-content">
         <div class="modal-header">
@@ -332,6 +367,30 @@ include __DIR__ . '/../includes/header.php';
                 from Inventory and approved.
             </p>
             <form id="itemForm">
+                <!-- 2026-10-12 — Building/Floor/Room selectors added so this
+                     modal can be opened from the top-level unified Add menu
+                     area (Buildings view), where no room context is known
+                     yet, instead of only from inside a drilled-into room.
+                     Mirrors roomModal's Building->Floor cascade, one level
+                     deeper (loadFloorsForItem()/loadRoomsForItem() below). -->
+                <div class="form-group">
+                    <label for="itemBuildingSelect">Building *</label>
+                    <select id="itemBuildingSelect" class="form-control" required onchange="loadFloorsForItem(this.value)">
+                        <option value="">Choose a building</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="itemFloorSelect">Floor *</label>
+                    <select id="itemFloorSelect" class="form-control" required onchange="loadRoomsForItem(this.value)">
+                        <option value="">Choose a floor</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="itemRoomSelect">Room *</label>
+                    <select id="itemRoomSelect" class="form-control" required>
+                        <option value="">Choose a room</option>
+                    </select>
+                </div>
                 <div class="form-group">
                     <label for="itemNameInput">Item Name *</label>
                     <input type="text" id="itemNameInput" class="form-control" required>
@@ -1145,6 +1204,78 @@ function addActionButton(text, onClick, variant = 'secondary') {
     document.getElementById('overviewActions').appendChild(btn);
 }
 
+// 2026-10-12 — unified "Add" menu (Buildings Overview top-level toolbar),
+// added on user request. Previously, adding a Floor required first drilling
+// into a Building (the old "Add Floor" button only appeared inside
+// loadFloors()), and adding a Room required drilling into Building -> Floor
+// (the old "Add New Room" button only appeared inside loadRooms()). Both of
+// those per-level buttons were REMOVED (user decision) in favor of this one
+// entry point, always visible on the top-level Buildings view only:
+// openFloorModal()/openRoomModal() now let you pick the building/floor from
+// inside the modal itself, so drilling down first is no longer required for
+// either. Mirrors the open/close-on-outside-click pattern already used for
+// the room-card kebab menu (openRoomCardMenuWrap, TASK 67) but tracked
+// separately since only one menu of either kind should ever be open at a
+// time, and they are unrelated DOM trees. Uses dedicated .add-menu-* CSS
+// (buildings-redesign.css) rather than reusing .room-card-menu-* directly,
+// since that class carries a `margin-left: auto` meant to push a kebab
+// button past a card's icon/name — #overviewActions has no such sibling to
+// push past, and reusing it would misalign this button against "Back".
+let openAddMenuWrap = null;
+
+function closeAddMenu() {
+    if (openAddMenuWrap) {
+        openAddMenuWrap.classList.remove('open');
+        openAddMenuWrap = null;
+    }
+}
+
+document.addEventListener('click', closeAddMenu);
+
+function addUnifiedAddButton() {
+    const wrap = document.createElement('div');
+    wrap.className = 'add-menu-wrap';
+
+    const trigger = document.createElement('button');
+    trigger.type = 'button';
+    trigger.className = 'btn btn-primary';
+    trigger.textContent = 'Add ▾';
+    trigger.setAttribute('aria-haspopup', 'true');
+    trigger.onclick = (event) => {
+        event.stopPropagation();
+        const wasOpen = wrap.classList.contains('open');
+        closeAddMenu();
+        if (!wasOpen) {
+            wrap.classList.add('open');
+            openAddMenuWrap = wrap;
+        }
+    };
+    wrap.appendChild(trigger);
+
+    const dropdown = document.createElement('div');
+    dropdown.className = 'add-menu-dropdown';
+
+    [
+        ['Add Building', () => openBuildingModal()],
+        ['Add Floor', () => openFloorModal()],
+        ['Add Room', () => openRoomModal()],
+    ].forEach(([label, handler]) => {
+        const item = document.createElement('button');
+        item.type = 'button';
+        item.className = 'add-menu-item';
+        item.textContent = label;
+        item.onclick = (event) => {
+            event.stopPropagation();
+            closeAddMenu();
+            handler();
+        };
+        dropdown.appendChild(item);
+    });
+
+    wrap.appendChild(dropdown);
+    document.getElementById('overviewActions').appendChild(wrap);
+}
+
 async function openPrintFilterModal() {
     const buildingSelect = document.getElementById('printBuildingSelect');
     const roomSelect = document.getElementById('printRoomSelect');
@@ -1402,18 +1533,44 @@ async function loadBuildings() {
     // TASK 35 — Administrator (super_admin) only; Head Maintenance and
     // Maintenance Staff are view-only for buildings (enforced server-side by
     // EnsureRole:'super_admin' on POST /api/buildings, see routes/web.php).
+    // 2026-10-12 — the single-purpose "Add Building" button here was
+    // replaced with a unified "Add ▾" menu (Add Building / Add Floor / Add
+    // Room), by user decision. It lives ONLY on this top-level view — the
+    // per-level "Add Floor" (loadFloors()) and "Add New Room" (loadRooms())
+    // buttons were removed in favor of this one entry point, since
+    // openFloorModal()/openRoomModal() now let you pick the building/floor
+    // from inside the modal instead of requiring you to already be drilled
+    // into one. See addUnifiedAddButton() below.
     if (canModifyBuildings) {
-        addActionButton('Add Building', () => openBuildingModal(), 'primary');
+        addUnifiedAddButton();
     }
-    // replaced refresh with a back button that navigates to previous page
-    addActionButton('Back', () => {
-        if (window.history.length > 1) {
-            window.history.back();
-        } else {
-            // Role-aware fallback when page is opened directly.
-            window.location.href = defaultBackUrl;
-        }
-    });
+    // 2026-10-12 — "Record Existing Item" moved here from the room-level
+    // Items view (loadItems()), by user decision: it now works from the top
+    // level via Building/Floor/Room selects inside openItemModal() itself
+    // (mirrors Add Room's own cascade, one level deeper — see
+    // loadFloorsForItem()/loadRoomsForItem()), so you no longer have to
+    // drill all the way into the specific room first. Narrowed from its old
+    // gate (super_admin + maintenance_admin, see loadItems()) to
+    // super_admin-only (canModifyBuildings) to match the "Add ▾" button it
+    // now sits beside — an explicit, informed trade-off the user chose
+    // after being told Head Maintenance would lose this at the top level.
+    // "Dispatch Items Here" is untouched and still lives in loadItems()
+    // (unrelated flow: new items arrive via Dispatch -> Approve -> Release,
+    // not this form). The backend route (POST /api/items) still allows
+    // maintenance_admin too — unchanged — this is a UI-only narrowing.
+    if (canModifyBuildings) {
+        addActionButton('Record Existing Item', () => openItemModal());
+    }
+    // 2026-10-12 — the "Back" button that used to sit here was removed, by
+    // user decision: this is the top-level (root) Buildings Overview view —
+    // there is no "previous step" within this page to go back to, the
+    // sidebar nav already covers leaving the page entirely, and it was
+    // sitting right next to the new "Add ▾" menu where it no longer made
+    // sense. Back buttons on the Floors/Rooms drill-down views (loadFloors()/
+    // loadRooms()) are unaffected — those still navigate up one level.
+    // defaultBackUrl (set above) is now unused here but left in place: it's
+    // still a reasonable role-aware fallback if a Back control is ever
+    // reintroduced at this level.
     setBuildingChromeVisibility(true);
 
     const container = document.getElementById('overviewContainer');
@@ -1481,11 +1638,12 @@ async function loadFloors(buildingId, buildingName) {
     document.getElementById('overviewTitle').textContent = 'Floors of ' + buildingName;
     document.getElementById('overviewSubtitle').textContent = 'Select a floor to view rooms';
     clearActions();
-    // TASK 35 — Administrator (super_admin) only; matches the narrowed
-    // POST /api/buildings/{id}/floors middleware (routes/web.php).
-    if (canModifyBuildings) {
-        addActionButton('Add Floor', () => openFloorModal());
-    }
+    // 2026-10-12 — the "Add Floor" button that used to live here was
+    // removed, by user decision: adding a floor now only happens through
+    // the unified "Add ▾" menu on the top-level Buildings view (see
+    // addUnifiedAddButton() in loadBuildings()), which lets you pick the
+    // building from inside the modal instead of requiring you to already be
+    // drilled into one.
     addActionButton('Back', loadBuildings);
     setBuildingChromeVisibility(false);
 
@@ -1530,11 +1688,11 @@ async function loadRooms(floorId, floorName) {
     document.getElementById('overviewTitle').textContent = 'Rooms of ' + floorName;
     document.getElementById('overviewSubtitle').textContent = 'Select a room to view items';
     clearActions();
-    // TASK 35 — Administrator (super_admin) only; matches the narrowed
-    // POST /api/rooms middleware (routes/web.php).
-    if (canModifyBuildings) {
-        addActionButton('Add New Room', () => openRoomModal(currentBuildingId, currentFloorId), 'primary');
-    }
+    // 2026-10-12 — the "Add New Room" button that used to live here was
+    // removed, by user decision: adding a room now only happens through the
+    // unified "Add ▾" menu on the top-level Buildings view (see
+    // addUnifiedAddButton() in loadBuildings()), which already lets you pick
+    // both the building and floor from inside the modal.
     addActionButton('Back', () => loadFloors(currentBuildingId, currentBuildingName));
     setRoomSearchVisibility(true, 'Search rooms...', true);
     setBuildingChromeVisibility(false);
@@ -1619,6 +1777,63 @@ function getRoomIcon(roomName, category) {
     
     // Classroom
     return 'book';
+}
+
+// 2026-10-12 — item cards (createItemCard/createDeployedItemCard below) used
+// to hardcode the generic 'package' icon for every single item regardless of
+// what it was, so an aircon, a chair, and a keyboard all looked identical.
+// Mirrors the getRoomCategory()/getRoomIcon() pattern just above: a lookup
+// table keyed by the exact `inventory_categories.name` strings this app
+// already seeds (see 2026_09_29_000100_replace_inventory_categories_with_
+// maintenance_taxonomy.php) first, then a name-keyword fallback for items
+// that don't carry a category at all.
+//
+// Why both are needed: createDeployedItemCard() gets `item.category` for
+// free (BuildingController::deployedItems() joins inventory_categories), but
+// createItemCard() reads from GET /api/items, which returns the raw `items`
+// row with no category join — category_id is there, but no name. Rather than
+// touch that endpoint (out of scope, and more surface area to break), room
+// assets fall through to matching on item.name, same as getRoomIcon() already
+// does for rooms with no stored category of their own.
+const ITEM_CATEGORY_ICONS = {
+    'Electrical': 'zap',
+    'Plumbing & Water': 'droplet',
+    'Air Conditioning & Ventilation': 'wind',
+    'Information Technology (IT)': 'monitor',
+    'Furniture': 'armchair',
+    'Building & Structural': 'building',
+    'Classroom Facilities': 'book',
+    'Laboratory Equipment': 'archive',
+    'Restroom Facilities': 'door',
+    'Safety & Security': 'alert-triangle',
+    'Cleaning & Sanitation': 'trash',
+    'Grounds & Outdoor Facilities': 'leaf',
+    'Communication & Audio-Visual': 'message-square',
+    'Transportation/Vehicle': 'truck',
+    'Other / General Maintenance': 'package',
+};
+
+function getItemNameIcon(itemName) {
+    const name = String(itemName || '').toLowerCase();
+    if (/aircon|air condition|a\/c\b|\bhvac\b|ventilat|exhaust fan/.test(name)) return 'wind';
+    if (/chair|table|desk|cabinet|shelf|locker|sofa|bench|armchair|stool/.test(name)) return 'armchair';
+    if (/keyboard|mouse|\bmonitor\b|computer|laptop|printer|projector|router|modem|\bcpu\b|scanner|webcam/.test(name)) return 'monitor';
+    if (/outlet|\bwire\b|wiring|breaker|switch|\bbulb\b|\blamp\b|\blight\b|socket|electrical/.test(name)) return 'zap';
+    if (/faucet|\bpipe\b|valve|\bsink\b|toilet|plumbing|drain/.test(name)) return 'droplet';
+    if (/extinguisher|\balarm\b|\bcctv\b|\bcamera\b|padlock|security/.test(name)) return 'alert-triangle';
+    if (/\bbroom\b|\bmop\b|dustbin|trash bin|sanitiz|cleaning/.test(name)) return 'trash';
+    if (/vehicle|\bcar\b|motorcycle|\btruck\b|\bbike\b/.test(name)) return 'truck';
+    if (/speaker|microphone|\baudio\b|\btv\b|television/.test(name)) return 'message-square';
+    return null;
+}
+
+function getItemIcon(item) {
+    const category = item && item.category;
+    if (category && ITEM_CATEGORY_ICONS[category]) {
+        return ITEM_CATEGORY_ICONS[category];
+    }
+    const name = item && (item.item_name || item.name);
+    return getItemNameIcon(name) || 'package';
 }
 
 // TASK 67 — room-card kebab menu (Edit Room / Delete Room). No dropdown-menu
@@ -1827,9 +2042,13 @@ async function loadItems(roomId, roomName) {
     document.getElementById('overviewSubtitle').textContent = 'Search items in this room';
     clearActions();
     // New items reach a room through Dispatch (Inventory -> approval ->
-    // release), so that is the primary action. "Record Existing Item" is only
-    // for equipment already in the room before the system was used. Both are
-    // Head/Administrator actions (the same roles the API allows).
+    // release), so that remains the primary action here.
+    // 2026-10-12 — "Record Existing Item" was moved to the top-level
+    // Buildings view (see loadBuildings()), by user decision, and no longer
+    // appears in this room-level view. It is also now super_admin-only
+    // there (narrowed from super_admin + maintenance_admin), so this gate
+    // is intentionally left at its original, wider scope for "Dispatch
+    // Items Here" alone — that action is unaffected by the move.
     if (['super_admin', 'maintenance_admin'].includes(userRole)) {
         addActionButton('Dispatch Items Here', () => {
             const url = window.SFMS_PUBLIC_URL('/dispatch-create')
@@ -1837,7 +2056,6 @@ async function loadItems(roomId, roomName) {
                 + '&room_name=' + encodeURIComponent(roomName || '');
             window.location.href = url;
         }, 'primary');
-        addActionButton('Record Existing Item', () => openItemModal());
     }
     addActionButton('Back', () => loadRooms(currentFloorId, currentFloorName));
 
@@ -1969,7 +2187,7 @@ function createDeployedItemCard(item) {
     const iconEl = document.createElement('div');
     iconEl.className = 'item-asset-card-icon';
     iconEl.setAttribute('aria-hidden', 'true');
-    iconEl.innerHTML = window.UIIcons ? window.UIIcons.svg('package', { size: 20 }) : '';
+    iconEl.innerHTML = window.UIIcons ? window.UIIcons.svg(getItemIcon(item), { size: 20 }) : '';
     header.appendChild(iconEl);
 
     const titleEl = document.createElement('h3');
@@ -2060,7 +2278,7 @@ function createItemCard(item) {
     const iconEl = document.createElement('div');
     iconEl.className = 'item-asset-card-icon';
     iconEl.setAttribute('aria-hidden', 'true');
-    iconEl.innerHTML = window.UIIcons ? window.UIIcons.svg('package', { size: 20 }) : '';
+    iconEl.innerHTML = window.UIIcons ? window.UIIcons.svg(getItemIcon(item), { size: 20 }) : '';
     header.appendChild(iconEl);
 
     const titleEl = document.createElement('h3');
@@ -2261,6 +2479,27 @@ function createFloorCard(floor) {
     content.appendChild(statsEl);
 
     div.appendChild(content);
+
+    // 2026-10-12 — Edit Floor trigger, added on user request. Administrator
+    // (super_admin) only, matching the narrowed PATCH
+    // /api/buildings/{id}/floors/{floorId} middleware (routes/web.php) and
+    // the identical gating already used for the building card's own ⋮
+    // button above. Reuses .building-card-menu-btn so it matches that
+    // control pixel-for-pixel instead of introducing a second menu-button
+    // style.
+    if (canModifyBuildings) {
+        const menuBtn = document.createElement('button');
+        menuBtn.type = 'button';
+        menuBtn.className = 'building-card-menu-btn';
+        menuBtn.setAttribute('aria-label', 'Edit ' + (floor.name || 'floor'));
+        menuBtn.title = 'Edit floor';
+        menuBtn.textContent = '⋮';
+        menuBtn.onclick = (event) => {
+            event.stopPropagation();
+            openEditFloorModal(floor.id);
+        };
+        div.appendChild(menuBtn);
+    }
 
     // Arrow button
     const arrow = document.createElement('div');
@@ -2504,6 +2743,58 @@ async function saveEditRoom() {
     }
 }
 
+// 2026-10-12 — Edit Floor (rename), added on user request. Mirrors
+// openEditRoomModal/closeEditRoomModal/saveEditRoom immediately above;
+// floorsRawCache (populated by loadFloors()) is the source of truth, the
+// same way currentRoomsCache backs the room edit flow.
+function openEditFloorModal(floorId) {
+    const floor = floorsRawCache.find((f) => Number(f.id) === Number(floorId));
+    if (!floor) {
+        Components.alert('Floor not found. Please refresh the list.', 'danger');
+        return;
+    }
+    currentEditFloorId = floorId;
+    document.getElementById('editFloorNameInput').value = floor.name || '';
+    document.getElementById('editFloorModal').classList.add('show');
+    document.getElementById('editFloorNameInput').focus();
+}
+
+function closeEditFloorModal() {
+    document.getElementById('editFloorModal').classList.remove('show');
+    document.getElementById('editFloorForm').reset();
+    currentEditFloorId = null;
+}
+
+async function saveEditFloor() {
+    const name = document.getElementById('editFloorNameInput').value.trim();
+    if (!currentEditFloorId) {
+        Components.alert('No floor selected for edit.', 'warning');
+        return;
+    }
+    if (!name) {
+        Components.alert('Please enter floor name', 'warning');
+        return;
+    }
+    try {
+        const res = await fetch(window.SFMS_PUBLIC_URL(`/api/buildings/${currentBuildingId}/floors/${currentEditFloorId}`), {
+            method: 'PATCH',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name })
+        });
+        const data = await res.json();
+        if (data.success) {
+            closeEditFloorModal();
+            loadFloors(currentBuildingId, currentBuildingName);
+        } else {
+            Components.alert(data.message || 'Failed to update floor', 'danger');
+        }
+    } catch (err) {
+        console.error('Error updating floor', err);
+        Components.alert('Error updating floor. Check console for details.', 'danger');
+    }
+}
+
 function openBuildingModal() {
     document.getElementById('buildingModal').classList.add('show');
     document.getElementById('buildingNameInput').focus();
@@ -2544,29 +2835,64 @@ async function saveBuildingData() {
 }
 
 // Floor modal functions
-function openFloorModal() {
+// 2026-10-12 — now opened from the top-level unified Add menu (no building
+// context known yet), so it loads its own building list, mirroring
+// openRoomModal()/loadBuildingsInModal(). defaultBuildingId is accepted for
+// future flexibility (no current caller passes one) the same way
+// openRoomModal()'s defaults are.
+function openFloorModal(defaultBuildingId = '') {
     document.getElementById('floorModal').classList.add('show');
+    loadBuildingsForFloorModal(defaultBuildingId);
     document.getElementById('floorNameInput').focus();
 }
 function closeFloorModal() {
     document.getElementById('floorModal').classList.remove('show');
     document.getElementById('floorForm').reset();
 }
+// 2026-10-12 — mirrors loadBuildingsInModal() (roomModal), minus the floor
+// half: a floor has no further nesting of its own to pick.
+function loadBuildingsForFloorModal(preselectBuildingId = '') {
+    const buildingSelect = document.getElementById('floorBuildingSelect');
+    buildingSelect.innerHTML = '<option value="">Choose a building</option>';
+
+    fetch(window.SFMS_PUBLIC_URL('/api/buildings'), {
+        credentials: 'same-origin'
+    })
+        .then(res => res.json())
+        .then(data => {
+            const buildings = extractList(data, 'buildings');
+            if (data.success && buildings.length > 0) {
+                buildings.forEach(building => {
+                    const option = document.createElement('option');
+                    option.value = building.id;
+                    option.textContent = building.name;
+                    buildingSelect.appendChild(option);
+                });
+
+                if (preselectBuildingId) {
+                    buildingSelect.value = String(preselectBuildingId);
+                }
+            }
+        })
+        .catch(err => {
+            console.error('Error loading buildings for floor modal', err);
+        });
+}
 async function saveFloorData() {
+    const buildingId = document.getElementById('floorBuildingSelect').value.trim();
     const name = document.getElementById('floorNameInput').value.trim();
+    if (!buildingId) {
+        Components.alert('Please select a building', 'warning');
+        return;
+    }
     if (!name) {
         Components.alert('Please enter floor name', 'warning');
         return;
     }
-    if (!currentBuildingId) {
-        // should never happen but guard just in case
-        Components.alert('No building selected. Please go back and choose a building first.', 'warning');
-        return;
-    }
-    console.log('Saving floor', {buildingId: currentBuildingId, buildingName: currentBuildingName, name});
+    console.log('Saving floor', {buildingId, name});
     try {
         const res = await fetch(
-            window.SFMS_PUBLIC_URL(`/api/buildings/${currentBuildingId}/floors`),
+            window.SFMS_PUBLIC_URL(`/api/buildings/${buildingId}/floors`),
             {
                 method: 'POST',
                 credentials: 'same-origin',
@@ -2583,8 +2909,11 @@ async function saveFloorData() {
         const data = await res.json();
         if (data.success) {
             closeFloorModal();
-            // reload current building's floors using stored name variable
-            loadFloors(currentBuildingId, currentBuildingName);
+            // 2026-10-12 — this modal is now only reachable from the
+            // top-level unified Add menu, so refresh THAT view rather than
+            // assuming a possibly-stale currentBuildingId/currentBuildingName
+            // from an earlier drill-down.
+            loadBuildings();
         } else {
             Components.alert(data.message || 'Failed to save floor', 'danger');
         }
@@ -2684,7 +3013,12 @@ async function saveRoomData() {
         const result = await response.json();
         if (result.success) {
             closeRoomModal();
-            loadRooms(currentFloorId, currentFloorName);
+            // 2026-10-12 — openRoomModal() is now only reached from the
+            // top-level unified Add menu, not from inside a drilled-into
+            // floor, so refresh THAT view instead of assuming
+            // currentFloorId/currentFloorName match whatever building/floor
+            // the user actually picked in this modal's own selects.
+            loadBuildings();
         } else {
             Components.alert(result.message || 'Failed to add room', 'danger');
         }
@@ -2695,29 +3029,129 @@ async function saveRoomData() {
 }
 
 // Item modal functions
+// 2026-10-12 — now opened from the top-level unified Add area (no room
+// context known yet), so it loads its own Building list; Floor and Room
+// cascade in as each parent is chosen (loadFloorsForItem()/
+// loadRoomsForItem() below), the same pattern as openRoomModal().
 function openItemModal() {
     document.getElementById('itemModal').classList.add('show');
+    loadBuildingsForItemModal();
     document.getElementById('itemNameInput').focus();
 }
 function closeItemModal() {
     document.getElementById('itemModal').classList.remove('show');
     document.getElementById('itemForm').reset();
+    document.getElementById('itemFloorSelect').innerHTML = '<option value="">Choose a floor</option>';
+    document.getElementById('itemRoomSelect').innerHTML = '<option value="">Choose a room</option>';
+}
+function loadBuildingsForItemModal(preselectBuildingId = '') {
+    const buildingSelect = document.getElementById('itemBuildingSelect');
+    buildingSelect.innerHTML = '<option value="">Choose a building</option>';
+
+    fetch(window.SFMS_PUBLIC_URL('/api/buildings'), {
+        credentials: 'same-origin'
+    })
+        .then(res => res.json())
+        .then(data => {
+            const buildings = extractList(data, 'buildings');
+            if (data.success && buildings.length > 0) {
+                buildings.forEach(building => {
+                    const option = document.createElement('option');
+                    option.value = building.id;
+                    option.textContent = building.name;
+                    buildingSelect.appendChild(option);
+                });
+
+                if (preselectBuildingId) {
+                    buildingSelect.value = String(preselectBuildingId);
+                    loadFloorsForItem(preselectBuildingId);
+                }
+            }
+        })
+        .catch(err => {
+            console.error('Error loading buildings for item modal', err);
+        });
+}
+function loadFloorsForItem(buildingId, preselectFloorId = '') {
+    const floorSelect = document.getElementById('itemFloorSelect');
+    const roomSelect = document.getElementById('itemRoomSelect');
+    floorSelect.innerHTML = '<option value="">Choose a floor</option>';
+    roomSelect.innerHTML = '<option value="">Choose a room</option>';
+    if (!buildingId) return;
+    fetch(window.SFMS_PUBLIC_URL(`/api/buildings/${encodeURIComponent(buildingId)}/floors`), {
+        credentials: 'same-origin'
+    })
+        .then(res => res.json())
+        .then(data => {
+            const floors = extractList(data, 'floors');
+            if (data.success && floors.length > 0) {
+                floors.forEach(floor => {
+                    const opt = document.createElement('option');
+                    opt.value = floor.id;
+                    opt.textContent = floor.name;
+                    floorSelect.appendChild(opt);
+                });
+
+                if (preselectFloorId) {
+                    floorSelect.value = String(preselectFloorId);
+                    loadRoomsForItem(preselectFloorId);
+                }
+            }
+        })
+        .catch(err => {
+            console.error('Error loading floors for item modal', err);
+        });
+}
+function loadRoomsForItem(floorId) {
+    const roomSelect = document.getElementById('itemRoomSelect');
+    const buildingId = document.getElementById('itemBuildingSelect').value;
+    roomSelect.innerHTML = '<option value="">Choose a room</option>';
+    if (!floorId || !buildingId) return;
+    fetch(window.SFMS_PUBLIC_URL(`/api/rooms?building_id=${encodeURIComponent(buildingId)}&floor_id=${encodeURIComponent(floorId)}`), {
+        credentials: 'same-origin'
+    })
+        .then(res => res.json())
+        .then(data => {
+            const rooms = extractList(data, 'rooms');
+            if (data.success && rooms.length > 0) {
+                rooms.forEach(room => {
+                    const opt = document.createElement('option');
+                    opt.value = room.id;
+                    opt.textContent = room.name;
+                    roomSelect.appendChild(opt);
+                });
+            }
+        })
+        .catch(err => {
+            console.error('Error loading rooms for item modal', err);
+        });
 }
 async function saveItemData() {
+    const roomId = document.getElementById('itemRoomSelect').value.trim();
     const name = document.getElementById('itemNameInput').value.trim();
     const quantity = document.getElementById('itemQuantityInput').value;
+    if (!roomId) { Components.alert('Please select a building, floor, and room', 'warning'); return; }
     if (!name) { Components.alert('Please enter item name', 'warning'); return; }
-    const res = await fetch(window.SFMS_PUBLIC_URL('/api/items'), {
-        method:'POST', headers:{'Content-Type':'application/json'},
-        credentials: 'same-origin',
-        body: JSON.stringify({ room_id: currentRoomId, name, quantity })
-    });
-    const data = await res.json();
-    if (data.success) {
-        closeItemModal();
-        loadItems(currentRoomId, document.getElementById('overviewTitle').textContent.split(' in ')[1]);
-    } else {
-        Components.alert(data.message, 'danger');
+    try {
+        const res = await fetch(window.SFMS_PUBLIC_URL('/api/items'), {
+            method:'POST', headers:{'Content-Type':'application/json'},
+            credentials: 'same-origin',
+            body: JSON.stringify({ room_id: roomId, name, quantity })
+        });
+        const data = await res.json();
+        if (data.success) {
+            closeItemModal();
+            // 2026-10-12 — this modal is now only reachable from the
+            // top-level unified Add area, so refresh THAT view rather than
+            // assuming currentRoomId/the page title match whatever room the
+            // user actually picked in this modal's own selects.
+            loadBuildings();
+        } else {
+            Components.alert(data.message, 'danger');
+        }
+    } catch (err) {
+        console.error('Error saving item', err);
+        Components.alert('Error saving item. Please try again.', 'danger');
     }
 }
 

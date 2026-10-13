@@ -1967,12 +1967,20 @@ main.container .dashboard-hero-panel .card-header.dashboard-hero-header {
     background: linear-gradient(135deg, var(--surface-muted) 0%, var(--surface) 100%);
     transition: all 0.2s ease;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    /* Clicking a row jumps to All Reports filtered to that priority — see
+       initPriorityLegendNavigation() in dashboard.php. */
+    cursor: pointer;
 }
 
 .priority-summary-card:hover {
     border-color: var(--priority-color);
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
     transform: translateY(-1px);
+}
+
+.priority-summary-card:focus-visible {
+    outline: 2px solid var(--priority-color);
+    outline-offset: 2px;
 }
 
 .priority-summary-icon {

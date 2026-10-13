@@ -170,8 +170,12 @@ class ReportDuplicateDetectionTest extends TestCase
         $response->assertJsonPath('data.has_duplicate', false);
     }
 
-    public function test_a_report_from_a_previous_day_is_not_a_duplicate(): void
+    public function test_a_still_open_report_from_a_previous_day_is_still_a_duplicate(): void
     {
+        // 2026-10-12 — user decision: the same-calendar-day restriction was
+        // removed. Re-reporting the same broken AC a week later while
+        // yesterday's report about it is still unresolved IS a duplicate —
+        // "today" was never the point, "is this already being handled" was.
         $fixture = $this->seedBuildingsOverview();
         $deptId = $this->seedDepartment();
         $reporterId = $this->seedUser(['role' => 'maintenance_staff', 'department_id' => $deptId]);
@@ -180,7 +184,33 @@ class ReportDuplicateDetectionTest extends TestCase
             'title' => 'Broken Aircon',
             'location' => 'Building 1 / 2nd Floor / Room 102',
             'problem_type' => 'HVAC / Aircon',
-            'created_at' => now()->subDay(),
+            'created_at' => now()->subWeek(),
+        ]);
+
+        $response = $this
+            ->actingAsSessionUser($reporterId, 'maintenance_staff')
+            ->postJson('/api/reports/check-duplicate', $this->duplicateCheckPayload($deptId, $fixture));
+
+        $response->assertOk();
+        $response->assertJsonPath('data.has_duplicate', true);
+    }
+
+    public function test_a_finished_report_from_a_previous_day_is_not_a_duplicate(): void
+    {
+        // Mirrors test_a_finished_report_for_the_same_asset_is_not_a_duplicate()
+        // below, for the general (non-asset-linked) branch: once the matching
+        // report reaches a final status (ReportArchiveService::FINAL_STATUSES),
+        // it stops being flagged — regardless of how old it is.
+        $fixture = $this->seedBuildingsOverview();
+        $deptId = $this->seedDepartment();
+        $reporterId = $this->seedUser(['role' => 'maintenance_staff', 'department_id' => $deptId]);
+
+        $this->seedReport($reporterId, $deptId, [
+            'title' => 'Broken Aircon',
+            'location' => 'Building 1 / 2nd Floor / Room 102',
+            'problem_type' => 'HVAC / Aircon',
+            'created_at' => now()->subWeek(),
+            'status' => 'completed',
         ]);
 
         $response = $this

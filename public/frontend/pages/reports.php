@@ -769,6 +769,12 @@ const PAGINATION_MIN_REPORTS = 10;
 let lastMonthOnly = false;
 let selectedWeek = 0;
 let statusGroupFilter = '';
+// Set from ?category=<problem_type value> (e.g. the Analytics "Reports by
+// Category" chart's click-to-filter — see applyCategoryFilter() below).
+// There is no #filter-category dropdown on this page, unlike status/
+// priority/report-type, so this is applied client-side the same way
+// statusGroupFilter is.
+let categoryFilter = '';
 // `lastLoadedScope` and `allTimeReportCount` were declared here. Both existed
 // solely to feed the removed date-scope summary line: the first recorded the
 // range the visible rows were fetched under, the second cached an all-time
@@ -854,6 +860,19 @@ function applyStatusGroupFilter(reports) {
         });
     }
 
+    if (statusGroupFilter === 'other_statuses') {
+        // Mirrors AnalyticsService.php's "Other" bucket for the Analytics
+        // "Reports by Status" donut's gray segment: anything that isn't
+        // submitted/assigned (Pending / Open), in_progress, or completed.
+        return reports.filter((report) => {
+            const status = String(report.status || '').toLowerCase();
+            return status !== 'submitted'
+                && status !== 'assigned'
+                && status !== 'in_progress'
+                && status !== 'completed';
+        });
+    }
+
     if (statusGroupFilter === 'unresolved') {
         return reports.filter((report) => {
             const status = String(report.status || '').toLowerCase();
@@ -918,6 +937,21 @@ function applyStatusGroupFilter(reports) {
     }
 
     return reports;
+}
+
+// Companion to applyStatusGroupFilter() above, for the Analytics "Reports by
+// Category" chart's click-to-filter (see analytics-dashboard.php's
+// anRenderReportsByCategoryChart onClick). That chart's bars come straight
+// from each report's problem_type column (AnalyticsService::getReportsByCategory
+// groups by problem_type verbatim, no relabeling), so an exact string match
+// against problem_type is the correct filter — unlike status, there's no
+// bucketing/grouping involved here.
+function applyCategoryFilter(reports) {
+    if (!Array.isArray(reports) || !categoryFilter) {
+        return Array.isArray(reports) ? reports : [];
+    }
+
+    return reports.filter((report) => String(report.problem_type || '') === categoryFilter);
 }
 
 function getReportWeekNumber(createdAt) {
@@ -1009,7 +1043,7 @@ function renderWeekPagination(sourceReports) {
 
 
 function renderReportsView() {
-    const groupedReports = applyStatusGroupFilter(allReports);
+    const groupedReports = applyCategoryFilter(applyStatusGroupFilter(allReports));
     renderWeekPagination(groupedReports);
     const filteredReports = getReportsBySelectedWeek(groupedReports);
     const totalReports = filteredReports.length;
@@ -2154,6 +2188,39 @@ function getActiveSemesterRange(settings) {
     };
 }
 
+// 'YYYY-MM-DD' - months (calendar-month subtraction). Mirrors PHP Carbon's
+// subMonths() closely enough for this use: native Date month arithmetic
+// rolls an out-of-range day into the following month the same way Carbon
+// does (e.g. Mar 31 - 1 month both land on ~Mar 3, not clamped to Feb 28).
+function subtractCalendarMonths(dateStr, months) {
+    const [y, m, d] = String(dateStr).split('-').map(Number);
+    const dt = new Date(y, (m - 1) - months, d);
+    const yyyy = dt.getFullYear();
+    const mm = String(dt.getMonth() + 1).padStart(2, '0');
+    const dd = String(dt.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
+}
+
+// Companion to getActiveSemesterRange() above, for charts whose query window
+// is WIDER than the semester's own bounds: AnalyticsService::dashboardOverview()
+// computes $semesterStartForCharts as "2 months before the semester's start
+// date... to capture reports created earlier" (its own comment) and feeds
+// that into getReportsByCategory() and getMonthlyReportsTrend() — NOT the
+// exact semester start getReportsByStatus() uses. The Analytics "Reports by
+// Category" chart's click-to-filter (analytics-dashboard.php) must match
+// this wider window, or a bar's own report can fall in that 2-month lookback
+// and silently vanish behind reports.php's narrower date filter.
+function getSemesterChartsRange(settings) {
+    const base = getActiveSemesterRange(settings);
+    if (!base) return null;
+
+    return {
+        start: subtractCalendarMonths(base.start, 2),
+        end: base.end,
+        label: base.label
+    };
+}
+
 async function refreshPrintSemesterInfo() {
     const infoEl = document.getElementById('print-semester-info');
     if (!infoEl) return;
@@ -2209,11 +2276,11 @@ async function fetchAllReportsForRange(dateFrom, dateTo) {
         page += 1;
     }
 
-    // Resolution (resolved/unresolved) is a client-side concept elsewhere on
-    // this page (see applyStatusGroupFilter/renderReportsView) — reused here
-    // rather than re-implemented so "resolved" means the same thing in the
-    // export as it does on screen.
-    return applyStatusGroupFilter(fetched);
+    // Resolution (resolved/unresolved) and category are client-side concepts
+    // elsewhere on this page (see applyStatusGroupFilter/applyCategoryFilter/
+    // renderReportsView) — reused here rather than re-implemented so both
+    // mean the same thing in the export as they do on screen.
+    return applyCategoryFilter(applyStatusGroupFilter(fetched));
 }
 
 // Shared by both Export PDF and Export Excel: resolves the active semester,
@@ -2825,6 +2892,21 @@ async function loadArchiveMenu() {
         if (event.key === 'Escape') closeArchiveMenu();
     });
 
+    // On mobile the menu is `position:fixed` with its `top` computed once,
+    // in px, at the moment it opens (see the click handler above) — fixed
+    // positioning does not recompute that offset on scroll the way the
+    // desktop `position:absolute` case does. Left alone, scrolling the page
+    // leaves the menu floating at that same screen position while the
+    // button it opened from scrolls away underneath it, i.e. the menu
+    // visibly "follows" the viewport instead of the control it belongs to.
+    // Closing it on scroll is the same behavior most native/mobile dropdown
+    // menus already use, and sidesteps re-anchoring it on every scroll tick.
+    window.addEventListener('scroll', () => {
+        if (!menu.hidden && window.matchMedia('(max-width: 640px)').matches) {
+            closeArchiveMenu();
+        }
+    }, { passive: true });
+
     // "Back to current reports" is exactly Clear Date (current month).
     document.getElementById('report-archive-exit')?.addEventListener('click', () => {
         document.getElementById('clear-date-filters').click();
@@ -2986,7 +3068,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         statusGroupFilter = 'pending_tasks';
     } else if (statusGroupParam === 'assigned_to_me') {
         statusGroupFilter = 'assigned_to_me';
+    } else if (statusGroupParam === 'other_statuses') {
+        statusGroupFilter = 'other_statuses';
     }
+
+    // Not lowercased like the params above — problem_type values (e.g.
+    // "HVAC / Aircon") are compared with an exact, case-sensitive match in
+    // applyCategoryFilter() since that's how they're stored and how the
+    // Analytics "Reports by Category" chart's labels come through verbatim.
+    categoryFilter = urlParams.get('category') || '';
 
     if (urlParams.get('last_month') === '1') {
         lastMonthOnly = true;
@@ -3046,6 +3136,30 @@ document.addEventListener('DOMContentLoaded', async () => {
             // in that case, so there is no real semester window to match
             // here either. Fall back to the same current-month default a
             // plain page load uses, rather than inventing a date range.
+            const range = getCurrentMonthDateRange();
+            document.getElementById('filter-date-from').value = formatLocalDate(range.start);
+            document.getElementById('filter-date-to').value = formatLocalDate(range.end);
+        }
+    } else if (dateScopeParam === 'semester_charts') {
+        // The Analytics "Reports by Category" bar chart's click-to-filter
+        // links here with ?date_scope=semester_charts rather than the plain
+        // ?date_scope=semester above, because its own data comes from a
+        // WIDER window — see getSemesterChartsRange()'s comment for why.
+        // Using the narrower ?date_scope=semester here would undercount: a
+        // bar's own report can sit in that 2-month lookback and vanish
+        // behind "No reports found." when clicked through.
+        let chartsRange = null;
+        try {
+            const settings = await fetchSchoolSettings();
+            chartsRange = getSemesterChartsRange(settings);
+        } catch (error) {
+            console.error('Unable to resolve charts semester range for date_scope=semester_charts', error);
+        }
+
+        if (chartsRange) {
+            document.getElementById('filter-date-from').value = chartsRange.start;
+            document.getElementById('filter-date-to').value = chartsRange.end;
+        } else {
             const range = getCurrentMonthDateRange();
             document.getElementById('filter-date-from').value = formatLocalDate(range.start);
             document.getElementById('filter-date-to').value = formatLocalDate(range.end);

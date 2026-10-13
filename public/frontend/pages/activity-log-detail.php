@@ -104,7 +104,7 @@ async function loadActivityLogDetail() {
             : '<span class="text-muted">No metadata recorded.</span>';
 
         document.getElementById('activity-log-detail-container').innerHTML = `
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+            <div class="detail-grid-2col">
                 <div><strong>Action:</strong> ${escapeActivityDetailHtml(formatActivityDetailLabel(log.action))}</div>
                 <div><strong>Module:</strong> ${escapeActivityDetailHtml(formatActivityDetailLabel(log.module || 'system'))}</div>
                 <div><strong>User:</strong> ${escapeActivityDetailHtml(log.user?.full_name || (log.user_id ? `User #${log.user_id}` : 'System'))}</div>

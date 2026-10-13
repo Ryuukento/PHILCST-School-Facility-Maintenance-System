@@ -241,6 +241,8 @@ Route::prefix('api')->group(function (): void {
         Route::get('buildings/{id}/floors',                      [BuildingController::class, 'floors']);
         Route::post('buildings/{id}/floors',                     [BuildingController::class, 'storeFloor'])
             ->middleware(EnsureRole::class . ':super_admin');
+        Route::patch('buildings/{id}/floors/{floorId}',          [BuildingController::class, 'updateFloor'])
+            ->middleware(EnsureRole::class . ':super_admin');
         Route::delete('buildings/{id}/floors/{floorId}',         [BuildingController::class, 'destroyFloor'])
             ->middleware(EnsureRole::class . ':super_admin');
 

@@ -383,6 +383,60 @@ class BuildingController extends Controller
         return $this->ok('Floor created successfully', ['id' => $floorId, 'name' => $name], 201);
     }
 
+    /**
+     * PATCH /api/buildings/{id}/floors/{floorId} — rename a floor (building
+     * reassignment is not supported here, matching RoomController::update()'s
+     * own "rename only" scope for rooms).
+     *
+     * 2026-10-12 — added on user request. Floors previously had no way to be
+     * renamed once created (only storeFloor()/destroyFloor() existed) — a
+     * typo in a floor name meant deleting and recreating it, which also
+     * meant losing it the moment any room existed under it (destroyFloor()
+     * blocks deletion while rooms exist). This closes that gap.
+     */
+    public function updateFloor(Request $request, int $id, int $floorId): JsonResponse
+    {
+        $name = trim((string) $request->input('name', ''));
+
+        if ($name === '') {
+            return $this->fail('Floor name is required', 422);
+        }
+
+        $floor = DB::table('floors')->where('id', $floorId)->where('building_id', $id)->first();
+        if (!$floor) {
+            return $this->fail('Floor not found', 404);
+        }
+
+        $duplicate = DB::table('floors')
+            ->where('building_id', $id)
+            ->whereRaw('LOWER(name) = ?', [strtolower($name)])
+            ->where('id', '!=', $floorId)
+            ->exists();
+        if ($duplicate) {
+            return $this->fail('Floor with this name already exists in this building', 409);
+        }
+
+        // TASK 52 convention (see update() above) — only touch the row and
+        // log an activity entry when something genuinely changed, so
+        // re-saving an unchanged form doesn't produce a no-op log entry.
+        if ($floor->name !== $name) {
+            DB::table('floors')->where('id', $floorId)->update([
+                'name'       => $name,
+                'updated_at' => now(),
+            ]);
+
+            $this->activityLogService->log([
+                'action' => 'UPDATE_FLOOR',
+                'module' => 'buildings',
+                'entity_type' => 'floor',
+                'entity_id' => $floorId,
+                'details' => 'Renamed floor to ' . $name . '.',
+            ], $request);
+        }
+
+        return $this->ok('Floor updated successfully');
+    }
+
     /** DELETE /api/buildings/{id}/floors/{floorId} */
     public function destroyFloor(Request $request, int $id, int $floorId): JsonResponse
     {

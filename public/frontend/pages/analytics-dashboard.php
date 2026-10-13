@@ -1348,7 +1348,18 @@ function anRenderReportsByStatusChart(data) {
             responsive: true,
             maintainAspectRatio: false,
             plugins: {
-                legend: { display: false },
+                // Was { display: false } — same chart-lite.js quirk fixed on
+                // the Inventory Status chart below (see its comment for the
+                // full explanation): display:false is never read by
+                // _drawDoughnut(), only plugins.legend.position === 'right'
+                // is, and 'right' is also what it falls back to when
+                // position is left unset. That silently reserved legend
+                // space and shifted the ring off the canvas's true center,
+                // while the HTML "Total Reports" overlay (#chart-reports-
+                // status-center) stayed centered on the full, unshifted box
+                // via flexbox — so the two centers disagreed. 'none' skips
+                // the reservation entirely.
+                legend: { position: 'none' },
                 tooltip: {
                     callbacks: {
                         label: function(context) {
@@ -1358,9 +1369,54 @@ function anRenderReportsByStatusChart(data) {
                         }
                     }
                 }
+            },
+            // Click a wedge to jump to the Reports page pre-filtered to
+            // that status bucket. Maps the clicked segment's label (not
+            // its index — labels are API-ordered, not fixed) to the exact
+            // filter reports.php already understands:
+            //  - 'Pending / Open' (submitted+assigned) -> status_group=
+            //    pending_tasks (applyStatusGroupFilter's existing branch)
+            //  - 'In Progress' / 'Completed' -> status=<value> (exact
+            //    single-status match, same dropdown values reports.php's
+            //    #filter-status already supports)
+            //  - 'Other' (anything else, e.g. cancelled/closed) ->
+            //    status_group=other_statuses, a new branch added to
+            //    applyStatusGroupFilter() (and its URL-param handler) to
+            //    mirror AnalyticsService.php's own "Other" bucket so this
+            //    segment navigates symmetrically with the rest.
+            onClick: (evt, items) => {
+                if (!items || !items.length) {
+                    return;
+                }
+                const label = labels[items[0].index];
+                const destinationByLabel = {
+                    'Pending / Open': '/reports?status_group=pending_tasks',
+                    'In Progress': '/reports?status=in_progress',
+                    'Completed': '/reports?status=completed',
+                    'Other': '/reports?status_group=other_statuses'
+                };
+                const destination = destinationByLabel[label];
+                if (destination) {
+                    // &date_scope=semester — this chart's counts come from
+                    // AnalyticsService::getReportsByStatus(), which is scoped
+                    // to the ACTIVE SEMESTER, not the current calendar month.
+                    // Without this, reports.php's own default date range
+                    // (current month — see its DOMContentLoaded handler) could
+                    // silently exclude the very report this segment counted,
+                    // e.g. a report from last month showing "No reports
+                    // found." Same fix/precedent as the dashboard's Total
+                    // Reports / Pending Tasks / etc KPI cards, which already
+                    // link here with ?date_scope=semester for this exact
+                    // reason.
+                    window.location.href = window.SFMS_PUBLIC_URL(destination + '&date_scope=semester');
+                }
             }
         }
     });
+
+    // Hint that the donut is interactive (matches the click-to-filter
+    // behavior wired up via options.onClick above).
+    canvas.style.cursor = 'pointer';
 
     // Render legend manually (vertical, right-aligned)
     const legendDiv = document.getElementById('chart-reports-status-legend');
@@ -1450,6 +1506,35 @@ function anRenderReportsByCategoryChart(data) {
                         font: { size: anCategoryIsMobile ? 10 : 12 }
                     }
                 }
+            },
+            // Click a bar to jump to Reports pre-filtered to that category.
+            // Unlike the status donut above, there's no existing dropdown or
+            // grouped filter for category on reports.php — these labels are
+            // the raw problem_type column values (AnalyticsService::
+            // getReportsByCategory groups by problem_type verbatim), so a
+            // new ?category=<value> param + client-side exact-match filter
+            // (applyCategoryFilter() in reports.php) was added rather than
+            // reusing status_group.
+            onClick: (evt, items) => {
+                if (!items || !items.length) {
+                    return;
+                }
+                const label = labels[items[0].index];
+                if (!label) {
+                    return;
+                }
+                // date_scope=semester_charts (NOT plain 'semester' — see the
+                // status donut's onClick above for that one). This chart's
+                // counts come from AnalyticsService::getReportsByCategory(),
+                // which AnalyticsService::dashboardOverview() feeds a date
+                // range starting 2 months BEFORE the semester's official
+                // start ("to capture reports created earlier", its own
+                // comment) — wider than the exact semester bounds. Using
+                // plain ?date_scope=semester here undercounts: a bar's own
+                // report can sit in that lookback window and vanish behind
+                // "No reports found." on the destination page.
+                const params = new URLSearchParams({ category: label, date_scope: 'semester_charts' });
+                window.location.href = window.SFMS_PUBLIC_URL('/reports?' + params.toString());
             }
         },
         plugins: [{
@@ -1473,6 +1558,10 @@ function anRenderReportsByCategoryChart(data) {
             }
         }]
     });
+
+    // Hint that the bars are interactive (matches the click-to-filter
+    // behavior wired up via options.onClick above).
+    canvas.style.cursor = 'pointer';
 }
 
 function anRenderMonthlyTrendChart(data) {
@@ -1553,7 +1642,23 @@ function anRenderInventoryStatusChart(data) {
                 padding: 0
             },
             plugins: {
-                legend: { display: false },
+                // Was { display: false }. chart-lite.js's _drawDoughnut() never
+                // checks `display` — it only reserves canvas space (and draws
+                // its own dot legend) when `plugins.legend.position === 'right'`,
+                // which is ALSO the default it falls back to when `position` is
+                // left unset. So `display: false` alone did nothing: the ring
+                // was still drawn off-center (shifted left to make room for a
+                // legend nobody asked for), while the HTML "Total Items" overlay
+                // below stayed centered on the FULL canvas box via CSS
+                // top/left:50% — the two centers disagreed, which is why the
+                // text looked off/overlapping the ring instead of sitting in
+                // its hole. 'none' is the value this same chart-lite.js quirk
+                // is already worked around with elsewhere in the app (see the
+                // matching TASK 31.12 comment in dashboard.php) — it skips the
+                // reservation entirely, so the ring centers on the real
+                // midpoint and lines up with the overlay. The manually-built
+                // #chart-inventory-status-legend list below is unaffected.
+                legend: { position: 'none' },
                 tooltip: {
                     callbacks: {
                         label: function(context) {
@@ -1563,9 +1668,34 @@ function anRenderInventoryStatusChart(data) {
                         }
                     }
                 }
+            },
+            onClick: (evt, items) => {
+                if (!items || !items.length) {
+                    return;
+                }
+                const label = labels[items[0].index];
+                // Reuses the exact ?status_filter= values inventory.php's own
+                // clickable status summary cards already write/read (see
+                // setInventoryStatusFilter() and the inventoryStatusFilter
+                // URLSearchParams read there) — the SAME mechanism the
+                // dashboard's "Low Stock" quick-link already uses
+                // (dashboard.php / maintenance-dashboard.php:
+                // '/inventory?status_filter=low_stock'). No new filtering
+                // logic needed on the inventory.php side.
+                const destinationByLabel = {
+                    'In Stock': 'available',
+                    'Low Stock': 'low_stock',
+                    'Out of Stock': 'out_of_stock'
+                };
+                const statusFilter = destinationByLabel[label];
+                if (statusFilter) {
+                    window.location.href = window.SFMS_PUBLIC_URL('/inventory?status_filter=' + statusFilter);
+                }
             }
         }
     });
+
+    canvas.style.cursor = 'pointer';
 
     // Render legend manually (vertical layout matching Reports by Status)
     const legendDiv = document.getElementById('chart-inventory-status-legend');
@@ -1711,9 +1841,37 @@ function anRenderDispatchStatusChart(data) {
             },
             scales: {
                 y: { beginAtZero: true, ticks: { stepSize: 1 } }
+            },
+            onClick: (evt, items) => {
+                if (!items || !items.length) {
+                    return;
+                }
+                const label = labels[items[0].index];
+                // Reuses dispatches.php's existing ?status= query-string
+                // support (dspApplyQueryStringFilters() — already used by the
+                // Maintenance Staff dashboard's "My Pending Releases" deep
+                // link). Unlike reports.php, dispatches.php's date-from/
+                // date-to inputs have NO default "current month" preset —
+                // they start blank (no date filter applied) unless the user
+                // sets them — so there is no semester/date-scope mismatch to
+                // work around here, even though this chart's own counts
+                // (getDispatchStatusBreakdown()) are scoped to the wider
+                // semesterStartForCharts window server-side. A bare ?status=
+                // link is enough to show every matching dispatch.
+                const destinationByLabel = {
+                    'Pending': 'pending',
+                    'Approved': 'approved',
+                    'Released': 'released'
+                };
+                const statusFilter = destinationByLabel[label];
+                if (statusFilter) {
+                    window.location.href = window.SFMS_PUBLIC_URL('/dispatches?status=' + statusFilter);
+                }
             }
         }
     });
+
+    canvas.style.cursor = 'pointer';
 }
 
 // ---------------------------------------------------------------------------

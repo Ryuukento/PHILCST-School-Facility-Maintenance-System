@@ -445,3 +445,41 @@
         width: 100%;
     }
 }
+
+
+/* ===================================================================
+   9. KEY/VALUE DETAIL GRIDS COLLAPSE ON PHONE  (brief section 12)
+
+   MEASURED DEFECT, same shape as purchase-receipts.php's own documented
+   fix at that file's inline <style> block (search
+   ".pr-new-receipt-row" there): a hardcoded 2-column
+   `grid-template-columns:1fr 1fr` with no responsive override, written
+   inline because these read-only "Label: value" sections are built in
+   JS template strings, not markup. Below ~560px the right-hand column
+   does not have room for both its label and value, so it either wraps
+   into the left column's space or gets clipped by the card.
+
+   Found identically duplicated (copy-pasted inline style, no shared
+   class) in THREE places: activity-log-detail.php's single detail
+   grid, damage-report-detail.php's four section grids (asset info,
+   linked maintenance report, assignment, repair/resolution), and
+   purchase-receipts.php's receipt-header-container. Per brief section
+   15 ("avoid duplicated CSS"), one shared class replaces all three
+   inline styles rather than three separate ad hoc fixes — each site
+   now sets class="detail-grid-2col" instead of the inline style, and
+   this is the only CSS backing it (there was none before).
+
+   560px matches the breakpoint purchase-receipts.php already
+   established for the same pattern, so the two converge instead of
+   disagreeing at different widths. */
+:root .detail-grid-2col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+
+@media (max-width: 560px) {
+    :root .detail-grid-2col {
+        grid-template-columns: 1fr;
+    }
+}

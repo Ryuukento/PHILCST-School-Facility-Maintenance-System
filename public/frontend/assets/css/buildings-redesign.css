@@ -1794,6 +1794,61 @@
     background: rgba(220, 38, 38, 0.12);
 }
 
+/* 2026-10-12 — unified "Add" menu trigger (Buildings Overview top-level
+   toolbar: Add Building / Add Floor / Add Room from one place, added on
+   user request). Visually mirrors .room-card-menu-wrap/-dropdown/-item
+   (TASK 67) above, but defined separately rather than reused directly:
+   that class carries `margin-left: auto`, meant to push the kebab button
+   past a card's icon/name inside .room-card-top. #overviewActions is a
+   plain flex row of sibling buttons (justify-content: flex-end, see
+   .header-actions) with no icon/name to push past — reusing that margin
+   would misalign this button against the adjacent "Back" button. */
+.add-menu-wrap {
+    position: relative;
+    display: inline-flex;
+}
+
+.add-menu-dropdown {
+    display: none;
+    position: absolute;
+    top: calc(100% + 4px);
+    right: 0;
+    min-width: 160px;
+    padding: 0.35rem;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: var(--buildings-surface);
+    box-shadow: 0 12px 28px rgba(15, 23, 42, 0.16);
+    z-index: 20;
+}
+
+.add-menu-wrap.open .add-menu-dropdown {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+}
+
+.add-menu-item {
+    display: block;
+    width: 100%;
+    padding: 0.45rem 0.6rem;
+    border: none;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--text-light, #111827);
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-align: left;
+    cursor: pointer;
+    transition: background 0.15s ease;
+}
+
+.add-menu-item:hover,
+.add-menu-item:focus-visible {
+    background: rgba(139, 92, 246, 0.12);
+    outline: none;
+}
+
 .room-card-context {
     margin: 0 0 0.75rem;
     font-size: 0.82rem;

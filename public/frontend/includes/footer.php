@@ -45,7 +45,16 @@
          still appeared in systemConfirm()/systemAlert() dialogs until a forced
          refresh. Only the token changed; utils.js functionality is untouched. -->
     <script src="<?php echo htmlspecialchars(public_url('/frontend/assets/js/utils.js?v=20260913')); ?>"></script>
-    <script src="<?php echo htmlspecialchars(public_url('/frontend/assets/js/api.js?v=20260927')); ?>"></script>
+    <script src="<?php echo htmlspecialchars(public_url('/frontend/assets/js/api.js?v=20261012')); ?>"></script>
+    <!-- 2026-10-12 — cache-buster bumped again because api.js gained
+         checkReportDuplicate(). create-report.php's own copy of that method
+         was being silently discarded by this file's unconditional
+         `window.API = API;` (see the TASK 98.2 note right below, and the
+         long comment above checkReportDuplicate() in api.js for the full
+         root-cause writeup) — a browser holding the pre-fix cached copy of
+         THIS file would keep clobbering window.API with a version that
+         still lacks the method, so the duplicate-warning popup would stay
+         silently broken even after api.js itself is updated on disk. -->
     <!-- TASK 98.2 — cache-buster bumped because api.js now assigns
          `window.API = API` at the bottom of the file (top-level `const`
          does not attach to window on its own). Without bumping this,

@@ -95,6 +95,15 @@ class ReportController extends Controller
             ->select([
                 'maintenance_reports.report_id',
                 'maintenance_reports.title',
+                // Problem Type — not previously selected here even though
+                // show() has always selected it unconditionally (see its own
+                // comment, below). Every report on this list endpoint came
+                // back with problem_type silently undefined, which broke the
+                // Analytics "Reports by Category" chart's click-to-filter
+                // (reports.php's applyCategoryFilter() compares against
+                // report.problem_type — always '' here — so it matched zero
+                // rows no matter what, independent of the date range).
+                'maintenance_reports.problem_type',
                 'maintenance_reports.priority',
                 'maintenance_reports.status',
                 'maintenance_reports.location',

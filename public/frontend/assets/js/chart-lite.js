@@ -440,7 +440,16 @@
                         height: barHeight
                     });
 
-                    ctx.fillStyle = '#e2e8f0';
+                    // Was '#e2e8f0' (light slate) — same dark-theme-era
+                    // leftover just fixed on this file's _drawLine() point
+                    // labels (see that comment). Drawn directly on the
+                    // chart's plain white background (e.g. Reports by
+                    // Category / Semester Comparison on
+                    // analytics-dashboard.php, both horizontal bar charts),
+                    // making it effectively invisible. The vertical-bar
+                    // branch below already uses a visible color
+                    // (datalabelColor, default '#f87171') and is unaffected.
+                    ctx.fillStyle = '#1f2937';
                     ctx.textAlign = 'left';
                     ctx.fillText(String(value), chartArea.left + Math.max(4, barWidth + 6), yCenter);
                 });
@@ -619,7 +628,16 @@
                     ctx.lineWidth = 2;
                     ctx.stroke();
 
-                    ctx.fillStyle = '#e2e8f0';
+                    // Was '#e2e8f0' (light slate) — a leftover from this
+                    // engine's dark-theme-era default, drawn directly on the
+                    // chart's plain background. Dark theme was removed
+                    // app-wide, so every page using a line chart now has that
+                    // background permanently white/light, making this value
+                    // label effectively invisible (e.g. Monthly Reports
+                    // Trend on analytics-dashboard.php). '#1f2937' matches
+                    // the dark text already used for other on-chart numbers
+                    // in this app (e.g. the doughnut center totals).
+                    ctx.fillStyle = '#1f2937';
                     ctx.textAlign = 'center';
                     ctx.textBaseline = 'bottom';
                     ctx.fillText(String(point.value), point.x, point.y - 8);
