@@ -784,6 +784,31 @@ class ReportService
         // everywhere else in the app) already self-guards this exact way;
         // this raw-insert path predates that service and needs the same
         // isolation explicitly.
+        // 2026-10-13 — department-matched New Report alert. The report's
+        // own department's active Head (maintenance_admin) + Staff
+        // (maintenance_staff) now get the full 3-channel treatment
+        // (System + Email + SMS), mirroring the Administrator Need Change
+        // alert's structure (see notifyAdministratorsOfNeedChangeRequest()
+        // below) instead of the old email-only-to-Head / in-system-broadcast
+        // split. See activeDepartmentHeadAndStaffRecipients() for who counts
+        // and notifyDepartmentOfNewReport() for the three channels.
+        //
+        // FALLBACK: a report with no department_id, or whose department
+        // currently has no active Head/Staff on file, falls through to the
+        // ORIGINAL org-wide broadcast + department-head-email-with-
+        // super_admin-fallback behavior below instead of silently notifying
+        // nobody — same safety-net principle sendDepartmentHeadEmailForNewReport()
+        // already uses for its own email leg.
+        $departmentRecipients = !empty($report->department_id)
+            ? $this->activeDepartmentHeadAndStaffRecipients((int) $report->department_id)
+            : [];
+
+        if (!empty($departmentRecipients)) {
+            $this->notifyDepartmentOfNewReport($report, $departmentRecipients, $submitterName);
+
+            return;
+        }
+
         try {
             $recipientRoles = ['super_admin', 'admin', 'maintenance_admin', 'admin_maintenance', 'department_admin'];
             $recipients = DB::table('users')
@@ -827,6 +852,134 @@ class ReportService
 
         // EMAIL: Send to department head (new flow per user requirement)
         $this->sendDepartmentHeadEmailForNewReport($report, $validated, $submitterName);
+    }
+
+    /**
+     * All active maintenance_admin (Head) and maintenance_staff (Staff)
+     * users belonging to $departmentId, with every field needed by any
+     * channel of the New Report alert (email, in-system, SMS) — the single
+     * recipient query notifyDepartmentOfNewReport()'s three channels share,
+     * mirroring activeSuperAdminRecipients()'s shape/contract exactly so
+     * "who counts" can never drift between channels. Deliberately includes
+     * recipients with no usable email and/or no phone number (those
+     * channels simply skip that one recipient).
+     */
+    private function activeDepartmentHeadAndStaffRecipients(int $departmentId): array
+    {
+        return DB::table('users')
+            ->select(['user_id', 'email', 'verified_email', 'full_name', 'phone', 'role'])
+            ->where('department_id', $departmentId)
+            ->where('status', 'active')
+            ->where(function ($query): void {
+                $query->whereRaw("LOWER(TRIM(role)) = 'maintenance_admin'")
+                    ->orWhereRaw("LOWER(TRIM(role)) = 'maintenance_staff'");
+            })
+            ->get()
+            ->map(static function ($row): array {
+                return [
+                    'user_id' => (int)($row->user_id ?? 0),
+                    'email' => strtolower(trim((string)($row->verified_email ?? $row->email ?? ''))),
+                    'full_name' => (string)($row->full_name ?? 'User'),
+                    'phone' => trim((string)($row->phone ?? '')),
+                    'role' => strtolower(trim((string)($row->role ?? ''))),
+                ];
+            })
+            ->values()
+            ->all();
+    }
+
+    /**
+     * New Report alert for the report's department's Head + Staff —
+     * In-system + Email + SMS. Mirrors notifyAdministratorsOfNeedChangeRequest()'s
+     * three-channel, per-channel-isolated structure exactly (see that
+     * method's docblock for the isolation rationale: a failure in one
+     * channel — missing phone, SMTP down, IPROG unreachable, a bad row —
+     * must never block either of the other two, or the report creation
+     * request itself).
+     *
+     * TRIGGER: called only from notifyAdminsOfNewReport() above, only when
+     * the report's department currently has at least one active Head
+     * and/or Staff on file (see that method's fallback branch for when it
+     * doesn't).
+     */
+    private function notifyDepartmentOfNewReport(MaintenanceReport $report, array $recipients, string $submitterName): void
+    {
+        // CHANNEL 1 — In-system notification, via the same NotificationService
+        // every other feature in this app uses.
+        try {
+            $title = 'New Maintenance Report Submitted';
+            $message = $submitterName . ' submitted a new report: ' . $report->title . ' (Report #' . $report->report_id . ')';
+
+            foreach ($recipients as $recipient) {
+                $this->notificationService->notify(
+                    (int) $recipient['user_id'],
+                    $title,
+                    $message,
+                    'report',
+                    $report->report_id
+                );
+            }
+        } catch (\Throwable $e) {
+            Log::warning('New report in-system department notification error', [
+                'report_id' => (int) $report->report_id,
+                'error' => $e->getMessage(),
+            ]);
+        }
+
+        // CHANNEL 2 — Email. Same template/EmailService call already used by
+        // sendDepartmentHeadEmailForNewReport()/notifyAdministratorsOfNeedChangeRequest(),
+        // just addressed to the full Head + Staff recipient list instead.
+        try {
+            $emailServicePath = base_path('public/backend/services/EmailService.php');
+            if (file_exists($emailServicePath)) {
+                require_once $emailServicePath;
+                if (class_exists('EmailService')) {
+                    $emailRecipients = array_values(array_filter(
+                        $recipients,
+                        static fn (array $recipient): bool => $recipient['email'] !== ''
+                            && filter_var($recipient['email'], FILTER_VALIDATE_EMAIL) !== false
+                    ));
+
+                    if (!empty($emailRecipients)) {
+                        $payload = [
+                            'report_id' => (int) $report->report_id,
+                            'title' => (string) $report->title,
+                            'description' => (string) $report->description,
+                            'location' => (string) ($report->location ?? ''),
+                            'priority' => (string) $report->priority,
+                            'submitted_by' => $submitterName,
+                            'creator_name' => $submitterName,
+                        ];
+
+                        \EmailService::sendNewReportNotification($payload, $emailRecipients);
+                    }
+                }
+            }
+        } catch (\Throwable $e) {
+            Log::warning('New report email department notification error', [
+                'report_id' => (int) $report->report_id,
+                'error' => $e->getMessage(),
+            ]);
+        }
+
+        // CHANNEL 3 — SMS (IPROG, via SmsService). Isolated per recipient as
+        // well as per channel: one recipient's missing/invalid phone number,
+        // or one failed send, must not stop the others from being
+        // attempted. SmsService::send() itself already never throws (logs
+        // and returns false instead), so this try/catch is a deliberate
+        // second layer, not a substitute for that guarantee.
+        $smsMessage = 'SFMS Alert: New report submitted — "' . $report->title . '" (Report #' . $report->report_id . '). Please review in the system.';
+        foreach ($recipients as $recipient) {
+            try {
+                $this->smsService->send($recipient['phone'] ?? null, $smsMessage);
+            } catch (\Throwable $e) {
+                Log::warning('New report SMS department notification error', [
+                    'report_id' => (int) $report->report_id,
+                    'user_id' => (int) ($recipient['user_id'] ?? 0),
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
     }
 
     /**

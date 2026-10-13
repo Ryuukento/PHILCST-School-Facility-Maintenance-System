@@ -30,8 +30,8 @@ use Tests\TestCase;
  * it through the real HTTP endpoints.
  *
  * The in-system channel is asserted directly against the notifications table.
- * The SMS channel is asserted via Http::fake() against the Semaphore endpoint
- * (config('services.semaphore.*') is overridden per test so SmsService never
+ * The SMS channel is asserted via Http::fake() against the IPROG endpoint
+ * (config('services.iprog.*') is overridden per test so SmsService never
  * no-ops for "not configured"). The email channel is NOT asserted for actual
  * delivery — EmailService is the pre-existing legacy PHPMailer/SMTP class
  * (unchanged by this feature) and really does attempt a live SMTP connection
@@ -59,14 +59,14 @@ class NeedChangeAdministratorAlertTest extends TestCase
         $this->createTestSchema();
         $this->forceLocalTestUrl();
 
-        // SmsService no-ops whenever SEMAPHORE_API_KEY is blank — every test
+        // SmsService no-ops whenever IPROG_SMS_API_TOKEN is blank — every test
         // below that wants the SMS leg to actually attempt a send must turn
         // this on explicitly, which also documents that "no key configured"
         // is its own safe, tested state (see test D's sibling assertion).
         config([
-            'services.semaphore.api_key' => 'test-semaphore-key',
-            'services.semaphore.sender_name' => 'SFMS',
-            'services.semaphore.api_url' => 'https://api.semaphore.co/api/v4/messages',
+            'services.iprog.api_token' => 'test-iprog-token',
+            'services.iprog.api_url' => 'https://sms.iprogtech.com/api/v1/sms_messages',
+            'services.iprog.sms_provider' => 0,
         ]);
 
         // EmailService (legacy, unmodified by this feature — see class
@@ -127,7 +127,7 @@ class NeedChangeAdministratorAlertTest extends TestCase
     public function test_new_need_change_request_notifies_all_active_super_admins_on_all_three_channels(): void
     {
         Http::fake([
-            'api.semaphore.co/*' => Http::response(['status' => 'success'], 200),
+            'sms.iprogtech.com/*' => Http::response(['status' => 'success'], 200),
         ]);
 
         $adminWithPhone = $this->seedUser([
@@ -171,11 +171,11 @@ class NeedChangeAdministratorAlertTest extends TestCase
         $this->assertSame(0, (clone $needChangeNotifications)->where('user_id', $staffId)->count(), 'Staff must not receive the Need-Change-specific alert.');
 
         // SMS attempted exactly once: only the admin with a phone number on
-        // file gets an outbound Semaphore call.
+        // file gets an outbound IPROG call.
         Http::assertSentCount(1);
         Http::assertSent(function ($request) {
-            return $request->url() === 'https://api.semaphore.co/api/v4/messages'
-                && $request['number'] === '+639171234567';
+            return $request->url() === 'https://sms.iprogtech.com/api/v1/sms_messages'
+                && $request['phone_number'] === '+639171234567';
         });
 
         $this->assertNotNull($reportId);
@@ -188,7 +188,7 @@ class NeedChangeAdministratorAlertTest extends TestCase
      */
     public function test_the_same_need_change_notification_fires_regardless_of_report_priority(): void
     {
-        Http::fake(['api.semaphore.co/*' => Http::response(['status' => 'success'], 200)]);
+        Http::fake(['sms.iprogtech.com/*' => Http::response(['status' => 'success'], 200)]);
 
         $adminId = $this->seedUser([
             'role' => 'super_admin',
@@ -235,7 +235,7 @@ class NeedChangeAdministratorAlertTest extends TestCase
      */
     public function test_unrelated_report_edit_does_not_retrigger_the_need_change_notification(): void
     {
-        Http::fake(['api.semaphore.co/*' => Http::response(['status' => 'success'], 200)]);
+        Http::fake(['sms.iprogtech.com/*' => Http::response(['status' => 'success'], 200)]);
 
         $adminId = $this->seedUser([
             'role' => 'super_admin',
@@ -314,7 +314,7 @@ class NeedChangeAdministratorAlertTest extends TestCase
     }
 
     /**
-     * TEST E — a hard SMS failure (the Semaphore call throwing, not merely
+     * TEST E — a hard SMS failure (the IPROG call throwing, not merely
      * returning a non-success response) must never prevent the in-system
      * notification from being written, and must never surface as a failed
      * report-creation request.
@@ -325,7 +325,7 @@ class NeedChangeAdministratorAlertTest extends TestCase
             return new class extends SmsService {
                 public function send(?string $phoneNumber, string $message): bool
                 {
-                    throw new \RuntimeException('Simulated Semaphore outage');
+                    throw new \RuntimeException('Simulated IPROG outage');
                 }
             };
         });
@@ -369,7 +369,7 @@ class NeedChangeAdministratorAlertTest extends TestCase
      */
     public function test_email_channel_failure_does_not_block_sms_or_in_system_notification(): void
     {
-        Http::fake(['api.semaphore.co/*' => Http::response(['status' => 'success'], 200)]);
+        Http::fake(['sms.iprogtech.com/*' => Http::response(['status' => 'success'], 200)]);
 
         $adminId = $this->seedUser([
             'role' => 'super_admin',
@@ -398,7 +398,7 @@ class NeedChangeAdministratorAlertTest extends TestCase
             'In-system notification must be written regardless of email outcome.'
         );
         Http::assertSentCount(1);
-        Http::assertSent(fn ($request) => $request->url() === 'https://api.semaphore.co/api/v4/messages');
+        Http::assertSent(fn ($request) => $request->url() === 'https://sms.iprogtech.com/api/v1/sms_messages');
     }
 
     /**
@@ -410,7 +410,7 @@ class NeedChangeAdministratorAlertTest extends TestCase
      */
     public function test_no_staff_or_head_receives_the_need_change_specific_notification(): void
     {
-        Http::fake(['api.semaphore.co/*' => Http::response(['status' => 'success'], 200)]);
+        Http::fake(['sms.iprogtech.com/*' => Http::response(['status' => 'success'], 200)]);
 
         $adminId = $this->seedUser(['role' => 'super_admin', 'status' => 'active', 'phone' => '+639171234567']);
         $headId = $this->seedUser(['role' => 'maintenance_admin', 'status' => 'active']);
