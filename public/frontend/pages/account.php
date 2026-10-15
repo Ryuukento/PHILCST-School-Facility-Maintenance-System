@@ -85,6 +85,7 @@ $forceProfileUpdate = !empty($currentUser['force_profile_update']);
                                     <label class="settings-label" style="display: flex; align-items: center; gap: 8px;">
                                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 18px; height: 18px;"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
                                         Phone Number
+                                        <?php if ($forceProfileUpdate): ?><span style="color:#ef4444;font-weight:600;font-size:12px;">(Required)</span><?php endif; ?>
                                     </label>
 
                                     <div style="border: 1px solid #e2e8f0; border-radius: 10px; background: #f8fafc; padding: 14px;">
@@ -146,6 +147,7 @@ $forceProfileUpdate = !empty($currentUser['force_profile_update']);
                                     <label class="settings-label" style="display: flex; align-items: center; gap: 8px;">
                                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 18px; height: 18px;"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M2 6l10 7 10-7"/></svg>
                                         Email Address
+                                        <?php if ($forceProfileUpdate): ?><span style="color:#ef4444;font-weight:600;font-size:12px;">(Required)</span><?php endif; ?>
                                     </label>
 
                                     <!-- Card wrapper so this (multi-control) group reads as one cohesive
@@ -210,7 +212,7 @@ $forceProfileUpdate = !empty($currentUser['force_profile_update']);
 <div class="force-setup-popup" id="force-setup-popup" role="dialog" aria-modal="true" aria-labelledby="force-setup-title">
     <div class="force-setup-popup-card">
         <h2 id="force-setup-title">Profile Setup Required</h2>
-        <p>This account was created by an Administrator. Before continuing, please update your Full Name and set a new Password.</p>
+        <p>This account was created by an Administrator. Before continuing, please update your Full Name, verify your Phone Number, verify your Email Address, and set a new Password.</p>
         <button type="button" id="force-setup-continue" class="btn btn-primary settings-primary-btn">Update Now</button>
     </div>
 </div>
@@ -356,9 +358,34 @@ document.getElementById('account-settings-form').addEventListener('submit', asyn
         return;
     }
 
-    if (forceProfileSetup && (!currentPassword || !newPassword)) {
-        showSettingsToast('For first-time setup, current and new password are required', 'error');
-        return;
+    if (forceProfileSetup) {
+        if (!currentPassword || !newPassword) {
+            showSettingsToast('For first-time setup, current and new password are required', 'error');
+            return;
+        }
+
+        // 2026-10-15 — first-time setup now also requires a verified phone
+        // and a verified email, not just a new password. These two displays
+        // are re-rendered to the real value the moment OTP verification
+        // succeeds (see verifyPhoneOtpBtn / verifyOtpBtn handlers below) and
+        // on every page load from a fresh DB read (see the PHP block at the
+        // top of this file), so checking their text here is a reliable proxy
+        // for "already OTP-verified", without duplicating that state in a
+        // separate JS variable. Server-side (UserController::updateProfile)
+        // enforces the same rule from users.phone/verified_email directly —
+        // this check is only here to give an immediate, specific error
+        // instead of a generic failed-save message.
+        const phoneVerified = verifiedPhoneDisplay && verifiedPhoneDisplay.textContent.trim() !== '' && verifiedPhoneDisplay.textContent.trim() !== 'Not set';
+        if (!phoneVerified) {
+            showSettingsToast('Please verify your phone number before continuing', 'error');
+            return;
+        }
+
+        const emailVerified = verifiedEmailDisplay && verifiedEmailDisplay.textContent.trim() !== '' && verifiedEmailDisplay.textContent.trim() !== 'Not set';
+        if (!emailVerified) {
+            showSettingsToast('Please verify your email address before continuing', 'error');
+            return;
+        }
     }
 
     const form = document.getElementById('account-settings-form');

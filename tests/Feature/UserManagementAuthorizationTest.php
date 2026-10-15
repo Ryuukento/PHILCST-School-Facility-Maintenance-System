@@ -900,6 +900,15 @@ class UserManagementAuthorizationTest extends TestCase
      * relogin flow requires) has to come back with force_profile_update
      * false, or the user would be dropped right back into the same lockout
      * they just escaped.
+     *
+     * 2026-10-15 — first-time setup now also requires a verified phone and a
+     * verified email (see test_forced_setup_rejects_* below), which only
+     * ever reach users.phone/verified_email through their own OTP-verified
+     * endpoints, never through this one. Seeding them here stands in for
+     * "the user already completed both OTP flows before clicking Save
+     * Changes" so this test still proves the original TASK 55 contract
+     * (flag clears, next login reflects it) rather than failing on the new
+     * unrelated requirement.
      */
     public function test_completing_forced_password_change_clears_the_flag_for_the_next_login(): void
     {
@@ -908,6 +917,8 @@ class UserManagementAuthorizationTest extends TestCase
             'password' => Hash::make('TempPass123!'),
             'force_profile_update' => 1,
             'role' => 'super_admin',
+            'phone' => '09171234567',
+            'verified_email' => 'newhire@example.com',
         ]);
 
         $this
@@ -926,6 +937,73 @@ class UserManagementAuthorizationTest extends TestCase
 
         $login->assertOk();
         $login->assertJsonPath('data.user.force_profile_update', false);
+    }
+
+    /**
+     * 2026-10-15 — a freshly Administrator-created account must prove it has
+     * a reachable phone (for SMS report alerts) and a reachable email before
+     * force_profile_update is allowed to clear, not just a new password.
+     * Without a verified phone on file, the save must be rejected even
+     * though the password change itself is otherwise valid — and the flag
+     * must still be 1 afterward, i.e. header.php's forced-setup redirect
+     * keeps the account locked to /account.
+     */
+    public function test_forced_setup_rejects_profile_save_without_a_verified_phone(): void
+    {
+        $userId = $this->seedUser([
+            'username' => 'nophoneyet',
+            'password' => Hash::make('TempPass123!'),
+            'force_profile_update' => 1,
+            'role' => 'super_admin',
+            'phone' => null,
+            'verified_email' => 'nophoneyet@example.com',
+        ]);
+
+        $this
+            ->actingAsSessionUser($userId, 'super_admin')
+            ->patchJson('/api/users/profile', [
+                'full_name' => 'No Phone Yet',
+                'current_password' => 'TempPass123!',
+                'new_password' => 'PermanentPass123!',
+            ])
+            ->assertStatus(422)
+            ->assertJsonPath('success', false);
+
+        $this->assertSame(
+            1,
+            (int) DB::table('users')->where('user_id', $userId)->value('force_profile_update')
+        );
+    }
+
+    /**
+     * Mirror of the phone check above, for the email side of the same new
+     * requirement.
+     */
+    public function test_forced_setup_rejects_profile_save_without_a_verified_email(): void
+    {
+        $userId = $this->seedUser([
+            'username' => 'noemailyet',
+            'password' => Hash::make('TempPass123!'),
+            'force_profile_update' => 1,
+            'role' => 'super_admin',
+            'phone' => '09171234567',
+            'verified_email' => null,
+        ]);
+
+        $this
+            ->actingAsSessionUser($userId, 'super_admin')
+            ->patchJson('/api/users/profile', [
+                'full_name' => 'No Email Yet',
+                'current_password' => 'TempPass123!',
+                'new_password' => 'PermanentPass123!',
+            ])
+            ->assertStatus(422)
+            ->assertJsonPath('success', false);
+
+        $this->assertSame(
+            1,
+            (int) DB::table('users')->where('user_id', $userId)->value('force_profile_update')
+        );
     }
 
     /**
@@ -1240,6 +1318,15 @@ class UserManagementAuthorizationTest extends TestCase
         // time here now fails with "duplicate column name: designation".
         Schema::table('users', function (Blueprint $table): void {
             $table->boolean('force_profile_update')->default(0);
+        });
+
+        // 2026-10-15 — UserController::updateProfile() now also reads
+        // users.verified_email (forced-setup save requires it alongside
+        // phone). Same situation as force_profile_update above: present on
+        // the real schema (EmailVerificationService) but not part of
+        // BuildsSharedTestSchema's minimal users table.
+        Schema::table('users', function (Blueprint $table): void {
+            $table->string('verified_email')->nullable();
         });
 
         Schema::enableForeignKeyConstraints();

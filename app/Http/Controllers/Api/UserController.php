@@ -434,8 +434,27 @@ class UserController extends Controller
             }
         }
 
-        if ($isForcedSetup && $newPassword === '') {
-            return $this->fail('For first-time account setup, setting a new password is required', 422);
+        if ($isForcedSetup) {
+            if ($newPassword === '') {
+                return $this->fail('For first-time account setup, setting a new password is required', 422);
+            }
+
+            // 2026-10-15 — an Administrator-created account must prove it has
+            // a reachable phone (for SMS report alerts) and a reachable email
+            // before it's allowed to start using the system, not just a new
+            // password. Both only ever reach users.phone / users.verified_email
+            // via their own OTP-verified flow (PhoneVerificationController /
+            // EmailVerificationController) — never through this endpoint — so
+            // checking them here on the freshly-read $currentUser row is proof
+            // the OTP step actually completed, not just that text was typed
+            // into the input.
+            if (empty($currentUser->phone)) {
+                return $this->fail('Please verify your phone number before continuing', 422);
+            }
+
+            if (empty($currentUser->verified_email)) {
+                return $this->fail('Please verify your email address before continuing', 422);
+            }
         }
 
         $passwordHash = null;
