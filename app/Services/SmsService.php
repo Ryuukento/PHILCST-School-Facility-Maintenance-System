@@ -70,14 +70,35 @@ class SmsService
 
             $response = Http::asForm()->timeout(10)->post($apiUrl, $payload);
 
-            if (!$response->successful()) {
+            $body = $response->json();
+            $messageId = is_array($body) ? ($body['message_id'] ?? null) : null;
+
+            // 2026-10-15 — traced a live-only failure to exactly this check:
+            // an HTTP 2xx status alone is not reliable proof the request
+            // ever reached IPROG. Something between this server and
+            // sms.iprogtech.com (most likely a hosting-side outbound
+            // firewall/proxy) was returning a bare 200 for a silently
+            // blocked request, and $response->successful() treated that as
+            // a real send — initiatePhoneVerification() and the New Report
+            // SMS alert both reported "sent" while IPROG's own account
+            // history showed nothing for either attempt. A genuine IPROG
+            // success always includes a message_id in the JSON body (see
+            // https://sms.iprogtech.com/api/v1/documentation and IPROG's
+            // own recent_sms account log); require that explicitly instead
+            // of trusting the status code alone.
+            if (!$response->successful() || empty($messageId)) {
                 // Deliberately NOT logging $payload — it contains the API token.
-                Log::warning('[SmsService] IPROG API responded with a non-success status.', [
+                // The response body is safe to log: IPROG's response never
+                // echoes the token back.
+                Log::warning('[SmsService] IPROG API did not return a recognizable success response.', [
                     'status' => $response->status(),
+                    'body' => mb_substr((string) $response->body(), 0, 500),
                 ]);
 
                 return false;
             }
+
+            Log::info('[SmsService] Sent.', ['message_id' => $messageId]);
 
             return true;
         } catch (Throwable $e) {
