@@ -55,7 +55,7 @@ include __DIR__ . '/../includes/header.php';
                     
                     <div class="form-group">
                         <label>Role</label>
-                        <input type="text" value="<?php echo htmlspecialchars(ucwords(str_replace('_', ' ', $currentUser['role'] ?? ''))); ?>" readonly style="background-color: #f9fafb;">
+                        <input type="text" value="<?php echo htmlspecialchars($userTitle ?? ucwords(str_replace('_', ' ', $currentUser['role'] ?? ''))); ?>" readonly style="background-color: #f9fafb;">
                     </div>
                 <?php else: ?>
                     <p class="text-muted">User information not available</p>

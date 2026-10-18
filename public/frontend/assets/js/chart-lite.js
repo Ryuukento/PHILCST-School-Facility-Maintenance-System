@@ -597,6 +597,29 @@
                 return { x, y, value, label };
             });
 
+            // 2026-10-18 — a trend spanning many months (e.g. a school-year
+            // view with Jan..Dec, 12 points) squeezes the fixed per-point
+            // spacing above down to just a few px per label, and unlike
+            // _drawBar() this line renderer had no rotation/skip logic at
+            // all, so month labels and the value numbers above each point
+            // would overlap into an unreadable smear. The line/points
+            // themselves are still drawn for every point below — this only
+            // thins out which points get a text label, the same "autoSkip"
+            // idea Chart.js uses by default, keeping the first and last
+            // labels visible and spacing the rest out so they never collide.
+            const pointSpacing = points.length > 1 ? (points[1].x - points[0].x) : plotWidth;
+            let maxLabelWidth = 0;
+            labels.forEach((label) => {
+                const labelWidth = ctx.measureText(formatLabel(label)).width;
+                if (labelWidth > maxLabelWidth) {
+                    maxLabelWidth = labelWidth;
+                }
+            });
+            const labelStep = pointSpacing > 0
+                ? Math.max(1, Math.ceil((maxLabelWidth + 10) / pointSpacing))
+                : 1;
+            const lastPointIndex = points.length - 1;
+
             if (points.length) {
                 ctx.beginPath();
                 points.forEach((point, index) => {
@@ -618,7 +641,7 @@
                     ctx.fill();
                 }
 
-                points.forEach((point) => {
+                points.forEach((point, index) => {
                     ctx.fillStyle = strokeColor;
                     ctx.beginPath();
                     ctx.arc(point.x, point.y, 4, 0, Math.PI * 2);
@@ -627,6 +650,28 @@
                     ctx.strokeStyle = '#ffffff';
                     ctx.lineWidth = 2;
                     ctx.stroke();
+
+                    // Every point still gets its dot above (plotted exactly
+                    // where its value belongs); only the text labels are
+                    // thinned per the labelStep computed above, always
+                    // keeping the first and last point labeled. The last
+                    // point's label is forced on regardless of step, so the
+                    // *regular*-step label right before it is suppressed
+                    // whenever it would land closer than labelStep to that
+                    // forced last label — otherwise e.g. a 12-point chart
+                    // could still show "Nov" immediately next to a forced
+                    // "Dec", overlapping into an unreadable "NovDec".
+                    let showLabel;
+                    if (labelStep <= 1 || index === lastPointIndex) {
+                        showLabel = true;
+                    } else if (index % labelStep === 0) {
+                        showLabel = (lastPointIndex - index) >= labelStep;
+                    } else {
+                        showLabel = false;
+                    }
+                    if (!showLabel) {
+                        return;
+                    }
 
                     // Was '#e2e8f0' (light slate) — a leftover from this
                     // engine's dark-theme-era default, drawn directly on the

@@ -71,25 +71,25 @@
         .sheet { width: 100%; }
 
         /* Letterhead */
-        .letterhead { display: flex; align-items: center; gap: 14px; padding-bottom: 10px; border-bottom: 3px solid #6b21a8; }
-        .logo { width: 74px; height: 74px; flex-shrink: 0; object-fit: cover; object-position: center; }
+        .letterhead { display: flex; align-items: center; gap: 14px; padding-bottom: 8px; border-bottom: 3px solid #6b21a8; }
+        .logo { width: 62px; height: 62px; flex-shrink: 0; object-fit: cover; object-position: center; }
         .school { flex: 1; min-width: 0; }
-        .school-name { margin: 0; font-size: 13.5pt; font-weight: 800; color: #4c1d95; letter-spacing: 0.02em; text-transform: uppercase; }
-        .school-sub { margin: 2px 0 0; font-size: 9.5pt; color: #475569; }
-        .school-system { margin: 3px 0 0; font-size: 9pt; font-weight: 700; color: #6b21a8; letter-spacing: 0.06em; text-transform: uppercase; }
-        .doc-meta { text-align: right; font-size: 8.5pt; color: #475569; line-height: 1.5; white-space: nowrap; }
+        .school-name { margin: 0; font-size: 13pt; font-weight: 800; color: #4c1d95; letter-spacing: 0.02em; text-transform: uppercase; }
+        .school-sub { margin: 2px 0 0; font-size: 9pt; color: #475569; }
+        .school-system { margin: 2px 0 0; font-size: 8.5pt; font-weight: 700; color: #6b21a8; letter-spacing: 0.06em; text-transform: uppercase; }
+        .doc-meta { text-align: right; font-size: 8pt; color: #475569; line-height: 1.4; white-space: nowrap; }
         .doc-meta strong { color: #1f2937; }
         .accent { height: 2px; background: #c4b5fd; margin-top: 2px; }
 
         /* Title block */
-        .title-block { text-align: center; margin: 10px 0 8px; }
-        .title-block h1 { margin: 0; font-size: 15pt; letter-spacing: 0.08em; text-transform: uppercase; color: #111827; }
-        .title-block p { margin: 3px 0 0; font-size: 10pt; color: #4b5563; }
+        .title-block { text-align: center; margin: 8px 0 6px; }
+        .title-block h1 { margin: 0; font-size: 14pt; letter-spacing: 0.08em; text-transform: uppercase; color: #111827; }
+        .title-block p { margin: 2px 0 0; font-size: 9.5pt; color: #4b5563; }
 
         /* Summary strip */
-        .stats { display: grid; gap: 8px; margin: 0 0 10px; }
-        .stat { border: 1px solid #e5e7eb; border-left: 4px solid #6b21a8; border-radius: 6px; padding: 6px 10px; background: #faf5ff; }
-        .stat-value { display: block; font-size: 14pt; font-weight: 800; color: #111827; line-height: 1.1; }
+        .stats { display: grid; gap: 6px; margin: 0 0 8px; }
+        .stat { border: 1px solid #e5e7eb; border-left: 4px solid #6b21a8; border-radius: 6px; padding: 4px 10px; background: #faf5ff; }
+        .stat-value { display: block; font-size: 13pt; font-weight: 800; color: #111827; line-height: 1.1; }
         .stat-label { display: block; font-size: 7.5pt; font-weight: 700; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em; }
         .stat.tone-blue   { border-left-color: #3b82f6; background: #eff6ff; }
         .stat.tone-violet { border-left-color: #8b5cf6; background: #f5f3ff; }
@@ -108,18 +108,28 @@
         .detail.wide .detail-label { flex-basis: 17%; }
 
         /* Table — fixed plan (table-layout: fixed + <colgroup>) so every
-           column always fits the page width. */
+           column always fits the page width.
+           2026-10-18 — the page-break-inside: avoid rule on tr below means
+           a row that doesn't fully fit the remaining space on a page is
+           pushed whole to the next page, leaving the rest of the current
+           page blank (reported as the first printed page looking "half
+           empty" before breaking to page 2). CSS paged media has no
+           "shrink to fit" for this, so the fix is density: the
+           letterhead/stats/title block and every row are now noticeably
+           shorter (tighter padding and line-height throughout this
+           stylesheet) so more rows fit per page and any one bumped row
+           wastes much less space. */
         table { width: 100%; border-collapse: collapse; table-layout: fixed; }
         thead { display: table-header-group; }
         tr { page-break-inside: avoid; break-inside: avoid; }
-        th { background: #4c1d95; color: #fff; font-size: 8pt; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; text-align: left; padding: 7px 6px; border: 1px solid #4c1d95; }
-        td { padding: 6px; border: 1px solid #e5e7eb; vertical-align: top; font-size: 8.8pt; line-height: 1.3; overflow-wrap: anywhere; }
+        th { background: #4c1d95; color: #fff; font-size: 8pt; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; text-align: left; padding: 5px 6px; border: 1px solid #4c1d95; }
+        td { padding: 4px 6px; border: 1px solid #e5e7eb; vertical-align: top; font-size: 8.8pt; line-height: 1.2; overflow-wrap: anywhere; }
         tbody tr:nth-child(even) td { background: #f8f7fc; }
         td.c-no { text-align: center; color: #6b7280; }
         td.c-key { font-weight: 700; color: #4c1d95; }
         td.c-strong { font-weight: 600; color: #111827; }
         td.c-nowrap { white-space: nowrap; }
-        .sub { display: block; margin-top: 2px; font-size: 7.8pt; color: #6b7280; font-weight: 400; }
+        .sub { display: block; margin-top: 1px; font-size: 7.8pt; color: #6b7280; font-weight: 400; }
         .muted { color: #9ca3af; }
 
         .text-critical { color: #b91c1c; font-weight: 700; } .text-high { color: #b45309; font-weight: 700; }

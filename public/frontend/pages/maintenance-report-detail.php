@@ -543,11 +543,6 @@ function syncAssignedToVisibility() {
     }
 }
 
-function getAssignmentRoleLabel(roleKey) {
-    if (roleKey === 'maintenance_admin') return 'Maintenance Admin';
-    return 'Maintenance Staff';
-}
-
 function getAssignmentPrimaryLabel(person) {
     return String(person?.full_name || person?.username || person?.display_name || 'Unknown').trim();
 }

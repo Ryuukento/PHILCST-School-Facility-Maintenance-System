@@ -910,6 +910,13 @@
     border-radius: 24px;
     width: min(92vw, 560px);
     min-height: 320px;
+    /* 2026-10-18 — mobile fix: without a height cap here, a tall form (e.g.
+       the Record Existing Item modal's Building/Floor/Room/Item/Quantity
+       fields) just grows past the viewport instead of scrolling, pushing
+       the footer's Cancel/Record buttons off-screen on phones. Capping the
+       modal and letting .modal-body (flex: 1; overflow-y: auto below) do
+       the scrolling keeps the header and footer always visible. */
+    max-height: 90vh;
     display: flex;
     flex-direction: column;
     box-shadow: 0 28px 74px rgba(15, 23, 42, 0.16);
@@ -1078,6 +1085,19 @@
     .header-actions {
         width: 100%;
         justify-content: flex-start;
+    }
+
+    /* 2026-10-18 — mobile fix: .add-menu-dropdown normally anchors with
+       `right: 0`, which is correct on desktop where .header-actions packs
+       its buttons to the right (justify-content: flex-end above) so the
+       "Add" trigger sits near the right edge. Here .header-actions switches
+       to flex-start, pulling "Add" to the LEFT edge instead — with the
+       dropdown still anchored from the right, it expanded leftward off the
+       trigger and ran off the left edge of the screen. Re-anchor from the
+       left at this breakpoint so it opens rightward and stays on screen. */
+    .add-menu-dropdown {
+        left: 0;
+        right: auto;
     }
 
     .room-search-wrap,

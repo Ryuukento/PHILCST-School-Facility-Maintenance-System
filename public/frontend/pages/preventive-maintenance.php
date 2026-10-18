@@ -1740,7 +1740,13 @@ function pmResultBadge(result) {
 
 async function pmCreateRepairReportFromHistory(btn) {
     const historyId = btn.dataset.historyId;
-    if (!historyId || !window.confirm('Create a repair report from this inspection? It will go to the normal report workflow.')) return;
+    if (!historyId) return;
+    const confirmed = await Components.confirm(
+        'Create a repair report from this inspection? It will go to the normal report workflow.',
+        'Create',
+        'Cancel'
+    );
+    if (!confirmed) return;
 
     try {
         Components.setLoading(btn, true);
@@ -1916,7 +1922,12 @@ function pmCloseHistoryModal() {
 
 async function pmToggleActive(row, activate) {
     const verb = activate ? 'reactivate' : 'archive';
-    if (!window.confirm(`Are you sure you want to ${verb} "${row.title}"?`)) return;
+    const confirmed = await Components.confirm(
+        `Are you sure you want to ${verb} "${row.title}"?`,
+        activate ? 'Reactivate' : 'Archive',
+        'Cancel'
+    );
+    if (!confirmed) return;
 
     try {
         const { response, data: payload } = await Components.fetchJson(`${PM_API_BASE}/${row.id}/${activate ? 'activate' : 'archive'}`, {
