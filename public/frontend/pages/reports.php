@@ -761,6 +761,12 @@ include __DIR__ . '/../includes/header.php';
 
 <script>
 let allReports = [];
+// Auto-refresh (see bottom of this file) re-fetches with whatever filters
+// were last applied, WITHOUT going through filterReports() again — that
+// function also resets currentPage/selectedWeek to the start, which would
+// yank a user back to page 1 / week 0 every refresh tick. This variable is
+// the one place those filters are remembered between ticks.
+let lastReportsFilters = {};
 let currentPage = 1;
 let rowsPerPage = 10;
 // All Reports pagination appears only once the list has at least this many
@@ -1194,13 +1200,11 @@ async function loadReports(filters = {}) {
             ...filters
         });
 
-        console.log('[DEBUG] API Request URL:', `${REPORTS_API}?${params.toString()}`);
         const res = await fetch(`${REPORTS_API}?${params.toString()}`, {
             credentials: 'include'
         });
         const response = await res.json();
-        console.log('[DEBUG] API Response:', response);
-        
+
         if (!response.success) {
             throw new Error(response.message || 'Failed to fetch reports');
         }
@@ -2614,9 +2618,9 @@ function filterReports() {
         filters.status_group = statusGroupFilter;
     }
 
-    console.log('[DEBUG] Filters sent to backend:', filters);
     selectedWeek = 0;
     currentPage = 1;
+    lastReportsFilters = filters;
     // Returned (not just fired) so the Export modal's Report Type control can
     // await the refreshed result set before the export buttons become usable
     // again — otherwise a fast click could export the previous type's rows.
@@ -3232,5 +3236,56 @@ function highlightNewReport(id) {
 
 // modify displayReports to add data-id attributes
 // NOTE: we'll insert additional logic inside displayReports function above - patch separately
+
+// ===================================
+// AUTO-REFRESH — All Reports table
+// ===================================
+// Survey feedback asked for "monitoring maintenance report status in real
+// time". Mirrors the cadence the notification bell already polls at
+// (notification.js, every 10s) but is a SEPARATE, self-contained timer
+// scoped only to this page — it does not touch notification.js (loaded
+// site-wide on every page) and does not change how notifications work.
+// Deliberately additive/isolated to keep the blast radius to this one file:
+//   - Re-fetches via loadReports(lastReportsFilters) directly, never
+//     filterReports() — filterReports() resets currentPage/selectedWeek to
+//     the start, which would silently kick the user back to page 1 every
+//     tick. loadReports() alone does not touch either, so whatever page/
+//     week/filters the user currently has stay exactly where they are.
+//   - Skipped entirely while the tab is hidden (no point spending a
+//     request nobody is looking at), while the Edit Report or Print Report
+//     modal is open (never yank the table out from under an in-progress
+//     edit/print), or while a previous tick's request is still in flight
+//     (never let slow responses pile up concurrent requests).
+//   - Any failure is swallowed and logged, never surfaced to the user as an
+//     error toast — a transient failed background refresh should be
+//     invisible; the next tick 15s later tries again on its own.
+const REPORTS_AUTO_REFRESH_INTERVAL_MS = 15000;
+let reportsAutoRefreshInFlight = false;
+
+function isReportsPageModalOpen() {
+    const editModal = document.getElementById('report-edit-modal');
+    const printModal = document.getElementById('print-report-modal');
+    return Boolean(
+        (editModal && editModal.classList.contains('show')) ||
+        (printModal && printModal.classList.contains('show'))
+    );
+}
+
+async function autoRefreshReportsTable() {
+    if (document.visibilityState !== 'visible') return;
+    if (isReportsPageModalOpen()) return;
+    if (reportsAutoRefreshInFlight) return;
+
+    reportsAutoRefreshInFlight = true;
+    try {
+        await loadReports(lastReportsFilters);
+    } catch (error) {
+        console.warn('Auto-refresh of reports table failed (will retry next tick):', error);
+    } finally {
+        reportsAutoRefreshInFlight = false;
+    }
+}
+
+setInterval(autoRefreshReportsTable, REPORTS_AUTO_REFRESH_INTERVAL_MS);
 
 </script>

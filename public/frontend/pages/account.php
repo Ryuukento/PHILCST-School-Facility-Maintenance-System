@@ -572,29 +572,6 @@ sendOtpBtn.addEventListener('click', async () => {
             otpEmailDisplay.textContent = email;
             otpCodeInput.focus();
 
-            // DEVELOPMENT MODE: If OTP is in response, show it to user for testing
-            if (data.data?.otp) {
-                const testOtpDiv = document.createElement('div');
-                testOtpDiv.style.cssText = 'background: #fef3c7; border: 1px solid #fcd34d; padding: 12px; border-radius: 6px; margin-bottom: 12px;';
-                testOtpDiv.innerHTML = `
-                    <p style="margin: 0 0 8px 0; font-size: 12px; font-weight: 600; color: #92400e;">
-                        🔧 TESTING MODE - OTP Code:
-                    </p>
-                    <div style="display: flex; gap: 8px; align-items: center;">
-                        <code style="background: #fff; padding: 8px 12px; border-radius: 4px; font-size: 16px; font-weight: bold; letter-spacing: 2px; flex: 1; text-align: center;">
-                            ${data.data.otp}
-                        </code>
-                        <button type="button" onclick="navigator.clipboard.writeText('${data.data.otp}'); alert('Copied!');" style="padding: 8px 12px; background: #fcd34d; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: 600;">
-                            Copy
-                        </button>
-                    </div>
-                    <p style="margin: 8px 0 0 0; font-size: 11px; color: #92400e;">
-                        Copy the code above and paste it in the field below.
-                    </p>
-                `;
-                otpForm.insertBefore(testOtpDiv, otpForm.firstChild);
-            }
-
             // Start timer: 5 minutes
             const expiresAt = Date.now() + (5 * 60 * 1000);
             startOtpTimer(expiresAt);
@@ -676,31 +653,6 @@ resendOtpBtn.addEventListener('click', async () => {
             otpCodeInput.value = '';
             otpCodeInput.focus();
             resendOtpBtn.style.display = 'none';
-
-            // DEVELOPMENT MODE: If OTP is in response, show it to user for testing
-            if (data.data?.otp) {
-                const existingTestDiv = otpForm.querySelector('div[style*="fef3c7"]');
-                if (existingTestDiv) {
-                    existingTestDiv.remove();
-                }
-
-                const testOtpDiv = document.createElement('div');
-                testOtpDiv.style.cssText = 'background: #fef3c7; border: 1px solid #fcd34d; padding: 12px; border-radius: 6px; margin-bottom: 12px;';
-                testOtpDiv.innerHTML = `
-                    <p style="margin: 0 0 8px 0; font-size: 12px; font-weight: 600; color: #92400e;">
-                        🔧 TESTING MODE - New OTP Code:
-                    </p>
-                    <div style="display: flex; gap: 8px; align-items: center;">
-                        <code style="background: #fff; padding: 8px 12px; border-radius: 4px; font-size: 16px; font-weight: bold; letter-spacing: 2px; flex: 1; text-align: center;">
-                            ${data.data.otp}
-                        </code>
-                        <button type="button" onclick="navigator.clipboard.writeText('${data.data.otp}'); alert('Copied!');" style="padding: 8px 12px; background: #fcd34d; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: 600;">
-                            Copy
-                        </button>
-                    </div>
-                `;
-                otpForm.insertBefore(testOtpDiv, otpForm.firstChild);
-            }
 
             const expiresAt = Date.now() + (5 * 60 * 1000);
             startOtpTimer(expiresAt);
