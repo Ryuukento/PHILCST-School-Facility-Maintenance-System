@@ -453,14 +453,14 @@ include __DIR__ . '/../includes/header.php';
     <div id="pm-assign-modal" class="modal" style="display:none;" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="pm-assign-modal-title">
         <div class="modal-content pm-assign-modal">
             <div class="modal-header">
-                <h3 class="modal-title" id="pm-assign-modal-title">Assign Maintenance Staff</h3>
+                <h3 class="modal-title" id="pm-assign-modal-title">Assign EELab Staff</h3>
                 <button type="button" class="modal-close" id="pm-assign-modal-close" aria-label="Close">&times;</button>
             </div>
             <div class="modal-body">
                 <p class="pm-assign-modal__intro" id="pm-assign-summary"></p>
                 <ul class="pm-assign-modal__tasks" id="pm-assign-task-list"></ul>
                 <div class="form-group">
-                    <label for="pm-assign-staff">Maintenance Staff</label>
+                    <label for="pm-assign-staff">EELab Staff</label>
                     <select id="pm-assign-staff" class="form-control">
                         <option value="">Loading staff...</option>
                     </select>
@@ -1787,11 +1787,11 @@ async function pmLoadStaffOptions(selectedId) {
             const users = (payload.data?.users || []).filter((u) => String(u.role).toLowerCase() === 'maintenance_staff');
             select.innerHTML = users.length
                 ? '<option value="">Select a staff member</option>' + users.map((u) => `<option value="${u.user_id}">${pmEscapeHtml(u.full_name)}</option>`).join('')
-                : '<option value="">No active Maintenance Staff found</option>';
+                : '<option value="">No active EELab Staff found</option>';
             pmStaffListLoaded = users.length > 0;
         } catch (error) {
             select.innerHTML = '<option value="">Unable to load staff</option>';
-            pmNotify(error.message || 'Unable to load maintenance staff.');
+            pmNotify(error.message || 'Unable to load EELab staff.');
         }
     }
     select.value = selectedId ? String(selectedId) : '';
@@ -1826,7 +1826,7 @@ function pmCloseAssignModal() {
 async function pmSubmitAssign() {
     const staffId = document.getElementById('pm-assign-staff').value;
     if (!staffId) {
-        pmNotify('Please select a Maintenance Staff member.', 'warning');
+        pmNotify('Please select an EELab Staff member.', 'warning');
         return;
     }
 

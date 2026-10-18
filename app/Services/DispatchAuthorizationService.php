@@ -209,7 +209,7 @@ class DispatchAuthorizationService
         // not also be its release personnel.
         if (!in_array(RoleNormalizerService::normalize((string) ($user->role ?? '')), ['maintenance_admin', 'maintenance_staff'], true)) {
             throw ValidationException::withMessages([
-                'release_assigned_to' => 'Release personnel must be a Head Maintenance or Maintenance Staff member.',
+                'release_assigned_to' => 'Release personnel must be a Head Maintenance or EELab Staff member.',
             ]);
         }
 

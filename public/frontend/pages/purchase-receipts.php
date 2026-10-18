@@ -671,7 +671,7 @@ async function prFetch(url, options) {
 const PR_PRINT_ROLE_LABELS = {
     super_admin: 'Administrator',
     maintenance_admin: 'Head Maintenance',
-    maintenance_staff: 'Maintenance Staff',
+    maintenance_staff: 'EELab Staff',
 };
 const PR_PREPARED_ROLE = PR_PRINT_ROLE_LABELS[<?php echo json_encode($userRole); ?>] || '';
 

@@ -197,7 +197,7 @@ class DispatchReleaseAssignmentAuthorizationTest extends TestCase
             ]);
 
         $response->assertStatus(400);
-        $this->assertStringContainsString('Head Maintenance or Maintenance Staff', (string) $response->json('message'));
+        $this->assertStringContainsString('Head Maintenance or EELab Staff', (string) $response->json('message'));
     }
 
     public function test_release_personnel_cannot_be_an_inactive_user(): void

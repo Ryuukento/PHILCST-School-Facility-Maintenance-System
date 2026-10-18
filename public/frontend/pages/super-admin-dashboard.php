@@ -558,7 +558,7 @@ $pageStylesheets = [
                     <div class="stat-detail">
                         Administrator: ${data.roleBreakdown.super_admin || 0}<br>
                         Head: ${data.roleBreakdown.maintenance_admin || 0}<br>
-                        Maintenance Staff: ${data.roleBreakdown.maintenance_staff || 0}
+                        EELab Staff: ${data.roleBreakdown.maintenance_staff || 0}
                     </div>
                 </div>
 

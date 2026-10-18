@@ -168,7 +168,7 @@ const DISPATCH_PAGE_BASE = window.SFMS_PUBLIC_URL ? window.SFMS_PUBLIC_URL('/dis
 const DISPATCH_ROLE_LABELS = {
     super_admin: 'Super Admin',
     maintenance_admin: 'Administrator',
-    maintenance_staff: 'Maintenance Staff',
+    maintenance_staff: 'EELab Staff',
 };
 
 function dspEscapeHtml(value) {
@@ -424,7 +424,7 @@ function dspDateCell(row) {
 const DSP_PRINT_ROLE_LABELS = {
     super_admin: 'Administrator',
     maintenance_admin: 'Head Maintenance',
-    maintenance_staff: 'Maintenance Staff',
+    maintenance_staff: 'EELab Staff',
 };
 const DSP_PRINT_STATUS_TONES = { pending: 'amber', approved: 'blue', released: 'green', cancelled: 'red' };
 

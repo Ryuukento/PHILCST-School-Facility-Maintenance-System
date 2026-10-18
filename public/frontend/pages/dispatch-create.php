@@ -122,14 +122,14 @@ include __DIR__ . '/../includes/header.php';
                         <div class="form-row-2">
                             <div class="form-group">
                                 <label for="dc-release-personnel-search">Primary Release Personnel <span style="color:#ef4444;">*</span></label>
-                                <input type="text" id="dc-release-personnel-search" class="form-control" placeholder="Search maintenance staff…" autocomplete="off">
+                                <input type="text" id="dc-release-personnel-search" class="form-control" placeholder="Search EELab staff…" autocomplete="off">
                                 <input type="hidden" id="dc-release-personnel-id">
-                                <small class="text-muted">The primary Maintenance Staff member responsible for the dispatch.</small>
+                                <small class="text-muted">The primary EELab Staff member responsible for the dispatch.</small>
                             </div>
 
                             <div class="form-group">
                                 <label for="dc-additional-personnel-search">Additional Personnel (Optional)</label>
-                                <input type="text" id="dc-additional-personnel-search" class="form-control" placeholder="Search and add maintenance staff…" autocomplete="off" style="margin-bottom:8px;">
+                                <input type="text" id="dc-additional-personnel-search" class="form-control" placeholder="Search and add EELab staff…" autocomplete="off" style="margin-bottom:8px;">
                                 <input type="hidden" id="dc-additional-personnel-id">
                                 <div id="dc-additional-personnel-list" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;"></div>
                                 <small class="text-muted">Add personnel from different departments.</small>
@@ -687,9 +687,17 @@ document.getElementById('dc-form').addEventListener('submit', async (e) => {
                 credentials: 'same-origin',
                 headers:     { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
                 body: JSON.stringify({
-                    department_ids:      departmentIds.length > 0 ? departmentIds : [],
-                    room_id:             parseInt(roomId, 10),
-                    release_assigned_to: releaseAssignedTo,
+                    department_ids:           departmentIds.length > 0 ? departmentIds : [],
+                    room_id:                  parseInt(roomId, 10),
+                    release_assigned_to:       releaseAssignedTo,
+                    // Sent alongside release_assigned_to so the server can
+                    // enforce "at least one personnel" itself (see
+                    // DispatchController::store()) instead of trusting only
+                    // the dcShowError guard above. The actual additional-
+                    // personnel assignment still happens via the separate
+                    // /add-personnel calls below — this array is for
+                    // validation only.
+                    additional_personnel_ids: Array.from(dcSelectedAdditionalPersonnel),
                     items,
                 }),
             }

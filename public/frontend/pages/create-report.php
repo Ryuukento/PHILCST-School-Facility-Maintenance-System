@@ -277,7 +277,7 @@ include __DIR__ . '/../includes/header.php';
                         <span class="form-section-index">2</span>
                         <div>
                             <h3 class="form-section-title">Description</h3>
-                            <p class="form-section-subtitle">Give maintenance staff the details they need.</p>
+                            <p class="form-section-subtitle">Give EELab staff the details they need.</p>
                         </div>
                     </div>
                     <div class="form-section-body">

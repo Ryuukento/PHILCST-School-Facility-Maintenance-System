@@ -97,7 +97,7 @@ class PreventiveMaintenanceService
                 ->exists();
             if (!$isActiveStaff) {
                 throw ValidationException::withMessages([
-                    'assigned_user_id' => 'Preventive maintenance tasks can only be assigned to active Maintenance Staff.',
+                    'assigned_user_id' => 'Preventive maintenance tasks can only be assigned to active EELab Staff.',
                 ]);
             }
         }

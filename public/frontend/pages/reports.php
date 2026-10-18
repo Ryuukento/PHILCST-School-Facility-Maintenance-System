@@ -2417,7 +2417,7 @@ function describePrintPeriod(mode, weekValue, dateValue, monthValue) {
 const PRINT_ROLE_LABELS = {
     super_admin: 'Administrator',
     maintenance_admin: 'Head Maintenance',
-    maintenance_staff: 'Maintenance Staff'
+    maintenance_staff: 'EELab Staff'
 };
 
 const PRINT_STATUS_TONES = {

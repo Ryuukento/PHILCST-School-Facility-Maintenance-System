@@ -822,7 +822,7 @@ class ReportController extends Controller
                     return $this->fail('You can only update status of reports assigned to you', 403);
                 }
                 if (!in_array($newStatus, $staffAllowed, true)) {
-                    return $this->fail('Maintenance Staff can only set status to In Progress or Completed', 403);
+                    return $this->fail('EELab Staff can only set status to In Progress or Completed', 403);
                 }
             } else {
                 return $this->fail('You are not allowed to change report status', 403);

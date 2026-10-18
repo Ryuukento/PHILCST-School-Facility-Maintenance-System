@@ -68,7 +68,7 @@ if ($user && $isForceProfileUpdate && !in_array($currentPage, ['account.php', 'l
 $roleTitleMap = [
     'super_admin'           => 'Administrator',
     'maintenance_admin'     => 'Head',
-    'maintenance_staff'     => 'Maintenance Staff',
+    'maintenance_staff'     => 'EELab Staff',
     ''                      => 'Maintenance Staff',
     'user'                  => 'User',
 ];

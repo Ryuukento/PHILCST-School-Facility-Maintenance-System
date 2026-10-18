@@ -106,8 +106,8 @@ if ($canAssignUser) {
     $assignmentTargetOrder = " AND u.status = 'active' ORDER BY u.full_name, u.username";
 
     if ($currentRole === 'maintenance_admin') {
-        $assignmentLabel = 'Assign To (Maintenance Staff)';
-        $assignmentPlaceholder = 'Select maintenance staff...';
+        $assignmentLabel = 'Assign To (EELab Staff)';
+        $assignmentPlaceholder = 'Select EELab staff...';
         $stmt = $pdo->query($assignmentTargetSelect . " WHERE u.role IN ('maintenance_staff')" . $assignmentTargetOrder);
         $assignmentTargetsByRole['maintenance_staff'] = $stmt->fetchAll();
     } else {

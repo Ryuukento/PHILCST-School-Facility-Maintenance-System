@@ -703,9 +703,9 @@ include __DIR__ . '/../includes/header.php';
             </div>
             <div class="modal-body">
                 <label for="dd-assign-personnel-search" style="font-weight:600;display:block;margin-bottom:6px;">Release Personnel <span style="color:#ef4444;">*</span></label>
-                <input type="text" id="dd-assign-personnel-search" class="form-control" placeholder="Search maintenance staff..." style="width:100%;margin-bottom:4px;" autocomplete="off">
+                <input type="text" id="dd-assign-personnel-search" class="form-control" placeholder="Search EELab staff..." style="width:100%;margin-bottom:4px;" autocomplete="off">
                 <input type="hidden" id="dd-assign-personnel-id">
-                <p style="font-size:12px;color:#6b7280;margin:0;">Any active Maintenance Staff member may be selected, regardless of department. Reassignment is no longer possible once the dispatch has been released.</p>
+                <p style="font-size:12px;color:#6b7280;margin:0;">Any active EELab Staff member may be selected, regardless of department. Reassignment is no longer possible once the dispatch has been released.</p>
                 <p id="dd-assign-error" style="color:#ef4444;font-size:13px;margin-top:10px;display:none;"></p>
             </div>
             <div class="modal-footer" style="display:flex;gap:8px;justify-content:flex-end;">
@@ -726,9 +726,9 @@ include __DIR__ . '/../includes/header.php';
             </div>
             <div class="modal-body">
                 <label for="dd-add-personnel-search" style="font-weight:600;display:block;margin-bottom:6px;">Select Personnel <span style="color:#ef4444;">*</span></label>
-                <input type="text" id="dd-add-personnel-search" class="form-control" placeholder="Search maintenance staff..." style="width:100%;margin-bottom:4px;" autocomplete="off">
+                <input type="text" id="dd-add-personnel-search" class="form-control" placeholder="Search EELab staff..." style="width:100%;margin-bottom:4px;" autocomplete="off">
                 <input type="hidden" id="dd-add-personnel-id">
-                <p style="font-size:12px;color:#6b7280;margin:0;">Add maintenance staff from different departments to dispatch different types of items.</p>
+                <p style="font-size:12px;color:#6b7280;margin:0;">Add EELab staff from different departments to dispatch different types of items.</p>
                 <p id="dd-add-personnel-error" style="color:#ef4444;font-size:13px;margin-top:10px;display:none;"></p>
             </div>
             <div class="modal-footer" style="display:flex;gap:8px;justify-content:flex-end;">
@@ -1059,7 +1059,7 @@ function ddAssignmentBlock(dispatch, options) {
         return `
             <div class="ui-empty-state">
                 <strong>No release personnel assigned.</strong>
-                <span>Head Maintenance must assign a Maintenance Staff member before this dispatch can be approved.</span>
+                <span>Head Maintenance must assign an EELab Staff member before this dispatch can be approved.</span>
             </div>`;
     }
 

@@ -266,9 +266,30 @@ class DispatchController extends Controller
             // Multi-Personnel Dispatch: release_assigned_to is now optional.
             // When using multi-personnel dispatch, personnel may be assigned
             // via the Additional Personnel field (added via /add-personnel
-            // endpoint after creation). At least one personnel assignment
-            // (primary or additional) is enforced on the client.
+            // endpoint after creation). "nullable" here means a bare
+            // ['nullable', ..., $closure] rule would NEVER run that closure
+            // when the field is empty — Laravel's nullable short-circuits
+            // every rule after it for that field once the value is empty, a
+            // closure included. So "at least one personnel overall" is NOT
+            // expressed as a rule on this field; it is checked manually,
+            // once, right after validate() returns (see below), where both
+            // this field and additional_personnel_ids are already resolved.
             'release_assigned_to' => ['nullable', 'integer', 'exists:users,user_id'],
+            // Multi-Personnel Dispatch: the create form lets Head Maintenance
+            // pick Additional Personnel BEFORE the dispatch exists — they are
+            // actually attached one-by-one via POST .../add-personnel calls
+            // made right after this request succeeds (that two-step flow is
+            // unchanged). This array is sent here too, in the SAME request,
+            // purely so the "at least one personnel" rule below can be
+            // enforced server-side instead of trusting the browser's own
+            // check (dispatch-create.php's dcShowError guard) — a crafted
+            // request bypassing the UI could otherwise omit both fields and
+            // create an unassigned dispatch that nothing catches until the
+            // (separate) approval-time check in DispatchService. Not used
+            // for anything else here; the actual assignment still happens
+            // through addPersonnelToDispatch()/assignPersonnelToDispatch().
+            'additional_personnel_ids'   => ['nullable', 'array'],
+            'additional_personnel_ids.*' => ['integer', 'exists:users,user_id'],
             'items'               => ['required', 'array', 'min:1'],
             // TASK 47 — Dispatch Create & Assignment Workflow: 'distinct'
             // rejects two rows for the same item_id in one request. Without
@@ -287,6 +308,20 @@ class DispatchController extends Controller
             'items.*.item_id'     => ['required', 'integer', 'exists:items,id', 'distinct'],
             'items.*.quantity'    => ['required', 'integer', 'min:1'],
         ]);
+
+        // Multi-Personnel Dispatch: server-side mirror of the client's own
+        // "at least one personnel (primary or additional)" guard in
+        // dispatch-create.php. Left uncaught deliberately — bootstrap/app.php's
+        // exception render() turns an unhandled ValidationException into the
+        // same {success:false, message, errors:{field:[...]}} / 422 shape as
+        // every other rule in the block above, so release_assigned_to reads
+        // as a normal validation error to both the UI and tests rather than
+        // needing its own response-shape special case.
+        if (empty($validated['release_assigned_to']) && count(array_filter($validated['additional_personnel_ids'] ?? [])) === 0) {
+            throw ValidationException::withMessages([
+                'release_assigned_to' => 'Please assign at least one personnel (Primary Release Personnel or Additional Personnel) to this dispatch.',
+            ]);
+        }
 
         $authUser = $this->authUser($request);
 
@@ -688,7 +723,7 @@ class DispatchController extends Controller
 
         // Only Maintenance Staff (maintenance_staff) can dispatch items
         if ($authUser['role'] !== 'maintenance_staff') {
-            return $this->fail('Only Maintenance Staff can dispatch items.', 403);
+            return $this->fail('Only EELab Staff can dispatch items.', 403);
         }
 
         // Deployed Asset registry — dispatching the final item now performs a
