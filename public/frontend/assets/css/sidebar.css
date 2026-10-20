@@ -1066,7 +1066,13 @@ main, .main-content, .content, .container, .app-footer {
     .sidebar-toggle,
     .sidebar-overlay,
     .app-footer {
-        display: none;
+        /* !important (2026-10-19): this rule already existed, but was losing
+           to later-loaded page CSS in some flows (e.g. preventive-maintenance's
+           in-page window.print()), leaving the "© ... All rights reserved."
+           copyright line visible on printed output. Forcing it here removes
+           the copyright/footer from every print across the app regardless of
+           load order. */
+        display: none !important;
     }
 
     main, .main-content, .content, .container,

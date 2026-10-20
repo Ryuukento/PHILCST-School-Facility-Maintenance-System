@@ -210,7 +210,7 @@ $headerTimeText = $headerNow->format('g:i A');
              holding the 20260920-5 copy would paint the old white rounded
              rectangle around the new circular logo — precisely the defect this
              change removes. */ ?>
-    <link rel="stylesheet" href="<?php echo htmlspecialchars(public_url('/frontend/assets/css/sidebar.css?v=20260921-1')); ?>">
+    <link rel="stylesheet" href="<?php echo htmlspecialchars(public_url('/frontend/assets/css/sidebar.css?v=20261019-2')); ?>">
     <?php /* Bumped with the sidebar contrast fix: the light-theme blanket text
              rule near the end of styles.css now excludes the sidebar subtree.
              A browser holding the 20260522-2 copy keeps painting slate text on

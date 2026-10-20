@@ -99,22 +99,22 @@ class PreventiveMaintenanceControllerTest extends TestCase
         $this->assertSame(0, DB::table('preventive_maintenance_tasks')->count());
     }
 
-    public function test_administrator_is_view_only_and_cannot_create_a_task(): void
+    public function test_administrator_can_also_create_a_task(): void
     {
-        // 2026-09-27: Preventive Maintenance is performed by Head Maintenance
-        // and Staff; the Administrator only views/monitors it.
+        // 2026-10-19 (supersedes the 2026-09-27 "Admin is view-only" plan):
+        // create is Head Maintenance OR Administrator.
         $adminId = $this->seedUser(['role' => 'super_admin']);
 
-        $this
+        $response = $this
             ->actingAsSessionUserWithFlatKeys($adminId, 'super_admin')
             ->postJson('/api/preventive-maintenance', [
                 'category' => 'Computers',
                 'title' => 'Lab PCs Quarterly Check',
                 'frequency' => 'quarterly',
-            ])
-            ->assertStatus(403);
+            ]);
 
-        $this->assertSame(0, DB::table('preventive_maintenance_tasks')->count());
+        $response->assertStatus(201);
+        $this->assertSame(1, DB::table('preventive_maintenance_tasks')->count());
     }
 
     public function test_head_maintenance_can_create_a_task(): void
@@ -318,54 +318,77 @@ class PreventiveMaintenanceControllerTest extends TestCase
             ->assertStatus(403);
     }
 
-    public function test_maintenance_admin_can_update_any_task_regardless_of_assignee(): void
+    public function test_administrator_can_update_any_task_regardless_of_assignee(): void
     {
-        $adminId = $this->seedUser(['role' => 'maintenance_admin']);
+        // 2026-10-19 (supersedes the 2026-09-27 plan): editing any task is
+        // now the Administrator's responsibility, not Head Maintenance's.
+        $adminId = $this->seedUser(['role' => 'super_admin']);
         $otherStaffId = $this->seedUser(['role' => 'maintenance_staff']);
         $taskId = $this->seedTask(['assigned_user_id' => $otherStaffId, 'title' => 'Original']);
 
         $this
-            ->actingAsSessionUserWithFlatKeys($adminId, 'maintenance_admin')
+            ->actingAsSessionUserWithFlatKeys($adminId, 'super_admin')
             ->patchJson("/api/preventive-maintenance/{$taskId}", ['title' => 'Updated By Admin'])
             ->assertStatus(200);
 
         $this->assertSame('Updated By Admin', DB::table('preventive_maintenance_tasks')->where('id', $taskId)->value('title'));
     }
 
-    public function test_update_can_clear_a_nullable_field_by_explicit_null(): void
+    public function test_head_maintenance_can_no_longer_update_a_task_it_does_not_own(): void
     {
-        $adminId = $this->seedUser(['role' => 'maintenance_admin']);
-        $staffId = $this->seedUser(['role' => 'maintenance_staff']);
-        $taskId = $this->seedTask(['assigned_user_id' => $staffId]);
+        // Head Maintenance lost blanket edit rights in the 2026-10-19 swap —
+        // it no longer owns any identity-based exception here (unlike
+        // Maintenance Staff's own-task carve-out), so every edit attempt is
+        // rejected regardless of who the task is assigned to.
+        $headId = $this->seedUser(['role' => 'maintenance_admin']);
+        $taskId = $this->seedTask(['assigned_user_id' => null, 'title' => 'Original']);
 
         $this
-            ->actingAsSessionUserWithFlatKeys($adminId, 'maintenance_admin')
-            ->patchJson("/api/preventive-maintenance/{$taskId}", ['assigned_user_id' => null])
-            ->assertStatus(200);
+            ->actingAsSessionUserWithFlatKeys($headId, 'maintenance_admin')
+            ->patchJson("/api/preventive-maintenance/{$taskId}", ['title' => 'Attempted Update By Head'])
+            ->assertStatus(403);
 
-        $this->assertNull(DB::table('preventive_maintenance_tasks')->where('id', $taskId)->value('assigned_user_id'));
+        $this->assertSame('Original', DB::table('preventive_maintenance_tasks')->where('id', $taskId)->value('title'));
     }
 
-    public function test_update_reassignment_notifies_the_new_assignee(): void
+    public function test_update_can_clear_a_nullable_field_by_explicit_null(): void
     {
-        $adminId = $this->seedUser(['role' => 'maintenance_admin']);
+        // 2026-10-19: editing is the Administrator's job now, not Head
+        // Maintenance's — rewritten to use 'notes' (a plain content field)
+        // instead of assigned_user_id, since clearing assigned_user_id is a
+        // reassignment and is covered separately below by the
+        // canAssignTasks guard (Head-only, even for the Administrator).
+        $adminId = $this->seedUser(['role' => 'super_admin']);
+        $taskId = $this->seedTask(['notes' => 'Original note']);
+
+        $this
+            ->actingAsSessionUserWithFlatKeys($adminId, 'super_admin')
+            ->patchJson("/api/preventive-maintenance/{$taskId}", ['notes' => null])
+            ->assertStatus(200);
+
+        $this->assertNull(DB::table('preventive_maintenance_tasks')->where('id', $taskId)->value('notes'));
+    }
+
+    public function test_administrator_cannot_reassign_a_task_via_update(): void
+    {
+        // Assigning stays Head Maintenance-only even through this side
+        // door: the Administrator can edit a task's own fields (title,
+        // frequency, notes, ...) but changing assigned_user_id via PATCH
+        // still goes through canAssignTasks(), which only maintenance_admin
+        // passes. Reassignment must go through POST .../assign instead
+        // (see test_head_can_bulk_assign_tasks_to_a_staff_member_who_is_notified).
+        $adminId = $this->seedUser(['role' => 'super_admin']);
         $oldAssignee = $this->seedUser(['role' => 'maintenance_staff']);
         $newAssignee = $this->seedUser(['role' => 'maintenance_staff']);
         $taskId = $this->seedTask(['assigned_user_id' => $oldAssignee]);
 
         $this
-            ->actingAsSessionUserWithFlatKeys($adminId, 'maintenance_admin')
+            ->actingAsSessionUserWithFlatKeys($adminId, 'super_admin')
             ->patchJson("/api/preventive-maintenance/{$taskId}", ['assigned_user_id' => $newAssignee])
-            ->assertStatus(200);
+            ->assertStatus(403);
 
-        $this->assertSame(
-            1,
-            DB::table('notifications')
-                ->where('user_id', $newAssignee)
-                ->where('title', 'Preventive Maintenance Task Assigned')
-                ->count()
-        );
-        $this->assertSame(0, DB::table('notifications')->where('user_id', $oldAssignee)->count());
+        $this->assertSame($oldAssignee, DB::table('preventive_maintenance_tasks')->where('id', $taskId)->value('assigned_user_id'));
+        $this->assertSame(0, DB::table('notifications')->where('user_id', $newAssignee)->count());
     }
 
     // ---------------------------------------------------------------
@@ -387,11 +410,13 @@ class PreventiveMaintenanceControllerTest extends TestCase
 
     public function test_admin_can_archive_and_reactivate_a_task_without_deleting_it(): void
     {
-        $adminId = $this->seedUser(['role' => 'maintenance_admin']);
+        // 2026-10-19 (supersedes the 2026-09-27 plan): archive/activate
+        // swapped from Head Maintenance to the Administrator.
+        $adminId = $this->seedUser(['role' => 'super_admin']);
         $taskId = $this->seedTask();
 
         $this
-            ->actingAsSessionUserWithFlatKeys($adminId, 'maintenance_admin')
+            ->actingAsSessionUserWithFlatKeys($adminId, 'super_admin')
             ->postJson("/api/preventive-maintenance/{$taskId}/archive")
             ->assertStatus(200);
 
@@ -399,9 +424,24 @@ class PreventiveMaintenanceControllerTest extends TestCase
         $this->assertSame(1, DB::table('preventive_maintenance_tasks')->count());
 
         $this
-            ->actingAsSessionUserWithFlatKeys($adminId, 'maintenance_admin')
+            ->actingAsSessionUserWithFlatKeys($adminId, 'super_admin')
             ->postJson("/api/preventive-maintenance/{$taskId}/activate")
             ->assertStatus(200);
+
+        $this->assertSame(1, (int) DB::table('preventive_maintenance_tasks')->where('id', $taskId)->value('is_active'));
+    }
+
+    public function test_head_maintenance_can_no_longer_archive_a_task(): void
+    {
+        // Head Maintenance lost archive/activate rights in the 2026-10-19
+        // swap — only the Administrator may now archive or reactivate.
+        $headId = $this->seedUser(['role' => 'maintenance_admin']);
+        $taskId = $this->seedTask();
+
+        $this
+            ->actingAsSessionUserWithFlatKeys($headId, 'maintenance_admin')
+            ->postJson("/api/preventive-maintenance/{$taskId}/archive")
+            ->assertStatus(403);
 
         $this->assertSame(1, (int) DB::table('preventive_maintenance_tasks')->where('id', $taskId)->value('is_active'));
     }
@@ -792,18 +832,23 @@ class PreventiveMaintenanceControllerTest extends TestCase
     // 2026-09-27 — Administrator view-only, Head assigns, inspection result
     // ---------------------------------------------------------------
 
-    public function test_administrator_cannot_edit_complete_or_archive_a_task(): void
+    public function test_administrator_can_edit_and_archive_but_still_cannot_complete_a_task(): void
     {
+        // 2026-10-19 (supersedes the 2026-09-27 "Admin is view-only" plan):
+        // edit and archive swapped to the Administrator. Completing a task
+        // (logging the actual PM work) was never part of the swap — that
+        // stays Head Maintenance / Maintenance Staff only.
         $adminId = $this->seedUser(['role' => 'super_admin']);
         $taskId = $this->seedTask();
         $session = fn () => $this->actingAsSessionUserWithFlatKeys($adminId, 'super_admin');
 
-        $session()->patchJson("/api/preventive-maintenance/{$taskId}", ['title' => 'Changed'])->assertStatus(403);
+        $session()->patchJson("/api/preventive-maintenance/{$taskId}", ['title' => 'Changed'])->assertStatus(200);
         $session()->postJson("/api/preventive-maintenance/{$taskId}/complete", ['completed_date' => '2026-08-15'])->assertStatus(403);
-        $session()->postJson("/api/preventive-maintenance/{$taskId}/archive")->assertStatus(403);
+        $session()->postJson("/api/preventive-maintenance/{$taskId}/archive")->assertStatus(200);
 
         $this->assertSame(0, DB::table('preventive_maintenance_history')->count());
-        $this->assertSame(1, (int) DB::table('preventive_maintenance_tasks')->where('id', $taskId)->value('is_active'));
+        $this->assertSame(0, (int) DB::table('preventive_maintenance_tasks')->where('id', $taskId)->value('is_active'));
+        $this->assertSame('Changed', DB::table('preventive_maintenance_tasks')->where('id', $taskId)->value('title'));
     }
 
     public function test_administrator_can_still_view_the_schedule_and_history(): void

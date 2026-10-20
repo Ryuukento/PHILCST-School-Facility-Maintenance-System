@@ -1049,7 +1049,7 @@
 
 @page {
     margin: 5mm 11mm 14mm;
-    size: letter;
+    size: letter landscape;
 }
 
 @media print {
@@ -1074,7 +1074,15 @@
     body.pm-printing .navbar,
     body.pm-printing .hamburger-icon,
     body.pm-printing .sidebar-toggle,
-    body.pm-printing .sidebar-toggle-mobile { display: none !important; }
+    body.pm-printing .sidebar-toggle-mobile,
+    body.pm-printing .app-footer { display: none !important; }
+    /* 2026-10-19: .app-footer sits outside .pm-page (it's part of the shared
+       layout, not a child pm-page covers via the ":not(.pm-print-only)" rule
+       below), so it was never actually hidden by this block — only by
+       sidebar.css's global print rule, which lacked !important and could
+       lose the cascade. Hiding it explicitly here too removes the
+       "© ... All rights reserved." copyright line from the printed
+       schedule regardless of load order or cache state. */
     body.pm-printing .pm-page > *:not(.pm-print-only) { display: none !important; }
     body.pm-printing .pm-print-only { display: block !important; margin: 0 !important; padding: 0 !important; }
     body.pm-printing main { margin: 0 !important; padding: 0 20px 20px 20px !important; }

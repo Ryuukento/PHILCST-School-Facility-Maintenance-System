@@ -25,21 +25,23 @@ class PreventiveMaintenanceService
 
     /**
      * RBAC per the confirmed plan: Maintenance Staff may VIEW every task
-     * (index is never scoped), but may only EDIT or COMPLETE a task whose
+     * (index is never scoped), but may only EDIT a task whose
      * assigned_user_id is their own user_id — an unassigned task cannot be
-     * completed by any staff member. Head Maintenance (maintenance_admin)
-     * owns the plan and may manage any task. Mirrors
-     * DispatchAuthorizationService's role of being the single place this
-     * identity check lives.
+     * edited by any staff member. Mirrors DispatchAuthorizationService's
+     * role of being the single place this identity check lives.
      *
-     * 2026-09-27: the Administrator (super_admin) is view/monitor only for
-     * Preventive Maintenance — PM is performed by Head Maintenance and Staff,
-     * so the Administrator no longer edits or completes tasks.
+     * 2026-10-19 (supersedes the 2026-09-27 plan): editing a plan's own
+     * details (title, frequency, schedule, etc.) is now the Administrator's
+     * responsibility, not Head Maintenance's — Head Maintenance and
+     * Administrator swapped roles for this action. Head Maintenance keeps
+     * ownership of create/assign (see canAssignTasks() below and the
+     * store()/assign() routes), just not blanket edit rights over every
+     * task.
      */
     public function canManageTask(array $authUser, PreventiveMaintenanceTask $task): bool
     {
         $role = (string) ($authUser['role'] ?? '');
-        if ($role === 'maintenance_admin') {
+        if ($role === 'super_admin') {
             return true;
         }
 

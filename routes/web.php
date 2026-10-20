@@ -497,12 +497,19 @@ Route::prefix('api')->group(function (): void {
                 ->middleware(EnsureRole::class . ':super_admin,maintenance_admin');
         });
 
-        // Preventive Maintenance module. RBAC per the confirmed plan:
-        // create/archive/activate/assign are Head Maintenance only (2026-09-27:
-        // the Administrator is view/monitor only for PM — PM is performed by
-        // Head Maintenance and Staff, so super_admin was removed from every
-        // write route below; the read routes stay open to all roles);
-        // index/show/summary/options/history are open to any authenticated
+        // Preventive Maintenance module. RBAC per the confirmed plan
+        // (2026-10-19, supersedes the 2026-09-27 "Admin is view-only" plan —
+        // Head Maintenance and the Administrator swapped responsibilities
+        // for editing/archiving):
+        //   - create:            Head Maintenance OR Administrator
+        //   - assign:            Head Maintenance only (Administrator does
+        //                        NOT get this one back — still excluded)
+        //   - edit (update):     Administrator (any task) OR Maintenance
+        //                        Staff (their own assigned task only, via
+        //                        PreventiveMaintenanceService::canManageTask())
+        //   - complete:          Head Maintenance OR Maintenance Staff
+        //   - archive/activate:  Administrator only
+        // index/show/summary/options/history stay open to any authenticated
         // role (Maintenance Staff sees the full list, per "view all, edit
         // only own"); update/complete carry the broader role gate here and
         // the actual "own task only" restriction is enforced per-record
@@ -537,16 +544,16 @@ Route::prefix('api')->group(function (): void {
                 ->middleware(EnsureRole::class . ':maintenance_admin,maintenance_staff');
             Route::get('', [PreventiveMaintenanceController::class, 'index']);
             Route::post('', [PreventiveMaintenanceController::class, 'store'])
-                ->middleware(EnsureRole::class . ':maintenance_admin');
+                ->middleware(EnsureRole::class . ':maintenance_admin,super_admin');
             Route::get('{preventiveMaintenanceTask}', [PreventiveMaintenanceController::class, 'show']);
             Route::patch('{preventiveMaintenanceTask}', [PreventiveMaintenanceController::class, 'update'])
-                ->middleware(EnsureRole::class . ':maintenance_admin,maintenance_staff');
+                ->middleware(EnsureRole::class . ':super_admin,maintenance_staff');
             Route::post('{preventiveMaintenanceTask}/complete', [PreventiveMaintenanceController::class, 'complete'])
                 ->middleware(EnsureRole::class . ':maintenance_admin,maintenance_staff');
             Route::post('{preventiveMaintenanceTask}/archive', [PreventiveMaintenanceController::class, 'archive'])
-                ->middleware(EnsureRole::class . ':maintenance_admin');
+                ->middleware(EnsureRole::class . ':super_admin');
             Route::post('{preventiveMaintenanceTask}/activate', [PreventiveMaintenanceController::class, 'activate'])
-                ->middleware(EnsureRole::class . ':maintenance_admin');
+                ->middleware(EnsureRole::class . ':super_admin');
             Route::get('{preventiveMaintenanceTask}/history', [PreventiveMaintenanceController::class, 'history']);
         });
 

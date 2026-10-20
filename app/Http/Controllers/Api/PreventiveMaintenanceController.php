@@ -531,8 +531,10 @@ class PreventiveMaintenanceController extends Controller
 
     /**
      * POST /api/preventive-maintenance/{task}/archive — soft-hide, not
-     * delete. Route middleware already restricts this to
-     * super_admin/maintenance_admin (Maintenance Staff cannot archive).
+     * delete. 2026-10-19: Route middleware now restricts this to
+     * super_admin only — Head Maintenance and Maintenance Staff can no
+     * longer archive a plan (Administrator took over this action, same
+     * swap as canManageTask() above).
      */
     public function archive(Request $request, PreventiveMaintenanceTask $preventiveMaintenanceTask)
     {

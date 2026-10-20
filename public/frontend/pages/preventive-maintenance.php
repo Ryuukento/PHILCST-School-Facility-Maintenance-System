@@ -21,23 +21,27 @@ $_pmUser = $_SESSION['user'] ?? $_SESSION['auth_user'] ?? [];
 $_pmRole = strtolower(trim((string)($_pmUser['role'] ?? '')));
 $_pmUserId = (int)($_pmUser['user_id'] ?? 0);
 
-// PM RBAC — confirmed plan: create/archive/activate are Administrator /
-// Head Maintenance only. Edit and Complete are allowed for all three roles at
-// the route/middleware layer, but split further by the backend service:
-// canManageTask() (EDIT) restricts Maintenance Staff to only their own
-// assigned tasks; canCompleteTask() (COMPLETE / repair-report) allows ANY
-// Maintenance Staff regardless of assignment (2026-09-30, by request — plans
-// are visible team-wide and assignment was often left blank). Both are
-// mirrored client-side below (pmCanManageTask() / pmCanCompleteTask()) purely
-// to decide which buttons to render; the API re-checks regardless, so this is
-// presentation only, never the actual authorization boundary.
-//
-// 2026-09-27: Preventive Maintenance is performed by Head Maintenance and
-// Staff. The Administrator (super_admin) is view/monitor only; Head
-// Maintenance owns the plan and is the one who assigns tasks to staff.
+// PM RBAC — confirmed plan (2026-10-19, supersedes the 2026-09-27 "Admin is
+// view-only" plan — Head Maintenance and the Administrator swapped
+// responsibilities for editing/archiving):
+//   - create:  Head Maintenance OR Administrator ($_pmCanCreate)
+//   - assign:  Head Maintenance only ($_pmCanAssign — Administrator does
+//              NOT get this one back, still excluded)
+//   - edit:    Administrator (any task) OR Maintenance Staff (their own
+//              assigned task only) — decided per-row client-side by
+//              pmCanManageTask() below, mirroring
+//              PreventiveMaintenanceService::canManageTask()
+//   - complete: Head Maintenance OR Maintenance Staff — decided per-row by
+//              pmCanCompleteTask() below, mirroring
+//              PreventiveMaintenanceService::canCompleteTask()
+//   - archive/activate: Administrator only ($_pmCanArchive)
+// All of this is presentation only (which buttons render) — the API
+// re-checks every one of these via route middleware and/or the service
+// methods above regardless, so this is never the actual authorization
+// boundary.
 $_pmCanCreate = $_pmRole === 'maintenance_admin' || $_pmRole === 'super_admin';
-$_pmCanArchive = $_pmRole === 'maintenance_admin' || $_pmRole === 'super_admin';
-$_pmCanAssign = $_pmRole === 'maintenance_admin' || $_pmRole === 'super_admin';
+$_pmCanArchive = $_pmRole === 'super_admin';
+$_pmCanAssign = $_pmRole === 'maintenance_admin';
 $_pmIsViewOnly = false;
 
 $pageTitle = 'Preventive Maintenance - SFMS';
@@ -501,7 +505,7 @@ include __DIR__ . '/../includes/header.php';
     <div id="pm-print-container" class="pm-print-only"></div>
 </main>
 
-<link rel="stylesheet" href="<?php echo htmlspecialchars(public_url('/frontend/assets/css/preventive-maintenance.inline.css?v=20260927-5')); ?>">
+<link rel="stylesheet" href="<?php echo htmlspecialchars(public_url('/frontend/assets/css/preventive-maintenance.inline.css?v=20261019-2')); ?>">
 
 <script>
 const PM_CURRENT_USER = {
@@ -620,9 +624,10 @@ function pmDaysUntilFromDate(date) {
 // every update() call. Governs EDIT only (see pmCanCompleteTask() below for
 // the wider completion permission).
 function pmCanManageTask(row) {
-    // Mirrors PreventiveMaintenanceService::canManageTask(): Head manages all,
-    // Staff only their own assigned tasks, Administrator is view-only.
-    if (PM_CURRENT_USER.role === 'maintenance_admin') return true;
+    // Mirrors PreventiveMaintenanceService::canManageTask() (2026-10-19):
+    // Administrator manages all, Staff only their own assigned tasks, Head
+    // Maintenance no longer has blanket edit rights (swapped to Admin).
+    if (PM_CURRENT_USER.role === 'super_admin') return true;
     if (PM_CURRENT_USER.role === 'maintenance_staff') {
         return Number(row.assigned_user_id) === Number(PM_CURRENT_USER.userId);
     }
@@ -2114,7 +2119,8 @@ document.addEventListener('DOMContentLoaded', () => {
         pmLoadChecklist();
     });
 
-    document.getElementById('pm-print-btn').addEventListener('click', pmPrintSchedule);
+    const printBtn = document.getElementById('pm-print-btn');
+    if (printBtn) printBtn.addEventListener('click', pmPrintSchedule);
 
     const newTaskBtn = document.getElementById('pm-new-task-btn');
     if (newTaskBtn) newTaskBtn.addEventListener('click', () => pmOpenFormModal('create', null));
