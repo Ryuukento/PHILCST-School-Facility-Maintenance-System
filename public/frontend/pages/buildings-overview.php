@@ -403,11 +403,41 @@ include __DIR__ . '/../includes/header.php';
                     <label for="itemQuantityInput">Quantity</label>
                     <input type="number" id="itemQuantityInput" class="form-control" min="1" value="1">
                 </div>
+                <!-- 2026-10-22 — optional Asset Code, by user request: some
+                     items already sitting in rooms carry a physical school
+                     asset tag from before this system was used, so let that
+                     be captured instead of always leaving items.asset_code
+                     blank. Validated/normalized server-side the same way a
+                     dispatch-release "existing" code is (ItemController::
+                     store() -> AssetRegistryService), so it can't collide
+                     with another item's or deployed asset's code. -->
+                <div class="form-group">
+                    <label for="itemAssetCodeInput">Asset Code <span style="color:#6b7280;font-weight:400;">(optional — if this item already has one)</span></label>
+                    <input type="text" id="itemAssetCodeInput" class="form-control" placeholder="e.g. PC-2025-001">
+                </div>
+                <!-- 2026-10-20 — multi-item queue, by user request: recording
+                     several pre-existing items into the same room used to
+                     mean closing and reopening this whole modal (re-picking
+                     Building/Floor/Room every time) once per item. "+ Add
+                     Another Item" now stages the current Name/Quantity into
+                     itemQueue (see addItemToQueue() below) and clears the
+                     inputs for the next one, so a whole room's worth of items
+                     can be typed in one sitting and submitted together by
+                     saveItemData(). Building/Floor/Room stay fixed for the
+                     whole batch, which is correct — this modal only ever
+                     targets one room per open. -->
+                <div class="form-group" style="margin-bottom:8px;">
+                    <button type="button" class="btn btn-secondary" id="itemAddAnotherBtn" onclick="addItemToQueue()" style="width:100%;">+ Add Another Item</button>
+                </div>
+                <div class="form-group" id="itemQueueWrap" style="display:none;">
+                    <label>Items to Record (<span id="itemQueueCount">0</span>)</label>
+                    <ul id="itemQueueList" style="list-style:none;margin:0;padding:0;border:1px solid rgba(124,58,237,0.2);border-radius:8px;max-height:160px;overflow-y:auto;"></ul>
+                </div>
             </form>
         </div>
         <div class="modal-footer">
             <button class="btn btn-secondary" onclick="closeItemModal()">Cancel</button>
-            <button class="btn btn-primary" onclick="saveItemData()">Record Item</button>
+            <button class="btn btn-primary" id="itemRecordBtn" onclick="saveItemData()">Record Item(s)</button>
         </div>
     </div>
 </div>
@@ -2077,6 +2107,12 @@ async function loadItems(roomId, roomName) {
     // Fetched in parallel; each renders as its own card type below since a
     // dispatched batch isn't a single physical unit with its own
     // asset_code/brand/model/status the way a room_asset row is.
+    // 2026-10-22 — deployed-items also returns a "direct" branch that is
+    // room_asset rows again (same invariant: items.room_id only ever set for
+    // those), included there for the building/floor count and print report.
+    // On this screen that duplicated every room_asset item into two cards,
+    // so its results get filtered down to dispatch-origin rows only right
+    // after the fetch below (see the dispatch_code filter).
     try {
         const [roomAssetRes, deployedRes] = await Promise.all([
             fetch(window.SFMS_PUBLIC_URL('/api/items?room_id=' + roomId), { credentials: 'same-origin' }),
@@ -2092,7 +2128,19 @@ async function loadItems(roomId, roomName) {
         }
 
         if (deployedData.success) {
-            currentDeployedItemsCache = extractList(deployedData, 'items');
+            // 2026-10-22 — drop the "direct" branch rows (BuildingController::
+            // deployedItems()'s docblock: dispatch_code is NULL only for
+            // those). That branch exists so building/floor item COUNTS and
+            // the print report don't miss room_asset rows that never went
+            // through Dispatch — but on THIS screen those exact same rows are
+            // already fetched above into currentItemsCache (/api/items?room_id=)
+            // and rendered by createItemCard(). Keeping them here too meant
+            // every room_asset item produced two cards for one physical unit
+            // (reported by user: a recorded item showing up both under "Items
+            // in <room>" and again under "Deployed via Dispatch"). Only rows
+            // with a real dispatch_code — i.e. actually released through
+            // Dispatch — belong in this section now.
+            currentDeployedItemsCache = extractList(deployedData, 'items').filter((it) => !!it.dispatch_code);
         }
         // Deployed-items failure is not surfaced as a blocking alert — the
         // room_asset list above is still usable on its own, same as before
@@ -2227,10 +2275,17 @@ function createDeployedItemCard(item) {
         return row;
     };
 
+    // 2026-10-22 — Category swapped out for Asset Code, by user request.
+    // Category came through as COALESCE(c.name, 'Uncategorized') from
+    // BuildingController::deployedItems(), so it never actually read "Not
+    // specified" even when no category was set — just a permanent
+    // "Uncategorized" with no useful signal. Asset Code is already selected
+    // by that same query (i.asset_code, the dispatched stock item's code)
+    // but was never surfaced on this card.
     const detailGrid = document.createElement('div');
     detailGrid.className = 'item-detail-grid';
     detailGrid.appendChild(detailField('Quantity', item.quantity));
-    detailGrid.appendChild(detailField('Category', item.category));
+    detailGrid.appendChild(detailField('Asset Code', item.asset_code));
     detailGrid.appendChild(detailField('Date Deployed', item.date_dispatched ? boFormatDateOnly(item.date_dispatched) : null));
     detailGrid.appendChild(detailField('Dispatch Code', item.dispatch_code, true));
     div.appendChild(detailGrid);
@@ -2322,13 +2377,17 @@ function createItemCard(item) {
         return row;
     };
 
+    // 2026-10-22 — Brand/Model/Condition/Status dropped from this card, by
+    // user request: this card represents a single pre-existing unit recorded
+    // via "Record Existing Item", which only ever collects name/quantity/
+    // asset_code (see the itemModal form above) — Brand/Model/Condition were
+    // never actually entered through that flow, and Status is derived from
+    // quantity, so all four rendered as near-permanent filler ("Not
+    // specified" / a status nobody set). Asset Code is the one field this
+    // card exists to surface.
     const detailGrid = document.createElement('div');
     detailGrid.className = 'item-detail-grid';
     detailGrid.appendChild(detailField('Asset Code', item.asset_code, true));
-    detailGrid.appendChild(detailField('Brand', item.brand));
-    detailGrid.appendChild(detailField('Model', item.model));
-    detailGrid.appendChild(detailField('Condition', item.item_condition ? String(item.item_condition).replace(/_/g, ' ') : null));
-    detailGrid.appendChild(detailField('Status', item.status ? String(item.status).replace(/_/g, ' ') : null));
     div.appendChild(detailGrid);
 
     // TASK 58 (Fix 3) — .card-delete keeps its existing absolute top-right
@@ -3033,9 +3092,17 @@ async function saveRoomData() {
 // context known yet), so it loads its own Building list; Floor and Room
 // cascade in as each parent is chosen (loadFloorsForItem()/
 // loadRoomsForItem() below), the same pattern as openRoomModal().
+// 2026-10-20 — staged items for the current itemModal session (see the
+// "+ Add Another Item" block in the modal markup above). Reset whenever the
+// modal opens or closes so a stale queue from a previous room can never leak
+// into the next session.
+let itemQueue = [];
+
 function openItemModal() {
     document.getElementById('itemModal').classList.add('show');
     loadBuildingsForItemModal();
+    itemQueue = [];
+    renderItemQueue();
     document.getElementById('itemNameInput').focus();
 }
 function closeItemModal() {
@@ -3043,6 +3110,74 @@ function closeItemModal() {
     document.getElementById('itemForm').reset();
     document.getElementById('itemFloorSelect').innerHTML = '<option value="">Choose a floor</option>';
     document.getElementById('itemRoomSelect').innerHTML = '<option value="">Choose a room</option>';
+    itemQueue = [];
+    renderItemQueue();
+}
+// Stages the current Item Name/Quantity into itemQueue and clears the inputs
+// so the next item can be typed immediately — this is what lets several
+// items go into the same room without reopening the modal. Building/Floor/
+// Room are required up front since every queued item shares the one room
+// this modal session targets.
+function addItemToQueue() {
+    const roomId = document.getElementById('itemRoomSelect').value.trim();
+    if (!roomId) { Components.alert('Please select a building, floor, and room first', 'warning'); return; }
+
+    const nameInput = document.getElementById('itemNameInput');
+    const qtyInput = document.getElementById('itemQuantityInput');
+    const assetCodeInput = document.getElementById('itemAssetCodeInput');
+    const name = nameInput.value.trim();
+    const quantity = qtyInput.value || '1';
+    const assetCode = assetCodeInput ? assetCodeInput.value.trim() : '';
+    if (!name) { Components.alert('Please enter item name', 'warning'); return; }
+
+    itemQueue.push({ name, quantity, assetCode });
+    renderItemQueue();
+
+    nameInput.value = '';
+    qtyInput.value = '1';
+    if (assetCodeInput) assetCodeInput.value = '';
+    nameInput.focus();
+}
+function removeItemFromQueue(index) {
+    itemQueue.splice(index, 1);
+    renderItemQueue();
+}
+// Renders itemQueue as a simple list with a per-row remove control. Built
+// with DOM calls (not innerHTML string interpolation) because item.name is
+// free-text user input — textContent keeps it safe from injection.
+function renderItemQueue() {
+    const wrap = document.getElementById('itemQueueWrap');
+    const list = document.getElementById('itemQueueList');
+    const count = document.getElementById('itemQueueCount');
+    if (!wrap || !list || !count) return;
+
+    count.textContent = String(itemQueue.length);
+    wrap.style.display = itemQueue.length > 0 ? 'block' : 'none';
+    list.innerHTML = '';
+
+    itemQueue.forEach((item, index) => {
+        const li = document.createElement('li');
+        li.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 12px;border-bottom:1px solid rgba(124,58,237,0.12);font-size:13px;';
+
+        const span = document.createElement('span');
+        span.textContent = item.assetCode
+            ? `${item.name} × ${item.quantity} (${item.assetCode})`
+            : `${item.name} × ${item.quantity}`;
+
+        const removeBtn = document.createElement('button');
+        removeBtn.type = 'button';
+        removeBtn.textContent = '×';
+        removeBtn.setAttribute('aria-label', `Remove ${item.name} from the queue`);
+        removeBtn.style.cssText = 'background:none;border:none;color:#dc2626;cursor:pointer;font-size:16px;line-height:1;padding:0 4px;';
+        removeBtn.onclick = () => removeItemFromQueue(index);
+
+        li.appendChild(span);
+        li.appendChild(removeBtn);
+        list.appendChild(li);
+    });
+
+    const lastRow = list.lastElementChild;
+    if (lastRow) lastRow.style.borderBottom = 'none';
 }
 function loadBuildingsForItemModal(preselectBuildingId = '') {
     const buildingSelect = document.getElementById('itemBuildingSelect');
@@ -3126,33 +3261,91 @@ function loadRoomsForItem(floorId) {
             console.error('Error loading rooms for item modal', err);
         });
 }
+// 2026-10-20 — now submits the whole itemQueue (built by
+// addItemToQueue()/the "+ Add Another Item" button) instead of a single
+// item, so one "Record Item(s)" click can record everything typed for this
+// room in one sitting. /api/items only ever accepted one item per call
+// (ItemController::store()), so this still POSTs one request per queued
+// item, sequentially — a true bulk endpoint would be a backend change this
+// close to defense, and this way a mid-batch failure only affects the one
+// item that failed rather than risking a half-applied batch of unrelated
+// changes.
 async function saveItemData() {
     const roomId = document.getElementById('itemRoomSelect').value.trim();
-    const name = document.getElementById('itemNameInput').value.trim();
-    const quantity = document.getElementById('itemQuantityInput').value;
     if (!roomId) { Components.alert('Please select a building, floor, and room', 'warning'); return; }
-    if (!name) { Components.alert('Please enter item name', 'warning'); return; }
-    try {
-        const res = await fetch(window.SFMS_PUBLIC_URL('/api/items'), {
-            method:'POST', headers:{'Content-Type':'application/json'},
-            credentials: 'same-origin',
-            body: JSON.stringify({ room_id: roomId, name, quantity })
+
+    // Convenience: if the user typed an item but forgot to click "+ Add
+    // Another Item" before hitting Record, queue it now rather than
+    // silently dropping the last one they typed.
+    const nameInput = document.getElementById('itemNameInput');
+    const qtyInput = document.getElementById('itemQuantityInput');
+    const assetCodeInput = document.getElementById('itemAssetCodeInput');
+    const pendingName = nameInput.value.trim();
+    if (pendingName) {
+        itemQueue.push({
+            name: pendingName,
+            quantity: qtyInput.value || '1',
+            assetCode: assetCodeInput ? assetCodeInput.value.trim() : ''
         });
-        const data = await res.json();
-        if (data.success) {
-            closeItemModal();
-            // 2026-10-12 — this modal is now only reachable from the
-            // top-level unified Add area, so refresh THAT view rather than
-            // assuming currentRoomId/the page title match whatever room the
-            // user actually picked in this modal's own selects.
-            loadBuildings();
-        } else {
-            Components.alert(data.message, 'danger');
-        }
-    } catch (err) {
-        console.error('Error saving item', err);
-        Components.alert('Error saving item. Please try again.', 'danger');
+        nameInput.value = '';
+        qtyInput.value = '1';
+        if (assetCodeInput) assetCodeInput.value = '';
     }
+
+    if (itemQueue.length === 0) {
+        Components.alert('Please enter at least one item name', 'warning');
+        return;
+    }
+
+    const recordBtn = document.getElementById('itemRecordBtn');
+    if (recordBtn) recordBtn.disabled = true;
+
+    const failures = [];
+    const succeededIndexes = [];
+    for (let i = 0; i < itemQueue.length; i++) {
+        const item = itemQueue[i];
+        try {
+            const res = await fetch(window.SFMS_PUBLIC_URL('/api/items'), {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                credentials: 'same-origin',
+                body: JSON.stringify({
+                    room_id: roomId,
+                    name: item.name,
+                    quantity: item.quantity,
+                    asset_code: item.assetCode || null
+                })
+            });
+            const data = await res.json();
+            if (data.success) {
+                succeededIndexes.push(i);
+            } else {
+                failures.push(`${item.name}: ${data.message || 'failed'}`);
+            }
+        } catch (err) {
+            console.error('Error saving item', item.name, err);
+            failures.push(`${item.name}: network error`);
+        }
+    }
+
+    // Drop only the items that actually saved — anything that failed stays
+    // queued (and visible in the list) so the user can see exactly what
+    // still needs retrying instead of having to re-type the whole batch.
+    itemQueue = itemQueue.filter((_, idx) => !succeededIndexes.includes(idx));
+    renderItemQueue();
+
+    if (recordBtn) recordBtn.disabled = false;
+
+    if (failures.length > 0) {
+        Components.alert('Some items could not be recorded: ' + failures.join('; '), 'danger');
+        return;
+    }
+
+    closeItemModal();
+    // 2026-10-12 — this modal is now only reachable from the
+    // top-level unified Add area, so refresh THAT view rather than
+    // assuming currentRoomId/the page title match whatever room the
+    // user actually picked in this modal's own selects.
+    loadBuildings();
 }
 
 // initialize on load

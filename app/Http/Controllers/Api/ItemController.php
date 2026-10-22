@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\InventoryTransaction;
 use App\Models\Item;
 use App\Services\ActivityLogService;
+use App\Services\AssetRegistryService;
 use App\Services\InventoryAdjustmentService;
 use App\Services\InventoryStatusService;
 use App\Support\ApiResponder;
@@ -19,7 +20,8 @@ class ItemController extends Controller
 
     public function __construct(
         private readonly ActivityLogService $activityLogService,
-        private readonly InventoryAdjustmentService $inventoryAdjustmentService
+        private readonly InventoryAdjustmentService $inventoryAdjustmentService,
+        private readonly AssetRegistryService $assetRegistryService
     ) {
     }
 
@@ -130,6 +132,16 @@ class ItemController extends Controller
             'reorder_level' => ['nullable', 'integer', 'min:0'],
             'low_stock_threshold_override' => ['nullable', 'integer', 'min:0'],
             'description' => ['nullable', 'string'],
+            // Optional — lets "Record Existing Item" (a pre-existing room_asset
+            // that already carries a physical school asset tag) capture that
+            // tag instead of leaving it blank. Shares one namespace with
+            // deployed_assets.asset_code (see AssetRegistryService::isTaken()),
+            // so it goes through the same normalize/validateManualCode/
+            // assertAvailable pipeline as a dispatch-release "existing" code
+            // rather than a bare unique-column check — that keeps the
+            // "SFMS-" prefix reserved and rejects a code already used by
+            // either table.
+            'asset_code' => ['nullable', 'string', 'max:50'],
         ]);
 
         // 'quantity' expresses the requested *initial* stock, not a direct Item
@@ -138,6 +150,19 @@ class ItemController extends Controller
         // Section 5 — single writer principle).
         $initialQuantity = (int) $validated['quantity'];
         unset($validated['quantity']);
+
+        $assetCode = $this->assetRegistryService->normalize($validated['asset_code'] ?? null);
+        if ($assetCode !== '') {
+            try {
+                $this->assetRegistryService->validateManualCode($assetCode, 'asset_code');
+                $this->assetRegistryService->assertAvailable($assetCode, 'asset_code');
+            } catch (ValidationException $e) {
+                return $this->fail(collect($e->errors())->flatten()->first() ?: 'Invalid asset code', 422);
+            }
+            $validated['asset_code'] = $assetCode;
+        } else {
+            $validated['asset_code'] = null;
+        }
 
         // Prevent duplicate item entries in same room with same name/brand/model
         $duplicateQuery = Item::query()

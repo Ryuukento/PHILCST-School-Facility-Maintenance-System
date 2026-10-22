@@ -96,13 +96,19 @@ include __DIR__ . '/../includes/header.php';
                     + Report a Problem
                 </a>
                 <?php endif; ?>
+                <?php /* 2026-10-20: Export Reports (PDF/Excel) removed for the
+                         Administrator — only Head Maintenance and EELab Staff
+                         may print/export from All Reports now. Presentation
+                         only; openPrintReportModal() is bound null-safely
+                         below (`if (printReportBtn) ...`), so simply not
+                         rendering the button for super_admin is sufficient
+                         and there is no 403 risk since this was never an
+                         API-gated action to begin with. */ ?>
+                <?php if (!$isSuperAdmin): ?>
                 <button type="button" id="print-report-btn" class="btn btn-secondary reports-header-btn reports-header-icon-btn">
-                    <?php if ($isSuperAdmin): ?>
-                    Export Reports (PDF/Excel)
-                    <?php else: ?>
-                    Print Summary Report
-                    <?php endif; ?>
+                    Print Reports (PDF/Excel)
                 </button>
+                <?php endif; ?>
                 <div class="reports-month-dropdown-wrap" style="position:relative;">
                     <button type="button" id="month-picker-btn" class="btn btn-secondary reports-header-btn reports-header-icon-btn" style="display:inline-flex;align-items:center;gap:6px;">
                         <?php /* TASK 7.1 — was <span>&#128197;</span>, the calendar emoji written as an
@@ -540,12 +546,22 @@ include __DIR__ . '/../includes/header.php';
 
             <div class="d-flex gap-sm">
                 <button type="button" class="btn btn-secondary" id="print-modal-cancel">Cancel</button>
-                <?php if ($isSuperAdmin): ?>
-                <button type="button" class="btn btn-primary" id="print-modal-export-pdf">Export PDF</button>
-                <button type="button" class="btn btn-primary" id="print-modal-export-excel">Export Excel</button>
-                <?php else: ?>
+                <?php /* 2026-10-20: Export Excel moved here from the removed
+                         Administrator branch above — Head Maintenance and
+                         EELab Staff now get both actions. #print-modal-generate
+                         and the old #print-modal-export-pdf called the exact
+                         same printSummaryReport() (see the two identical
+                         addEventListener bindings further down), so "Generate
+                         Print" already covers the PDF half of the "Print
+                         Reports (PDF/Excel)" button label; only Excel export
+                         was actually missing here. #print-modal-export-excel's
+                         handler, exportReportsToExcel(), is pure client-side
+                         CSV-from-already-fetched-rows — no role check inside
+                         it and no new API surface, so no backend change is
+                         needed for this to work identically to how it worked
+                         for the Administrator. */ ?>
                 <button type="button" class="btn btn-primary" id="print-modal-generate">Generate Print</button>
-                <?php endif; ?>
+                <button type="button" class="btn btn-primary" id="print-modal-export-excel">Export Excel</button>
             </div>
         </div>
     </div>
