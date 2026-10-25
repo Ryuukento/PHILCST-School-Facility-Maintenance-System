@@ -273,10 +273,22 @@ class DashboardController extends Controller
     /**
      * Status distribution, priority distribution, and 6-month trend charts.
      *
-     * Sprint 2 / Feature 1: same 3-way role branch as maintenanceStats() —
-     * super_admin (system-wide), maintenance_admin (department-scoped, NEW,
-     * falls back to system-wide with no department_id), everyone else
-     * (personal-scoped, pre-existing SQL shape, now reachable for staff).
+     * 2026-10-25: made unconditionally system-wide for every role. This used
+     * to role-branch like maintenanceStats() — super_admin (system-wide),
+     * maintenance_admin (department-scoped), everyone else (personal-scoped,
+     * i.e. maintenance_staff saw only reports they created or were assigned
+     * to). That meant the Administrator, Head, and Staff dashboards' "Reports
+     * by Status"/"Reports by Priority"/trend charts could show three
+     * different totals for the same calendar month, which was confusing to
+     * explain (e.g. in a thesis defense) even though each number was
+     * correctly scoped — it looked like a bug. Explicit user decision: drop
+     * the role scoping here so these three charts always compute the exact
+     * same way, with the exact same (system-wide) data, regardless of which
+     * dashboard renders them. The top KPI/workload cards on the Head and
+     * Staff dashboards (maintenanceStats(), and the /api/reports?status_
+     * group=assigned_to_me fetch on staff-dashboard.php) are a SEPARATE,
+     * deliberately untouched data source — those remain personal/department
+     * -scoped "my work" counters, not affected by this change.
      *
      * Query params: ?year=, ?month=
      * Response (wrapped): { status_data: {labels, values},
@@ -284,13 +296,6 @@ class DashboardController extends Controller
      */
     public function maintenanceCharts(Request $request): JsonResponse
     {
-        $authUser     = (array) $request->session()->get('auth_user', $request->session()->get('user', []));
-        $userId       = (int) ($authUser['user_id'] ?? 0);
-        $role         = $this->normalizeRole((string) ($authUser['role'] ?? ''));
-        $departmentId = $role === 'maintenance_admin' ? $this->resolveDepartmentId($userId) : null;
-        $isSystemWide = $role === 'super_admin' || ($role === 'maintenance_admin' && $departmentId === null);
-        $isDeptScoped = $role === 'maintenance_admin' && $departmentId !== null;
-
         $year     = max(2000, (int) $request->query('year',  date('Y')));
         $month    = max(1, min(12, (int) $request->query('month', date('n'))));
         // TASK 53 — see monthDateBounds() doc comment: $dateTo must include a
@@ -306,14 +311,6 @@ class DashboardController extends Controller
                          FROM maintenance_reports
                          WHERE created_at >= ? AND created_at <= ?";
         $statusParams = [$dateFrom, $dateTo];
-        if ($isDeptScoped) {
-            $statusSql    .= ' AND department_id = ?';
-            $statusParams[] = $departmentId;
-        } elseif (!$isSystemWide) {
-            $statusSql    .= ' AND (created_by = ? OR assigned_to = ?)';
-            $statusParams[] = $userId;
-            $statusParams[] = $userId;
-        }
         $statusSql .= ' GROUP BY normalized_status ORDER BY count DESC';
 
         $statusRows    = DB::select($statusSql, $statusParams);
@@ -325,18 +322,22 @@ class DashboardController extends Controller
         }
 
         // -- Priority distribution --
+        // 2026-10-25: exclude 'cancelled' reports here too. The status chart
+        // above (and every dashboard's rendering of it — dashboard.php,
+        // maintenance-dashboard.php, staff-dashboard.php) only ever draws 3
+        // buckets (Submitted/In Progress/Completed) and silently drops
+        // 'cancelled' from its total; this panel used to count every status
+        // including 'cancelled', so a cancelled report in the selected month
+        // would make "Reports by Priority"'s total exceed "Reports by
+        // Status"'s total even though both claim to describe the same
+        // month — the same class of mismatch already fixed once for
+        // 'closed'. Excluding 'cancelled' here keeps both panels' totals
+        // identical in every role's dashboard (they share this one query).
         $prioritySql    = "SELECT priority, COUNT(*) as count
                            FROM maintenance_reports
-                           WHERE created_at >= ? AND created_at <= ?";
+                           WHERE created_at >= ? AND created_at <= ?
+                             AND status != 'cancelled'";
         $priorityParams = [$dateFrom, $dateTo];
-        if ($isDeptScoped) {
-            $prioritySql    .= ' AND department_id = ?';
-            $priorityParams[] = $departmentId;
-        } elseif (!$isSystemWide) {
-            $prioritySql    .= ' AND (created_by = ? OR assigned_to = ?)';
-            $priorityParams[] = $userId;
-            $priorityParams[] = $userId;
-        }
         $prioritySql .= " GROUP BY priority ORDER BY FIELD(priority,'low','medium','high','urgent','critical')";
 
         $priorityRows   = DB::select($prioritySql, $priorityParams);
@@ -357,14 +358,6 @@ class DashboardController extends Controller
                         FROM maintenance_reports
                         WHERE created_at >= DATE_SUB(CURRENT_DATE, INTERVAL 6 MONTH)";
         $trendParams = [];
-        if ($isDeptScoped) {
-            $trendSql    .= ' AND department_id = ?';
-            $trendParams[] = $departmentId;
-        } elseif (!$isSystemWide) {
-            $trendSql    .= ' AND (created_by = ? OR assigned_to = ?)';
-            $trendParams[] = $userId;
-            $trendParams[] = $userId;
-        }
         $trendSql .= " GROUP BY DATE_FORMAT(created_at,'%Y-%m'), DATE_FORMAT(created_at, '%b %y') ORDER BY MIN(created_at)";
 
         $trendRows      = DB::select($trendSql, $trendParams);

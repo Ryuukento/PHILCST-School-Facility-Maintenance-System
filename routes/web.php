@@ -89,7 +89,22 @@ Route::middleware(EnsureApiAuthenticated::class)->group(function (): void {
     // "Account" nav item links to (see sidebar.php), so repoint here instead
     // of leaving a dead redirect target.
     Route::get('/settings', fn() => redirect('/frontend/pages/account.php'))->name('settings');
-    Route::get('/maintenance-dashboard', fn() => redirect('/frontend/pages/maintenance-dashboard.php'))->name('maintenance.dashboard');
+    // 2026-10-25 fix: this used to redirect to the raw
+    // '/frontend/pages/maintenance-dashboard.php' path. Since the 2026-10-06
+    // Clean URLs change, THAT path is itself caught by the root .htaccess's
+    // old-URL-to-clean-URL rule (it matches any request for
+    // frontend/pages/{dashboard,maintenance-dashboard,staff-dashboard,
+    // super-admin-dashboard,role-dashboard}.php) and bounced again, to
+    // '/dashboard'. So hitting this route produced a pointless double
+    // redirect that always ended up at '/dashboard' anyway — role-dashboard.php
+    // there picks the same page for maintenance_admin/maintenance_staff, so
+    // nothing about where a real Head/Staff user lands changes. Confirmed via
+    // grep that no sidebar link, page, or test ever targets this route by
+    // name or path — the sidebar's own Dashboard link already uses
+    // public_url('/dashboard'). Pointing straight at '/dashboard' here removes
+    // the dead hop; kept (rather than deleted) only so an old bookmark for
+    // '/maintenance-dashboard' still lands somewhere sensible.
+    Route::get('/maintenance-dashboard', fn() => redirect('/dashboard'))->name('maintenance.dashboard');
     // TASK LEGACY QUARTET PHASE 2 — the /maintenance-reports route (and its
     // target page, maintenance-reports-list.php) was retired here. The page
     // itself only performed a redirect to reports.php (forwarding the query
@@ -100,8 +115,17 @@ Route::middleware(EnsureApiAuthenticated::class)->group(function (): void {
     // repointed directly at reports.php first, eliminating the redirect hop.
     // See TASK_LEGACY_QUARTET_PHASE2_MAINTENANCE_REPORTS_LIST_RETIREMENT_IMPLEMENTATION_REPORT.md.
     Route::get('/maintenance-reports/{id}', fn($id) => redirect('/frontend/pages/maintenance-report-detail.php?id=' . (int) $id))->name('maintenance.reports.show');
-    Route::get('/staff-dashboard', fn() => redirect('/frontend/pages/staff-dashboard.php'))->name('staff.dashboard');
-    Route::get('/super-admin-dashboard', fn() => redirect('/frontend/pages/super-admin-dashboard.php'))->name('superadmin.dashboard');
+    // 2026-10-25 fix: same dead-double-redirect issue as '/maintenance-dashboard'
+    // above — redirecting to the raw .php path only got bounced straight back
+    // to '/dashboard' by the .htaccess clean-URL rule. Pointing directly at
+    // '/dashboard' for the same reasons (no live link/test uses this route;
+    // role-dashboard.php already lands maintenance_staff here anyway).
+    Route::get('/staff-dashboard', fn() => redirect('/dashboard'))->name('staff.dashboard');
+    // 2026-10-25 fix: same dead-double-redirect issue, same fix. Note
+    // role-dashboard.php's "else" branch (anything that isn't maintenance_admin
+    // or maintenance_staff, i.e. super_admin) already serves dashboard.php at
+    // '/dashboard' — identical to where this route always ended up anyway.
+    Route::get('/super-admin-dashboard', fn() => redirect('/dashboard'))->name('superadmin.dashboard');
     Route::get('/activity-log', fn() => redirect('/frontend/pages/activity-log.php'))->name('activity.log');
     Route::get('/activity-logs', fn() => redirect('/frontend/pages/activity-log.php'))->name('activity-logs.index');
     Route::get('/activity-logs/{id}', fn($id) => redirect('/frontend/pages/activity-log-detail.php?id=' . (int) $id))->name('activity-logs.show');

@@ -312,6 +312,30 @@ main.container .dashboard-hero-panel .card-header.dashboard-hero-header {
     width: 100%;
 }
 
+/* New card-redesign request (2026-10-25): title + a short descriptive
+   subtitle now stack vertically beside the icon (was: title alone on the
+   head row). This wrapper is additive only — .summary-card-title keeps its
+   existing class/id-free markup and its own rules untouched below; nothing
+   the JS queries (ids are all on .summary-card-value/-desc in the body,
+   never in the head) changed. */
+.dashboard-hero-kpi-item-headtext {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+    flex: 1 1 auto;
+}
+
+.dashboard-hero-kpi-item-subtitle {
+    margin: 0;
+    font-size: 0.72rem;
+    font-weight: 500;
+    color: var(--muted-text, #6b7280) !important;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
 .dashboard-hero-kpi-item .summary-card-icon {
     width: 34px;
     height: 34px;
@@ -494,11 +518,15 @@ main.container .dashboard-hero-panel .card-header.dashboard-hero-header {
    per the explicit "still feels muted, increase saturation" follow-up.
    TASK 31.18 — bumped once more (0.28 -> 0.34 fill, 0.45 -> 0.55 border)
    per the repeated "still too muted, increase saturation" follow-up. */
-.dashboard-hero-kpi-row > .dashboard-hero-kpi-item:nth-child(1) .summary-card-icon { background: rgba(139, 92, 246, 0.34); color: #8b5cf6; border: 1px solid rgba(139, 92, 246, 0.55); }
-.dashboard-hero-kpi-row > .dashboard-hero-kpi-item:nth-child(2) .summary-card-icon { background: rgba(59, 130, 246, 0.34); color: #3b82f6; border: 1px solid rgba(59, 130, 246, 0.55); }
-.dashboard-hero-kpi-row > .dashboard-hero-kpi-item:nth-child(3) .summary-card-icon { background: rgba(245, 158, 11, 0.34); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.55); }
-.dashboard-hero-kpi-row > .dashboard-hero-kpi-item:nth-child(4) .summary-card-icon { background: rgba(20, 184, 166, 0.34); color: #14b8a6; border: 1px solid rgba(20, 184, 166, 0.55); }
-.dashboard-hero-kpi-row > .dashboard-hero-kpi-item:nth-child(5) .summary-card-icon { background: rgba(16, 185, 129, 0.34); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.55); }
+/* New card-redesign request (2026-10-25): solid-fill icon chip with a white
+   glyph (was: translucent tinted chip with a colored glyph). Same 5-color
+   accent scheme, just inverted fill/glyph treatment — border removed since
+   a solid fill no longer needs a hairline to read as a chip. */
+.dashboard-hero-kpi-row > .dashboard-hero-kpi-item:nth-child(1) .summary-card-icon { background: #8b5cf6; color: #ffffff; border: none; }
+.dashboard-hero-kpi-row > .dashboard-hero-kpi-item:nth-child(2) .summary-card-icon { background: #3b82f6; color: #ffffff; border: none; }
+.dashboard-hero-kpi-row > .dashboard-hero-kpi-item:nth-child(3) .summary-card-icon { background: #f59e0b; color: #ffffff; border: none; }
+.dashboard-hero-kpi-row > .dashboard-hero-kpi-item:nth-child(4) .summary-card-icon { background: #14b8a6; color: #ffffff; border: none; }
+.dashboard-hero-kpi-row > .dashboard-hero-kpi-item:nth-child(5) .summary-card-icon { background: #10b981; color: #ffffff; border: none; }
 
 /* TASK 31.17 — new: each KPI card's own resting-state border now carries a
    faint tint of its icon's accent color (was the flat neutral var(--border)
@@ -556,6 +584,72 @@ main.container .dashboard-hero-panel .card-header.dashboard-hero-header {
     background: rgba(239, 68, 68, 0.32);
     color: #ef4444;
 }
+
+/* New card-redesign request (2026-10-25): the STATIC caption pill (e.g.
+   "this semester", "needs attention" — the default text set directly in
+   dashboard.php's markup and never touched by JS) now tints to match its
+   own card's accent color instead of the shared green/orange semantic
+   above, per the new reference design. Scoped to .summary-card-desc (the
+   plain class on the <p> itself), NOT .summary-trend-chip — the nested
+   chip span that renderKpiTrend() creates when a card DOES show a real
+   computed trend (Reports Today / In Progress / Completed; see
+   renderKpiTrend() in dashboard.php) keeps the original green="good"/
+   red="bad" semantic untouched, because that's a different selector these
+   rules don't reach. Higher specificity than the plain .summary-trend-
+   positive/-warning rules above (via the .dashboard-hero-kpi-row > ...
+   nth-child ancestor chain) wins without needing !important. */
+.dashboard-hero-kpi-row > .dashboard-hero-kpi-item:nth-child(1) .summary-card-desc.summary-trend-positive { background: rgba(139, 92, 246, 0.16); color: #7c3aed; }
+.dashboard-hero-kpi-row > .dashboard-hero-kpi-item:nth-child(2) .summary-card-desc.summary-trend-positive { background: rgba(59, 130, 246, 0.16); color: #2563eb; }
+.dashboard-hero-kpi-row > .dashboard-hero-kpi-item:nth-child(3) .summary-card-desc.summary-trend-warning  { background: rgba(245, 158, 11, 0.16); color: #b45309; }
+.dashboard-hero-kpi-row > .dashboard-hero-kpi-item:nth-child(4) .summary-card-desc.summary-trend-positive { background: rgba(20, 184, 166, 0.16); color: #0f766e; }
+.dashboard-hero-kpi-row > .dashboard-hero-kpi-item:nth-child(5) .summary-card-desc.summary-trend-positive { background: rgba(16, 185, 129, 0.16); color: #059669; }
+
+/* New card-redesign request (2026-10-25): soft colored "wave" glow + a
+   small decorative bar-chart glyph in the bottom-right corner, matching the
+   new reference. Both are purely decorative (aria-hidden icon; the wave is
+   a plain ::before with no content) and sit at z-index:0, same layering
+   already established for the (currently unused) watermark above — the
+   real head/body content stays at z-index:1 so neither element can ever
+   sit on top of or interfere with the number/pill/click target. */
+.dashboard-hero-kpi-item::before {
+    content: '';
+    position: absolute;
+    left: -15%;
+    right: -15%;
+    bottom: -64px;
+    height: 110px;
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 0;
+}
+
+.dashboard-hero-kpi-row > .dashboard-hero-kpi-item:nth-child(1)::before { background: radial-gradient(ellipse at center, rgba(139, 92, 246, 0.22), rgba(139, 92, 246, 0) 70%); }
+.dashboard-hero-kpi-row > .dashboard-hero-kpi-item:nth-child(2)::before { background: radial-gradient(ellipse at center, rgba(59, 130, 246, 0.22), rgba(59, 130, 246, 0) 70%); }
+.dashboard-hero-kpi-row > .dashboard-hero-kpi-item:nth-child(3)::before { background: radial-gradient(ellipse at center, rgba(245, 158, 11, 0.22), rgba(245, 158, 11, 0) 70%); }
+.dashboard-hero-kpi-row > .dashboard-hero-kpi-item:nth-child(4)::before { background: radial-gradient(ellipse at center, rgba(20, 184, 166, 0.22), rgba(20, 184, 166, 0) 70%); }
+.dashboard-hero-kpi-row > .dashboard-hero-kpi-item:nth-child(5)::before { background: radial-gradient(ellipse at center, rgba(16, 185, 129, 0.22), rgba(16, 185, 129, 0) 70%); }
+
+.dashboard-hero-kpi-item-chart-icon {
+    position: absolute;
+    right: 16px;
+    bottom: 14px;
+    width: 24px;
+    height: 24px;
+    z-index: 0;
+    opacity: 0.45;
+    pointer-events: none;
+}
+
+.dashboard-hero-kpi-item-chart-icon svg {
+    width: 100%;
+    height: 100%;
+}
+
+.dashboard-hero-kpi-row > .dashboard-hero-kpi-item:nth-child(1) .dashboard-hero-kpi-item-chart-icon { color: #8b5cf6; }
+.dashboard-hero-kpi-row > .dashboard-hero-kpi-item:nth-child(2) .dashboard-hero-kpi-item-chart-icon { color: #3b82f6; }
+.dashboard-hero-kpi-row > .dashboard-hero-kpi-item:nth-child(3) .dashboard-hero-kpi-item-chart-icon { color: #f59e0b; }
+.dashboard-hero-kpi-row > .dashboard-hero-kpi-item:nth-child(4) .dashboard-hero-kpi-item-chart-icon { color: #14b8a6; }
+.dashboard-hero-kpi-row > .dashboard-hero-kpi-item:nth-child(5) .dashboard-hero-kpi-item-chart-icon { color: #10b981; }
 
 /* TASK 31.11 — reference shows only the arrow+percentage pilled, with
    "vs {window}" as separate plain muted text beside it. renderKpiTrend()
@@ -3207,6 +3301,24 @@ main.container .dashboard-hero-panel .card-header.dashboard-hero-header {
     border-color: var(--purple-border, var(--border)) !important;
     box-shadow: var(--shadow-card) !important;
 }
+
+/* New card-redesign request (2026-10-25): per-card soft gradient tint +
+   matching border, replacing the flat white the block above forces (via
+   !important) specifically on .dashboard-hero-kpi-item. This has to be
+   scoped under the same :root[data-theme-resolved='light'] condition and
+   also carry !important — the app is light-theme-only (dark theme was
+   permanently removed; see project_light_theme_only memory), so that block
+   above is always active and would otherwise win over any plain
+   (non-!important) background rule regardless of selector specificity.
+   The extra .dashboard-hero-kpi-row > ...:nth-child(N) specificity here
+   is redundant insurance on top of !important, not strictly required, but
+   costs nothing and keeps this consistent with every other per-card accent
+   rule in this file. */
+:root[data-theme-resolved='light'] .dashboard-hero-kpi-row > .dashboard-hero-kpi-item:nth-child(1) { background: linear-gradient(180deg, rgba(139, 92, 246, 0.14), rgba(139, 92, 246, 0.04)) !important; border-color: rgba(139, 92, 246, 0.45) !important; }
+:root[data-theme-resolved='light'] .dashboard-hero-kpi-row > .dashboard-hero-kpi-item:nth-child(2) { background: linear-gradient(180deg, rgba(59, 130, 246, 0.14), rgba(59, 130, 246, 0.04)) !important; border-color: rgba(59, 130, 246, 0.45) !important; }
+:root[data-theme-resolved='light'] .dashboard-hero-kpi-row > .dashboard-hero-kpi-item:nth-child(3) { background: linear-gradient(180deg, rgba(245, 158, 11, 0.14), rgba(245, 158, 11, 0.04)) !important; border-color: rgba(245, 158, 11, 0.45) !important; }
+:root[data-theme-resolved='light'] .dashboard-hero-kpi-row > .dashboard-hero-kpi-item:nth-child(4) { background: linear-gradient(180deg, rgba(20, 184, 166, 0.14), rgba(20, 184, 166, 0.04)) !important; border-color: rgba(20, 184, 166, 0.45) !important; }
+:root[data-theme-resolved='light'] .dashboard-hero-kpi-row > .dashboard-hero-kpi-item:nth-child(5) { background: linear-gradient(180deg, rgba(16, 185, 129, 0.14), rgba(16, 185, 129, 0.04)) !important; border-color: rgba(16, 185, 129, 0.45) !important; }
 
 :root[data-theme-resolved='light'] .summary-cards-grid .summary-card:hover,
 :root[data-theme-resolved='light'] .summary-cards-grid .summary-card.summary-card-action:hover,

@@ -58,7 +58,10 @@ $user = $_SESSION['user'] ?? $_SESSION['auth_user'];
                                     <path d="M14 2v6h6"></path>
                                 </svg>
                             </div>
-                            <h3 class="summary-card-title">Total Reports</h3>
+                            <div class="dashboard-hero-kpi-item-headtext">
+                                <h3 class="summary-card-title">Total Reports</h3>
+                                <p class="dashboard-hero-kpi-item-subtitle">All maintenance reports</p>
+                            </div>
                         </div>
                         <div class="dashboard-hero-kpi-item-body">
                             <div class="summary-card-content">
@@ -66,6 +69,11 @@ $user = $_SESSION['user'] ?? $_SESSION['auth_user'];
                                 <p class="summary-card-desc summary-trend-positive" id="stat-total-desc">this semester</p>
                             </div>
                         </div>
+                        <span class="dashboard-hero-kpi-item-chart-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                                <path d="M5 19V13M12 19V9M19 19V5"></path>
+                            </svg>
+                        </span>
                     </div>
 
                     <!-- Reports Today -->
@@ -77,7 +85,10 @@ $user = $_SESSION['user'] ?? $_SESSION['auth_user'];
                                     <path d="M16 2v4M8 2v4M3 10h18"></path>
                                 </svg>
                             </div>
-                            <h3 class="summary-card-title">Reports Today</h3>
+                            <div class="dashboard-hero-kpi-item-headtext">
+                                <h3 class="summary-card-title">Reports Today</h3>
+                                <p class="dashboard-hero-kpi-item-subtitle">Submitted today</p>
+                            </div>
                         </div>
                         <div class="dashboard-hero-kpi-item-body">
                             <div class="summary-card-content">
@@ -85,6 +96,11 @@ $user = $_SESSION['user'] ?? $_SESSION['auth_user'];
                                 <p class="summary-card-desc summary-trend-positive" id="stat-today-desc">submitted today</p>
                             </div>
                         </div>
+                        <span class="dashboard-hero-kpi-item-chart-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                                <path d="M5 19V13M12 19V9M19 19V5"></path>
+                            </svg>
+                        </span>
                     </div>
 
                     <!-- Pending Tasks -->
@@ -96,7 +112,10 @@ $user = $_SESSION['user'] ?? $_SESSION['auth_user'];
                                     <path d="M12 7v6l4 2"></path>
                                 </svg>
                             </div>
-                            <h3 class="summary-card-title">Pending Tasks</h3>
+                            <div class="dashboard-hero-kpi-item-headtext">
+                                <h3 class="summary-card-title">Pending Tasks</h3>
+                                <p class="dashboard-hero-kpi-item-subtitle">Needs attention</p>
+                            </div>
                         </div>
                         <div class="dashboard-hero-kpi-item-body">
                             <div class="summary-card-content">
@@ -104,6 +123,11 @@ $user = $_SESSION['user'] ?? $_SESSION['auth_user'];
                                 <p class="summary-card-desc summary-trend-warning" id="stat-pending-desc">needs attention</p>
                             </div>
                         </div>
+                        <span class="dashboard-hero-kpi-item-chart-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                                <path d="M5 19V13M12 19V9M19 19V5"></path>
+                            </svg>
+                        </span>
                     </div>
 
                     <!-- In Progress -->
@@ -114,7 +138,10 @@ $user = $_SESSION['user'] ?? $_SESSION['auth_user'];
                                     <path d="M20 7a5 5 0 0 1-7 4.6L7.6 17A2 2 0 1 1 5 14.4l5.4-5.4A5 5 0 1 1 20 7z"></path>
                                 </svg>
                             </div>
-                            <h3 class="summary-card-title">In Progress</h3>
+                            <div class="dashboard-hero-kpi-item-headtext">
+                                <h3 class="summary-card-title">In Progress</h3>
+                                <p class="dashboard-hero-kpi-item-subtitle">Currently being handled</p>
+                            </div>
                         </div>
                         <div class="dashboard-hero-kpi-item-body">
                             <div class="summary-card-content">
@@ -122,6 +149,11 @@ $user = $_SESSION['user'] ?? $_SESSION['auth_user'];
                                 <p class="summary-card-desc summary-trend-positive" id="stat-in-progress-desc">on track</p>
                             </div>
                         </div>
+                        <span class="dashboard-hero-kpi-item-chart-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                                <path d="M5 19V13M12 19V9M19 19V5"></path>
+                            </svg>
+                        </span>
                     </div>
 
                     <!-- Completed -->
@@ -132,7 +164,10 @@ $user = $_SESSION['user'] ?? $_SESSION['auth_user'];
                                     <path d="M20 6L9 17l-5-5"></path>
                                 </svg>
                             </div>
-                            <h3 class="summary-card-title">Completed</h3>
+                            <div class="dashboard-hero-kpi-item-headtext">
+                                <h3 class="summary-card-title">Completed</h3>
+                                <p class="dashboard-hero-kpi-item-subtitle">Successfully resolved</p>
+                            </div>
                         </div>
                         <div class="dashboard-hero-kpi-item-body">
                             <div class="summary-card-content">
@@ -140,6 +175,11 @@ $user = $_SESSION['user'] ?? $_SESSION['auth_user'];
                                 <p class="summary-card-desc summary-trend-positive" id="stat-completed-desc">this semester</p>
                             </div>
                         </div>
+                        <span class="dashboard-hero-kpi-item-chart-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                                <path d="M5 19V13M12 19V9M19 19V5"></path>
+                            </svg>
+                        </span>
                     </div>
                 </div>
 
@@ -1232,8 +1272,8 @@ main.maintenance-admin-dashboard-page #school-settings-widget .academic-period-i
 
 /* Dashboard KPI Icon Colors */
 .kpi-icon-reports {
-    background: #dbeafe !important;
-    color: #1e40af;
+    background: #8b5cf6 !important;
+    color: #ffffff;
 }
 
 .kpi-icon-reports svg {
@@ -1242,8 +1282,8 @@ main.maintenance-admin-dashboard-page #school-settings-widget .academic-period-i
 }
 
 .kpi-icon-today {
-    background: #dcfce7 !important;
-    color: #059669;
+    background: #3b82f6 !important;
+    color: #ffffff;
 }
 
 .kpi-icon-today svg {
@@ -1252,8 +1292,8 @@ main.maintenance-admin-dashboard-page #school-settings-widget .academic-period-i
 }
 
 .kpi-icon-pending {
-    background: #fef08a !important;
-    color: #d97706;
+    background: #f59e0b !important;
+    color: #ffffff;
 }
 
 .kpi-icon-pending svg {
@@ -1262,8 +1302,8 @@ main.maintenance-admin-dashboard-page #school-settings-widget .academic-period-i
 }
 
 .kpi-icon-progress {
-    background: #ccfbf1 !important;
-    color: #0d9488;
+    background: #14b8a6 !important;
+    color: #ffffff;
 }
 
 .kpi-icon-progress svg {
@@ -1272,8 +1312,8 @@ main.maintenance-admin-dashboard-page #school-settings-widget .academic-period-i
 }
 
 .kpi-icon-completed {
-    background: #dcfce7 !important;
-    color: #059669;
+    background: #10b981 !important;
+    color: #ffffff;
 }
 
 .kpi-icon-completed svg {
@@ -1919,7 +1959,11 @@ function refreshDashboardChartsForTheme() {
     const doughnutBorder = isLightMode ? '#ffffff' : '#0f172a';
     const submitted  = (stats.submitted || 0) + (stats.assigned || 0);
     const inProgress = stats.in_progress || 0;
-    const completed  = stats.completed   || 0;
+    // BUGFIX (2026-10-25) — fold 'closed' into 'completed', same as the
+    // chartCompleted fix in initDashboard() below; this is the theme-toggle
+    // re-render path and must agree with that one (see its comment for the
+    // 19-vs-20 totals mismatch this caused against the Priority card).
+    const completed  = (stats.completed || 0) + (stats.closed || 0);
     const cancelled  = stats.cancelled   || 0;
     const priorityLow      = stats.by_priority?.low      || 0;
     const priorityMedium   = stats.by_priority?.medium   || 0;
@@ -2505,7 +2549,15 @@ function buildStatsFromReports(reports) {
             stats[status] += 1;
         }
 
-        if (Object.prototype.hasOwnProperty.call(stats.by_priority, normalizedPriority)) {
+        // 2026-10-25: exclude 'cancelled' reports from the priority totals,
+        // same as maintenanceCharts()'s priority SQL now does for the
+        // Head/Staff dashboards. The Status donut only ever draws 3 buckets
+        // (Submitted/In Progress/Completed) and drops 'cancelled' from its
+        // total, so counting a cancelled report's priority here would make
+        // "Reports by Priority"'s total exceed "Reports by Status"'s total
+        // for the same month — the same class of bug already fixed once
+        // for 'closed'.
+        if (status !== 'cancelled' && Object.prototype.hasOwnProperty.call(stats.by_priority, normalizedPriority)) {
             stats.by_priority[normalizedPriority] += 1;
         }
     });
@@ -2752,8 +2804,18 @@ async function fetchMonthlyChartStats(year = selectedYear, month = selectedMonth
         month: selectedMonth
     };
 
+    // BUGFIX (2026-10-25) — `closed` was computed by buildStatsFromReports()
+    // (it has its own `closed` bucket) but this function's returned object
+    // never carried it through, so every caller's `stats.closed` read back
+    // as `undefined`. Reports by Status then silently excluded any 'closed'
+    // report from its total/Completed count, while Reports by Priority
+    // (summed from by_priority, which includes every report regardless of
+    // status) kept counting it — the two cards disagreed by exactly the
+    // number of 'closed' reports in the selected month. `closed` is now
+    // passed through, and `total` includes it so this function's own
+    // `total` field (used by ISS-01's empty-month notice) matches too.
     const zero = {
-        submitted: 0, assigned: 0, in_progress: 0, completed: 0, cancelled: 0, total: 0,
+        submitted: 0, assigned: 0, in_progress: 0, completed: 0, closed: 0, cancelled: 0, total: 0,
         by_priority: { low: 0, medium: 0, high: 0, critical: 0 }
     };
 
@@ -2775,8 +2837,9 @@ async function fetchMonthlyChartStats(year = selectedYear, month = selectedMonth
             assigned:    stats.assigned    || 0,
             in_progress: stats.in_progress || 0,
             completed:   stats.completed   || 0,
+            closed:      stats.closed      || 0,
             cancelled:   stats.cancelled   || 0,
-            total: (stats.submitted || 0) + (stats.assigned || 0) + (stats.in_progress || 0) + (stats.completed || 0),
+            total: (stats.submitted || 0) + (stats.assigned || 0) + (stats.in_progress || 0) + (stats.completed || 0) + (stats.closed || 0),
             by_priority: stats.by_priority || { low: 0, medium: 0, high: 0, critical: 0 }
         };
     } catch (error) {
@@ -3233,16 +3296,12 @@ async function initDashboard() {
             // is left as-is. Nothing here is fabricated: every trend is a
             // literal count of real reports in two adjacent real date windows.
             const rawReports = stats._reports || [];
-            const totalTrend = computeCountTrend(rawReports, null, 30);
-            renderKpiTrend(totalDescEl, totalTrend, true, 'last 30 days');
-
-            const pendingTrend = computeCountTrend(rawReports, (r) => {
-                const s = (r.status || '').toLowerCase();
-                return s === '' || s === 'submitted' || s === 'assigned';
-            }, 7);
-            // More new pending reports than the prior week is not a "good"
-            // trend, so positiveIsGood is false here (unlike the others).
-            renderKpiTrend(pendingDescEl, pendingTrend, false, 'last 7 days');
+            // Total Reports and Pending Tasks trend badges (the
+            // "<arrow>NN% vs last 30/7 days" pills) were removed per explicit
+            // request — the two renderKpiTrend() calls that used to run here
+            // are intentionally gone, leaving the static "this semester"
+            // caption set above untouched. In Progress and Completed below
+            // are unaffected.
 
             const inProgressTrend = computeCountTrend(rawReports, (r) =>
                 (r.status || '').toLowerCase() === 'in_progress', 7);
@@ -3363,9 +3422,20 @@ async function initDashboard() {
                     // TASK 31.4 — same submitted/inProgress/completed counts already
                     // being fed into the chart's own data array below, pulled into
                     // named consts so the legend labels can show the identical %s.
+                    //
+                    // BUGFIX (2026-10-25) — chartCompleted previously only counted
+                    // status==='completed', silently dropping any report whose
+                    // status is 'closed'. That made this donut's total under-count
+                    // vs. the Reports by Priority card beside it (which sums
+                    // by_priority across ALL reports regardless of status) whenever
+                    // a 'closed' report existed in the selected month — e.g. 19
+                    // here vs. 20 there. maintenance-dashboard.php's renderStatusChart()
+                    // already folds closed into completed ("'closed' is a finished
+                    // report too — the KPI cards above already treat completed/closed
+                    // as one bucket") — mirrored here so all 3 dashboards agree.
                     const chartSubmitted  = (effectiveChartStats.submitted || 0) + (effectiveChartStats.assigned || 0);
                     const chartInProgress = effectiveChartStats.in_progress || 0;
-                    const chartCompleted  = effectiveChartStats.completed || 0;
+                    const chartCompleted  = (effectiveChartStats.completed || 0) + (effectiveChartStats.closed || 0);
 
                     reportsStatusChart = new Chart(statusCtx, {
                         type: 'doughnut',
