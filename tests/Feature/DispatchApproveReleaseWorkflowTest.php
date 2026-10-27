@@ -63,14 +63,19 @@ class DispatchApproveReleaseWorkflowTest extends TestCase
             ->postJson('/api/dispatches', [
                 'items' => [['item_id' => $itemId, 'quantity' => 2]],
                 'room_id' => $this->roomId,
-                'release_assigned_to' => $staffId,
+                'personnel_ids' => [$staffId],
             ]);
         $created->assertStatus(201);
         $dispatchId = (int) $created->json('data.dispatch_id');
 
         $dispatch = DB::table('dispatches')->where('id', $dispatchId)->first();
         $this->assertSame('pending', $dispatch->status);
-        $this->assertSame($staffId, (int) $dispatch->release_assigned_to);
+        $this->assertTrue(
+            DB::table('dispatch_personnel_assignments')
+                ->where('dispatch_id', $dispatchId)
+                ->where('personnel_user_id', $staffId)
+                ->exists()
+        );
 
         // 2. Administrator approves — decision only, no stock movement.
         $this->actingAsSessionUserWithFlatKeys($adminId, 'super_admin')
@@ -162,7 +167,13 @@ class DispatchApproveReleaseWorkflowTest extends TestCase
         $dispatch = DB::table('dispatches')->where('id', $dispatchId)->first();
         $this->assertNull($dispatch->released_by, 'Approval must not set released_by, whatever the client sends.');
         $this->assertNull($dispatch->release_remarks, 'Approval must not write release remarks.');
-        $this->assertSame($staffId, (int) $dispatch->release_assigned_to, 'The Head-chosen assignment must be untouched.');
+        $this->assertTrue(
+            DB::table('dispatch_personnel_assignments')
+                ->where('dispatch_id', $dispatchId)
+                ->where('personnel_user_id', $staffId)
+                ->exists(),
+            'The Head-chosen roster must be untouched.'
+        );
     }
 
     /**
@@ -264,8 +275,18 @@ class DispatchApproveReleaseWorkflowTest extends TestCase
         $this->assertSame('cancelled', DB::table('dispatches')->where('id', $dispatchId)->value('status'));
     }
 
+    /**
+     * Primary/Additional hierarchy removal — this raw-insert seed helper
+     * predates the pivot table. canReleaseDispatch() and approveDispatch()
+     * now read dispatch_personnel_assignments, not release_assigned_to, so a
+     * 'release_assigned_to' override here is mirrored into a matching pivot
+     * row — otherwise every test that approves/releases via this helper
+     * would silently fail authorization.
+     */
     private function seedDispatch(int $itemId, int $quantity, array $overrides = []): int
     {
+        $personnelUserId = $overrides['release_assigned_to'] ?? null;
+
         $dispatchId = DB::table('dispatches')->insertGetId(array_merge([
             'dispatch_code' => 'DSP-' . uniqid(),
             'status' => 'pending',
@@ -281,12 +302,24 @@ class DispatchApproveReleaseWorkflowTest extends TestCase
             'updated_at' => now(),
         ]);
 
+        if ($personnelUserId !== null) {
+            DB::table('dispatch_personnel_assignments')->insert([
+                'dispatch_id' => $dispatchId,
+                'personnel_user_id' => $personnelUserId,
+                'assigned_by' => null,
+                'assigned_at' => now(),
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        }
+
         return $dispatchId;
     }
 
     private function createTestSchema(): void
     {
         Schema::disableForeignKeyConstraints();
+        Schema::dropIfExists('dispatch_personnel_assignments');
         Schema::dropIfExists('dispatch_items');
         Schema::dropIfExists('dispatches');
         Schema::dropIfExists('inventory_transactions');
@@ -311,6 +344,7 @@ class DispatchApproveReleaseWorkflowTest extends TestCase
 
         $this->createDispatchesTable();
         $this->createDispatchItemsTable();
+        $this->createDispatchPersonnelAssignmentsTable();
 
         Schema::enableForeignKeyConstraints();
     }

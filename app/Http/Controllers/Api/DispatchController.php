@@ -89,9 +89,13 @@ class DispatchController extends Controller
         $query = Dispatch::query()
             ->with([
                 'department', 'room', 'requestedByUser', 'approvedByUser', 'releasedByUser', 'receiverUser',
-                // TASK 13 — eager-loaded so release_assigned_to_name /
-                // release_assigned_by_name resolve without an N+1 per row.
-                'releaseAssignedToUser', 'releaseAssignedByUser',
+                // Primary/Additional hierarchy removal — the flat roster is
+                // the default eager-load now. releaseAssignedToUser /
+                // releaseAssignedByUser (still defined on the Dispatch model,
+                // so historical dispatches keep rendering correctly) are no
+                // longer eager-loaded by default here, since no dispatch
+                // created after this change ever populates those columns.
+                'personnelAssignments.personnel',
                 'report:report_id,title,status,created_by',
                 'report.creator:user_id,full_name',
             ])
@@ -107,7 +111,17 @@ class DispatchController extends Controller
         // cannot be bypassed by paging, and so no other role's view narrows.
         $authUser = $this->authUser($request);
         if ($this->dispatchAuthorizationService->shouldScopeIndexToAssignments($authUser)) {
-            $query->where('release_assigned_to', (int) ($authUser['user_id'] ?? 0));
+            // Primary/Additional hierarchy removal — scoped by flat-roster
+            // membership instead of the single release_assigned_to column.
+            // This also fixes a pre-existing bug: a staff member who was
+            // only ever added as "additional" personnel (never
+            // release_assigned_to) could never see the dispatch in their own
+            // staff-scoped list. Pivot membership covers everyone on the
+            // roster.
+            $userId = (int) ($authUser['user_id'] ?? 0);
+            $query->whereHas('personnelAssignments', function ($q) use ($userId): void {
+                $q->where('personnel_user_id', $userId);
+            });
         }
 
         if ($request->filled('status')) {
@@ -195,7 +209,11 @@ class DispatchController extends Controller
             ->whereIn('status', ['approved', 'released']);
 
         if ($this->dispatchAuthorizationService->shouldScopeIndexToAssignments($authUser)) {
-            $query->where('release_assigned_to', $userId);
+            // Primary/Additional hierarchy removal — same roster-membership
+            // scoping as index() above.
+            $query->whereHas('personnelAssignments', function ($q) use ($userId): void {
+                $q->where('personnel_user_id', $userId);
+            });
         }
 
         $ids = $query->pluck('id')->map(fn ($id) => (int) $id)->all();
@@ -263,33 +281,17 @@ class DispatchController extends Controller
             'report_id'            => ['nullable', 'integer', 'exists:maintenance_reports,report_id'],
             'damage_report_id'     => ['nullable', 'integer', 'exists:damage_reports,id'],
             'notes'               => ['nullable', 'string'],
-            // Multi-Personnel Dispatch: release_assigned_to is now optional.
-            // When using multi-personnel dispatch, personnel may be assigned
-            // via the Additional Personnel field (added via /add-personnel
-            // endpoint after creation). "nullable" here means a bare
-            // ['nullable', ..., $closure] rule would NEVER run that closure
-            // when the field is empty — Laravel's nullable short-circuits
-            // every rule after it for that field once the value is empty, a
-            // closure included. So "at least one personnel overall" is NOT
-            // expressed as a rule on this field; it is checked manually,
-            // once, right after validate() returns (see below), where both
-            // this field and additional_personnel_ids are already resolved.
-            'release_assigned_to' => ['nullable', 'integer', 'exists:users,user_id'],
-            // Multi-Personnel Dispatch: the create form lets Head Maintenance
-            // pick Additional Personnel BEFORE the dispatch exists — they are
-            // actually attached one-by-one via POST .../add-personnel calls
-            // made right after this request succeeds (that two-step flow is
-            // unchanged). This array is sent here too, in the SAME request,
-            // purely so the "at least one personnel" rule below can be
-            // enforced server-side instead of trusting the browser's own
-            // check (dispatch-create.php's dcShowError guard) — a crafted
-            // request bypassing the UI could otherwise omit both fields and
-            // create an unassigned dispatch that nothing catches until the
-            // (separate) approval-time check in DispatchService. Not used
-            // for anything else here; the actual assignment still happens
-            // through addPersonnelToDispatch()/assignPersonnelToDispatch().
-            'additional_personnel_ids'   => ['nullable', 'array'],
-            'additional_personnel_ids.*' => ['integer', 'exists:users,user_id'],
+            // Primary/Additional hierarchy removal — there is no longer a
+            // separate "primary" (release_assigned_to) vs "additional"
+            // concept. Every dispatch needs at least one Release Personnel,
+            // enforced directly by 'min:1' rather than a manual post-
+            // validate() check, and every selected person is written into
+            // the flat roster (dispatch_personnel_assignments) by
+            // createDispatch() in one transaction — there is no longer a
+            // second round of individual /add-personnel calls for this
+            // initial set.
+            'personnel_ids'   => ['required', 'array', 'min:1'],
+            'personnel_ids.*' => ['integer', 'exists:users,user_id', 'distinct'],
             'items'               => ['required', 'array', 'min:1'],
             // TASK 47 — Dispatch Create & Assignment Workflow: 'distinct'
             // rejects two rows for the same item_id in one request. Without
@@ -309,42 +311,27 @@ class DispatchController extends Controller
             'items.*.quantity'    => ['required', 'integer', 'min:1'],
         ]);
 
-        // Multi-Personnel Dispatch: server-side mirror of the client's own
-        // "at least one personnel (primary or additional)" guard in
-        // dispatch-create.php. Left uncaught deliberately — bootstrap/app.php's
-        // exception render() turns an unhandled ValidationException into the
-        // same {success:false, message, errors:{field:[...]}} / 422 shape as
-        // every other rule in the block above, so release_assigned_to reads
-        // as a normal validation error to both the UI and tests rather than
-        // needing its own response-shape special case.
-        if (empty($validated['release_assigned_to']) && count(array_filter($validated['additional_personnel_ids'] ?? [])) === 0) {
-            throw ValidationException::withMessages([
-                'release_assigned_to' => 'Please assign at least one personnel (Primary Release Personnel or Additional Personnel) to this dispatch.',
-            ]);
-        }
-
         $authUser = $this->authUser($request);
 
-        // Multi-Personnel Dispatch: only validate release personnel if one was
-        // assigned. Validation is skipped when additional personnel will be
-        // assigned via the /add-personnel endpoint after creation.
-        if (!empty($validated['release_assigned_to'])) {
-            try {
-                // SERVER-SIDE role/active enforcement. The searchable selector on
-                // the create page is already filtered to Head Maintenance +
-                // Maintenance Staff (TASK 57 — Administrator excluded), but
-                // that is a convenience only — this is the check that actually
-                // stops a crafted request from naming an inactive user or an
-                // ineligible role. Department-based restriction was removed here
-                // (see DispatchAuthorizationService class doc comment) —
-                // department_id is a reporting tag, not an eligibility filter.
+        // Primary/Additional hierarchy removal — every selected person gets
+        // the same SERVER-SIDE role/active enforcement; there is no longer a
+        // "primary only" special case. The searchable selector on the create
+        // page is already filtered to Head Maintenance + Maintenance Staff
+        // (TASK 57 — Administrator excluded), but that is a convenience
+        // only — this is the check that actually stops a crafted request
+        // from naming an inactive user or an ineligible role. Department-
+        // based restriction was removed here (see
+        // DispatchAuthorizationService class doc comment) — department_id is
+        // a reporting tag, not an eligibility filter.
+        try {
+            foreach ($validated['personnel_ids'] as $personnelId) {
                 $this->dispatchAuthorizationService->assertAssignableReleasePersonnel(
                     $authUser,
-                    (int) $validated['release_assigned_to']
+                    (int) $personnelId
                 );
-            } catch (ValidationException $e) {
-                return $this->fail(collect($e->errors())->flatten()->first() ?: 'Invalid release personnel.', 400);
             }
+        } catch (ValidationException $e) {
+            return $this->fail(collect($e->errors())->flatten()->first() ?: 'Invalid release personnel.', 400);
         }
 
         // TASK 41 — the approval-bypass decision is derived from the SESSION
@@ -391,12 +378,17 @@ class DispatchController extends Controller
         // dispatch that is not theirs by guessing its id. index() is scoped by
         // query; show() needs the equivalent per-record check.
         $authUser = $this->authUser($request);
+        // Primary/Additional hierarchy removal — per-record roster
+        // membership check, replacing the identity comparison against the
+        // single release_assigned_to column. Also fixes a pre-existing bug:
+        // an "additional" personnel member could never open a dispatch
+        // directly via its id even though they were genuinely on it.
         if ($this->dispatchAuthorizationService->shouldScopeIndexToAssignments($authUser)
-            && (int) ($dispatch->release_assigned_to ?? 0) !== (int) ($authUser['user_id'] ?? 0)) {
+            && !$dispatch->personnelAssignments()->where('personnel_user_id', (int) ($authUser['user_id'] ?? 0))->exists()) {
             return $this->fail('Forbidden', 403);
         }
 
-        $dispatch->load(['items.item', 'department', 'room', 'requestedByUser', 'approvedByUser', 'releasedByUser', 'receiverUser', 'releaseAssignedToUser', 'releaseAssignedByUser', 'report:report_id,title,status,created_by', 'report.creator:user_id,full_name']);
+        $dispatch->load(['items.item', 'department', 'room', 'requestedByUser', 'approvedByUser', 'releasedByUser', 'receiverUser', 'personnelAssignments.personnel', 'report:report_id,title,status,created_by', 'report.creator:user_id,full_name']);
         return $this->ok('Dispatch retrieved', ['dispatch' => $dispatch]);
     }
 
@@ -432,52 +424,6 @@ class DispatchController extends Controller
                 ['maintenance_admin', 'maintenance_staff']
             ),
         ]);
-    }
-
-    /**
-     * TASK 13 — assign / reassign Release Personnel after creation.
-     */
-    public function assignPersonnel(Request $request, Dispatch $dispatch)
-    {
-        $validated = $request->validate([
-            'release_assigned_to' => ['required', 'integer', 'exists:users,user_id'],
-        ]);
-
-        $authUser = $this->authUser($request);
-
-        if (!$this->dispatchAuthorizationService->canAssignReleasePersonnel($authUser, $dispatch)) {
-            return $this->fail('You are not allowed to change the release personnel for this dispatch.', 403);
-        }
-
-        try {
-            $this->dispatchAuthorizationService->assertAssignableReleasePersonnel(
-                $authUser,
-                (int) $validated['release_assigned_to']
-            );
-
-            $this->dispatchService->assignReleasePersonnel(
-                $dispatch,
-                (int) $validated['release_assigned_to'],
-                (int) $request->session()->get('user_id')
-            );
-        } catch (\Throwable $e) {
-            $code = $e instanceof ValidationException ? 400 : 500;
-            $message = $e instanceof ValidationException
-                ? (collect($e->errors())->flatten()->first() ?: 'Unable to assign release personnel')
-                : 'Failed to assign release personnel: ' . $e->getMessage();
-
-            return $this->fail($message, $code);
-        }
-
-        $this->activityLogService->log([
-            'action' => 'ASSIGN_DISPATCH_RELEASE_PERSONNEL',
-            'module' => 'dispatch',
-            'entity_type' => 'dispatch',
-            'entity_id' => $dispatch->id,
-            'details' => 'Assigned release personnel for dispatch ' . $dispatch->dispatch_code . '.',
-        ], $request);
-
-        return $this->ok('Release personnel assigned');
     }
 
     public function approve(Request $request, Dispatch $dispatch)
@@ -660,9 +606,12 @@ class DispatchController extends Controller
     }
 
     /**
-     * Multi-Personnel Dispatch: Add personnel to a dispatch.
-     * Allows multiple maintenance staff from different departments to be assigned
-     * to a single dispatch (distinct from the single release_assigned_to flow).
+     * Primary/Additional hierarchy removal — adds one person to a dispatch's
+     * flat Release Personnel roster. Gate swapped from a raw role-string
+     * comparison to canAssignReleasePersonnel(), which also closes a
+     * pre-existing gap: this endpoint previously had no check at all on the
+     * dispatch's status, so a Head could add personnel to an already-
+     * released or cancelled dispatch.
      */
     public function addPersonnelToDispatch(Request $request, Dispatch $dispatch)
     {
@@ -673,12 +622,16 @@ class DispatchController extends Controller
         $authUser = $this->authUser($request);
         $actorUserId = (int) $request->session()->get('user_id');
 
-        // Only Head Maintenance (maintenance_admin) can assign personnel
-        if ($authUser['role'] !== 'maintenance_admin') {
-            return $this->fail('Only Head Maintenance can assign dispatch personnel.', 403);
+        if (!$this->dispatchAuthorizationService->canAssignReleasePersonnel($authUser, $dispatch)) {
+            return $this->fail('You are not allowed to assign release personnel for this dispatch.', 403);
         }
 
         try {
+            $this->dispatchAuthorizationService->assertAssignableReleasePersonnel(
+                $authUser,
+                (int) $validated['personnel_user_id']
+            );
+
             $this->dispatchService->assignPersonnelToDispatch(
                 $dispatch,
                 (int) $validated['personnel_user_id'],
@@ -692,6 +645,46 @@ class DispatchController extends Controller
             $message = $e instanceof ValidationException
                 ? (collect($e->errors())->flatten()->first() ?: 'Unable to assign personnel')
                 : 'Failed to assign personnel: ' . $e->getMessage();
+
+            return $this->fail($message, $code);
+        }
+    }
+
+    /**
+     * Primary/Additional hierarchy removal — removes one person from a
+     * dispatch's flat Release Personnel roster. Same gate as adding one
+     * (canRemoveDispatchPersonnel() mirrors canAssignReleasePersonnel()):
+     * Head Maintenance only, and only while the dispatch is still
+     * pending/approved. Removal is allowed to take the roster to zero per
+     * product decision — DispatchService::removePersonnelFromDispatch()
+     * enforces no minimum.
+     */
+    public function removePersonnelFromDispatch(Request $request, Dispatch $dispatch)
+    {
+        $validated = $request->validate([
+            'personnel_user_id' => ['required', 'integer', 'exists:users,user_id'],
+        ]);
+
+        $authUser = $this->authUser($request);
+        $actorUserId = (int) $request->session()->get('user_id');
+
+        if (!$this->dispatchAuthorizationService->canRemoveDispatchPersonnel($authUser, $dispatch)) {
+            return $this->fail('You are not allowed to remove release personnel for this dispatch.', 403);
+        }
+
+        try {
+            $this->dispatchService->removePersonnelFromDispatch(
+                $dispatch,
+                (int) $validated['personnel_user_id'],
+                $actorUserId
+            );
+
+            return $this->ok('Personnel removed from dispatch');
+        } catch (\Throwable $e) {
+            $code = $e instanceof ValidationException ? 400 : 500;
+            $message = $e instanceof ValidationException
+                ? (collect($e->errors())->flatten()->first() ?: 'Unable to remove personnel')
+                : 'Failed to remove personnel: ' . $e->getMessage();
 
             return $this->fail($message, $code);
         }

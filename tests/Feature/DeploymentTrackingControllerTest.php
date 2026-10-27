@@ -459,8 +459,88 @@ class DeploymentTrackingControllerTest extends TestCase
         $this->assertNotNull($dispatchRow);
         $this->assertSame('DSP-REAL-CODE', $dispatchRow['dispatch_code']);
         $this->assertSame('dispatch', $dispatchRow['deployment_source']);
-        // No asset_code fabricated for a dispatch-sourced row.
+        // No asset_code fabricated for a dispatch-sourced row that was never
+        // tracked as an asset at release (no deployed_assets row for its
+        // dispatch_item) — distinct from the real-code case covered below.
         $this->assertNull($dispatchRow['asset_code']);
+    }
+
+    /**
+     * A dispatch released with "Track as Assets" checked creates one
+     * deployed_assets row per unit (AssetRegistryService::registerReleasePlan()).
+     * Deployment Tracking's dispatch-sourced rows used to hardcode
+     * `NULL AS asset_code` unconditionally, so a genuinely tracked/generated
+     * SFMS code never surfaced here even though the asset was really
+     * registered — this pins the fix.
+     */
+    public function test_index_dispatch_deployment_shows_asset_code_when_tracked(): void
+    {
+        $userId = $this->seedUser(['role' => 'super_admin']);
+        $itemId = $this->seedItem(['name' => 'Aircon']);
+        $dispatchId = $this->seedDispatch($itemId, 1, ['dispatch_code' => 'DSP-TRACKED', 'status' => 'released']);
+        $dispatchItemId = DB::table('dispatch_items')->where('dispatch_id', $dispatchId)->value('id');
+
+        DB::table('deployed_assets')->insert([
+            'asset_code' => 'SFMS-2026-000001',
+            'code_source' => 'generated',
+            'item_id' => $itemId,
+            'dispatch_id' => $dispatchId,
+            'dispatch_item_id' => $dispatchItemId,
+            'status' => 'active',
+            'deployed_at' => now(),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $response = $this
+            ->actingAsSessionUser($userId, 'super_admin')
+            ->getJson('/api/deployment-tracking');
+
+        $response->assertOk();
+        $row = collect($response->json('data.rows'))->firstWhere('dispatch_id', $dispatchId);
+
+        $this->assertNotNull($row);
+        $this->assertSame('SFMS-2026-000001', $row['asset_code']);
+        $this->assertArrayNotHasKey('dispatch_item_id', $row);
+    }
+
+    /**
+     * A tracked line with quantity > 1 registers several deployed_assets
+     * rows (one per unit) against the SAME dispatch_item_id. Deployment
+     * Tracking has one row per dispatch_item line, so all of that line's
+     * codes must be merged into its single asset_code cell rather than only
+     * the first/last one winning.
+     */
+    public function test_index_dispatch_deployment_merges_multiple_asset_codes_for_one_line(): void
+    {
+        $userId = $this->seedUser(['role' => 'super_admin']);
+        $itemId = $this->seedItem(['name' => 'Office Chair']);
+        $dispatchId = $this->seedDispatch($itemId, 2, ['dispatch_code' => 'DSP-MULTI', 'status' => 'released']);
+        $dispatchItemId = DB::table('dispatch_items')->where('dispatch_id', $dispatchId)->value('id');
+
+        foreach (['SFMS-2026-000010', 'SFMS-2026-000011'] as $code) {
+            DB::table('deployed_assets')->insert([
+                'asset_code' => $code,
+                'code_source' => 'generated',
+                'item_id' => $itemId,
+                'dispatch_id' => $dispatchId,
+                'dispatch_item_id' => $dispatchItemId,
+                'status' => 'active',
+                'deployed_at' => now(),
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        }
+
+        $response = $this
+            ->actingAsSessionUser($userId, 'super_admin')
+            ->getJson('/api/deployment-tracking');
+
+        $response->assertOk();
+        $row = collect($response->json('data.rows'))->firstWhere('dispatch_id', $dispatchId);
+
+        $this->assertNotNull($row);
+        $this->assertSame('SFMS-2026-000010, SFMS-2026-000011', $row['asset_code']);
     }
 
     public function test_index_q_filter_matches_direct_deployment_by_asset_code(): void
@@ -690,6 +770,7 @@ class DeploymentTrackingControllerTest extends TestCase
 
         $this->createDispatchesTable();
         $this->createDispatchItemsTable();
+        $this->createDeployedAssetsTable();
 
         // Minimal standalone rooms table (no buildings/floors FKs) — the
         // controller only ever needs r.id / r.name for its LEFT JOINs.

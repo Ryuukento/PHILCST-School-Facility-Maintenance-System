@@ -253,6 +253,30 @@ trait BuildsSharedTestSchema
     }
 
     /**
+     * Multi-personnel dispatch support
+     * (2026_10_04_000100_add_multi_personnel_dispatch_support). This is the
+     * flat, equal "who is on this dispatch's release roster" table — the
+     * sole source of truth as of the Primary/Additional hierarchy removal.
+     * Mirrors the real migration's columns, and the local blueprint
+     * DeployedAssetRegistryTest.php already duplicated for its own suite
+     * before this trait had one. Opt-in (not called from every test's
+     * createTestSchema()) since not every dispatch test exercises personnel
+     * assignment directly — call it from whichever test needs it.
+     */
+    protected function createDispatchPersonnelAssignmentsTable(): void
+    {
+        Schema::create('dispatch_personnel_assignments', function (Blueprint $table): void {
+            $table->bigIncrements('id');
+            $table->unsignedInteger('dispatch_id');
+            $table->unsignedInteger('personnel_user_id');
+            $table->unsignedInteger('assigned_by')->nullable();
+            $table->timestamp('assigned_at')->nullable();
+            $table->timestamps();
+            $table->unique(['dispatch_id', 'personnel_user_id']);
+        });
+    }
+
+    /**
      * Deployed Asset registry
      * (2026_10_06_000100_create_deployed_assets_tables). asset_code carries
      * the same UNIQUE index as the real table, so duplicate-code races are

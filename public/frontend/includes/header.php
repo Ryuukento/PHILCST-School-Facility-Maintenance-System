@@ -73,8 +73,53 @@ $roleTitleMap = [
     'user'                  => 'User',
 ];
 
-// maintenance_admin label is department-aware
-if (($user['role'] ?? '') === 'maintenance_admin') {
+// Live-refresh designation/department straight from the DB so a change an
+// Administrator makes in User Management shows up immediately, without
+// requiring the affected user to log out and back in. The login session
+// (AuthController::login()) only captures 'designation' at login time, so
+// without this refresh the sidebar would keep showing a stale value (or,
+// for anyone who logged in before the session payload carried
+// 'designation' at all, no value) until their next login. Falls back
+// silently to whatever the session already has if the lookup fails.
+if ($user && !empty($user['user_id'])) {
+    try {
+        require_once __DIR__ . '/../../backend/config/database.php';
+        $headerProfilePdo = getDBConnection();
+        $headerProfileStmt = $headerProfilePdo->prepare(
+            'SELECT u.designation, d.name AS department_name
+             FROM users u
+             LEFT JOIN departments d ON d.department_id = u.department_id
+             WHERE u.user_id = ?
+             LIMIT 1'
+        );
+        $headerProfileStmt->execute([(int)$user['user_id']]);
+        $headerProfileRow = $headerProfileStmt->fetch(PDO::FETCH_ASSOC);
+        if ($headerProfileRow) {
+            $user['designation'] = $headerProfileRow['designation'];
+            $user['department_name'] = $headerProfileRow['department_name'];
+        }
+    } catch (Throwable $e) {
+        // Keep whatever $user already had from the session.
+    }
+    unset($headerProfileStmt, $headerProfileRow);
+}
+
+// Sidebar title — the Administrator-entered users.designation value
+// (e.g. "Head Computer", "Technician") is the actual stored per-person
+// title and now wins for EVERY role, not just maintenance_admin.
+// designation is a free-text field the app already validates the same way
+// regardless of role (UserController::store()/update(): nullable|string,
+// no role restriction), and super_admin accounts can never actually end up
+// with one populated through the app's own UI (the create-user modal only
+// shows the field for maintenance_admin/maintenance_staff, and editing a
+// super_admin target is rejected server-side), so applying this
+// universally carries no extra risk for that role. The department-name
+// substring guess is kept only as a maintenance_admin-specific fallback
+// for an account whose designation hasn't been filled in yet.
+$_designation = trim((string)($user['designation'] ?? ''));
+if ($_designation !== '') {
+    $userTitle = $_designation;
+} elseif (($user['role'] ?? '') === 'maintenance_admin') {
     $_dept = strtolower(trim((string)($user['department_name'] ?? '')));
     if (strpos($_dept, 'computer') !== false) {
         $userTitle = 'Head Computer';
@@ -91,6 +136,7 @@ if (($user['role'] ?? '') === 'maintenance_admin') {
 } else {
     $userTitle = $roleTitleMap[$user['role'] ?? ''] ?? 'User';
 }
+unset($_designation);
 
 $brandLink = public_url('/dashboard');
 if (!empty($user['role']) && $user['role'] === 'maintenance_admin') {
@@ -221,7 +267,7 @@ $headerTimeText = $headerNow->format('g:i A');
              styles.css. A browser holding either old copy would show half the
              system purple and half of it grey. */ ?>
     <link rel="stylesheet" href="<?php echo htmlspecialchars(public_url('/frontend/assets/css/styles.css?v=20260921-2')); ?>">
-    <link rel="stylesheet" href="<?php echo htmlspecialchars(public_url('/frontend/assets/css/layout.css?v=20260921-2')); ?>">
+    <link rel="stylesheet" href="<?php echo htmlspecialchars(public_url('/frontend/assets/css/layout.css?v=20261026-1')); ?>">
     <link rel="stylesheet" href="<?php echo htmlspecialchars(public_url('/frontend/assets/css/color-scheme.css?v=20260921-2')); ?>">
     <?php /* header-redesign.css is no longer linked. Every one of its ~35 rules
              selected a node inside the removed top bar — .navbar*, .header-profile*,

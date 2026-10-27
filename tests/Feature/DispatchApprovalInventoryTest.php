@@ -219,10 +219,11 @@ class DispatchApprovalInventoryTest extends TestCase
 
     /**
      * TASK 13 — approving a dispatch nobody is assigned to would create a
-     * permanently stuck record: canReleaseDispatch() requires an identity
-     * match against release_assigned_to, so a null assignment means no user
-     * on earth can release it. Only rows created before this task can be in
-     * that state, and they must be refused rather than silently advanced.
+     * permanently stuck record: canReleaseDispatch() requires roster
+     * (dispatch_personnel_assignments) membership, so an empty roster means
+     * no user on earth can release it. Rows created before this task, or any
+     * dispatch whose personnel were all later removed, can be in that state,
+     * and they must be refused rather than silently advanced.
      */
     public function test_dispatch_without_assigned_personnel_cannot_be_approved(): void
     {
@@ -235,7 +236,11 @@ class DispatchApprovalInventoryTest extends TestCase
             ->postJson("/api/dispatches/{$dispatchId}/approve", ['approved_by' => $adminId]);
 
         $response->assertStatus(400);
-        $this->assertStringContainsString('no assigned release personnel', (string) $response->json('message'));
+        // Primary/Additional hierarchy removal — DispatchService::
+        // approveDispatch()'s guard message changed from "no assigned
+        // release personnel" to "no release personnel" to match the flat
+        // roster (no single "assigned" person anymore).
+        $this->assertStringContainsString('no release personnel', (string) $response->json('message'));
 
         $dispatch = DB::table('dispatches')->where('id', $dispatchId)->first();
         $this->assertSame('pending', $dispatch->status);
@@ -319,6 +324,8 @@ class DispatchApprovalInventoryTest extends TestCase
 
     private function seedDispatch(int $itemId, int $quantity, array $overrides = []): int
     {
+        $personnelUserId = $overrides['release_assigned_to'] ?? null;
+
         $dispatchId = DB::table('dispatches')->insertGetId(array_merge([
             'dispatch_code' => 'DSP-' . uniqid(),
             'status' => 'pending',
@@ -327,6 +334,24 @@ class DispatchApprovalInventoryTest extends TestCase
         ], $overrides));
 
         $this->addDispatchItem($dispatchId, $itemId, $quantity);
+
+        // Primary/Additional hierarchy removal — approveDispatch()'s guard
+        // and canReleaseDispatch() read dispatch_personnel_assignments, not
+        // the legacy release_assigned_to column set above. Every existing
+        // call site here passes 'release_assigned_to' as its one-person
+        // overrides key, so mirroring it into the pivot keeps them seeding an
+        // equivalent, approvable/releasable roster without editing each call
+        // site individually.
+        if ($personnelUserId !== null) {
+            DB::table('dispatch_personnel_assignments')->insert([
+                'dispatch_id' => $dispatchId,
+                'personnel_user_id' => $personnelUserId,
+                'assigned_by' => $overrides['release_assigned_by'] ?? null,
+                'assigned_at' => now(),
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        }
 
         return $dispatchId;
     }
@@ -367,6 +392,13 @@ class DispatchApprovalInventoryTest extends TestCase
 
         $this->createDispatchesTable();
         $this->createDispatchItemsTable();
+
+        // Primary/Additional hierarchy removal — approveDispatch()'s guard
+        // and canReleaseDispatch() now read this pivot table instead of the
+        // dispatches.release_assigned_to column seedDispatch() still writes
+        // below, so it must exist here too.
+        Schema::dropIfExists('dispatch_personnel_assignments');
+        $this->createDispatchPersonnelAssignmentsTable();
 
         Schema::enableForeignKeyConstraints();
     }

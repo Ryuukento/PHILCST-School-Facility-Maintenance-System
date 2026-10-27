@@ -44,10 +44,17 @@ return new class extends Migration
                     ->references('id')
                     ->on('dispatches')
                     ->onDelete('cascade');
+                // personnel_user_id is NOT NULL (every assignment row needs a
+                // person), so nullOnDelete() here would be invalid -- MySQL/
+                // MariaDB reject a SET NULL action on a non-nullable column
+                // with errno 150 "Foreign key constraint is incorrectly
+                // formed" the moment this table is actually created. Cascade
+                // instead: deleting a user removes their roster rows rather
+                // than leaving an invalid null-person assignment behind.
                 $table->foreign('personnel_user_id')
                     ->references('user_id')
                     ->on('users')
-                    ->nullOnDelete();
+                    ->onDelete('cascade');
                 $table->foreign('assigned_by')
                     ->references('user_id')
                     ->on('users')

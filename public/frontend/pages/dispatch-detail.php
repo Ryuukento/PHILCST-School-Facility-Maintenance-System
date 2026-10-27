@@ -77,10 +77,14 @@ include __DIR__ . '/../includes/header.php';
     gap: 16px;
 }
 
+/* Primary/Additional hierarchy removal — this used to be a single avatar +
+   name + department row (flex, align-items: center). It's now the roster's
+   header: an eyebrow line followed by the <ul class="dd-roster-list"> below,
+   so it stacks in a column instead. */
 .dispatch-detail-page .dd-assignment-person {
     display: flex;
-    align-items: center;
-    gap: 16px;
+    flex-direction: column;
+    gap: 10px;
     min-width: 0;
 }
 
@@ -98,18 +102,6 @@ include __DIR__ . '/../includes/header.php';
     inset: 0;
     width: 100%;
     height: 100%;
-}
-
-/* The Release Assignment card's own avatar — larger, because on that card the
-   person IS the subject. Everywhere else the shared 40px default applies. */
-.dispatch-detail-page .dd-avatar-lg {
-    width: 52px;
-    height: 52px;
-    font-size: 19px;
-}
-
-.dispatch-detail-page .dd-assignment-person-text {
-    min-width: 0;
 }
 
 .dispatch-detail-page .dd-assignment-eyebrow {
@@ -133,20 +125,78 @@ include __DIR__ . '/../includes/header.php';
     text-transform: none;
 }
 
-.dispatch-detail-page .dd-assignment-name {
+/* Primary/Additional hierarchy removal — the roster list itself. Reset list
+   semantics stay (a screen reader should still hear "list, N items"); the
+   visual is a column of quiet rows rather than bullets. */
+.dispatch-detail-page .dd-roster-list {
+    list-style: none;
     margin: 0;
-    font-size: 19px;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.dispatch-detail-page .dd-roster-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    min-width: 0;
+}
+
+.dispatch-detail-page .dd-roster-row-person {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+}
+
+.dispatch-detail-page .dd-roster-row-text {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.dispatch-detail-page .dd-roster-row-name {
+    font-size: 15px;
     font-weight: 700;
-    line-height: 1.25;
+    line-height: 1.3;
     color: var(--text-light, #111827);
     word-break: break-word;
 }
 
-.dispatch-detail-page .dd-assignment-department {
-    margin: 2px 0 0;
-    font-size: 13px;
+.dispatch-detail-page .dd-roster-row-meta {
+    margin-top: 1px;
+    font-size: 12px;
     color: var(--text-muted, #6b7280);
     word-break: break-word;
+}
+
+/* Inline "remove from roster" control — icon-only, quiet until the user
+   actually means to interact with it, with a 32px tap target and a clear
+   danger hover state. No separate modal; Components.confirm() does the
+   "are you sure" step (see ddRemovePersonnelRow). */
+.dispatch-detail-page .dd-roster-remove-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    border: 1px solid var(--border, #e5e7eb);
+    border-radius: var(--radius-md, 12px);
+    background: transparent;
+    color: var(--text-muted, #6b7280);
+    cursor: pointer;
+    transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.dispatch-detail-page .dd-roster-remove-btn:hover {
+    background: #fef2f2;
+    border-color: #fecaca;
+    color: #b91c1c;
 }
 
 /* A <dl>, because these genuinely are term/definition pairs. The border-top is
@@ -310,12 +360,6 @@ include __DIR__ . '/../includes/header.php';
     .dispatch-detail-page .dd-assignment-facts {
         gap: 14px 20px;
         padding-top: 14px;
-    }
-
-    .dispatch-detail-page .dd-avatar-lg {
-        width: 44px;
-        height: 44px;
-        font-size: 17px;
     }
 }
 
@@ -591,13 +635,6 @@ include __DIR__ . '/../includes/header.php';
             </button>
             <?php endif; ?>
             <?php if ($canAssign): ?>
-            <button type="button" id="dd-assign-btn"
-                    class="btn btn-secondary"
-                    style="display:none;">
-                Change Release Personnel
-            </button>
-            <?php endif; ?>
-            <?php if ($canAssign): ?>
             <button type="button" id="dd-add-personnel-btn"
                     class="btn btn-secondary"
                     style="display:none;">
@@ -690,34 +727,12 @@ include __DIR__ . '/../includes/header.php';
     <?php endif; ?>
 
     <?php if ($canAssign): ?>
-    <!-- TASK 13 — Reassign Release Personnel (Head Maintenance).
-         Reuses the same Components.SearchableSelect widget as the create page.
-         Department-based scoping of candidates was removed (see
+    <!-- Flat Release Personnel roster (Head Maintenance) — adds one person at
+         a time to the roster already shown on the Release Assignment card.
+         Reuses the same Components.SearchableSelect widget as the create
+         page. Department-based scoping of candidates was removed (see
          DispatchAuthorizationService) — any active Maintenance Staff member
          is a candidate, regardless of department. -->
-    <div id="dd-assign-modal" class="modal" style="display:none;" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="dd-assign-modal-title">
-        <div class="modal-content" style="max-width:520px;">
-            <div class="modal-header">
-                <h3 class="modal-title" id="dd-assign-modal-title">Change Release Personnel</h3>
-                <button type="button" class="modal-close" id="dd-assign-modal-close" aria-label="Close">&times;</button>
-            </div>
-            <div class="modal-body">
-                <label for="dd-assign-personnel-search" style="font-weight:600;display:block;margin-bottom:6px;">Release Personnel <span style="color:#ef4444;">*</span></label>
-                <input type="text" id="dd-assign-personnel-search" class="form-control" placeholder="Search EELab staff..." style="width:100%;margin-bottom:4px;" autocomplete="off">
-                <input type="hidden" id="dd-assign-personnel-id">
-                <p style="font-size:12px;color:#6b7280;margin:0;">Any active EELab Staff member may be selected, regardless of department. Reassignment is no longer possible once the dispatch has been released.</p>
-                <p id="dd-assign-error" style="color:#ef4444;font-size:13px;margin-top:10px;display:none;"></p>
-            </div>
-            <div class="modal-footer" style="display:flex;gap:8px;justify-content:flex-end;">
-                <button type="button" class="btn btn-secondary" id="dd-assign-modal-dismiss">Cancel</button>
-                <button type="button" class="btn btn-primary" id="dd-assign-confirm-btn">Save Assignment</button>
-            </div>
-        </div>
-    </div>
-    <?php endif; ?>
-
-    <?php if ($canAssign): ?>
-    <!-- Multi-Personnel Dispatch: Add Personnel Modal -->
     <div id="dd-add-personnel-modal" class="modal" style="display:none;" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="dd-add-personnel-modal-title">
         <div class="modal-content" style="max-width:520px;">
             <div class="modal-header">
@@ -808,9 +823,10 @@ const DSP_USER_ID = <?php echo (int)($_ddUser['user_id'] ?? $_ddUser['id'] ?? 0)
 // TASK 4 — Approve & Release Workflow: holds the most recently loaded
 // dispatch payload so the action dialogs can read from it.
 let DD_CURRENT_DISPATCH = null;
-// TASK 13 — the reassignment dialog's searchable select (the approve dialog no
-// longer has one).
-let DD_ASSIGN_PERSONNEL_SELECT = null;
+// Primary/Additional hierarchy removal — the Add Personnel dialog's
+// searchable select (the approve dialog is purely informational and has no
+// select of its own).
+let DD_ADD_PERSONNEL_SELECT = null;
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -928,6 +944,28 @@ function ddHeaderMetaItem(icon, html, extraClass) {
     return `<span class="dd-header-meta-item${extraClass ? ' ' + extraClass : ''}"><span class="dd-header-meta-icon" aria-hidden="true">${ddIcon(icon, '', 14)}</span>${html}</span>`;
 }
 
+// Primary/Additional hierarchy removal — a dispatch now has a flat, equal
+// roster (dispatches.personnel_assignments) instead of one named assignee.
+// These two helpers are the single place that reads that roster; every other
+// renderer below (header meta, the Release Assignment card, the approval
+// dialog, the timeline, and the Release button's visibility check) goes
+// through them rather than re-deriving the list itself.
+function ddRosterList(dispatch) {
+    return Array.isArray(dispatch?.personnel_assignments) ? dispatch.personnel_assignments : [];
+}
+
+// Confirmed display rule: comma list + "+N more" once the roster exceeds two
+// names (e.g. "Euclide, Mariah +3 more") — used by the one-line header meta,
+// where there is no room for a full list.
+const DD_ROSTER_SUMMARY_MAX = 2;
+function ddRosterSummaryText(dispatch) {
+    const names = ddRosterList(dispatch).map((a) => a.personnel_name).filter(Boolean);
+    if (!names.length) return '';
+    const shown = names.slice(0, DD_ROSTER_SUMMARY_MAX);
+    const remaining = names.length - shown.length;
+    return remaining > 0 ? `${shown.join(', ')} +${remaining} more` : shown.join(', ');
+}
+
 function ddHeaderMeta(dispatch) {
     let html = `<span class="dd-header-meta">`;
     html += `<span class="dd-header-meta-item">${ddDispatchBadge(dispatch.status)}</span>`;
@@ -939,8 +977,8 @@ function ddHeaderMeta(dispatch) {
     // The single most important fact this workflow added — who will physically
     // release the inventory — is stated in the header, at the top of the page,
     // before the reader scrolls anywhere.
-    html += ddHeaderMetaItem('user', dispatch.release_assigned_to_name
-        ? `Release by <strong>${ddEscapeHtml(dispatch.release_assigned_to_name)}</strong>`
+    html += ddHeaderMetaItem('user', ddRosterList(dispatch).length
+        ? `Release Personnel: <strong>${ddEscapeHtml(ddRosterSummaryText(dispatch))}</strong>`
         : ddUnassignedValue('No release personnel assigned'));
 
     html += ddHeaderMetaItem('user-check', dispatch.requested_by_name
@@ -956,14 +994,15 @@ function ddHeaderMeta(dispatch) {
 }
 
 // ---------------------------------------------------------------------------
-// TASK 13.1 — Release Assignment block.
+// TASK 13.1 / Primary+Additional removal — Release Assignment block.
 //
 // ONE implementation, rendered in two places: the "Release Assignment" card on
 // this page, and the Administrator's approval dialog (§3), where it is purely
-// informational. Everything it renders is already present in the dispatch
-// payload — release_assigned_to_name / release_assigned_by_name /
-// release_assigned_at, plus the eager-loaded release_assigned_to_user relation
-// for the avatar. No new endpoint, no new field, no second request.
+// informational (no remove controls there). Everything it renders is already
+// present in the dispatch payload's personnel_assignments relation — each row
+// carries personnel_name / assigned_by_name / assigned_at plus the
+// eager-loaded personnel relation for the avatar. No new endpoint, no new
+// field, no second request.
 // ---------------------------------------------------------------------------
 
 function ddInitial(name) {
@@ -985,34 +1024,12 @@ function ddInitial(name) {
 // name once from the visible text, plus once from the photo's alt when a
 // photo exists — never a bare "image" and never an unlabelled letter.
 //
-// `size` is presentational only ('lg' on the Release Assignment card, default
-// elsewhere) so one avatar implementation serves every surface.
-function ddAvatar(name, avatarUrl, size) {
-    const sizeClass = size === 'lg' ? ' dd-avatar-lg' : '';
+function ddAvatar(name, avatarUrl) {
     const circle = `<span class="avatar-circle" aria-hidden="true">${ddEscapeHtml(ddInitial(name))}</span>`;
     const photo  = avatarUrl
         ? `<img src="${ddEscapeHtml(avatarUrl)}" alt="${ddEscapeHtml(name || 'Profile photo')}" class="avatar-img dd-avatar-photo" onerror="this.remove();">`
         : '';
-    return `<span class="user-avatar-wrap dd-avatar${sizeClass}">${circle}${photo}</span>`;
-}
-
-/**
- * Historically captioned the Release Personnel card with the assignee's
- * department, inferred by comparing the DISPATCH's department_id against the
- * assignee's department_id and reusing the dispatch's department NAME when
- * they matched (the payload never carried the assignee's own department name).
- *
- * That inference relied on department-based release-personnel restriction:
- * "the two departments are the same by construction" (any assignable staff
- * member necessarily shared the dispatch's department). That restriction was
- * REMOVED — see DispatchAuthorizationService's class doc comment — so a match
- * here is now coincidence, not identity, and would misrepresent an unrelated
- * reporting tag as the person's department. Always returns null so the caption
- * stays hidden; kept as a named function (rather than deleted outright) so the
- * call site below documents why nothing renders here.
- */
-function ddAssigneeDepartment(dispatch) {
-    return null;
+    return `<span class="user-avatar-wrap dd-avatar">${circle}${photo}</span>`;
 }
 
 // Maps dispatch status to the assignment's own plain-language state, using the
@@ -1022,7 +1039,7 @@ function ddAssigneeDepartment(dispatch) {
 function ddAssignmentStatus(dispatch) {
     const status = String(dispatch.status || '').toLowerCase();
 
-    if (!dispatch.release_assigned_to) {
+    if (!ddRosterList(dispatch).length) {
         return { label: 'Not Assigned', tone: 'pending' };
     }
     if (status === 'cancelled') {
@@ -1046,20 +1063,54 @@ function ddAssignmentFact(label, valueHtml) {
         </div>`;
 }
 
+// One roster row: avatar, name, its OWN "added by / added on" line (each
+// person has their own, since there is no longer a single aggregate
+// assignment), and — only when opts.canRemove is true — an inline remove
+// control. No separate confirm modal: clicking it raises the existing
+// Components.confirm() dialog (see ddRemovePersonnelRow below), the same
+// confirm primitive other pages in this app already use for a destructive
+// one-click action.
+function ddAssignmentRosterRow(assignment, opts) {
+    const name = assignment.personnel_name || 'Unknown';
+    const userId = assignment.personnel_user_id;
+
+    const metaParts = [];
+    if (assignment.assigned_by_name) metaParts.push(`Added by ${assignment.assigned_by_name}`);
+    if (assignment.assigned_at) metaParts.push(ddFormatDateOnly(assignment.assigned_at));
+    const meta = metaParts.join(' · ');
+
+    const removeBtn = opts.canRemove
+        ? `<button type="button" class="dd-roster-remove-btn" data-personnel-user-id="${ddEscapeHtml(userId)}" data-personnel-name="${ddEscapeHtml(name)}" aria-label="Remove ${ddEscapeHtml(name)} from the release roster" title="Remove from roster">${ddIcon('x', '', 14)}</button>`
+        : '';
+
+    return `
+        <li class="dd-roster-row">
+            <span class="dd-roster-row-person">
+                ${ddAvatar(name, assignment.personnel && assignment.personnel.avatar)}
+                <span class="dd-roster-row-text">
+                    <span class="dd-roster-row-name">${ddEscapeHtml(name)}</span>
+                    ${meta ? `<span class="dd-roster-row-meta">${ddEscapeHtml(meta)}</span>` : ''}
+                </span>
+            </span>
+            ${removeBtn}
+        </li>`;
+}
+
+// Primary/Additional hierarchy removal — this used to render ONE assignee as
+// a large identity block with aggregate "Assigned By"/"Assigned Date" facts.
+// It now renders the flat roster as a list, each row carrying its own
+// added-by/added-on (see ddAssignmentRosterRow above), since there is no
+// longer one assignment to describe in aggregate.
 function ddAssignmentBlock(dispatch, options) {
-    const opts = options || {};
-    const showAssigner = opts.showAssigner !== false;
+    const opts   = options || {};
+    const roster = ddRosterList(dispatch);
+    const state  = ddAssignmentStatus(dispatch);
 
-    const assignee   = dispatch.release_assigned_to_user || null;
-    const name       = dispatch.release_assigned_to_name || '';
-    const department = ddAssigneeDepartment(dispatch);
-    const state      = ddAssignmentStatus(dispatch);
-
-    if (!name) {
+    if (!roster.length) {
         return `
             <div class="ui-empty-state">
                 <strong>No release personnel assigned.</strong>
-                <span>Head Maintenance must assign an EELab Staff member before this dispatch can be approved.</span>
+                <span>Head Maintenance must add at least one EELab Staff member to the roster before this dispatch can be approved.</span>
             </div>`;
     }
 
@@ -1074,43 +1125,27 @@ function ddAssignmentBlock(dispatch, options) {
         ? '<span class="badge badge-success dd-assignment-check">' + ddIcon('check', '', 13) + ' Assigned</span>'
         : '';
 
-    // TASK 13.2 §2 — visual hierarchy: the person is now a full-width identity
-    // block at the top (larger avatar, name as the dominant line, department
-    // beneath it), separated by a rule from the supporting facts below. Before
-    // this, person and facts sat side by side and competed for attention.
     let html = '<div class="dd-assignment">';
     html += `
         <div class="dd-assignment-person">
-            ${ddAvatar(name, assignee && assignee.avatar, 'lg')}
-            <div class="dd-assignment-person-text">
-                <p class="dd-assignment-eyebrow">
-                    <span>Release Personnel</span>
-                    ${assignedChip}
-                </p>
-                <p class="dd-assignment-name">${ddEscapeHtml(name)}</p>
-                ${department ? `<p class="dd-assignment-department">${ddEscapeHtml(department)}</p>` : ''}
-            </div>
+            <p class="dd-assignment-eyebrow">
+                <span>Release Personnel (${roster.length})</span>
+                ${assignedChip}
+            </p>
+            <ul class="dd-roster-list">
+                ${roster.map((assignment) => ddAssignmentRosterRow(assignment, opts)).join('')}
+            </ul>
         </div>`;
 
-    html += '<dl class="dd-assignment-facts">';
-    if (showAssigner) {
-        html += ddAssignmentFact(
-            'Assigned By',
-            dispatch.release_assigned_by_name ? ddEscapeHtml(dispatch.release_assigned_by_name) : ddUnassignedValue('Not recorded')
-        );
-        html += ddAssignmentFact(
-            'Assigned Date',
-            dispatch.release_assigned_at ? ddEscapeHtml(ddFormatDateOnly(dispatch.release_assigned_at)) : ddUnassignedValue('Not recorded')
-        );
-    }
     // TASK 78 — once released, this "Status" fact and the page header's
     // ddDispatchBadge(dispatch.status) both say the literal word "Released"
     // a few inches apart. Every other tone still tells the reader something
     // the header doesn't (who can act next), so only 'released' is hidden.
     if (state.tone !== 'released') {
+        html += '<dl class="dd-assignment-facts">';
         html += ddAssignmentFact('Status', `<span class="badge badge-${state.tone}">${ddEscapeHtml(state.label)}</span>`);
+        html += '</dl>';
     }
-    html += '</dl>';
 
     if (opts.hint) {
         html += `<p class="dd-assignment-hint">${ddEscapeHtml(opts.hint)}</p>`;
@@ -1125,7 +1160,18 @@ function renderReleaseAssignment(dispatch) {
     const body = document.getElementById('dd-assignment-body');
     if (!card || !body) return;
 
-    body.innerHTML = ddAssignmentBlock(dispatch, { showAssigner: true });
+    // Removal is only ever offered on this page's own card (never in the
+    // read-only approval dialog), and only while the server would actually
+    // accept it — mirrors DispatchAuthorizationService::canRemoveDispatchPersonnel()
+    // (maintenance_admin, status pending|approved). Cosmetic only: the server
+    // re-checks this on every POST /remove-personnel.
+    const status = String(dispatch.status || '').toLowerCase();
+    const canRemove = DSP_CAN_ASSIGN && (status === 'pending' || status === 'approved');
+
+    body.innerHTML = ddAssignmentBlock(dispatch, { canRemove });
+    body.querySelectorAll('.dd-roster-remove-btn').forEach((btn) => {
+        btn.addEventListener('click', () => ddRemovePersonnelRow(btn.dataset.personnelUserId, btn.dataset.personnelName));
+    });
     card.style.display = 'block';
 }
 
@@ -1144,18 +1190,20 @@ function renderReleaseAssignment(dispatch) {
 // enum still holds only pending/approved/released/cancelled, and no
 // 'assigned' status was introduced (it would have required an enum migration
 // and would have silently fallen outside cancelDispatch()'s
-// ['pending','approved'] whitelist). The stage is derived from whether
-// release_assigned_to is populated, which is the fact it actually represents.
-// In the normal flow it is already satisfied at creation time, because Head
-// Maintenance picks the personnel on the create form — it renders as a
-// completed step immediately, and only shows as pending for legacy rows
-// created before this task.
+// ['pending','approved'] whitelist). The stage is derived from whether the
+// flat personnel roster is non-empty, which is the fact it actually
+// represents (Primary/Additional hierarchy removal — previously this read a
+// single release_assigned_to column). In the normal flow it is already
+// satisfied at creation time, because Head Maintenance picks the roster on
+// the create form — it renders as a completed step immediately, and only
+// shows as pending for legacy rows created before this task (which have no
+// pivot rows at all).
 //
 // The ordering the stepper draws is enforced by the service layer, not
 // assumed here: createDispatch() always writes status='pending';
 // approveDispatch() rejects anything not 'pending' AND refuses to approve a
-// dispatch with no release_assigned_to; releaseDispatch() rejects anything
-// not 'approved'. So Assigned → Approved → Released is the only reachable
+// dispatch with an empty roster; releaseDispatch() rejects anything not
+// 'approved'. So Assigned → Approved → Released is the only reachable
 // order. This remains distinct from any upstream Need Change / Replacement
 // Request approval on the originating report — hence the explicit "Dispatch
 // Approved" wording (see card subtitle above).
@@ -1260,17 +1308,15 @@ function renderDispatchTimeline(dispatch) {
         'file-text'
     );
 
-    // TASK 13 — assignment step, derived from release_assigned_to.
-    const assignedName = dispatch.release_assigned_to_name || '';
+    // Primary/Additional hierarchy removal — assignment step is now derived
+    // from roster non-emptiness rather than a single release_assigned_to
+    // value; the roster summary line (comma + "+N more") stands in for the
+    // old single name.
+    const roster = ddRosterList(dispatch);
     html += ddTimelineStep(
         'Release Personnel Assigned',
-        assignedName ? 'done' : 'pending',
-        assignedName
-            ? ddStepMeta(
-                `${assignedName}${dispatch.release_assigned_by_name ? ` · assigned by ${dispatch.release_assigned_by_name}` : ''}`,
-                dispatch.release_assigned_at
-            )
-            : 'Awaiting assignment',
+        roster.length ? 'done' : 'pending',
+        roster.length ? ddRosterSummaryText(dispatch) : 'Awaiting assignment',
         'user'
     );
 
@@ -1354,20 +1400,19 @@ function renderDispatchTimeline(dispatch) {
 }
 
 // ---------------------------------------------------------------------------
-// Action-button visibility — TASK 13
+// Action-button visibility — TASK 13 / Primary+Additional removal
 //
 // Mirrors DispatchAuthorizationService exactly:
 //   Approve / Reject  → Administrator, while status === 'pending'
-//   Change Personnel  → Head Maintenance, while status is 'pending' or
-//                       'approved' (never once released — the requirement is
-//                       "reassignment allowed after approval ONLY IF
-//                       status != released")
+//   Add Personnel     → Head Maintenance, while status is 'pending' or
+//                       'approved' (never once released) — mirrors
+//                       canAssignReleasePersonnel()/canRemoveDispatchPersonnel().
 //   Release           → Maintenance Staff, while status === 'approved', AND
-//                       only when this user IS the assignee. The identity
-//                       check is the point of the whole task, so it is done
-//                       here as well as server-side; the server check in
-//                       DispatchAuthorizationService::canReleaseDispatch() is
-//                       the one that actually enforces it.
+//                       only when this user is ON THE ROSTER. The roster
+//                       membership check is the point of the whole task, so
+//                       it is done here as well as server-side; the server
+//                       check in DispatchAuthorizationService::canReleaseDispatch()
+//                       is the one that actually enforces it.
 //   Cancel            → Administrator / Head Maintenance, pending or approved
 // ---------------------------------------------------------------------------
 
@@ -1380,17 +1425,14 @@ function ddShowButton(id, visible) {
 
 function ddRenderActionButtons(dispatch) {
     const status     = String(dispatch.status || '').toLowerCase();
-    const assignedTo = dispatch.release_assigned_to !== null && dispatch.release_assigned_to !== undefined
-        ? Number(dispatch.release_assigned_to)
-        : null;
-    const isAssignee = assignedTo !== null && DSP_USER_ID > 0 && assignedTo === DSP_USER_ID;
+    const isOnRoster = DSP_USER_ID > 0 && ddRosterList(dispatch).some((a) => Number(a.personnel_user_id) === DSP_USER_ID);
 
     let anyVisible = false;
-    anyVisible = ddShowButton('dd-approve-btn', DSP_CAN_APPROVE && status === 'pending') || anyVisible;
-    anyVisible = ddShowButton('dd-reject-btn',  DSP_CAN_APPROVE && status === 'pending') || anyVisible;
-    anyVisible = ddShowButton('dd-assign-btn',  DSP_CAN_ASSIGN  && (status === 'pending' || status === 'approved')) || anyVisible;
-    anyVisible = ddShowButton('dd-release-btn', DSP_CAN_RELEASE && status === 'approved' && isAssignee) || anyVisible;
-    anyVisible = ddShowButton('dd-cancel-btn',  DSP_CAN_CANCEL  && (status === 'pending' || status === 'approved')) || anyVisible;
+    anyVisible = ddShowButton('dd-approve-btn',       DSP_CAN_APPROVE && status === 'pending') || anyVisible;
+    anyVisible = ddShowButton('dd-reject-btn',        DSP_CAN_APPROVE && status === 'pending') || anyVisible;
+    anyVisible = ddShowButton('dd-add-personnel-btn', DSP_CAN_ASSIGN  && (status === 'pending' || status === 'approved')) || anyVisible;
+    anyVisible = ddShowButton('dd-release-btn',       DSP_CAN_RELEASE && status === 'approved' && isOnRoster) || anyVisible;
+    anyVisible = ddShowButton('dd-cancel-btn',        DSP_CAN_CANCEL  && (status === 'pending' || status === 'approved')) || anyVisible;
 
     const section = document.getElementById('dd-action-section');
     if (section) {
@@ -1654,21 +1696,21 @@ function ddOpenApproveModal() {
     // Administrator can see at a glance that the prerequisite is satisfied
     // rather than having to read the name and infer it.
     document.getElementById('dd-approve-assignment').innerHTML = ddAssignmentBlock(dispatch, {
-        showAssigner: true,
         showAssignedIndicator: true,
-        hint: 'Assigned by Head Maintenance. This cannot be changed from the approval dialog.',
+        hint: 'Added by Head Maintenance. The roster cannot be changed from this approval dialog.',
     });
 
     const errEl      = document.getElementById('dd-approve-error');
     const confirmBtn = document.getElementById('dd-approve-confirm-btn');
     errEl.style.display = 'none';
 
-    // A dispatch with no assigned personnel cannot be approved — the server
-    // rejects it outright (approveDispatch() throws on a null
-    // release_assigned_to), so say so here instead of letting the click fail.
-    // Only legacy rows created before this task can be in that state.
-    if (!dispatch.release_assigned_to) {
-        errEl.textContent   = 'This dispatch has no assigned release personnel. Head Maintenance must assign one before it can be approved.';
+    // A dispatch with an empty roster cannot be approved — the server
+    // rejects it outright (approveDispatch() throws when the personnel
+    // roster is empty), so say so here instead of letting the click fail.
+    // Only legacy rows created before this task, or a roster emptied by
+    // removal, can be in that state.
+    if (!ddRosterList(dispatch).length) {
+        errEl.textContent   = 'This dispatch has no release personnel on its roster. Head Maintenance must add at least one before it can be approved.';
         errEl.style.display = 'block';
         confirmBtn.disabled = true;
     } else {
@@ -1732,31 +1774,33 @@ async function doReject() {
 }
 
 // ---------------------------------------------------------------------------
-// Change Release Personnel — TASK 13 (Head Maintenance)
+// Add / Remove Personnel — Primary/Additional hierarchy removal (Head
+// Maintenance)
 //
-// Allowed while pending and while approved-but-not-released. The candidate
-// list is every active Maintenance Staff member — department-based scoping
-// was REMOVED (see DispatchAuthorizationService's class doc comment); the
-// endpoint takes no department parameter. Eligibility (active status,
-// Maintenance Staff role, dispatch still pending/approved) is re-validated
-// on submit by DispatchAuthorizationService::assertAssignableReleasePersonnel()
-// and ::canAssignReleasePersonnel(). This widget only makes the choice
-// convenient — the server is the authority.
+// Allowed while pending and while approved-but-not-released, same window as
+// the retired "Change Release Personnel" action. The candidate list for Add
+// is every active Head Maintenance / Maintenance Staff member not already
+// on the roster — department-based scoping was REMOVED (see
+// DispatchAuthorizationService's class doc comment); the endpoint takes no
+// department parameter. Eligibility (active status, role, dispatch still
+// pending/approved) is re-validated on submit by
+// DispatchAuthorizationService::assertAssignableReleasePersonnel() and
+// ::canAssignReleasePersonnel()/::canRemoveDispatchPersonnel(). These widgets
+// only make the choice convenient — the server is the authority, including
+// on removal (it is allowed to empty the roster entirely; a dispatch with no
+// roster simply cannot be approved until someone is added back).
 // ---------------------------------------------------------------------------
 
-function ddOpenAssignModal() {
+function ddOpenAddPersonnelModal() {
     const dispatch = DD_CURRENT_DISPATCH;
     if (!dispatch) return;
 
-    const searchInput = document.getElementById('dd-assign-personnel-search');
-    const hiddenInput = document.getElementById('dd-assign-personnel-id');
+    const searchInput = document.getElementById('dd-add-personnel-search');
+    const hiddenInput = document.getElementById('dd-add-personnel-id');
+    searchInput.value = '';
+    hiddenInput.value = '';
 
-    // Pre-fill with the current assignee so the dialog opens showing what it
-    // is about to change, not an empty box.
-    searchInput.value = dispatch.release_assigned_to_name || '';
-    hiddenInput.value = dispatch.release_assigned_to || '';
-
-    if (!DD_ASSIGN_PERSONNEL_SELECT) {
+    if (!DD_ADD_PERSONNEL_SELECT) {
         // Same Components.SearchableSelect used by the dispatch create form —
         // no new widget, no new interaction pattern.
         //
@@ -1767,51 +1811,98 @@ function ddOpenAssignModal() {
         // field ended up holding a department id instead of the selected
         // user's id. Same fix as dispatch-create.php and
         // repair-assignment.php's technician select.
-        DD_ASSIGN_PERSONNEL_SELECT = new Components.SearchableSelect({
-            inputId:  'dd-assign-personnel-search',
-            hiddenId: 'dd-assign-personnel-id',
+        DD_ADD_PERSONNEL_SELECT = new Components.SearchableSelect({
+            inputId:  'dd-add-personnel-search',
+            hiddenId: 'dd-add-personnel-id',
             endpoint: window.SFMS_PUBLIC_URL('/api/dispatches/support/release-personnel'),
             displayKey: 'full_name',
-            onSelect: (it) => { document.getElementById('dd-assign-personnel-id').value = it.user_id || ''; },
+            // Hide anyone already on the roster, so there is no "already
+            // added" round trip to the server for the obvious case. Read
+            // fresh on every render, same pattern as dispatch-create.php.
+            getExcludeIds: () => new Set(ddRosterList(DD_CURRENT_DISPATCH).map((a) => Number(a.personnel_user_id))),
+            onSelect: (it) => { document.getElementById('dd-add-personnel-id').value = it.user_id || ''; },
         });
     }
 
-    document.getElementById('dd-assign-error').style.display = 'none';
-    ddOpenModal('dd-assign-modal');
+    document.getElementById('dd-add-personnel-error').style.display = 'none';
+    ddOpenModal('dd-add-personnel-modal');
 }
 
-function ddCloseAssignModal() {
-    ddCloseModal('dd-assign-modal');
+function ddCloseAddPersonnelModal() {
+    ddCloseModal('dd-add-personnel-modal');
 }
 
-async function doAssign() {
-    const releaseAssignedTo = Number(document.getElementById('dd-assign-personnel-id').value || 0);
-    const errEl = document.getElementById('dd-assign-error');
+async function doAddPersonnel() {
+    const personnelUserId = Number(document.getElementById('dd-add-personnel-id').value || 0);
+    const errEl = document.getElementById('dd-add-personnel-error');
 
-    if (!releaseAssignedTo) {
-        errEl.textContent   = 'Please select the Release Personnel.';
+    if (!personnelUserId) {
+        errEl.textContent   = 'Please select who to add.';
         errEl.style.display = 'block';
         return;
     }
 
     await ddSubmitAction(
-        '/assign-personnel',
-        { release_assigned_to: releaseAssignedTo },
-        'dd-assign-confirm-btn',
-        'dd-assign-error',
-        'Saving...'
+        '/add-personnel',
+        { personnel_user_id: personnelUserId },
+        'dd-add-personnel-confirm-btn',
+        'dd-add-personnel-error',
+        'Adding...'
     );
 }
 
+// Inline remove — no separate modal. A click raises the app's existing
+// Components.confirm() dialog (the same primitive inventory.php and
+// preventive-maintenance.php use for one-click destructive actions), and on
+// confirmation posts straight to the new remove-personnel endpoint. Failure
+// is surfaced as a toast rather than inline, since there is no dedicated
+// error slot for a roster row.
+async function ddRemovePersonnelRow(personnelUserId, personnelName) {
+    const userId = Number(personnelUserId || 0);
+    if (!userId) return;
+
+    const confirmed = await Components.confirm(
+        `Remove ${personnelName || 'this person'} from the release roster?`,
+        'Remove',
+        'Cancel'
+    );
+    if (!confirmed) return;
+
+    try {
+        const response = await fetch(
+            window.SFMS_PUBLIC_URL(`/api/dispatches/${DSP_ID}/remove-personnel`),
+            {
+                method:      'POST',
+                credentials: 'same-origin',
+                headers:     { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+                body:        JSON.stringify({ personnel_user_id: userId }),
+            }
+        );
+        const payload = await response.json();
+
+        if (!response.ok || !payload.success) {
+            const firstError = payload && payload.errors
+                ? Object.values(payload.errors).flat()[0]
+                : null;
+            throw new Error(firstError || payload.message || 'The request could not be completed.');
+        }
+
+        loadDispatchDetail();
+    } catch (err) {
+        ddNotify(err.message || 'Unable to remove this person from the roster.');
+    }
+}
+
 // ---------------------------------------------------------------------------
-// Release — TASK 13 (assigned Maintenance Staff only)
+// Release — TASK 13 / Primary+Additional removal (roster members only)
 //
 // This is the ONLY point at which inventory is deducted. The request body
 // deliberately does NOT carry released_by: the controller uses the session
 // user, and DispatchAuthorizationService::canReleaseDispatch() requires that
-// user to equal dispatches.release_assigned_to. A staff member who reaches
-// this endpoint for someone else's dispatch gets a 403 regardless of what the
-// browser sends.
+// user to be a member of the dispatch's flat personnel roster
+// (dispatch_personnel_assignments), not a match against a single
+// release_assigned_to column. A staff member who reaches this endpoint for a
+// dispatch they are not on gets a 403 regardless of what the browser sends.
 // ---------------------------------------------------------------------------
 
 function ddOpenReleaseModal() {
@@ -2135,17 +2226,17 @@ document.addEventListener('DOMContentLoaded', () => {
     // getElementById(...).addEventListener() would throw for any role that
     // doesn't get that particular control, killing the rest of this handler
     // (including the timeline and items rendering).
-    ddBind('dd-approve-btn', 'click', ddOpenApproveModal);
-    ddBind('dd-reject-btn',  'click', ddOpenRejectModal);
-    ddBind('dd-assign-btn',  'click', ddOpenAssignModal);
-    ddBind('dd-release-btn', 'click', ddOpenReleaseModal);
-    ddBind('dd-cancel-btn',  'click', ddOpenCancelModal);
+    ddBind('dd-approve-btn',       'click', ddOpenApproveModal);
+    ddBind('dd-reject-btn',        'click', ddOpenRejectModal);
+    ddBind('dd-add-personnel-btn', 'click', ddOpenAddPersonnelModal);
+    ddBind('dd-release-btn',       'click', ddOpenReleaseModal);
+    ddBind('dd-cancel-btn',        'click', ddOpenCancelModal);
 
-    ddWireModal('dd-approve-modal', ddCloseApproveModal, 'dd-approve-confirm-btn', doApprove);
-    ddWireModal('dd-reject-modal',  ddCloseRejectModal,  'dd-reject-confirm-btn',  doReject);
-    ddWireModal('dd-assign-modal',  ddCloseAssignModal,  'dd-assign-confirm-btn',  doAssign);
-    ddWireModal('dd-release-modal', ddCloseReleaseModal, 'dd-release-confirm-btn', doRelease);
-    ddWireModal('dd-cancel-modal',  ddCloseCancelModal,  'dd-cancel-confirm-btn',  doCancel);
+    ddWireModal('dd-approve-modal',       ddCloseApproveModal,       'dd-approve-confirm-btn',       doApprove);
+    ddWireModal('dd-reject-modal',        ddCloseRejectModal,        'dd-reject-confirm-btn',        doReject);
+    ddWireModal('dd-add-personnel-modal', ddCloseAddPersonnelModal, 'dd-add-personnel-confirm-btn', doAddPersonnel);
+    ddWireModal('dd-release-modal',       ddCloseReleaseModal,       'dd-release-confirm-btn',       doRelease);
+    ddWireModal('dd-cancel-modal',        ddCloseCancelModal,        'dd-cancel-confirm-btn',        doCancel);
 });
 </script>
 

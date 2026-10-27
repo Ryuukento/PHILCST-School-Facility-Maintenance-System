@@ -165,8 +165,18 @@ class DispatchReleaseLowStockNotificationTest extends TestCase
         );
     }
 
+    /**
+     * Primary/Additional hierarchy removal — this raw-insert seed helper
+     * predates the pivot table. canReleaseDispatch() and approveDispatch()
+     * now read dispatch_personnel_assignments, not release_assigned_to, so a
+     * 'release_assigned_to' override here is mirrored into a matching pivot
+     * row — otherwise every test that approves/releases via this helper
+     * would silently fail authorization.
+     */
     private function seedDispatch(int $itemId, int $quantity, array $overrides = []): int
     {
+        $personnelUserId = $overrides['release_assigned_to'] ?? null;
+
         $dispatchId = DB::table('dispatches')->insertGetId(array_merge([
             'dispatch_code' => 'DSP-' . uniqid(),
             'status' => 'pending',
@@ -175,6 +185,17 @@ class DispatchReleaseLowStockNotificationTest extends TestCase
         ], $overrides));
 
         $this->addDispatchItem($dispatchId, $itemId, $quantity);
+
+        if ($personnelUserId !== null) {
+            DB::table('dispatch_personnel_assignments')->insert([
+                'dispatch_id' => $dispatchId,
+                'personnel_user_id' => $personnelUserId,
+                'assigned_by' => null,
+                'assigned_at' => now(),
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        }
 
         return $dispatchId;
     }
@@ -194,6 +215,7 @@ class DispatchReleaseLowStockNotificationTest extends TestCase
     {
         Schema::disableForeignKeyConstraints();
         Schema::dropIfExists('notifications');
+        Schema::dropIfExists('dispatch_personnel_assignments');
         Schema::dropIfExists('dispatch_items');
         Schema::dropIfExists('dispatches');
         Schema::dropIfExists('inventory_transactions');
@@ -218,6 +240,7 @@ class DispatchReleaseLowStockNotificationTest extends TestCase
 
         $this->createDispatchesTable();
         $this->createDispatchItemsTable();
+        $this->createDispatchPersonnelAssignmentsTable();
 
         Schema::enableForeignKeyConstraints();
     }

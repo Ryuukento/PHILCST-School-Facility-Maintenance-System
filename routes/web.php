@@ -11,7 +11,6 @@ use App\Http\Controllers\Api\DepartmentController;
 use App\Http\Controllers\Api\BuildingController;
 use App\Http\Controllers\Api\InventoryCategoryController;
 use App\Http\Controllers\Api\NotificationController;
-use App\Http\Controllers\Api\PhoneVerificationController;
 use App\Http\Controllers\Api\PreventiveMaintenanceController;
 use App\Http\Controllers\Api\PurchaseReceiptController;
 use App\Http\Controllers\Api\ReplacementTrackingController;
@@ -294,15 +293,10 @@ Route::prefix('api')->group(function (): void {
             Route::get('status',        [EmailVerificationController::class, 'getStatus']);
         });
 
-        // Phone Number OTP verification (mirrors email-verification above) —
-        // proves a Phone Number is actually reachable by SMS before it is
-        // trusted and saved to users.phone.
-        Route::prefix('phone-verification')->group(function (): void {
-            Route::post('initiate',     [PhoneVerificationController::class, 'initiate']);
-            Route::post('verify-otp',   [PhoneVerificationController::class, 'verifyOtp']);
-            Route::post('resend-otp',   [PhoneVerificationController::class, 'resendOtp']);
-            Route::get('status',        [PhoneVerificationController::class, 'getStatus']);
-        });
+        // Phone Number OTP verification was removed 2026-10-26 as redundant —
+        // phone is now a plain field saved directly through PATCH
+        // users/profile (UserController::updateProfile), same as Full Name
+        // and Username. See app/Http/Controllers/Api/UserController.php.
 
         Route::get('items', [ItemController::class, 'index']);
         Route::post('items', [ItemController::class, 'store'])
@@ -395,10 +389,13 @@ Route::prefix('api')->group(function (): void {
             Route::post('labels-printed', [\App\Http\Controllers\Api\DispatchController::class, 'markLabelsPrinted'])
                 ->middleware(\App\Http\Middleware\EnsureRole::class . ':super_admin,maintenance_admin,maintenance_staff');
             Route::get('{dispatch}', [\App\Http\Controllers\Api\DispatchController::class, 'show']);
-            Route::post('{dispatch}/assign-personnel', [\App\Http\Controllers\Api\DispatchController::class, 'assignPersonnel'])
-                ->middleware(\App\Http\Middleware\EnsureRole::class . ':maintenance_admin');
-            // Multi-Personnel Dispatch: Add personnel to dispatch (different from single release_assigned_to)
+            // Primary/Additional hierarchy removal — flat Release Personnel
+            // roster: add/remove one person at a time, both Head Maintenance
+            // only. The old single-assignee {dispatch}/assign-personnel route
+            // is gone along with the controller method it called.
             Route::post('{dispatch}/add-personnel', [\App\Http\Controllers\Api\DispatchController::class, 'addPersonnelToDispatch'])
+                ->middleware(\App\Http\Middleware\EnsureRole::class . ':maintenance_admin');
+            Route::post('{dispatch}/remove-personnel', [\App\Http\Controllers\Api\DispatchController::class, 'removePersonnelFromDispatch'])
                 ->middleware(\App\Http\Middleware\EnsureRole::class . ':maintenance_admin');
             Route::post('{dispatch}/approve', [\App\Http\Controllers\Api\DispatchController::class, 'approve'])
                 ->middleware(\App\Http\Middleware\EnsureRole::class . ':super_admin');

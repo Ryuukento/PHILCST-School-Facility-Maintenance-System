@@ -58,7 +58,7 @@ class DispatchCreateValidationTest extends TestCase
             ->postJson('/api/dispatches', [
                 'items' => [['item_id' => $itemId, 'quantity' => 2]],
                 'room_id' => $this->roomId,
-                'release_assigned_to' => $staffId,
+                'personnel_ids' => [$staffId],
             ]);
 
         $response->assertStatus(201);
@@ -81,7 +81,7 @@ class DispatchCreateValidationTest extends TestCase
                     ['item_id' => $itemId, 'quantity' => 3],
                 ],
                 'room_id' => $this->roomId,
-                'release_assigned_to' => $staffId,
+                'personnel_ids' => [$staffId],
             ]);
 
         $response->assertStatus(422);
@@ -99,7 +99,7 @@ class DispatchCreateValidationTest extends TestCase
             ->postJson('/api/dispatches', [
                 'items' => [['item_id' => 999999, 'quantity' => 1]],
                 'room_id' => $this->roomId,
-                'release_assigned_to' => $staffId,
+                'personnel_ids' => [$staffId],
             ]);
 
         $response->assertStatus(422);
@@ -117,14 +117,21 @@ class DispatchCreateValidationTest extends TestCase
             ->postJson('/api/dispatches', [
                 'items' => [['item_id' => $itemId, 'quantity' => 0]],
                 'room_id' => $this->roomId,
-                'release_assigned_to' => $staffId,
+                'personnel_ids' => [$staffId],
             ]);
 
         $response->assertStatus(422);
         $this->assertSame(0, DB::table('dispatches')->count());
     }
 
-    public function test_missing_release_assigned_to_is_rejected(): void
+    /**
+     * Primary/Additional hierarchy removal — was
+     * test_missing_release_assigned_to_is_rejected(). There is no longer a
+     * single required release_assigned_to field; 'personnel_ids' is the
+     * required array (enforced by 'required|array|min:1'), so the validation
+     * error now surfaces under that key instead.
+     */
+    public function test_missing_personnel_ids_is_rejected(): void
     {
         $headId = $this->seedUser(['role' => 'maintenance_admin', 'department_id' => 1]);
         $itemId = $this->seedItem(['name' => 'Mouse', 'quantity' => 10, 'reserved_quantity' => 0]);
@@ -137,7 +144,30 @@ class DispatchCreateValidationTest extends TestCase
             ]);
 
         $response->assertStatus(422);
-        $this->assertArrayHasKey('release_assigned_to', $response->json('errors'));
+        $this->assertArrayHasKey('personnel_ids', $response->json('errors'));
+        $this->assertSame(0, DB::table('dispatches')->count());
+    }
+
+    /**
+     * An empty roster is rejected the same way as a missing one — 'min:1'
+     * catches both. A dispatch must always start with at least one Release
+     * Personnel; the roster may only drop to zero later via /remove-personnel.
+     */
+    public function test_empty_personnel_ids_array_is_rejected(): void
+    {
+        $headId = $this->seedUser(['role' => 'maintenance_admin', 'department_id' => 1]);
+        $itemId = $this->seedItem(['name' => 'Mouse', 'quantity' => 10, 'reserved_quantity' => 0]);
+
+        $response = $this
+            ->actingAsSessionUserWithFlatKeys($headId, 'maintenance_admin')
+            ->postJson('/api/dispatches', [
+                'items' => [['item_id' => $itemId, 'quantity' => 1]],
+                'room_id' => $this->roomId,
+                'personnel_ids' => [],
+            ]);
+
+        $response->assertStatus(422);
+        $this->assertArrayHasKey('personnel_ids', $response->json('errors'));
         $this->assertSame(0, DB::table('dispatches')->count());
     }
 
@@ -157,7 +187,7 @@ class DispatchCreateValidationTest extends TestCase
             ->actingAsSessionUserWithFlatKeys($headId, 'maintenance_admin')
             ->postJson('/api/dispatches', [
                 'items' => [['item_id' => $itemId, 'quantity' => 1]],
-                'release_assigned_to' => $staffId,
+                'personnel_ids' => [$staffId],
             ]);
 
         $response->assertStatus(422);
@@ -183,7 +213,7 @@ class DispatchCreateValidationTest extends TestCase
             ->postJson('/api/dispatches', [
                 'items' => [['item_id' => $itemId, 'quantity' => 1]],
                 'room_id' => 999999,
-                'release_assigned_to' => $staffId,
+                'personnel_ids' => [$staffId],
             ]);
 
         $response->assertStatus(422);
@@ -202,7 +232,7 @@ class DispatchCreateValidationTest extends TestCase
             ->postJson('/api/dispatches', [
                 'items' => [['item_id' => $itemId, 'quantity' => 1]],
                 'room_id' => $this->roomId,
-                'release_assigned_to' => $otherStaffId,
+                'personnel_ids' => [$otherStaffId],
             ]);
 
         $response->assertStatus(403);
@@ -212,6 +242,7 @@ class DispatchCreateValidationTest extends TestCase
     private function createTestSchema(): void
     {
         Schema::disableForeignKeyConstraints();
+        Schema::dropIfExists('dispatch_personnel_assignments');
         Schema::dropIfExists('dispatch_items');
         Schema::dropIfExists('dispatches');
         Schema::dropIfExists('inventory_transactions');
@@ -234,6 +265,7 @@ class DispatchCreateValidationTest extends TestCase
 
         $this->createDispatchesTable();
         $this->createDispatchItemsTable();
+        $this->createDispatchPersonnelAssignmentsTable();
 
         Schema::enableForeignKeyConstraints();
     }

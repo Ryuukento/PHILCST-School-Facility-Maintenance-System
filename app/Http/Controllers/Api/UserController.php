@@ -416,6 +416,26 @@ class UserController extends Controller
         $newPassword     = (string)$request->input('new_password', '');
         $isForcedSetup   = !empty($currentUser->force_profile_update);
 
+        // 2026-10-26 — phone number used to only reach users.phone through the
+        // OTP-verified PhoneVerificationController flow (see the now-removed
+        // "Send Code" UI this endpoint's old comment referred to). That step
+        // was retired as redundant, so phone is now accepted here directly,
+        // the same way full_name/username already are.
+        //
+        // 2026-10-26 (later same day) — tightened to PH-mobile-only format:
+        // exactly 11 digits, must start with "09" (e.g. 09171234713). This
+        // is the EXACT format already proven to work with the IPROG SMS
+        // gateway (see SmsService::send(), which does zero normalization
+        // and sends users.phone raw) and matches the 2 existing live rows
+        // in users.phone. The account.php "+63" badge is decorative only —
+        // the value that reaches this endpoint is still plain 09XXXXXXXXX,
+        // never a "+63"-prefixed string, so no format change is needed here
+        // to support it. Client-side mirror: PHONE_PATTERN in account.php.
+        $phone = trim((string)$request->input('phone', $currentUser->phone ?? ''));
+        if ($phone !== '' && !preg_match('/^09\d{9}$/', $phone)) {
+            return $this->fail('Phone number must be 11 digits starting with 09 (e.g. 09171234713)', 422);
+        }
+
         if ($fullName === '') {
             return $this->fail('Full name is required', 422);
         }
@@ -439,17 +459,18 @@ class UserController extends Controller
                 return $this->fail('For first-time account setup, setting a new password is required', 422);
             }
 
-            // 2026-10-15 — an Administrator-created account must prove it has
-            // a reachable phone (for SMS report alerts) and a reachable email
-            // before it's allowed to start using the system, not just a new
-            // password. Both only ever reach users.phone / users.verified_email
-            // via their own OTP-verified flow (PhoneVerificationController /
-            // EmailVerificationController) — never through this endpoint — so
-            // checking them here on the freshly-read $currentUser row is proof
-            // the OTP step actually completed, not just that text was typed
-            // into the input.
-            if (empty($currentUser->phone)) {
-                return $this->fail('Please verify your phone number before continuing', 422);
+            // 2026-10-15 — an Administrator-created account must supply a
+            // phone (for SMS report alerts) and a reachable, OTP-verified
+            // email before it's allowed to start using the system, not just
+            // a new password. (2026-10-26: phone no longer needs its own OTP
+            // step — see the $phone block above — so this is now a plain
+            // non-empty check on the value just submitted, same as
+            // full_name.) Email still only ever reaches users.verified_email
+            // via EmailVerificationController, never through this endpoint,
+            // so checking it here on the freshly-read $currentUser row is
+            // proof that OTP step actually completed.
+            if ($phone === '') {
+                return $this->fail('Please enter your phone number before continuing', 422);
             }
 
             if (empty($currentUser->verified_email)) {
@@ -505,6 +526,7 @@ class UserController extends Controller
         $updates = [
             'full_name'            => $fullName,
             'username'             => $username !== '' ? $username : ($currentUser->username ?? null),
+            'phone'                => $phone !== '' ? $phone : null,
             'avatar'               => $avatarPath,
             'force_profile_update' => 0,
             'updated_at'           => now(),
@@ -512,19 +534,13 @@ class UserController extends Controller
         if ($passwordHash) {
             $updates['password'] = $passwordHash;
         }
-        // Phone number is deliberately NOT accepted here. (2026-10-13) It now
-        // only changes through the OTP-verified flow in
-        // PhoneVerificationController/PhoneVerificationService — the user
-        // asked for the number to be proven reachable by SMS before it's
-        // trusted, the same way Email Address already requires a code
-        // before users.verified_email is trusted. Accepting a raw 'phone'
-        // field here would let it bypass that verification entirely.
 
         DB::table('users')->where('user_id', $userId)->update($updates);
 
         $updatedAuthUser = array_merge((array)$authUser, [
             'full_name' => $fullName,
             'avatar'    => $avatarPath,
+            'phone'     => $updates['phone'],
         ]);
         $request->session()->put('auth_user', $updatedAuthUser);
         $request->session()->put('user', $updatedAuthUser);
@@ -535,7 +551,7 @@ class UserController extends Controller
                 'full_name'            => $fullName,
                 'avatar'               => $avatarPath,
                 'force_profile_update' => 0,
-                'phone'                => $currentUser->phone ?? null,
+                'phone'                => $updates['phone'],
             ],
         ]);
     }

@@ -92,6 +92,12 @@ class AuthController extends Controller
             'role'                 => $this->normalizeRoleAlias($user->role),
             'status'               => $user->status,
             'department_id'        => $user->department_id,
+            // header.php's sidebar title for maintenance_admin reads this
+            // directly (the value Administrator sets per-person in User
+            // Management, e.g. "Head Computer") instead of guessing a
+            // department from a department_name key that was never actually
+            // in this session array.
+            'designation'          => $user->designation,
             'avatar'               => $user->avatar,
             // Administrator Need Change SMS alert — carried in the session
             // purely for display/edit convenience in the account settings UI.

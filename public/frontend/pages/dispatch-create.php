@@ -112,28 +112,23 @@ include __DIR__ . '/../includes/header.php';
                         </div>
 
                         <!-- TASK 13 — Dispatch Release Assignment Workflow.
-                             Reuses the existing Components.SearchableSelect
-                             widget and the existing .form-control styling; no
-                             new component and no new styles were introduced.
+                             Primary/Additional hierarchy removal — the two
+                             separate widgets this section used to have
+                             (Primary Release Personnel + Additional
+                             Personnel) are now one flat, equal "Release
+                             Personnel" roster. Reuses the existing
+                             Components.SearchableSelect widget and the
+                             existing .form-control styling; no new component
+                             and no new styles were introduced.
                              Department-based restriction on this list was
                              removed (see DispatchAuthorizationService) — the
-                             helper text below is now the same for every role. -->
-                        <!-- Multi-Personnel Dispatch: Additional Personnel Assignment -->
-                        <div class="form-row-2">
-                            <div class="form-group">
-                                <label for="dc-release-personnel-search">Primary Release Personnel <span style="color:#ef4444;">*</span></label>
-                                <input type="text" id="dc-release-personnel-search" class="form-control" placeholder="Search EELab staff…" autocomplete="off">
-                                <input type="hidden" id="dc-release-personnel-id">
-                                <small class="text-muted">The primary EELab Staff member responsible for the dispatch.</small>
-                            </div>
-
-                            <div class="form-group">
-                                <label for="dc-additional-personnel-search">Additional Personnel (Optional)</label>
-                                <input type="text" id="dc-additional-personnel-search" class="form-control" placeholder="Search and add EELab staff…" autocomplete="off" style="margin-bottom:8px;">
-                                <input type="hidden" id="dc-additional-personnel-id">
-                                <div id="dc-additional-personnel-list" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;"></div>
-                                <small class="text-muted">Add personnel from different departments.</small>
-                            </div>
+                             helper text below is the same for every role. -->
+                        <div class="form-group">
+                            <label for="dc-release-personnel-search">Release Personnel <span style="color:#ef4444;">*</span></label>
+                            <input type="text" id="dc-release-personnel-search" class="form-control" placeholder="Search and add EELab staff…" autocomplete="off" style="margin-bottom:8px;">
+                            <input type="hidden" id="dc-release-personnel-id">
+                            <div id="dc-release-personnel-list" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;"></div>
+                            <small class="text-muted">At least one person is required. Add everyone who will be responsible for releasing this dispatch.</small>
                         </div>
                     </div>
                 </div>
@@ -468,23 +463,23 @@ function addItemRow() {
 }
 
 // ---------------------------------------------------------------------------
-// TASK 41 — Release Personnel selector
+// TASK 41 / Primary-Additional hierarchy removal — Release Personnel roster
+//
+// One flat, equal list: search-and-add, same as the old Additional
+// Personnel widget, minus the mutual-exclusion-with-primary logic that no
+// longer applies now that there is no "primary" to exclude against.
 //
 // Head Maintenance: the endpoint derives the department from the SESSION, so
 // no parameter is passed and the list is already scoped to their department.
-//
-// Administrator: they have no department of their own, so the endpoint is
-// scoped by the chosen DESTINATION department instead. SearchableSelect takes
-// its endpoint as a fixed string and already handles one containing a query
-// string, so the instance is destroyed and rebuilt when the department
-// changes rather than modifying the shared component.
+// Administrator: they have no department of their own, so the list is the
+// same regardless of the chosen destination department (department-based
+// restriction on this endpoint was removed — see
+// DispatchAuthorizationService).
 // ---------------------------------------------------------------------------
 
 let dcPersonnelSelect = null;
+const dcSelectedPersonnel = new Set();
 
-// Department-based scoping of this endpoint was removed (see
-// DispatchAuthorizationService) — the list is now the same regardless of
-// role or the chosen Department, so this only needs to build once.
 function dcBuildPersonnelSelect() {
     if (!(window.Components && typeof Components.SearchableSelect === 'function')) return;
 
@@ -493,108 +488,67 @@ function dcBuildPersonnelSelect() {
         dcPersonnelSelect = null;
     }
 
-    // TASK 75 — SearchableSelect's default hidden-value fallback chain checks
-    // it.id then it.department_id before it.user_id; a personnel row has no
-    // `id` but DOES have `department_id`, so without this override the hidden
-    // field would hold a department id instead of the selected user's id.
     dcPersonnelSelect = new Components.SearchableSelect({
         inputId:    'dc-release-personnel-search',
         hiddenId:   'dc-release-personnel-id',
         endpoint:   '/api/dispatches/support/release-personnel',
         displayKey: 'full_name',
-        onSelect: (personnel) => {
-            const userId = personnel.user_id || 0;
-            document.getElementById('dc-release-personnel-id').value = userId;
-
-            // Validation: if this person is already in additional personnel, remove them
-            if (userId && dcSelectedAdditionalPersonnel.has(userId)) {
-                dcRemoveAdditionalPersonnel(userId, new Event('click'));
-                alert(personnel.full_name + ' was removed from Additional Personnel since they are now the Primary Release Personnel.');
-            }
+        // Hide anyone already added to the roster from the dropdown itself,
+        // instead of letting the user click them again and hit the
+        // "already added" alert below. Read fresh on every render (see
+        // getExcludeIds in components.js).
+        getExcludeIds: () => {
+            const ids = new Set();
+            dcSelectedPersonnel.forEach((id) => ids.add(Number(id)));
+            return ids;
         },
-    });
-}
-
-// ---------------------------------------------------------------------------
-// Multi-Personnel Dispatch Support — Additional Personnel Selection
-// ---------------------------------------------------------------------------
-
-let dcAdditionalPersonnelSelect = null;
-const dcSelectedAdditionalPersonnel = new Set();
-
-function dcBuildAdditionalPersonnelSelect() {
-    if (!(window.Components && typeof Components.SearchableSelect === 'function')) return;
-
-    if (dcAdditionalPersonnelSelect && typeof dcAdditionalPersonnelSelect.destroy === 'function') {
-        dcAdditionalPersonnelSelect.destroy();
-        dcAdditionalPersonnelSelect = null;
-    }
-
-    dcAdditionalPersonnelSelect = new Components.SearchableSelect({
-        inputId:    'dc-additional-personnel-search',
-        hiddenId:   'dc-additional-personnel-id',
-        endpoint:   '/api/dispatches/support/release-personnel',
-        displayKey: 'full_name',
         onSelect: (personnel) => {
             const userId = personnel.user_id || 0;
-            const primaryUserId = parseInt(document.getElementById('dc-release-personnel-id').value || '0', 10) || null;
+            if (!userId) return;
 
-            // Validation: prevent adding same person twice
-            if (!userId) {
-                return;
-            }
-
-            // Prevent adding primary release personnel as additional personnel
-            if (userId === primaryUserId) {
-                alert(personnel.full_name + ' is already assigned as Primary Release Personnel. Cannot add as Additional Personnel.');
-                document.getElementById('dc-additional-personnel-search').value = '';
-                document.getElementById('dc-additional-personnel-id').value = '';
-                if (dcAdditionalPersonnelSelect) {
-                    dcAdditionalPersonnelSelect.clearSelection();
+            // Defensive fallback only — getExcludeIds above already hides
+            // anyone already on the roster, so this should be unreachable
+            // in normal use (e.g. a stale rendered list from a search that
+            // started just before a previous pick).
+            if (dcSelectedPersonnel.has(userId)) {
+                alert(personnel.full_name + ' is already added to Release Personnel.');
+                document.getElementById('dc-release-personnel-search').value = '';
+                document.getElementById('dc-release-personnel-id').value = '';
+                if (dcPersonnelSelect) {
+                    dcPersonnelSelect.clearSelection();
                 }
                 return;
             }
 
-            // Prevent adding same person twice in additional personnel
-            if (dcSelectedAdditionalPersonnel.has(userId)) {
-                alert(personnel.full_name + ' is already added to Additional Personnel.');
-                document.getElementById('dc-additional-personnel-search').value = '';
-                document.getElementById('dc-additional-personnel-id').value = '';
-                if (dcAdditionalPersonnelSelect) {
-                    dcAdditionalPersonnelSelect.clearSelection();
-                }
-                return;
-            }
-
-            dcSelectedAdditionalPersonnel.add(userId);
-            dcUpdateAdditionalPersonnelList(personnel);
+            dcSelectedPersonnel.add(userId);
+            dcUpdatePersonnelList(personnel);
             // Clear the input after selection
-            document.getElementById('dc-additional-personnel-search').value = '';
-            document.getElementById('dc-additional-personnel-id').value = '';
-            if (dcAdditionalPersonnelSelect) {
-                dcAdditionalPersonnelSelect.clearSelection();
+            document.getElementById('dc-release-personnel-search').value = '';
+            document.getElementById('dc-release-personnel-id').value = '';
+            if (dcPersonnelSelect) {
+                dcPersonnelSelect.clearSelection();
             }
         },
     });
 }
 
-function dcUpdateAdditionalPersonnelList(personnel) {
-    const container = document.getElementById('dc-additional-personnel-list');
+function dcUpdatePersonnelList(personnel) {
+    const container = document.getElementById('dc-release-personnel-list');
     const badge = document.createElement('div');
     badge.style.cssText = 'display:flex;align-items:center;gap:6px;padding:6px 10px;background:#f0e7ff;border:1px solid #ddd6fe;border-radius:6px;font-size:13px;font-weight:500;';
     badge.id = 'dc-personnel-' + personnel.user_id;
     badge.innerHTML = `
         <span>${personnel.full_name}</span>
         <button type="button" style="background:none;border:none;color:#6b7280;cursor:pointer;padding:0;font-size:16px;line-height:1;"
-                onclick="dcRemoveAdditionalPersonnel(${personnel.user_id}, event)">×</button>
+                onclick="dcRemovePersonnel(${personnel.user_id}, event)">×</button>
     `;
     container.appendChild(badge);
 }
 
-function dcRemoveAdditionalPersonnel(userId, event) {
+function dcRemovePersonnel(userId, event) {
     event.preventDefault();
     event.stopPropagation();
-    dcSelectedAdditionalPersonnel.delete(userId);
+    dcSelectedPersonnel.delete(userId);
     const badge = document.getElementById('dc-personnel-' + userId);
     if (badge) badge.remove();
 }
@@ -659,15 +613,13 @@ document.getElementById('dc-form').addEventListener('submit', async (e) => {
         return;
     }
 
-    // Multi-Personnel Dispatch: Release Personnel is now optional. When using
-    // multi-personnel dispatch, additional personnel are assigned via the
-    // Additional Personnel field instead. The form requires at least one
-    // personnel assignment (primary or additional).
-    const releaseAssignedTo = parseInt(document.getElementById('dc-release-personnel-id').value || '0', 10) || null;
-    const hasAdditionalPersonnel = dcSelectedAdditionalPersonnel.size > 0;
+    // Primary/Additional hierarchy removal — Release Personnel is one flat,
+    // required roster. Mirrors the server's 'required|array|min:1' rule on
+    // personnel_ids (see DispatchController::store()).
+    const personnelIds = Array.from(dcSelectedPersonnel);
 
-    if (!releaseAssignedTo && !hasAdditionalPersonnel) {
-        dcShowError('Please assign at least one personnel (Primary Release Personnel or Additional Personnel) to this dispatch.');
+    if (personnelIds.length === 0) {
+        dcShowError('Please add at least one Release Personnel to this dispatch.');
         return;
     }
 
@@ -687,17 +639,14 @@ document.getElementById('dc-form').addEventListener('submit', async (e) => {
                 credentials: 'same-origin',
                 headers:     { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
                 body: JSON.stringify({
-                    department_ids:           departmentIds.length > 0 ? departmentIds : [],
-                    room_id:                  parseInt(roomId, 10),
-                    release_assigned_to:       releaseAssignedTo,
-                    // Sent alongside release_assigned_to so the server can
-                    // enforce "at least one personnel" itself (see
-                    // DispatchController::store()) instead of trusting only
-                    // the dcShowError guard above. The actual additional-
-                    // personnel assignment still happens via the separate
-                    // /add-personnel calls below — this array is for
-                    // validation only.
-                    additional_personnel_ids: Array.from(dcSelectedAdditionalPersonnel),
+                    department_ids: departmentIds.length > 0 ? departmentIds : [],
+                    room_id:        parseInt(roomId, 10),
+                    // Primary/Additional hierarchy removal — the whole
+                    // roster is created in one request now; createDispatch()
+                    // writes every id into dispatch_personnel_assignments in
+                    // the same transaction as the dispatch itself, so the
+                    // old create-then-loop-/add-personnel sequence is gone.
+                    personnel_ids:  personnelIds,
                     items,
                 }),
             }
@@ -708,27 +657,6 @@ document.getElementById('dc-form').addEventListener('submit', async (e) => {
         }
 
         const newId = payload.data?.dispatch_id;
-
-        // Assign additional personnel if any were selected
-        if (newId && dcSelectedAdditionalPersonnel.size > 0) {
-            try {
-                for (const personelUserId of dcSelectedAdditionalPersonnel) {
-                    await dcFetch(
-                        `/api/dispatches/${newId}/add-personnel`,
-                        {
-                            method:      'POST',
-                            credentials: 'same-origin',
-                            headers:     { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
-                            body: JSON.stringify({
-                                personnel_user_id: personelUserId,
-                            }),
-                        }
-                    );
-                }
-            } catch (personnelErr) {
-                console.warn('Some personnel assignments failed, but dispatch was created:', personnelErr);
-            }
-        }
 
         window.location.href = newId ? `${DC_BASE}/${newId}` : DC_BASE;
     } catch (err) {
@@ -756,15 +684,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         // this scales no matter how many rooms the school adds later.
         dcBuildRoomSelect();
 
-        // TASK 13 / TASK 41 — Release Personnel selector. Built once by
-        // dcBuildPersonnelSelect() above; no longer rebuilt when Department
-        // changes, since the list it loads no longer depends on Department
-        // for either role (see DispatchAuthorizationService class comment).
+        // TASK 13 / TASK 41 / Primary-Additional hierarchy removal — Release
+        // Personnel roster selector. Built once; the list it loads no
+        // longer depends on Department for either role (see
+        // DispatchAuthorizationService class comment).
         dcBuildPersonnelSelect();
-
-        // Multi-Personnel Dispatch: Additional Personnel selector for assigning
-        // multiple staff from different departments to dispatch relevant items.
-        dcBuildAdditionalPersonnelSelect();
     }
 
     // Items must load before the first row is added so the select is populated

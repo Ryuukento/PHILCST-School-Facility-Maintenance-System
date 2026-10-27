@@ -2279,9 +2279,16 @@ function createDeployedItemCard(item) {
     // Category came through as COALESCE(c.name, 'Uncategorized') from
     // BuildingController::deployedItems(), so it never actually read "Not
     // specified" even when no category was set — just a permanent
-    // "Uncategorized" with no useful signal. Asset Code is already selected
-    // by that same query (i.asset_code, the dispatched stock item's code)
-    // but was never surfaced on this card.
+    // "Uncategorized" with no useful signal.
+    // 2026-10-27 — item.asset_code used to render "Not specified" for every
+    // dispatch-sourced row: i.asset_code (the plain inventory item's code)
+    // is NOT the per-unit SFMS code for anything released through the normal
+    // Dispatch -> Approve -> Release flow — that lives in deployed_assets,
+    // one row per physical unit, registered at release time when "Track as
+    // Assets" is used. BuildingController::deployedItems() now backfills
+    // asset_code from deployed_assets for those rows before this endpoint
+    // responds (same fix already applied to DeploymentTrackingController),
+    // so this field is safe to render as-is again.
     const detailGrid = document.createElement('div');
     detailGrid.className = 'item-detail-grid';
     detailGrid.appendChild(detailField('Quantity', item.quantity));

@@ -668,80 +668,12 @@
     background: rgba(248, 113, 113, 0.08);
 }
 
-.inventory-entry-history-card {
-    margin-top: 20px;
-}
-
-.inventory-entry-history-header {
-    align-items: flex-start;
-}
-
-.inventory-entry-subtitle {
-    margin: 6px 0 0;
-}
-
-.inventory-entry-filters-grid {
-    display: grid;
-    grid-template-columns: repeat(6, minmax(0, 1fr));
-    gap: 12px;
-    margin-bottom: 16px;
-}
-
-.inventory-entry-filters-grid .inventory-entry-clear-btn {
-    min-height: 42px;
-    align-self: stretch;
-}
-
-.inventory-entry-table-wrap {
-    overflow: auto;
-}
+/* 2026-10-26 — .inventory-entry-* rules (history card, filters grid,
+   id banner, qty pill) removed: they styled the "Inventory Entry"
+   button/modal/history card, all deleted from inventory.php. */
 
 .inventory-history-table-wrap {
     overflow: auto;
-}
-
-.inventory-entry-table th,
-.inventory-entry-table td {
-    vertical-align: top;
-}
-
-.inventory-entry-qty-pill {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    margin-left: 8px;
-    padding: 4px 10px;
-    border-radius: 999px;
-    background: rgba(96, 165, 250, 0.18);
-    color: #dbeafe;
-    font-size: 12px;
-    font-weight: 700;
-    white-space: nowrap;
-}
-
-.inventory-entry-id-banner {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    margin-bottom: 18px;
-    padding: 14px 16px;
-    border-radius: 14px;
-    border: 1px solid rgba(96, 165, 250, 0.28);
-    background: rgba(30, 64, 175, 0.18);
-}
-
-.inventory-entry-id-label {
-    font-size: 12px;
-    font-weight: 700;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: #bfdbfe;
-}
-
-.inventory-entry-id-banner strong {
-    color: #ffffff;
-    font-size: 16px;
 }
 
 .inventory-table-actions {
@@ -915,20 +847,6 @@ main.inventory-page .table tbody tr:hover td {
     color: #111827 !important;
 }
 
-:root[data-theme-resolved='light'] .inventory-entry-id-banner {
-    background: #eff6ff !important;
-    border-color: #bfdbfe !important;
-}
-
-:root[data-theme-resolved='light'] .inventory-entry-id-label,
-:root[data-theme-resolved='light'] .inventory-entry-qty-pill {
-    color: #1d4ed8 !important;
-}
-
-:root[data-theme-resolved='light'] .inventory-entry-qty-pill {
-    background: #dbeafe !important;
-}
-
 :root[data-theme-resolved='light'] .inventory-category-admin-card,
 :root[data-theme-resolved='light'] .inventory-category-admin-stat {
     background: #ffffff !important;
@@ -993,10 +911,6 @@ main.inventory-page .table tbody tr:hover td {
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
-    .inventory-entry-filters-grid {
-        grid-template-columns: 1fr;
-    }
-
     .inventory-items-filter-grid {
         grid-template-columns: 1fr;
     }
@@ -1011,11 +925,6 @@ main.inventory-page .table tbody tr:hover td {
     .inventory-category-admin-grid,
     .inventory-category-admin-stats {
         grid-template-columns: 1fr;
-    }
-
-    .inventory-entry-id-banner {
-        flex-direction: column;
-        align-items: flex-start;
     }
 
     .inventory-modal-header,

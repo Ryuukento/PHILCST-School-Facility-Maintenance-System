@@ -106,17 +106,14 @@ class DispatchService
                 // named here, RepairService::fulfillReplacement(), has been
                 // retired. The pass-through itself is unchanged.)
                 'requested_by'        => $data['requested_by']        ?? $actorUserId,
-                // TASK 13 — Dispatch Release Assignment Workflow: Head
-                // Maintenance picks the Release Personnel as part of creating
-                // the dispatch. Optional at the service layer so a programmatic
-                // internal caller with no Head in the loop can omit it. (TASK
-                // 13 — the internal caller this named,
-                // RepairService::fulfillReplacement(), has been retired; the
-                // parameter stays optional.) The public create endpoint
-                // requires it (see DispatchController::store()).
-                'release_assigned_to' => $data['release_assigned_to']  ?? null,
-                'release_assigned_by' => isset($data['release_assigned_to']) ? $actorUserId : null,
-                'release_assigned_at' => isset($data['release_assigned_to']) ? now() : null,
+                // Primary/Additional hierarchy removal — release_assigned_to/
+                // _by/_at are no longer written for dispatches created after
+                // this change. They stay NULL forever on every new dispatch;
+                // dispatch_personnel_assignments (written below, once per
+                // selected person) is now the sole source of truth for who
+                // may release a dispatch. Pre-existing dispatches keep their
+                // historical values untouched — these columns are not backed
+                // out, only stopped being written going forward.
                 'room_id'             => $data['room_id']             ?? null,
                 'room_note'           => $data['room_note']           ?? null,
                 // TASK 13 (Repair retirement) — the 'repair_request_id'
@@ -149,6 +146,23 @@ class DispatchService
                 ]);
             }
 
+            // Primary/Additional hierarchy removal — every selected person is
+            // written into the flat roster at creation time, inside this same
+            // transaction. Previously only /add-personnel calls (for
+            // "additional" people) wrote this pivot; the primary person was
+            // written to release_assigned_to instead and never appeared here
+            // at all. Now there is no primary — everyone selected lands in
+            // dispatch_personnel_assignments the same way.
+            $personnelIds = array_values(array_unique(array_map('intval', $data['personnel_ids'] ?? [])));
+            foreach ($personnelIds as $personnelId) {
+                \App\Models\DispatchPersonnelAssignment::query()->create([
+                    'dispatch_id' => $dispatch->id,
+                    'personnel_user_id' => $personnelId,
+                    'assigned_by' => $actorUserId,
+                    'assigned_at' => now(),
+                ]);
+            }
+
             // A dispatch that skips approval is "approved" from the start, so
             // it gets the same stock check approveDispatch() applies (the
             // whole transaction rolls back if stock is short).
@@ -167,10 +181,10 @@ class DispatchService
                     'meta' => [
                         'dispatch_code' => $dispatchCode,
                         'items_count' => count($data['items']),
-                        // TASK 13 §7 — the audit trail must show who assigned
-                        // the release personnel; for the normal flow that is
-                        // the creating Head, recorded here at creation time.
-                        'release_assigned_to' => $data['release_assigned_to'] ?? null,
+                        // Primary/Additional hierarchy removal — the audit
+                        // trail now shows the whole flat roster assigned at
+                        // creation time, not a single primary person.
+                        'personnel_ids' => $personnelIds,
                         // TASK 41 — the audit trail must record that this
                         // dispatch legitimately skipped approval, since
                         // approved_by stays NULL and would otherwise look like
@@ -191,92 +205,19 @@ class DispatchService
             // a second wording, and it cannot double-fire: approveDispatch()
             // only accepts a 'pending' dispatch, and this one is already
             // 'approved'.
-            if (!$requiresApproval && !empty($data['release_assigned_to'])) {
-                $this->notificationService->notify(
-                    (int) $data['release_assigned_to'],
-                    'Dispatch Ready For Release',
-                    'Dispatch ' . $dispatchCode . ' has been created and is ready for you to release.',
-                    'dispatch',
-                    $dispatch->id
-                );
+            if (!$requiresApproval) {
+                foreach ($personnelIds as $personnelId) {
+                    $this->notificationService->notify(
+                        $personnelId,
+                        'Dispatch Ready For Release',
+                        'Dispatch ' . $dispatchCode . ' has been created and is ready for you to release.',
+                        'dispatch',
+                        $dispatch->id
+                    );
+                }
             }
 
             return $dispatch->load('items.item');
-        });
-    }
-
-    /**
-     * TASK 13 — Dispatch Release Assignment Workflow: assign / reassign the
-     * Maintenance Staff member who will physically release this dispatch.
-     *
-     * Creation already captures an assignment (see createDispatch above), so
-     * this method exists for the *change* case: Head Maintenance correcting
-     * the assignment while the dispatch is still Pending, or after it has been
-     * Approved but before it has been Released.
-     *
-     * Authorization (role, department, and the status window) is enforced by
-     * DispatchAuthorizationService at the controller boundary — this method
-     * re-checks the status under a row lock only, because status is the one
-     * input that can change between the controller's check and this write.
-     */
-    public function assignReleasePersonnel(
-        Dispatch $dispatch,
-        int $releaseAssignedTo,
-        ?int $actorUserId = null
-    ): Dispatch {
-        return DB::transaction(function () use ($dispatch, $releaseAssignedTo, $actorUserId): Dispatch {
-            $locked = Dispatch::query()->whereKey($dispatch->id)->lockForUpdate()->first();
-
-            // Re-checked under the lock: a release could have committed
-            // between the controller's authorization check and this write,
-            // and reassigning an already-released dispatch would rewrite
-            // history for inventory that has physically moved.
-            if (!$locked || !in_array($locked->status, ['pending', 'approved'], true)) {
-                throw ValidationException::withMessages([
-                    'status' => 'Release personnel can only be changed before the dispatch is released.',
-                ]);
-            }
-
-            $previousAssignee = $locked->release_assigned_to !== null ? (int) $locked->release_assigned_to : null;
-
-            $locked->update([
-                'release_assigned_to' => $releaseAssignedTo,
-                'release_assigned_by' => $actorUserId,
-                'release_assigned_at' => now(),
-            ]);
-
-            $assigneeName = User::query()->find($releaseAssignedTo)?->full_name ?? 'Unknown personnel';
-
-            if ($actorUserId) {
-                $this->activityLogService->logFromSession([
-                    'user_id' => $actorUserId,
-                    'action' => 'ASSIGN_DISPATCH_RELEASE_PERSONNEL',
-                    'module' => 'dispatch',
-                    'entity_type' => 'dispatch',
-                    'entity_id' => $locked->id,
-                    'details' => 'Assigned ' . $assigneeName . ' as release personnel for Dispatch ' . $locked->dispatch_code . '.',
-                    'meta' => [
-                        'dispatch_code' => $locked->dispatch_code,
-                        'release_assigned_to' => $releaseAssignedTo,
-                        'release_assigned_to_name' => $assigneeName,
-                        'previous_release_assigned_to' => $previousAssignee,
-                    ],
-                ]);
-            }
-
-            // Only notify on a genuine change of assignee. Re-saving the same
-            // person (e.g. an unchanged form submit) should not spam them.
-            if ($previousAssignee !== $releaseAssignedTo) {
-                $this->notificationService->notify(
-                    $releaseAssignedTo,
-                    'Dispatch Assigned To You',
-                    'You have been assigned to release Dispatch ' . $locked->dispatch_code . '.',
-                    'dispatch',
-                    $locked->id
-                );
-            }
-
-            return $locked->fresh('items.item');
         });
     }
 
@@ -329,13 +270,16 @@ class DispatchService
                 ]);
             }
 
-            // TASK 13 — a dispatch with no assigned release personnel could
-            // never be released by anyone (canReleaseDispatch() requires an
-            // identity match), so approving it would create a permanently
-            // stuck record. Refuse early with an actionable message.
-            if (!$locked->release_assigned_to) {
+            // TASK 13 — a dispatch with an empty personnel roster could never
+            // be released by anyone (canReleaseDispatch() requires roster
+            // membership), so approving it would create a permanently stuck
+            // record. Refuse early with an actionable message. Primary/
+            // Additional hierarchy removal — this now checks the flat
+            // dispatch_personnel_assignments roster instead of a single
+            // release_assigned_to column.
+            if ($locked->personnelAssignments()->doesntExist()) {
                 throw ValidationException::withMessages([
-                    'release_assigned_to' => 'This dispatch has no assigned release personnel and cannot be approved.',
+                    'personnel_ids' => 'This dispatch has no release personnel and cannot be approved.',
                 ]);
             }
 
@@ -352,7 +296,13 @@ class DispatchService
                 'status' => 'approved',
             ]);
 
-            $assigneeName = User::query()->find((int) $locked->release_assigned_to)?->full_name ?? 'the assigned personnel';
+            // Primary/Additional hierarchy removal — the roster is a flat
+            // list of equals, so the audit trail and notification below cover
+            // everyone on it rather than a single "the assignee" name.
+            $roster = $locked->personnelAssignments()->with('personnel')->get();
+            $rosterNames = $roster->pluck('personnel.full_name')->filter()->values()->all();
+            $rosterIds = $roster->pluck('personnel_user_id')->map(fn ($id) => (int) $id)->values()->all();
+            $assigneeSummary = $rosterNames !== [] ? implode(', ', $rosterNames) : 'the assigned personnel';
 
             if ($actorUserId) {
                 $this->activityLogService->logFromSession([
@@ -361,25 +311,30 @@ class DispatchService
                     'module' => 'dispatch',
                     'entity_type' => 'dispatch',
                     'entity_id' => $locked->id,
-                    'details' => 'Administrator approved Dispatch ' . $locked->dispatch_code . '. Awaiting release by ' . $assigneeName . '.',
+                    'details' => 'Administrator approved Dispatch ' . $locked->dispatch_code . '. Awaiting release by ' . $assigneeSummary . '.',
                     'meta' => [
                         'dispatch_code' => $locked->dispatch_code,
-                        'release_assigned_to' => (int) $locked->release_assigned_to,
-                        'release_assigned_to_name' => $assigneeName,
+                        'personnel_ids' => $rosterIds,
+                        'personnel_names' => $rosterNames,
                     ],
                 ]);
             }
 
-            // TASK 13 §8 — the assigned Release Personnel is notified when the
-            // dispatch becomes Approved, because that is the moment their work
-            // becomes actionable.
-            $this->notificationService->notify(
-                (int) $locked->release_assigned_to,
-                'Dispatch Ready For Release',
-                'Dispatch ' . $locked->dispatch_code . ' has been approved and is ready for you to release.',
-                'dispatch',
-                $locked->id
-            );
+            // TASK 13 §8 — every Release Personnel on the roster is notified
+            // when the dispatch becomes Approved, because that is the moment
+            // their work becomes actionable. Primary/Additional hierarchy
+            // removal — previously only the single release_assigned_to person
+            // was notified; now every roster member is, since none of them is
+            // "more primary" than another.
+            foreach ($rosterIds as $rosterUserId) {
+                $this->notificationService->notify(
+                    $rosterUserId,
+                    'Dispatch Ready For Release',
+                    'Dispatch ' . $locked->dispatch_code . ' has been approved and is ready for you to release.',
+                    'dispatch',
+                    $locked->id
+                );
+            }
 
             $this->notifyDispatchLinkedParty(
                 $locked,
@@ -732,8 +687,12 @@ class DispatchService
 
             // TASK 13 §8 — Head Maintenance is notified after the release.
             // requested_by is the Head who created the dispatch under the new
-            // workflow; release_assigned_by covers a dispatch whose assignment
-            // was later changed by a different Head.
+            // workflow. release_assigned_by is permanently NULL on every
+            // dispatch created after the Primary/Additional hierarchy removal
+            // (nothing writes it anymore), so this fallback only ever
+            // resolves through requested_by for those dispatches — it is kept
+            // here, unchanged, purely so a legacy dispatch that still carries
+            // a release_assigned_by value keeps notifying that same person.
             $headToNotify = (int) ($locked->release_assigned_by ?? $locked->requested_by ?? 0);
             if ($headToNotify > 0 && $headToNotify !== $releasedBy) {
                 $this->notificationService->notify(
@@ -772,10 +731,15 @@ class DispatchService
     /**
      * Multi-Personnel Dispatch Support: Assign personnel to a dispatch.
      *
-     * Allows multiple maintenance staff from different departments to be assigned
-     * to a single dispatch. Each person will only dispatch items relevant to their
-     * department. This complements the existing release_assigned_to field which
-     * represents the primary release person.
+     * Allows multiple maintenance staff from different departments to be
+     * assigned to a single dispatch. Each person will only dispatch items
+     * relevant to their department.
+     *
+     * Primary/Additional hierarchy removal — this is now the ONE primitive
+     * that adds anyone to a dispatch's roster, used both by createDispatch()
+     * (everyone selected at creation) and by the add-personnel endpoint
+     * (anyone added afterward). There is no separate "primary" write path
+     * anymore — release_assigned_to is never populated going forward.
      */
     public function assignPersonnelToDispatch(
         Dispatch $dispatch,
@@ -830,6 +794,69 @@ class DispatchService
             );
 
             return $dispatch->fresh('personnelAssignments.personnel', 'items.item');
+        });
+    }
+
+    /**
+     * Primary/Additional hierarchy removal — the flat-roster counterpart to
+     * assignPersonnelToDispatch(): deletes one person's pivot row.
+     *
+     * No minimum-roster-size check: per product decision the roster is
+     * allowed to go to zero. A zero-personnel dispatch simply becomes
+     * unapprovable (see approveDispatch()'s guard) / unreleasable (see
+     * DispatchAuthorizationService::canReleaseDispatch()) until someone is
+     * added back — removal itself is never blocked by roster size.
+     *
+     * Authorization (role + status window) is enforced by
+     * DispatchAuthorizationService::canRemoveDispatchPersonnel() at the
+     * controller boundary — this method re-checks the status under a row
+     * lock only, because status is the one input that can change between the
+     * controller's check and this write.
+     */
+    public function removePersonnelFromDispatch(
+        Dispatch $dispatch,
+        int $personnelUserId,
+        ?int $actorUserId = null
+    ): Dispatch {
+        return DB::transaction(function () use ($dispatch, $personnelUserId, $actorUserId): Dispatch {
+            $locked = Dispatch::query()->whereKey($dispatch->id)->lockForUpdate()->first();
+
+            if (!$locked || !in_array($locked->status, ['pending', 'approved'], true)) {
+                throw ValidationException::withMessages([
+                    'status' => 'Release personnel can only be changed before the dispatch is released.',
+                ]);
+            }
+
+            $assignment = \App\Models\DispatchPersonnelAssignment::query()
+                ->where('dispatch_id', $locked->id)
+                ->where('personnel_user_id', $personnelUserId)
+                ->first();
+
+            if (!$assignment) {
+                return $locked->fresh('personnelAssignments.personnel', 'items.item');
+            }
+
+            $personnelName = User::query()->find($personnelUserId)?->full_name ?? 'Unknown personnel';
+
+            $assignment->delete();
+
+            if ($actorUserId) {
+                $this->activityLogService->logFromSession([
+                    'user_id' => $actorUserId,
+                    'action' => 'REMOVE_DISPATCH_PERSONNEL',
+                    'module' => 'dispatch',
+                    'entity_type' => 'dispatch',
+                    'entity_id' => $locked->id,
+                    'details' => 'Removed ' . $personnelName . ' from dispatch ' . $locked->dispatch_code . '.',
+                    'meta' => [
+                        'dispatch_code' => $locked->dispatch_code,
+                        'personnel_user_id' => $personnelUserId,
+                        'personnel_name' => $personnelName,
+                    ],
+                ]);
+            }
+
+            return $locked->fresh('personnelAssignments.personnel', 'items.item');
         });
     }
 
@@ -939,10 +966,20 @@ class DispatchService
             }
 
             // releaseDispatch() records who physically released the stock, so
-            // it needs a real person. Fall back to the assigned release
-            // personnel; with neither, the dispatch stays approved rather than
-            // being released without an accountable releaser.
-            $releasedBy = $releasedBy ?: ($locked->release_assigned_to !== null ? (int) $locked->release_assigned_to : null);
+            // it needs a real person. Fall back to the earliest-assigned
+            // roster member; with neither, the dispatch stays approved rather
+            // than being released without an accountable releaser.
+            //
+            // Primary/Additional hierarchy removal — release_assigned_to is
+            // permanently NULL on every dispatch created after this change,
+            // so this can no longer fall back to it. The pivot row with the
+            // oldest assigned_at is used instead (same tie-break a "primary"
+            // person would have had, since they were always the first one
+            // written at creation time).
+            if (!$releasedBy) {
+                $earliestAssignment = $locked->personnelAssignments()->oldest('assigned_at')->first();
+                $releasedBy = $earliestAssignment ? (int) $earliestAssignment->personnel_user_id : null;
+            }
             if (!$releasedBy) {
                 return $locked;
             }

@@ -134,6 +134,15 @@
        white/surface — only the outer edge is purple. */
     border: 1px solid var(--purple-border, var(--border));
     color: var(--text-light);
+    /* A modal whose content (header + body + footer, all sharing this one
+       padded box) is taller than the viewport used to have no way to
+       reach its own title/close button or its footer action buttons --
+       flex-centering on .modal just let it overflow past both the top and
+       bottom edges of the screen with nothing to scroll. Cap it and let it
+       scroll as a unit instead; most modals are shorter than this and are
+       visually unaffected. */
+    max-height: 90vh;
+    overflow-y: auto;
 }
 
 .modal-header {

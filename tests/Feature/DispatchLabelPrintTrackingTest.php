@@ -30,7 +30,7 @@ class DispatchLabelPrintTrackingTest extends TestCase
 
         $this->useInMemoryDatabase('dispatch_label_print_tracking_testing');
         Schema::disableForeignKeyConstraints();
-        foreach (['dispatch_items', 'dispatches', 'activity_logs', 'maintenance_reports', 'items', 'rooms', 'departments', 'users'] as $table) {
+        foreach (['dispatch_personnel_assignments', 'dispatch_items', 'dispatches', 'activity_logs', 'maintenance_reports', 'items', 'rooms', 'departments', 'users'] as $table) {
             Schema::dropIfExists($table);
         }
         $this->createUsersTable();
@@ -41,6 +41,7 @@ class DispatchLabelPrintTrackingTest extends TestCase
         $this->createMaintenanceReportsTable();
         $this->createDispatchesTable();
         $this->createDispatchItemsTable();
+        $this->createDispatchPersonnelAssignmentsTable();
         Schema::enableForeignKeyConstraints();
         $this->forceLocalTestUrl();
 
@@ -94,8 +95,28 @@ class DispatchLabelPrintTrackingTest extends TestCase
 
     public function test_maintenance_staff_can_only_mark_their_own_dispatches(): void
     {
-        $own = $this->seedDispatch(['release_assigned_to' => $this->staffId]);
-        $someoneElses = $this->seedDispatch(['release_assigned_to' => $this->otherStaffId]);
+        // Primary/Additional hierarchy removal — "their own" now means
+        // "on the flat Release Personnel roster" (dispatch_personnel_assignments),
+        // not a single release_assigned_to column.
+        $own = $this->seedDispatch();
+        DB::table('dispatch_personnel_assignments')->insert([
+            'dispatch_id' => $own,
+            'personnel_user_id' => $this->staffId,
+            'assigned_by' => null,
+            'assigned_at' => now(),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $someoneElses = $this->seedDispatch();
+        DB::table('dispatch_personnel_assignments')->insert([
+            'dispatch_id' => $someoneElses,
+            'personnel_user_id' => $this->otherStaffId,
+            'assigned_by' => null,
+            'assigned_at' => now(),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
 
         $this->actingAsSessionUserWithFlatKeys($this->staffId, 'maintenance_staff')
             ->postJson('/api/dispatches/labels-printed', ['dispatch_ids' => [$own, $someoneElses]])

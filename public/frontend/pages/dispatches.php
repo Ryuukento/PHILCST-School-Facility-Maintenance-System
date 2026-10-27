@@ -314,26 +314,23 @@ function dspApproverCell(row) {
     `;
 }
 
-// TASK 13.1 §2 — "Release Personnel" column. Everything rendered here is
-// already on the list payload (release_assigned_to_name is an appended
-// attribute; release_assigned_to_user is eager-loaded by
-// DispatchController::index()), so this adds no API call and no new endpoint.
-//
-// The department line is deliberately conservative. The assignee's OWN
-// department name is not in the payload — only their department_id is — and
-// eager-loading the relation would be a backend change this task excludes. In
-// this workflow the assignee always belongs to the dispatch's department, so
-// dispatch.department_name IS their department; but rather than assume that,
-// the ids are compared and the caption is simply omitted when they disagree.
-// Better a missing line than a confidently wrong one.
-function dspAssigneeDepartment(row) {
-    const assignee = row.release_assigned_to_user;
-    const deptName = row.department_name || row.department?.name;
-    if (!assignee || !deptName) return null;
+// Primary/Additional hierarchy removal — the roster is now the flat
+// dispatch_personnel_assignments list (row.personnel_assignments, with each
+// row's .personnel sub-object), eager-loaded by DispatchController::index()
+// alongside the rest of the list payload, so this still adds no API call and
+// no new endpoint. Mirrors ddRosterList()/ddRosterSummaryText() in
+// dispatch-detail.php so the same dispatch reads identically on both pages.
+function dspRosterList(row) {
+    return Array.isArray(row?.personnel_assignments) ? row.personnel_assignments : [];
+}
 
-    const a = assignee.department_id === null || assignee.department_id === undefined ? null : Number(assignee.department_id);
-    const d = row.department_id === null || row.department_id === undefined ? null : Number(row.department_id);
-    return a !== null && a === d ? deptName : null;
+const DSP_ROSTER_SUMMARY_MAX = 2;
+function dspRosterSummaryText(row) {
+    const names = dspRosterList(row).map((a) => a.personnel_name).filter(Boolean);
+    if (!names.length) return '';
+    const shown = names.slice(0, DSP_ROSTER_SUMMARY_MAX);
+    const remaining = names.length - shown.length;
+    return remaining > 0 ? `${shown.join(', ')} +${remaining} more` : shown.join(', ');
 }
 
 // TASK 13.2 §7 — the RELEASE state, which is a different fact from the
@@ -346,7 +343,7 @@ function dspAssigneeDepartment(row) {
 function dspAssignmentStatus(row) {
     const status = String(row.status || '').toLowerCase();
 
-    if (!row.release_assigned_to) return { label: 'Not Assigned', tone: 'pending' };
+    if (!dspRosterList(row).length) return { label: 'Not Assigned', tone: 'pending' };
     if (status === 'cancelled') {
         return /Rejected:/i.test(String(row.notes || ''))
             ? { label: 'Rejected', tone: 'cancelled' }
@@ -357,25 +354,37 @@ function dspAssignmentStatus(row) {
     return { label: 'Waiting for Approval', tone: 'pending' };
 }
 
+// Primary/Additional hierarchy removal — this used to render ONE assignee
+// (release_assigned_to_name) with their own department caption. It now
+// renders the flat roster as a name summary (comma + "+N more", per
+// dspRosterSummaryText() above), with the first roster member's avatar
+// standing in for the group since a table cell has no room for N avatars.
+// The per-person department caption is dropped rather than guessed at for a
+// multi-person roster — same "a missing line beats a confidently wrong one"
+// reasoning the single-assignee version used, just no longer answerable for
+// more than one person.
 function dspReleasePersonnelCell(row) {
-    const name = row.release_assigned_to_name;
-    if (!name) {
+    const roster = dspRosterList(row);
+    if (!roster.length) {
         return '<span class="dispatches-muted-cell">Not assigned</span>';
     }
+
+    const summary = dspRosterSummaryText(row);
+    const first = roster[0];
+    const firstName = first.personnel_name || '';
 
     // Reuses the shared avatar trio from styles.css (.user-avatar-wrap /
     // .avatar-circle / .avatar-img) — the same one the sidebar renders — so
     // there is no second avatar component. The initial sits underneath and the
     // photo is layered over it, then removed if it fails to load.
-    const avatarUrl = row.release_assigned_to_user?.avatar;
-    const initial = String(name).trim().charAt(0).toUpperCase() || '?';
+    const avatarUrl = first.personnel?.avatar;
+    const initial = String(firstName).trim().charAt(0).toUpperCase() || '?';
     // TASK 13.2 §9 — the photo now carries the person's name as alt text
     // instead of alt="", and the initial underneath is aria-hidden, so a
     // screen reader announces the name exactly once whichever one renders.
     const photo = avatarUrl
-        ? `<img src="${dspEscapeHtml(avatarUrl)}" alt="${dspEscapeHtml(name)}" class="avatar-img dispatches-assignee-photo" onerror="this.remove();">`
+        ? `<img src="${dspEscapeHtml(avatarUrl)}" alt="${dspEscapeHtml(firstName)}" class="avatar-img dispatches-assignee-photo" onerror="this.remove();">`
         : '';
-    const department = dspAssigneeDepartment(row);
     const state = dspAssignmentStatus(row);
 
     // TASK 78 — once a dispatch is released, dspAssignmentStatus() and the
@@ -395,8 +404,7 @@ function dspReleasePersonnelCell(row) {
                 <span class="avatar-circle" aria-hidden="true">${dspEscapeHtml(initial)}</span>${photo}
             </span>
             <div class="dispatches-assignee-text">
-                <div class="dispatches-cell-primary">${dspEscapeHtml(name)}</div>
-                ${department ? `<div class="dispatches-cell-secondary">${dspEscapeHtml(department)}</div>` : ''}
+                <div class="dispatches-cell-primary">${dspEscapeHtml(summary)}</div>
                 ${stateBadge}
             </div>
         </div>
@@ -499,7 +507,10 @@ async function printDispatchReport() {
             const deptName = row.department_name || row.department?.name;
             const roomName = row.room_name || row.room?.name;
             const itemCount = Number(row.item_count || 0);
-            const assignee = row.release_assigned_to_name;
+            // Primary/Additional hierarchy removal — the printed column shows
+            // the same roster summary (comma + "+N more") as the on-screen
+            // cell, not a single release_assigned_to_name.
+            const assignee = dspRosterSummaryText(row);
             const approverRole = dspRoleLabel(row.approved_by_user?.role);
 
             return `

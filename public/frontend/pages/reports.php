@@ -47,6 +47,17 @@ if ($canFilterByDepartment) {
     $myDeptId = $myDeptStmt->fetchColumn();
 }
 
+// Default the Department filter to "My Dept" (not "All Departments") for
+// Head Maintenance and Maintenance Staff ONLY, per request: clicking All
+// Reports from their sidebar used to always land on "All Departments", so
+// they had to filter it down to their own department by hand every time.
+// Administrator is deliberately excluded — they oversee every department
+// and should keep seeing everything by default. This only changes which
+// <option> is pre-selected below; the dropdown itself is untouched; they
+// can still switch to "All Departments" or any other one at any time.
+$defaultToOwnDepartment = in_array($currentRole, ['maintenance_staff', 'maintenance_admin'], true)
+    && !empty($myDeptId);
+
 // TASK 9 — the current user's department, used to hide/disable modification
 // actions whenever user.department_id != report.department_id (Administrator
 // is exempt). Prefer the session value written at login by AuthController,
@@ -206,12 +217,14 @@ include __DIR__ . '/../includes/header.php';
 
                 <?php if ($canFilterByDepartment && !empty($filterDepartments)): ?>
                 <select id="filter-department" class="form-control reports-filter-select">
-                    <option value="">All Departments</option>
+                    <option value=""<?php echo $defaultToOwnDepartment ? '' : ' selected'; ?>>All Departments</option>
                     <?php foreach ($filterDepartments as $dept): ?>
+                    <?php $isMyDept = isset($myDeptId) && $myDeptId == $dept['department_id']; ?>
                     <option value="<?php echo $dept['department_id']; ?>"
-                        <?php echo (isset($myDeptId) && $myDeptId == $dept['department_id']) ? 'data-my-dept="1"' : ''; ?>>
+                        <?php echo $isMyDept ? 'data-my-dept="1"' : ''; ?>
+                        <?php echo ($defaultToOwnDepartment && $isMyDept) ? 'selected' : ''; ?>>
                         <?php echo htmlspecialchars($dept['name']); ?>
-                        <?php echo (isset($myDeptId) && $myDeptId == $dept['department_id']) ? ' (My Dept)' : ''; ?>
+                        <?php echo $isMyDept ? ' (My Dept)' : ''; ?>
                     </option>
                     <?php endforeach; ?>
                 </select>
@@ -604,8 +617,17 @@ include __DIR__ . '/../includes/header.php';
      `.reports-actions-buttons` flex div. A browser holding the 20260922
      stylesheet has no rule for that new div (it would sit unstyled, inline,
      with no gap) and would still apply the old 9% Actions column against
-     the new markup, so the bump is required, not cosmetic. -->
-<link rel="stylesheet" href="<?php echo htmlspecialchars(public_url('/frontend/assets/css/reports.inline1.css?v=20260922-2')); ?>">
+     the new markup, so the bump is required, not cosmetic.
+
+     Bumped again 20260922-2 -> 20261026 to fix a stray divider line cutting
+     across the Report column: .reports-cell-report had display: flex,
+     which (unlike a plain <td>) Chrome does not stretch to the row's full
+     height, so the cell's own border-bottom floated above the row's real
+     bottom edge instead of sitting flush with every other column's. Fixed
+     by dropping display: flex in favor of vertical-align: middle (see
+     reports.inline1.css). A browser holding the old stylesheet would still
+     show the stray line, so the bump is required, not cosmetic. -->
+<link rel="stylesheet" href="<?php echo htmlspecialchars(public_url('/frontend/assets/css/reports.inline1.css?v=20261026')); ?>">
 <link rel="stylesheet" href="<?php echo htmlspecialchars(public_url('/frontend/assets/css/enterprise-reports.css?v=20260726-1')); ?>">
 <!-- TASK 29 — Need Change (Edit Report): reuses create-report.php's existing
      .need-change-* component styles wholesale (unscoped rules, lines 29-172
@@ -863,7 +885,10 @@ function archiveTagHtml(report) {
     if (archive.is_reopened) {
         return `<span class="report-archive-tag is-reopened" title="From ${term}. Reopened by the Administrator for changes.">Reopened · ${term}</span>`;
     }
-    return `<span class="report-archive-tag is-carried" title="Unfinished report from ${term}. It stays actionable until it is completed.">Carried over · ${term}</span>`;
+    // "Carried over · {term}" badge removed for now per request — an
+    // unfinished report from a past term still renders with no archive
+    // badge at all (it stays fully actionable either way).
+    return '';
 }
 
 const REPORTS_API = window.SFMS_PUBLIC_URL('/api/reports');

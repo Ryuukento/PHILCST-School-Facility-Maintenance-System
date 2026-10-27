@@ -116,7 +116,7 @@ class DispatchAdministratorNoApprovalWorkflowTest extends TestCase
             ->postJson('/api/dispatches', [
                 'items' => [['item_id' => $itemId, 'quantity' => 2]],
                 'room_id' => $this->roomId,
-                'release_assigned_to' => $staffId,
+                'personnel_ids' => [$staffId],
             ]);
 
         $response->assertStatus(201);
@@ -129,13 +129,21 @@ class DispatchAdministratorNoApprovalWorkflowTest extends TestCase
         [$adminId, $staffId, $itemId] = $this->seedAdminStaffAndItem();
 
         $dispatchId = $this->createAsAdmin($adminId, $staffId, $itemId);
-        $dispatch = $this->dispatch($dispatchId);
 
-        $this->assertSame($staffId, (int) $dispatch->release_assigned_to);
+        // Primary/Additional hierarchy removal — the flat roster
+        // (dispatch_personnel_assignments) is now the source of truth; the
+        // write-once-historical release_assigned_to/_by/_at columns stay
+        // NULL for every dispatch created after this change.
+        $assignment = DB::table('dispatch_personnel_assignments')
+            ->where('dispatch_id', $dispatchId)
+            ->where('personnel_user_id', $staffId)
+            ->first();
+
+        $this->assertNotNull($assignment, 'The assigned staff member must be on the roster.');
         // The Administrator is recorded as the assigner — this is a real,
         // attributable action, unlike the approval that never happened.
-        $this->assertSame($adminId, (int) $dispatch->release_assigned_by);
-        $this->assertNotNull($dispatch->release_assigned_at);
+        $this->assertSame($adminId, (int) $assignment->assigned_by);
+        $this->assertNotNull($assignment->assigned_at);
     }
 
     /**
@@ -156,7 +164,7 @@ class DispatchAdministratorNoApprovalWorkflowTest extends TestCase
             ->postJson('/api/dispatches', [
                 'items' => [['item_id' => $itemId, 'quantity' => 2]],
                 'room_id' => $this->roomId,
-                'release_assigned_to' => $staffId,
+                'personnel_ids' => [$staffId],
             ]);
 
         $response->assertStatus(201);
@@ -362,7 +370,7 @@ class DispatchAdministratorNoApprovalWorkflowTest extends TestCase
             ->postJson('/api/dispatches', [
                 'items' => [['item_id' => $itemId, 'quantity' => 1]],
                 'room_id' => $this->roomId,
-                'release_assigned_to' => $staffId,
+                'personnel_ids' => [$staffId],
             ])
             ->assertStatus(201);
 
@@ -382,7 +390,7 @@ class DispatchAdministratorNoApprovalWorkflowTest extends TestCase
             ->postJson('/api/dispatches', [
                 'items' => [['item_id' => $itemId, 'quantity' => 1]],
                 'room_id' => $this->roomId,
-                'release_assigned_to' => $staffId,
+                'personnel_ids' => [$staffId],
             ]);
 
         $response->assertStatus(201);
@@ -403,7 +411,7 @@ class DispatchAdministratorNoApprovalWorkflowTest extends TestCase
             ->postJson('/api/dispatches', [
                 'items' => [['item_id' => $itemId, 'quantity' => 2]],
                 'room_id' => $this->roomId,
-                'release_assigned_to' => $staffId,
+                'personnel_ids' => [$staffId],
             ])->json('data.dispatch_id');
 
         $this->actingAsSessionUserWithFlatKeys($staffId, 'maintenance_staff')
@@ -453,13 +461,15 @@ class DispatchAdministratorNoApprovalWorkflowTest extends TestCase
             ->postJson('/api/dispatches', [
                 'items' => [['item_id' => $itemId, 'quantity' => 1]],
                 'room_id' => $this->roomId,
-                'release_assigned_to' => $foreignStaffId,
+                'personnel_ids' => [$foreignStaffId],
             ]);
 
         $response->assertStatus(201);
-        $this->assertSame(
-            $foreignStaffId,
-            (int) DB::table('dispatches')->where('id', $response->json('data.dispatch_id'))->value('release_assigned_to')
+        $this->assertTrue(
+            DB::table('dispatch_personnel_assignments')
+                ->where('dispatch_id', $response->json('data.dispatch_id'))
+                ->where('personnel_user_id', $foreignStaffId)
+                ->exists()
         );
     }
 
@@ -478,7 +488,7 @@ class DispatchAdministratorNoApprovalWorkflowTest extends TestCase
             ->postJson('/api/dispatches', [
                 'items' => [['item_id' => $itemId, 'quantity' => 1]],
                 'room_id' => $this->roomId,
-                'release_assigned_to' => $otherStaffId,
+                'personnel_ids' => [$otherStaffId],
             ])
             ->assertStatus(403);
 
@@ -514,7 +524,7 @@ class DispatchAdministratorNoApprovalWorkflowTest extends TestCase
                 ->postJson('/api/dispatches', array_merge([
                     'items' => [['item_id' => $itemId, 'quantity' => 1]],
                     'room_id' => $this->roomId,
-                    'release_assigned_to' => $otherStaffId,
+                    'personnel_ids' => [$otherStaffId],
                 ], $extra))
                 ->assertStatus(403);
         }
@@ -545,7 +555,7 @@ class DispatchAdministratorNoApprovalWorkflowTest extends TestCase
             ->postJson('/api/dispatches', [
                 'items' => [['item_id' => $itemId, 'quantity' => 1]],
                 'room_id' => $this->roomId,
-                'release_assigned_to' => $staffId,
+                'personnel_ids' => [$staffId],
                 // All of these are attacker-supplied and must be ignored.
                 'role' => 'super_admin',
                 'user_role' => 'super_admin',
@@ -597,7 +607,7 @@ class DispatchAdministratorNoApprovalWorkflowTest extends TestCase
                 ->postJson('/api/dispatches', [
                     'items' => [['item_id' => $itemId, 'quantity' => 1]],
                     'room_id' => $this->roomId,
-                    'release_assigned_to' => $staffId,
+                    'personnel_ids' => [$staffId],
                 ]);
 
             $response->assertStatus($expectedHttp);
@@ -647,7 +657,7 @@ class DispatchAdministratorNoApprovalWorkflowTest extends TestCase
                 ->postJson('/api/dispatches', [
                     'items' => [['item_id' => $itemId, 'quantity' => 1]],
                     'room_id' => $this->roomId,
-                    'release_assigned_to' => $badAssigneeId,
+                    'personnel_ids' => [$badAssigneeId],
                 ])
                 ->assertStatus(400);
         }
@@ -657,7 +667,7 @@ class DispatchAdministratorNoApprovalWorkflowTest extends TestCase
             ->postJson('/api/dispatches', [
                 'items' => [['item_id' => $itemId, 'quantity' => 1]],
                 'room_id' => $this->roomId,
-                'release_assigned_to' => 999999,
+                'personnel_ids' => [999999],
             ])
             ->assertStatus(422);
 
@@ -685,7 +695,7 @@ class DispatchAdministratorNoApprovalWorkflowTest extends TestCase
             ->postJson('/api/dispatches', [
                 'items' => [['item_id' => $itemId, 'quantity' => 2]],
                 'room_id' => $this->roomId,
-                'release_assigned_to' => $headId,
+                'personnel_ids' => [$headId],
             ]);
         $response->assertStatus(201);
         $dispatchId = (int) $response->json('data.dispatch_id');
@@ -701,7 +711,7 @@ class DispatchAdministratorNoApprovalWorkflowTest extends TestCase
             ->postJson('/api/dispatches', [
                 'items' => [['item_id' => $itemId, 'quantity' => 1]],
                 'room_id' => $this->roomId,
-                'release_assigned_to' => $otherAdminId,
+                'personnel_ids' => [$otherAdminId],
             ])
             ->assertStatus(400);
     }
@@ -729,13 +739,15 @@ class DispatchAdministratorNoApprovalWorkflowTest extends TestCase
                 'department_id' => self::DEPT_COMPUTER,
                 'items' => [['item_id' => $itemId, 'quantity' => 1]],
                 'room_id' => $this->roomId,
-                'release_assigned_to' => $electricalStaffId,
+                'personnel_ids' => [$electricalStaffId],
             ]);
 
         $response->assertStatus(201);
-        $this->assertSame(
-            $electricalStaffId,
-            (int) DB::table('dispatches')->where('id', $response->json('data.dispatch_id'))->value('release_assigned_to')
+        $this->assertTrue(
+            DB::table('dispatch_personnel_assignments')
+                ->where('dispatch_id', $response->json('data.dispatch_id'))
+                ->where('personnel_user_id', $electricalStaffId)
+                ->exists()
         );
 
         // The same-department staff member is, of course, still accepted too.
@@ -744,7 +756,7 @@ class DispatchAdministratorNoApprovalWorkflowTest extends TestCase
                 'department_id' => self::DEPT_COMPUTER,
                 'items' => [['item_id' => $itemId, 'quantity' => 1]],
                 'room_id' => $this->roomId,
-                'release_assigned_to' => $computerStaffId,
+                'personnel_ids' => [$computerStaffId],
             ])
             ->assertStatus(201);
     }
@@ -780,7 +792,7 @@ class DispatchAdministratorNoApprovalWorkflowTest extends TestCase
             ->postJson('/api/dispatches', array_merge([
                 'items' => [['item_id' => $itemId, 'quantity' => $quantity]],
                 'room_id' => $this->roomId,
-                'release_assigned_to' => $staffId,
+                'personnel_ids' => [$staffId],
             ], $extra));
 
         $response->assertStatus(201);
@@ -808,6 +820,7 @@ class DispatchAdministratorNoApprovalWorkflowTest extends TestCase
         Schema::dropIfExists('purchase_receipt_items');
         Schema::dropIfExists('purchase_receipts');
         Schema::dropIfExists('notifications');
+        Schema::dropIfExists('dispatch_personnel_assignments');
         Schema::dropIfExists('dispatch_items');
         Schema::dropIfExists('dispatches');
         Schema::dropIfExists('inventory_transactions');
@@ -841,6 +854,14 @@ class DispatchAdministratorNoApprovalWorkflowTest extends TestCase
 
         $this->createDispatchesTable();
         $this->createDispatchItemsTable();
+        $this->createDispatchPersonnelAssignmentsTable();
+
+        // Deployment Tracking (GET /api/deployment-tracking, exercised by
+        // scenario 10 below) looks up deployed_assets by dispatch_item_id to
+        // backfill asset_code on dispatch-sourced rows. No rows are seeded;
+        // the lookup is skipped entirely when a row has no deployed_assets
+        // match, so the table only needs to exist here.
+        $this->createDeployedAssetsTable();
 
         Schema::create('notifications', function (Blueprint $table): void {
             $table->bigIncrements('id');

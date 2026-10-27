@@ -157,8 +157,18 @@ class BuildingController extends Controller
                 'di.quantity',
                 'i.unit_type as unit',
                 'i.item_condition as condition',
-                // asset_code/status are needed for completeness of the
-                // inventory data (see that controller's docblock above).
+                // i.asset_code is NOT the per-unit SFMS code for a dispatched
+                // item — that lives in deployed_assets, one row per UNIT,
+                // created at release time when "Track as Assets" is used
+                // (AssetRegistryService::registerReleasePlan()). i.asset_code
+                // stays selected here only for completeness of the inventory
+                // data (see docblock above); it is overwritten below by the
+                // real code(s) from deployed_assets, same backfill approach
+                // DeploymentTrackingController::index() uses and for the same
+                // reason: di.id is carried through so codes can be looked up
+                // and merged in PHP after this query runs, instead of a SQL
+                // join/GROUP_CONCAT that MySQL and the test suite's SQLite
+                // connection don't agree on the syntax for.
                 'i.asset_code',
                 'i.status',
                 'd.updated_at as date_dispatched',
@@ -167,6 +177,7 @@ class BuildingController extends Controller
                 'b.name as building_name',
                 'b.id as building_id',
                 'r.id as room_id',
+                'di.id as dispatch_item_id',
             ])
             ->join('dispatch_items as di', 'd.id', '=', 'di.dispatch_id')
             ->join('items as i', 'di.item_id', '=', 'i.id')
@@ -190,6 +201,7 @@ class BuildingController extends Controller
                 'b2.name as building_name',
                 'b2.id as building_id',
                 'r2.id as room_id',
+                DB::raw('NULL as dispatch_item_id'),
             ])
             ->join('rooms as r2', 'ri.room_id', '=', 'r2.id')
             ->leftJoin('buildings as b2', 'r2.building_id', '=', 'b2.id')
@@ -216,6 +228,34 @@ class BuildingController extends Controller
                 ['item_name', 'asc'],
             ])
             ->values();
+
+        // Backfill asset_code for dispatch-sourced rows with the real
+        // per-unit SFMS code(s) from deployed_assets — see the comment on
+        // $dispatchQuery's select above for why i.asset_code alone is wrong
+        // here. Mirrors DeploymentTrackingController::index()'s identical
+        // fix: a released dispatch line "Tracked as Assets" at release time
+        // has one deployed_assets row per unit, so a line of quantity > 1
+        // can carry several codes, joined with ", ".
+        $dispatchItemIds = $items->pluck('dispatch_item_id')->filter()->unique()->values();
+
+        if ($dispatchItemIds->isNotEmpty()) {
+            $codesByDispatchItemId = DB::table('deployed_assets')
+                ->whereIn('dispatch_item_id', $dispatchItemIds)
+                ->orderBy('id')
+                ->get(['dispatch_item_id', 'asset_code'])
+                ->groupBy('dispatch_item_id')
+                ->map(fn ($group) => $group->pluck('asset_code')->implode(', '));
+
+            $items->each(function ($item) use ($codesByDispatchItemId): void {
+                if ($item->dispatch_item_id !== null && $codesByDispatchItemId->has((int) $item->dispatch_item_id)) {
+                    $item->asset_code = $codesByDispatchItemId->get((int) $item->dispatch_item_id);
+                }
+            });
+        }
+
+        $items->each(function ($item): void {
+            unset($item->dispatch_item_id);
+        });
 
         return $this->ok('Deployed items retrieved', ['items' => $items]);
     }

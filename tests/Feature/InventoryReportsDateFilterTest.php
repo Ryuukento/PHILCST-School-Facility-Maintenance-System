@@ -301,6 +301,7 @@ class InventoryReportsDateFilterTest extends TestCase
         Schema::dropIfExists('damage_reports');
         Schema::dropIfExists('purchase_receipt_items');
         Schema::dropIfExists('purchase_receipts');
+        Schema::dropIfExists('dispatch_personnel_assignments');
         Schema::dropIfExists('dispatch_items');
         Schema::dropIfExists('dispatches');
         Schema::dropIfExists('inventory_transactions');
@@ -316,12 +317,16 @@ class InventoryReportsDateFilterTest extends TestCase
         $this->createActivityLogsTable();
         // DispatchController::index() eager-loads report/report.creator even
         // when a dispatch has no report_id — the table just needs to exist
-        // (same reasoning as DispatchPersonnelAuditTrailTest).
+        // (same reasoning as DispatchPersonnelAuditTrailTest). It also
+        // eager-loads personnelAssignments.personnel (Primary/Additional
+        // hierarchy removal), so that pivot table must exist too even though
+        // this file's dispatches are seeded with no personnel.
         $this->createMaintenanceReportsTable();
         $this->createInventoryTransactionsTable();
 
         $this->createDispatchesTable();
         $this->createDispatchItemsTable();
+        $this->createDispatchPersonnelAssignmentsTable();
 
         Schema::create('purchase_receipts', function ($table): void {
             $table->bigIncrements('id');

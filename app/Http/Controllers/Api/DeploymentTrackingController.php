@@ -97,10 +97,19 @@ class DeploymentTrackingController extends Controller
 
         // Complex query: source OR comes from direct link or fallback (oldest receipt referencing item)
         // TASK 36 PHASE 2 — this SELECT ("dispatch" branch) is untouched from
-        // its original form other than adding the two trailing literal columns
+        // its original form other than adding the trailing literal columns
         // (asset_code, deployment_source, deployed_at) so its column list lines
         // up with the "direct" branch below for the UNION ALL. No existing
         // dispatch-side filtering/joins/columns were changed.
+        //
+        // asset_code stays a literal NULL here (not joined to deployed_assets
+        // directly) because this row is one per dispatch_item LINE, while
+        // deployed_assets is one row per UNIT -- a tracked line with quantity
+        // > 1 can carry several codes, which GROUP_CONCAT could express in
+        // MySQL but not in the SQLite connection the test suite runs this
+        // same raw SQL against. di.id is carried through instead so the
+        // codes can be looked up and merged in PHP after the UNION/pagination
+        // runs, portably, below.
         $dispatchSql = "
             SELECT
                 d.id                                                              AS dispatch_id,
@@ -118,7 +127,8 @@ class DeploymentTrackingController extends Controller
                 dept.name                                                         AS department_name,
                 NULL                                                              AS asset_code,
                 'dispatch'                                                        AS deployment_source,
-                d.created_at                                                      AS deployed_at
+                d.created_at                                                      AS deployed_at,
+                di.id                                                             AS dispatch_item_id
             FROM       dispatches d
             INNER JOIN dispatch_items di   ON di.dispatch_id = d.id
             INNER JOIN items i             ON i.id = di.item_id
@@ -208,7 +218,8 @@ class DeploymentTrackingController extends Controller
                     NULL           AS department_name,
                     ri.asset_code  AS asset_code,
                     'direct'       AS deployment_source,
-                    ri.created_at  AS deployed_at
+                    ri.created_at  AS deployed_at,
+                    NULL           AS dispatch_item_id
                 FROM      items ri
                 LEFT JOIN rooms r2 ON r2.id = ri.room_id
                 {$whereDirectClause}";
@@ -226,6 +237,38 @@ class DeploymentTrackingController extends Controller
         $offset = ($page - 1) * $perPage;
         $sql  = "SELECT * FROM ({$sql}) AS combined ORDER BY deployed_at DESC, item_name ASC LIMIT {$perPage} OFFSET {$offset}";
         $rows = DB::select($sql, $params);
+
+        // Backfill asset_code for dispatch-sourced rows (left NULL in the SQL
+        // above — see the comment on $dispatchSql). A released dispatch line
+        // "Tracked as Assets" at release time has one deployed_assets row per
+        // unit (AssetRegistryService::registerReleasePlan()); without this,
+        // every dispatch-sourced row showed "-" in Deployment Tracking even
+        // when a real SFMS code had been generated for it. Done as a second,
+        // small query keyed on dispatch_item_id rather than a SQL join/
+        // GROUP_CONCAT so the exact same raw SQL above keeps working
+        // unmodified against the SQLite connection the test suite uses.
+        $dispatchItemIds = array_values(array_unique(array_filter(
+            array_map(static fn ($row) => $row->dispatch_item_id !== null ? (int) $row->dispatch_item_id : null, $rows)
+        )));
+
+        if ($dispatchItemIds !== []) {
+            $codesByDispatchItemId = DB::table('deployed_assets')
+                ->whereIn('dispatch_item_id', $dispatchItemIds)
+                ->orderBy('id')
+                ->get(['dispatch_item_id', 'asset_code'])
+                ->groupBy('dispatch_item_id')
+                ->map(fn ($group) => $group->pluck('asset_code')->implode(', '));
+
+            foreach ($rows as $row) {
+                if ($row->dispatch_item_id !== null) {
+                    $row->asset_code = $codesByDispatchItemId->get((int) $row->dispatch_item_id);
+                }
+            }
+        }
+
+        foreach ($rows as $row) {
+            unset($row->dispatch_item_id);
+        }
 
         // Filter-option dropdowns: rooms/departments that have at least one
         // released dispatch OR (TASK 36 PHASE 2) at least one room_asset item.

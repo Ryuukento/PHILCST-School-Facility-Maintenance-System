@@ -75,52 +75,6 @@ $forceProfileUpdate = !empty($currentUser['force_profile_update']);
                                     <small style="color:#64748b;font-size:12px;">3-50 characters, lowercase letters, numbers, underscores only.</small>
                                 </div>
 
-                                <!-- Phone Verification Section (2026-10-13) — mirrors the Email
-                                     Address card below: a phone number is no longer accepted as
-                                     free text on "Save Changes". It must be proven reachable via
-                                     a 6-digit SMS code before it is trusted and saved to
-                                     users.phone, the same way a new email must be OTP-verified
-                                     before users.verified_email trusts it. -->
-                                <div class="settings-form-group">
-                                    <label class="settings-label" style="display: flex; align-items: center; gap: 8px;">
-                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 18px; height: 18px;"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
-                                        Phone Number
-                                        <?php if ($forceProfileUpdate): ?><span style="color:#ef4444;font-weight:600;font-size:12px;">(Required)</span><?php endif; ?>
-                                    </label>
-
-                                    <div style="border: 1px solid #e2e8f0; border-radius: 10px; background: #f8fafc; padding: 14px;">
-                                        <div id="phone-display" style="margin-bottom: 12px;">
-                                            <p style="font-size: 13px; color: #64748b; margin: 0;">
-                                                Phone Number: <strong id="verified-phone-display" style="color: #1e293b;"><?php echo !empty($user['phone']) ? htmlspecialchars($user['phone']) : 'Not set'; ?></strong>
-                                            </p>
-                                            <p style="font-size: 12px; color: #94a3b8; margin: 4px 0 0 0;">Used to send you an SMS alert for new reports / Need Change requests assigned to you.</p>
-                                        </div>
-
-                                        <!-- Phone Input and Send OTP Button -->
-                                        <div id="phone-form" style="display: flex; gap: 8px;">
-                                            <input type="text" id="new-phone" class="form-control settings-input" placeholder="e.g. 09171234567" style="flex: 1; background: #fff;" inputmode="tel" autocomplete="tel">
-                                            <button type="button" id="send-phone-otp-btn" class="btn btn-secondary" style="white-space: nowrap;">Send Code</button>
-                                        </div>
-
-                                        <!-- OTP Verification Form (Hidden initially) -->
-                                        <div id="phone-otp-form" style="display: none; background: #fff; padding: 14px; border-radius: 8px; border: 1px solid #e2e8f0; margin-top: 12px;">
-                                            <p style="font-size: 13px; color: #64748b; margin: 0 0 12px 0;">Enter the 6-digit code sent via SMS to <strong id="phone-otp-number-display"></strong></p>
-                                            <div style="display: flex; gap: 8px; margin-bottom: 12px;">
-                                                <input type="text" id="phone-otp-code" class="form-control settings-input" placeholder="000000" maxlength="6" inputmode="numeric" style="flex: 1; letter-spacing: 4px; font-size: 18px; text-align: center;">
-                                                <button type="button" id="verify-phone-otp-btn" class="btn btn-primary">Verify</button>
-                                            </div>
-                                            <div style="display: flex; justify-content: space-between; align-items: center;">
-                                                <p id="phone-otp-timer" style="font-size: 12px; color: #64748b; margin: 0;"></p>
-                                                <button type="button" id="resend-phone-otp-btn" class="btn btn-link" style="font-size: 12px; padding: 0; display: none;">Resend Code</button>
-                                                <button type="button" id="cancel-phone-otp-btn" class="btn btn-link" style="font-size: 12px; padding: 0; color: #ef4444;">Cancel</button>
-                                            </div>
-                                        </div>
-
-                                        <!-- Status Messages -->
-                                        <div id="phone-status" class="alert" style="display: none; margin-top: 12px;"></div>
-                                    </div>
-                                </div>
-
                                 <div class="settings-form-group">
                                     <label for="current_password" class="settings-label">Current Password</label>
                                     <div class="password-input-wrap">
@@ -141,7 +95,48 @@ $forceProfileUpdate = !empty($currentUser['force_profile_update']);
                                     </div>
                                 </div>
 
-                                <!-- Email Verification Section — placed beside New Password to use
+                                <!-- Phone Number (2026-10-26) — the Send Code/OTP verification step
+                                     was removed as redundant: it was requested, but the user decided
+                                     a plain editable field (saved directly on "Save Changes", like
+                                     Full Name/Username) is enough here. The SMS-OTP flow this used to
+                                     require is still registered for Email Address below; it was
+                                     never part of that decision and is untouched.
+                                     2026-10-26 (later) — moved below Current/New Password (was above
+                                     Current Password) per user request, so New Password sits directly
+                                     across from Current Password instead of Phone Number. -->
+                                <div class="settings-form-group">
+                                    <label for="phone" class="settings-label" style="display: flex; align-items: center; gap: 8px;">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 18px; height: 18px;"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                                        Phone Number
+                                        <?php if ($forceProfileUpdate): ?><span style="color:#ef4444;font-weight:600;font-size:12px;">(Required)</span><?php endif; ?>
+                                    </label>
+                                    <!-- 2026-10-26 — PH-only validation, international-notation style:
+                                         the "+63" badge replaces the leading "0" (not just a decorative
+                                         label anymore), so the user types only the 10 digits after it.
+                                         The submit handler below rebuilds "0" + these 10 digits into the
+                                         full 09XXXXXXXXX (11-digit) format BEFORE sending — the exact
+                                         format already proven to work with IPROG SMS (see
+                                         SmsService::send() and the two live users.phone rows) — so
+                                         UserController::updateProfile and IPROG see no format change at
+                                         all; only this input's display changed. -->
+                                    <div style="display:flex; align-items:stretch; border:1px solid #d7c6f2; border-radius:10px; background:#fff; overflow:hidden;">
+                                        <span style="display:flex; align-items:center; padding:0 12px; background:#f3effc; color:#6d28d9; font-weight:700; font-size:14px; border-right:1px solid #d7c6f2; white-space:nowrap;">+63</span>
+                                        <?php
+                                        // 2026-10-26 (later) — the "+63" badge now stands in for the
+                                        // leading "0" too (international notation drops it: +63 917...
+                                        // not +63 0917...), so the user only types the 10 digits after
+                                        // it. users.phone is still stored/sent as the full 09XXXXXXXXX
+                                        // (11 digits) — see the submit handler below, which rebuilds
+                                        // that before the request ever reaches UserController — so this
+                                        // is display-only and does NOT change the saved format.
+                                        $phoneTenDigitDisplay = (preg_match('/^0(\d{10})$/', (string)($user['phone'] ?? ''), $phoneMatch)) ? $phoneMatch[1] : '';
+                                        ?>
+                                        <input type="text" id="phone" name="phone" class="form-control settings-input" placeholder="9171234713" value="<?php echo htmlspecialchars($phoneTenDigitDisplay); ?>" inputmode="numeric" autocomplete="tel" maxlength="10" style="border:none; border-radius:0; flex:1; min-height:42px; background:transparent;">
+                                    </div>
+                                    <small id="phone-help" style="color:#64748b;font-size:12px;">Used to send you an SMS alert for new reports / Need Change requests assigned to you. Format: 10 digits after +63 (e.g. 9171234713 for 0917-123-4713), Philippine mobile numbers only.</small>
+                                </div>
+
+                                <!-- Email Verification Section — placed beside Phone Number to use
                                      the empty grid cell instead of its own full-width row below. -->
                                 <div class="settings-form-group">
                                     <label class="settings-label" style="display: flex; align-items: center; gap: 8px;">
@@ -151,7 +146,7 @@ $forceProfileUpdate = !empty($currentUser['force_profile_update']);
                                     </label>
 
                                     <!-- Card wrapper so this (multi-control) group reads as one cohesive
-                                         block beside the plain New Password input, instead of a loose
+                                         block beside the Phone Number input, instead of a loose
                                          stack of mismatched-height elements. -->
                                     <div style="border: 1px solid #e2e8f0; border-radius: 10px; background: #f8fafc; padding: 14px;">
                                         <div id="email-display" style="margin-bottom: 12px;">
@@ -212,7 +207,7 @@ $forceProfileUpdate = !empty($currentUser['force_profile_update']);
 <div class="force-setup-popup" id="force-setup-popup" role="dialog" aria-modal="true" aria-labelledby="force-setup-title">
     <div class="force-setup-popup-card">
         <h2 id="force-setup-title">Profile Setup Required</h2>
-        <p>This account was created by an Administrator. Before continuing, please update your Full Name, verify your Phone Number, verify your Email Address, and set a new Password.</p>
+        <p>This account was created by an Administrator. Before continuing, please update your Full Name, Phone Number, verify your Email Address, and set a new Password.</p>
         <button type="button" id="force-setup-continue" class="btn btn-primary settings-primary-btn">Update Now</button>
     </div>
 </div>
@@ -341,6 +336,27 @@ document.getElementById('profile_picture').addEventListener('change', function(e
     });
 });
 
+// 2026-10-26 — PH mobile numbers only: strip anything non-digit as the user
+// types and hard-cap at 10 characters (the "+63" badge now stands for the
+// leading "0" too, international-notation style, so the user only types the
+// 9XXXXXXXXX part), so it is physically impossible to type letters,
+// symbols, or an 11th digit into this field. The server (UserController::
+// updateProfile) still only ever receives the full 09XXXXXXXXX (11-digit)
+// value — see "0" + phoneTyped below, right before the fetch — so IPROG's
+// proven format and UserController's /^09\d{9}$/ check are UNCHANGED.
+const phoneInputEl = document.getElementById('phone');
+if (phoneInputEl) {
+    phoneInputEl.addEventListener('input', () => {
+        phoneInputEl.value = phoneInputEl.value.replace(/\D/g, '').slice(0, 10);
+    });
+}
+
+// Matches the 10-digit value actually typed into #phone (no leading "0" —
+// that's implied by the "+63" badge). Every valid PH 09-format number is
+// "09" + 9 digits, so stripping that leading "0" always leaves something
+// starting with "9" — hence the fixed leading 9 here, not \d.
+const PHONE_PATTERN = /^9\d{9}$/;
+
 document.getElementById('account-settings-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     const fullName = document.getElementById('full_name').value.trim();
@@ -364,26 +380,39 @@ document.getElementById('account-settings-form').addEventListener('submit', asyn
             return;
         }
 
-        // 2026-10-15 — first-time setup now also requires a verified phone
-        // and a verified email, not just a new password. These two displays
-        // are re-rendered to the real value the moment OTP verification
-        // succeeds (see verifyPhoneOtpBtn / verifyOtpBtn handlers below) and
-        // on every page load from a fresh DB read (see the PHP block at the
-        // top of this file), so checking their text here is a reliable proxy
-        // for "already OTP-verified", without duplicating that state in a
-        // separate JS variable. Server-side (UserController::updateProfile)
-        // enforces the same rule from users.phone/verified_email directly —
-        // this check is only here to give an immediate, specific error
-        // instead of a generic failed-save message.
-        const phoneVerified = verifiedPhoneDisplay && verifiedPhoneDisplay.textContent.trim() !== '' && verifiedPhoneDisplay.textContent.trim() !== 'Not set';
-        if (!phoneVerified) {
-            showSettingsToast('Please verify your phone number before continuing', 'error');
+        // 2026-10-15 — first-time setup also requires a phone number and a
+        // verified email, not just a new password. (2026-10-26: phone no
+        // longer needs OTP verification — see the Phone Number field note
+        // above — so this is now a plain non-empty + format check, same
+        // spirit as Full Name.) Server-side (UserController::updateProfile)
+        // enforces the same rule directly — this check is only here to give
+        // an immediate, specific error instead of a generic failed-save
+        // message.
+        const phoneValue = document.getElementById('phone')?.value.trim() || '';
+        if (!phoneValue) {
+            showSettingsToast('Please enter your phone number before continuing', 'error');
+            return;
+        }
+        if (!PHONE_PATTERN.test(phoneValue)) {
+            showSettingsToast('Phone number must be 10 digits (e.g. 9171234713 for +63 917 123 4713)', 'error');
             return;
         }
 
         const emailVerified = verifiedEmailDisplay && verifiedEmailDisplay.textContent.trim() !== '' && verifiedEmailDisplay.textContent.trim() !== 'Not set';
         if (!emailVerified) {
             showSettingsToast('Please verify your email address before continuing', 'error');
+            return;
+        }
+    }
+
+    // 2026-10-26 — Outside forced setup, phone is optional (nullable in DB),
+    // but IF the user typed something, it must match the PH mobile format —
+    // otherwise a half-typed/garbled number would silently save and break
+    // the SMS alert feature later with no feedback at save time.
+    if (!forceProfileSetup) {
+        const phoneValueOptional = document.getElementById('phone')?.value.trim() || '';
+        if (phoneValueOptional && !PHONE_PATTERN.test(phoneValueOptional)) {
+            showSettingsToast('Phone number must be 10 digits (e.g. 9171234713 for +63 917 123 4713)', 'error');
             return;
         }
     }
@@ -396,6 +425,18 @@ document.getElementById('account-settings-form').addEventListener('submit', asyn
 
     try {
         const formData = new FormData(form);
+
+        // 2026-10-26 (later) — #phone now only collects the 10 digits after
+        // the "+63" badge (no leading "0"), but UserController::
+        // updateProfile — and, downstream of it, SmsService/IPROG — still
+        // expect and validate the original, proven 09XXXXXXXXX (11-digit)
+        // format. Rebuild that exact format here, right before it's sent,
+        // so the server-side contract and the live SMS integration need
+        // ZERO changes. Already validated above as empty or /^9\d{9}$/, so
+        // this is always either '' or exactly "0" + 10 digits = 11 chars.
+        const phoneTyped = document.getElementById('phone')?.value.trim() || '';
+        formData.set('phone', phoneTyped ? ('0' + phoneTyped) : '');
+
         const response = await API.updateProfile(formData);
 
         if (!response.success) {
@@ -687,215 +728,6 @@ otpCodeInput.addEventListener('keypress', (e) => {
         verifyOtpBtn.click();
     }
 });
-
-// ═════════════════════════════════════════════════════════════════════════════
-// Phone Number Verification Flow (2026-10-13) — mirrors the Email
-// Verification Flow above, but sends the code via SMS (IPROG, through
-// SmsService/PhoneVerificationService) instead of email, and never echoes
-// the OTP back in the API response (there is no "testing mode" leak here
-// the way the email flow still has one).
-// ═════════════════════════════════════════════════════════════════════════════
-
-let phoneOtpTimer = null;
-let phoneOtpExpiresAt = null;
-
-const phoneForm = document.getElementById('phone-form');
-const phoneOtpForm = document.getElementById('phone-otp-form');
-const sendPhoneOtpBtn = document.getElementById('send-phone-otp-btn');
-const verifyPhoneOtpBtn = document.getElementById('verify-phone-otp-btn');
-const resendPhoneOtpBtn = document.getElementById('resend-phone-otp-btn');
-const cancelPhoneOtpBtn = document.getElementById('cancel-phone-otp-btn');
-const newPhoneInput = document.getElementById('new-phone');
-const phoneOtpCodeInput = document.getElementById('phone-otp-code');
-const phoneStatusDiv = document.getElementById('phone-status');
-const phoneOtpTimerDiv = document.getElementById('phone-otp-timer');
-const phoneOtpNumberDisplay = document.getElementById('phone-otp-number-display');
-const verifiedPhoneDisplay = document.getElementById('verified-phone-display');
-
-function showPhoneStatus(message, isError = false) {
-    phoneStatusDiv.textContent = message;
-    phoneStatusDiv.className = 'alert ' + (isError ? 'alert-error' : 'alert-success');
-    phoneStatusDiv.style.display = 'block';
-}
-
-function hidePhoneStatus() {
-    phoneStatusDiv.style.display = 'none';
-}
-
-function startPhoneOtpTimer(expiresAt) {
-    phoneOtpExpiresAt = expiresAt;
-    clearInterval(phoneOtpTimer);
-
-    function updateTimer() {
-        const now = Date.now();
-        const remaining = Math.max(0, expiresAt - now);
-        const minutes = Math.floor(remaining / 60000);
-        const seconds = Math.floor((remaining % 60000) / 1000);
-
-        if (remaining <= 0) {
-            phoneOtpTimerDiv.textContent = 'Code expired';
-            resendPhoneOtpBtn.style.display = 'block';
-            verifyPhoneOtpBtn.disabled = true;
-            clearInterval(phoneOtpTimer);
-        } else {
-            phoneOtpTimerDiv.textContent = `Expires in ${minutes}:${seconds.toString().padStart(2, '0')}`;
-            verifyPhoneOtpBtn.disabled = false;
-        }
-    }
-
-    updateTimer();
-    phoneOtpTimer = setInterval(updateTimer, 1000);
-}
-
-// Send OTP via SMS
-sendPhoneOtpBtn.addEventListener('click', async () => {
-    const phone = newPhoneInput.value.trim();
-
-    if (!phone) {
-        showPhoneStatus('Please enter a phone number', true);
-        return;
-    }
-
-    if (!/^[0-9+()\-\s]{7,30}$/.test(phone)) {
-        showPhoneStatus('Phone number may only contain digits, spaces, and + ( ) - , and must be 7-30 characters', true);
-        return;
-    }
-
-    sendPhoneOtpBtn.disabled = true;
-    sendPhoneOtpBtn.textContent = 'Sending...';
-
-    try {
-        const response = await fetch(window.SFMS_PUBLIC_URL('/api/phone-verification/initiate'), {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
-            body: JSON.stringify({ phone })
-        });
-
-        const data = await response.json();
-
-        if (response.ok) {
-            hidePhoneStatus();
-            phoneForm.style.display = 'none';
-            phoneOtpForm.style.display = 'block';
-            phoneOtpNumberDisplay.textContent = phone;
-            phoneOtpCodeInput.focus();
-
-            const expiresAt = Date.now() + (5 * 60 * 1000);
-            startPhoneOtpTimer(expiresAt);
-        } else {
-            showPhoneStatus(data.message || 'Failed to send code', true);
-        }
-    } catch (err) {
-        console.error('Phone OTP send error:', err);
-        showPhoneStatus('Failed to send code. Please try again.', true);
-    } finally {
-        sendPhoneOtpBtn.disabled = false;
-        sendPhoneOtpBtn.textContent = 'Send Code';
-    }
-});
-
-// Verify OTP
-verifyPhoneOtpBtn.addEventListener('click', async () => {
-    const phone = newPhoneInput.value.trim();
-    const otp = phoneOtpCodeInput.value.trim();
-
-    if (!otp || otp.length !== 6) {
-        showPhoneStatus('Please enter a 6-digit code', true);
-        return;
-    }
-
-    verifyPhoneOtpBtn.disabled = true;
-    verifyPhoneOtpBtn.textContent = 'Verifying...';
-
-    try {
-        const response = await fetch(window.SFMS_PUBLIC_URL('/api/phone-verification/verify-otp'), {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
-            body: JSON.stringify({ phone, otp })
-        });
-
-        const data = await response.json();
-
-        if (response.ok) {
-            hidePhoneStatus();
-            phoneOtpForm.style.display = 'none';
-            phoneForm.style.display = 'flex';
-            newPhoneInput.value = '';
-            phoneOtpCodeInput.value = '';
-            verifiedPhoneDisplay.textContent = phone;
-
-            showSettingsToast('Phone number verified successfully!', 'success');
-            clearInterval(phoneOtpTimer);
-        } else {
-            showPhoneStatus(data.message || 'Verification failed', true);
-        }
-    } catch (err) {
-        console.error('Phone OTP verification error:', err);
-        showPhoneStatus('Verification failed. Please try again.', true);
-    } finally {
-        verifyPhoneOtpBtn.disabled = false;
-        verifyPhoneOtpBtn.textContent = 'Verify';
-    }
-});
-
-// Resend OTP
-resendPhoneOtpBtn.addEventListener('click', async () => {
-    const phone = newPhoneInput.value.trim();
-
-    resendPhoneOtpBtn.disabled = true;
-    resendPhoneOtpBtn.textContent = 'Resending...';
-
-    try {
-        const response = await fetch(window.SFMS_PUBLIC_URL('/api/phone-verification/resend-otp'), {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
-            body: JSON.stringify({ phone })
-        });
-
-        const data = await response.json();
-
-        if (response.ok) {
-            phoneOtpCodeInput.value = '';
-            phoneOtpCodeInput.focus();
-            resendPhoneOtpBtn.style.display = 'none';
-
-            const expiresAt = Date.now() + (5 * 60 * 1000);
-            startPhoneOtpTimer(expiresAt);
-
-            showSettingsToast('New code sent', 'success');
-        } else {
-            showPhoneStatus(data.message || 'Failed to resend code', true);
-        }
-    } catch (err) {
-        console.error('Resend phone OTP error:', err);
-        showPhoneStatus('Failed to resend code. Please try again.', true);
-    } finally {
-        resendPhoneOtpBtn.disabled = false;
-        resendPhoneOtpBtn.textContent = 'Resend Code';
-    }
-});
-
-// Cancel OTP verification
-cancelPhoneOtpBtn.addEventListener('click', () => {
-    phoneOtpForm.style.display = 'none';
-    phoneForm.style.display = 'flex';
-    newPhoneInput.value = '';
-    phoneOtpCodeInput.value = '';
-    hidePhoneStatus();
-    clearInterval(phoneOtpTimer);
-    newPhoneInput.focus();
-});
-
-// Allow Enter key to submit phone OTP
-phoneOtpCodeInput.addEventListener('keypress', (e) => {
-    if (e.key === 'Enter') {
-        verifyPhoneOtpBtn.click();
-    }
-});
-
 </script>
 
 <?php include __DIR__ . '/../includes/footer.php'; ?>

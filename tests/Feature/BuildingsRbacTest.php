@@ -747,6 +747,12 @@ class BuildingsRbacTest extends TestCase
         $this->createDispatchesTable();
         $this->createDispatchItemsTable();
 
+        // deployedItems() now backfills asset_code for dispatch-sourced rows
+        // from deployed_assets (keyed by dispatch_item_id), same per-unit
+        // asset-registry fix already applied to DeploymentTrackingController.
+        // Without this table the query throws "no such table: deployed_assets".
+        $this->createDeployedAssetsTable();
+
         Schema::create('inventory_categories', function (Blueprint $table): void {
             $table->increments('id');
             $table->string('name');

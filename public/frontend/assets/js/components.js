@@ -109,6 +109,15 @@
             this.pageSize = opts.pageSize || 50;
             this.debounceMs = opts.debounceMs || 250;
             this.onSelect = typeof opts.onSelect === 'function' ? opts.onSelect : null;
+            // 2026-10-26 — optional hook so a page can hide specific rows
+            // from this dropdown (e.g. someone already picked in another
+            // field on the same form) instead of letting the user click
+            // them and then showing an "already added" error. Called fresh
+            // on every render (not just once at build time), so it always
+            // reflects the form's CURRENT state. Every other page using
+            // this widget omits it, so renderList()'s filter step is
+            // skipped there — fully backward compatible.
+            this.getExcludeIds = typeof opts.getExcludeIds === 'function' ? opts.getExcludeIds : null;
             this.list = null;
             this.timeout = null;
             this.init();
@@ -152,6 +161,21 @@
             Components._instances = Components._instances.filter((inst) => inst !== this);
         }
 
+        // 2026-10-26 — every onSelect handler across the pages using this
+        // widget clears the input/hidden value itself, then called this
+        // method to also close the dropdown — but it was never defined, so
+        // every one of those calls threw "clearSelection is not a function"
+        // (silently, since it's the last statement in each handler and the
+        // dropdown was already hidden by the row click above it, so nothing
+        // visibly broke — it just spammed the console). Defining it here
+        // fixes every existing call site without touching any of them.
+        clearSelection(){
+            if (this.list) {
+                this.list.innerHTML = '';
+                this.list.style.display = 'none';
+            }
+        }
+
         async onInput(e){
             const q = this.input.value.trim();
             if(this.timeout) clearTimeout(this.timeout);
@@ -176,6 +200,33 @@
 
         renderList(items){
             this.list.innerHTML = '';
+            if (this.getExcludeIds) {
+                const excludeIds = this.getExcludeIds();
+                if (excludeIds && excludeIds.size > 0) {
+                    // 2026-10-26 FIX — the row click handler below resolves a
+                    // record's id via PRIORITY (it.id || it.department_id ||
+                    // it.user_id || it.room_id — first truthy field wins),
+                    // because it only ever needs ONE value to store in the
+                    // hidden input. Exclusion can't use that same priority
+                    // chain: a personnel row from /release-personnel has
+                    // BOTH department_id (the staff member's own department,
+                    // often non-null) and user_id, so picking department_id
+                    // first means it never equals the user_id stored in
+                    // excludeIds — a real staff member (e.g. one already
+                    // chosen as Primary Release Personnel) silently failed to
+                    // be excluded. Exclusion instead checks every candidate
+                    // id field independently and excludes the row if ANY of
+                    // them is in excludeIds, so it's correct however many of
+                    // those fields happen to be populated on a given record.
+                    items = (items || []).filter((it) => {
+                        const candidates = [it.id, it.department_id, it.user_id, it.room_id];
+                        return !candidates.some((val) => {
+                            if (val === undefined || val === null || val === '') return false;
+                            return excludeIds.has(Number(val));
+                        });
+                    });
+                }
+            }
             if(!items || items.length === 0){ this.list.style.display='none'; return; }
             items.forEach(it=>{
                 const row = document.createElement('div'); row.className='search-item'; row.style.cssText='padding:12px;cursor:pointer;font-size:14px;color:#000000;font-weight:600;border-bottom:1px solid #f1f5f9;transition:background-color 150ms ease;background-color:transparent';

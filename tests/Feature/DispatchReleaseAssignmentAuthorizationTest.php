@@ -13,28 +13,42 @@ use Tests\TestCase;
 /**
  * TASK 13 — Dispatch Release Assignment Workflow: AUTHORIZATION.
  *
+ * Primary/Additional hierarchy removal — this file was fully rewritten. A
+ * dispatch's Release Personnel is now a flat, equal roster stored in
+ * dispatch_personnel_assignments; there is no longer a single
+ * release_assigned_to "primary" person with a separate reassignment endpoint.
+ * `POST {dispatch}/assign-personnel` no longer exists — it is replaced by
+ * `POST {dispatch}/add-personnel` and `POST {dispatch}/remove-personnel`,
+ * each adding/removing ONE roster member at a time.
+ *
  * Every test here drives a real HTTP request, because the requirement is that
  * these rules hold SERVER-SIDE — "client-side filtering alone is NOT
  * sufficient". Each one therefore sends exactly the request a malicious or
  * out-of-date client would send, bypassing whatever the UI would have allowed,
  * and asserts the server refuses it and that no state changed.
  *
- * Two properties are under test:
+ * Three properties are under test:
  *
  *   1. RELEASE PERSONNEL ELIGIBILITY. Department-based restriction (TASK 9)
  *      on who may be assigned as Release Personnel was REMOVED per product
  *      decision — see DispatchAuthorizationService's class doc comment.
  *      `dispatches.department_id` is a reporting/attribution tag only; it is
  *      not a property of the items in the dispatch and never restricted who
- *      may hand off stock. Any active Maintenance Staff member is now a valid
- *      candidate for either role, regardless of department. What still MUST
- *      fail: an inactive user, a non-Maintenance-Staff user, or (for
- *      reassignment) a dispatch that is already released/cancelled.
+ *      may hand off stock. Any active Head Maintenance or Maintenance Staff
+ *      member is now a valid roster candidate, regardless of department. What
+ *      still MUST fail: an inactive user, an Administrator, or (for add/
+ *      remove) a dispatch that is already released/cancelled.
  *
- *   2. ASSIGNEE-ONLY RELEASE. "Server must validate: Authenticated user ==
- *      release_assigned_to. Role alone is NOT enough." Holding the
- *      maintenance_staff role must not be sufficient to release somebody
- *      else's dispatch.
+ *   2. ROSTER-MEMBERSHIP-ONLY RELEASE. "Server must validate: Authenticated
+ *      user is a MEMBER of the dispatch's personnel roster. Role alone is NOT
+ *      enough, and — since the hierarchy removal — being the FIRST person
+ *      added is not special either." Any roster member, first or not, may
+ *      release; nobody outside the roster may.
+ *
+ *   3. VISIBILITY. Maintenance Staff see only dispatches whose roster they
+ *      are on — including as a non-first member, which is the pre-existing
+ *      bug this change fixes (an "additional" person could never see their
+ *      own dispatch under the old release_assigned_to-only scoping).
  */
 class DispatchReleaseAssignmentAuthorizationTest extends TestCase
 {
@@ -59,7 +73,7 @@ class DispatchReleaseAssignmentAuthorizationTest extends TestCase
     private int $roomId;
 
     // -----------------------------------------------------------------
-    // 1. Release Personnel eligibility — assignment
+    // 1. Release Personnel eligibility — creation
     // -----------------------------------------------------------------
 
     public function test_head_can_assign_staff_from_their_own_department_at_creation(): void
@@ -73,11 +87,17 @@ class DispatchReleaseAssignmentAuthorizationTest extends TestCase
             ->postJson('/api/dispatches', [
                 'items' => [['item_id' => $itemId, 'quantity' => 1]],
                 'room_id' => $this->roomId,
-                'release_assigned_to' => $staffId,
+                'personnel_ids' => [$staffId],
             ]);
 
         $response->assertStatus(201);
-        $this->assertSame($staffId, (int) DB::table('dispatches')->where('id', $response->json('data.dispatch_id'))->value('release_assigned_to'));
+        $dispatchId = (int) $response->json('data.dispatch_id');
+        $this->assertTrue(
+            DB::table('dispatch_personnel_assignments')
+                ->where('dispatch_id', $dispatchId)
+                ->where('personnel_user_id', $staffId)
+                ->exists()
+        );
     }
 
     /**
@@ -98,69 +118,70 @@ class DispatchReleaseAssignmentAuthorizationTest extends TestCase
             ->postJson('/api/dispatches', [
                 'items' => [['item_id' => $itemId, 'quantity' => 1]],
                 'room_id' => $this->roomId,
-                'release_assigned_to' => $foreignStaffId,
+                'personnel_ids' => [$foreignStaffId],
             ]);
 
         $response->assertStatus(201);
-        $this->assertSame(
-            $foreignStaffId,
-            (int) DB::table('dispatches')->where('id', $response->json('data.dispatch_id'))->value('release_assigned_to')
+        $dispatchId = (int) $response->json('data.dispatch_id');
+        $this->assertTrue(
+            DB::table('dispatch_personnel_assignments')
+                ->where('dispatch_id', $dispatchId)
+                ->where('personnel_user_id', $foreignStaffId)
+                ->exists()
         );
     }
 
-    public function test_head_can_assign_staff_from_another_department_when_reassigning(): void
+    /**
+     * A dispatch may name several Release Personnel at once, all equal — no
+     * primary/additional split. Every one of them lands in the flat roster
+     * from the single create call; createDispatch() no longer requires a
+     * second round of individual /add-personnel calls for the initial set.
+     */
+    public function test_a_dispatch_can_be_created_with_multiple_equal_release_personnel(): void
     {
         $headId = $this->seedUser(['role' => 'maintenance_admin', 'department_id' => self::DEPT_COMPUTER]);
-        $ownStaffId = $this->seedUser(['role' => 'maintenance_staff', 'department_id' => self::DEPT_COMPUTER]);
-        $foreignStaffId = $this->seedUser(['role' => 'maintenance_staff', 'department_id' => self::DEPT_ELECTRICAL]);
+        $staffA = $this->seedUser(['role' => 'maintenance_staff', 'department_id' => self::DEPT_COMPUTER]);
+        $staffB = $this->seedUser(['role' => 'maintenance_staff', 'department_id' => self::DEPT_ELECTRICAL]);
         $itemId = $this->seedItem(['name' => 'Mouse', 'quantity' => 10, 'reserved_quantity' => 0]);
-        $dispatchId = $this->seedDispatch($itemId, 1, [
-            'department_id' => self::DEPT_COMPUTER,
-            'requested_by' => $headId,
-            'release_assigned_to' => $ownStaffId,
-            'release_assigned_by' => $headId,
-        ]);
 
         $response = $this
             ->actingAsSessionUserWithFlatKeys($headId, 'maintenance_admin')
-            ->postJson("/api/dispatches/{$dispatchId}/assign-personnel", [
-                'release_assigned_to' => $foreignStaffId,
+            ->postJson('/api/dispatches', [
+                'items' => [['item_id' => $itemId, 'quantity' => 1]],
+                'room_id' => $this->roomId,
+                'personnel_ids' => [$staffA, $staffB],
             ]);
 
-        $response->assertOk();
-        $this->assertSame($foreignStaffId, (int) DB::table('dispatches')->where('id', $dispatchId)->value('release_assigned_to'));
+        $response->assertStatus(201);
+        $dispatchId = (int) $response->json('data.dispatch_id');
+        $rosterIds = DB::table('dispatch_personnel_assignments')
+            ->where('dispatch_id', $dispatchId)
+            ->pluck('personnel_user_id')
+            ->map(fn ($id) => (int) $id)
+            ->sort()
+            ->values()
+            ->all();
+
+        $expected = [$staffA, $staffB];
+        sort($expected);
+        $this->assertSame($expected, $rosterIds);
     }
 
-    /**
-     * Reassignment authorization (TASK 13) checks role (must be
-     * maintenance_admin) and dispatch status (must be pending/approved) —
-     * it never checked "did this Head create this dispatch", so there is no
-     * ownership gate here to preserve. The department-matching check that
-     * used to ALSO gate this (a Head could only touch dispatches tagged with
-     * their own department) was removed along with the rest of the
-     * department-based restriction (see DispatchAuthorizationService's class
-     * doc comment) — any Head Maintenance may reassign the release personnel
-     * of any still-pending-or-approved dispatch.
-     */
-    public function test_head_can_reassign_a_dispatch_belonging_to_another_department(): void
+    public function test_a_dispatch_cannot_be_created_with_an_empty_roster(): void
     {
-        $foreignHeadId = $this->seedUser(['role' => 'maintenance_admin', 'department_id' => self::DEPT_ELECTRICAL]);
-        $foreignStaffId = $this->seedUser(['role' => 'maintenance_staff', 'department_id' => self::DEPT_ELECTRICAL]);
-        $computerStaffId = $this->seedUser(['role' => 'maintenance_staff', 'department_id' => self::DEPT_COMPUTER]);
+        $headId = $this->seedUser(['role' => 'maintenance_admin', 'department_id' => self::DEPT_COMPUTER]);
         $itemId = $this->seedItem(['name' => 'Mouse', 'quantity' => 10, 'reserved_quantity' => 0]);
-        $dispatchId = $this->seedDispatch($itemId, 1, [
-            'department_id' => self::DEPT_COMPUTER,
-            'release_assigned_to' => $computerStaffId,
-        ]);
 
         $response = $this
-            ->actingAsSessionUserWithFlatKeys($foreignHeadId, 'maintenance_admin')
-            ->postJson("/api/dispatches/{$dispatchId}/assign-personnel", [
-                'release_assigned_to' => $foreignStaffId,
+            ->actingAsSessionUserWithFlatKeys($headId, 'maintenance_admin')
+            ->postJson('/api/dispatches', [
+                'items' => [['item_id' => $itemId, 'quantity' => 1]],
+                'room_id' => $this->roomId,
+                'personnel_ids' => [],
             ]);
 
-        $response->assertOk();
-        $this->assertSame($foreignStaffId, (int) DB::table('dispatches')->where('id', $dispatchId)->value('release_assigned_to'));
+        $response->assertStatus(422);
+        $this->assertSame(0, DB::table('dispatches')->count());
     }
 
     /**
@@ -183,7 +204,7 @@ class DispatchReleaseAssignmentAuthorizationTest extends TestCase
             ->postJson('/api/dispatches', [
                 'items' => [['item_id' => $itemId, 'quantity' => 1]],
                 'room_id' => $this->roomId,
-                'release_assigned_to' => $otherHeadId,
+                'personnel_ids' => [$otherHeadId],
             ])
             ->assertStatus(201);
 
@@ -193,7 +214,7 @@ class DispatchReleaseAssignmentAuthorizationTest extends TestCase
             ->postJson('/api/dispatches', [
                 'items' => [['item_id' => $itemId, 'quantity' => 1]],
                 'room_id' => $this->roomId,
-                'release_assigned_to' => $adminId,
+                'personnel_ids' => [$adminId],
             ]);
 
         $response->assertStatus(400);
@@ -215,7 +236,7 @@ class DispatchReleaseAssignmentAuthorizationTest extends TestCase
             ->postJson('/api/dispatches', [
                 'items' => [['item_id' => $itemId, 'quantity' => 1]],
                 'room_id' => $this->roomId,
-                'release_assigned_to' => $inactiveStaffId,
+                'personnel_ids' => [$inactiveStaffId],
             ]);
 
         $response->assertStatus(400);
@@ -282,10 +303,10 @@ class DispatchReleaseAssignmentAuthorizationTest extends TestCase
     }
 
     // -----------------------------------------------------------------
-    // 2. Assignee-only release
+    // 2. Roster-membership-only release
     // -----------------------------------------------------------------
 
-    public function test_the_assigned_staff_member_can_release(): void
+    public function test_a_roster_member_can_release(): void
     {
         [$adminId, $staffId, $dispatchId, $itemId] = $this->seedApprovedDispatch();
 
@@ -298,9 +319,33 @@ class DispatchReleaseAssignmentAuthorizationTest extends TestCase
     }
 
     /**
+     * Primary/Additional hierarchy removal — a roster of TWO people, neither
+     * one "primary". The second-added person must be just as able to release
+     * as the first.
+     */
+    public function test_a_non_first_roster_member_can_also_release(): void
+    {
+        $adminId = $this->seedUser(['role' => 'super_admin']);
+        $staffA = $this->seedUser(['role' => 'maintenance_staff', 'department_id' => self::DEPT_COMPUTER]);
+        $staffB = $this->seedUser(['role' => 'maintenance_staff', 'department_id' => self::DEPT_ELECTRICAL]);
+        $itemId = $this->seedItem(['name' => 'Mouse', 'quantity' => 10, 'reserved_quantity' => 0]);
+        $dispatchId = $this->seedDispatch($itemId, 2, [], [$staffA, $staffB]);
+
+        $this->actingAsSessionUserWithFlatKeys($adminId, 'super_admin')
+            ->postJson("/api/dispatches/{$dispatchId}/approve", ['approved_by' => $adminId])
+            ->assertOk();
+
+        $this->actingAsSessionUserWithFlatKeys($staffB, 'maintenance_staff')
+            ->postJson("/api/dispatches/{$dispatchId}/release", [])
+            ->assertOk();
+
+        $this->assertSame('released', DB::table('dispatches')->where('id', $dispatchId)->value('status'));
+    }
+
+    /**
      * THE core security rule of TASK 13. This user has the correct role, is
      * active, and is in the same department — and must still be refused,
-     * because they are not the assignee.
+     * because they are not on the roster.
      */
     public function test_a_different_staff_member_cannot_release_someone_elses_dispatch(): void
     {
@@ -317,12 +362,13 @@ class DispatchReleaseAssignmentAuthorizationTest extends TestCase
         $this->assertSame(0, DB::table('inventory_transactions')->count());
     }
 
-    public function test_a_maintenance_staff_member_cannot_release_an_unassigned_dispatch(): void
+    public function test_a_maintenance_staff_member_cannot_release_a_dispatch_with_an_empty_roster(): void
     {
         $adminId = $this->seedUser(['role' => 'super_admin']);
         $staffId = $this->seedUser(['role' => 'maintenance_staff', 'department_id' => self::DEPT_COMPUTER]);
         $itemId = $this->seedItem(['name' => 'Mouse', 'quantity' => 10, 'reserved_quantity' => 0]);
-        // A legacy row: approved under the old workflow, never assigned.
+        // A legacy/edge row: approved, roster empty (pre-TASK-13 shape, or a
+        // dispatch whose roster was removed down to zero after approval).
         $dispatchId = $this->seedDispatch($itemId, 2, ['status' => 'approved', 'approved_by' => $adminId]);
 
         $response = $this
@@ -342,7 +388,7 @@ class DispatchReleaseAssignmentAuthorizationTest extends TestCase
         $headId = $this->seedUser(['role' => 'maintenance_admin', 'department_id' => self::DEPT_COMPUTER]);
         $staffId = $this->seedUser(['role' => 'maintenance_staff', 'department_id' => self::DEPT_COMPUTER]);
         $itemId = $this->seedItem(['name' => 'Mouse', 'quantity' => 10, 'reserved_quantity' => 0]);
-        $dispatchId = $this->seedDispatch($itemId, 2, ['release_assigned_to' => $staffId]);
+        $dispatchId = $this->seedDispatch($itemId, 2, [], [$staffId]);
 
         $this->actingAsSessionUserWithFlatKeys($headId, 'maintenance_admin')
             ->postJson("/api/dispatches/{$dispatchId}/approve", ['approved_by' => $headId])
@@ -351,19 +397,24 @@ class DispatchReleaseAssignmentAuthorizationTest extends TestCase
         $this->assertSame('pending', DB::table('dispatches')->where('id', $dispatchId)->value('status'));
     }
 
-    public function test_administrator_cannot_assign_release_personnel(): void
+    public function test_administrator_cannot_add_release_personnel(): void
     {
         $adminId = $this->seedUser(['role' => 'super_admin']);
         $staffId = $this->seedUser(['role' => 'maintenance_staff', 'department_id' => self::DEPT_COMPUTER]);
         $otherStaffId = $this->seedUser(['role' => 'maintenance_staff', 'department_id' => self::DEPT_COMPUTER]);
         $itemId = $this->seedItem(['name' => 'Mouse', 'quantity' => 10, 'reserved_quantity' => 0]);
-        $dispatchId = $this->seedDispatch($itemId, 2, ['release_assigned_to' => $staffId]);
+        $dispatchId = $this->seedDispatch($itemId, 2, [], [$staffId]);
 
         $this->actingAsSessionUserWithFlatKeys($adminId, 'super_admin')
-            ->postJson("/api/dispatches/{$dispatchId}/assign-personnel", ['release_assigned_to' => $otherStaffId])
+            ->postJson("/api/dispatches/{$dispatchId}/add-personnel", ['personnel_user_id' => $otherStaffId])
             ->assertStatus(403);
 
-        $this->assertSame($staffId, (int) DB::table('dispatches')->where('id', $dispatchId)->value('release_assigned_to'));
+        $this->assertFalse(
+            DB::table('dispatch_personnel_assignments')
+                ->where('dispatch_id', $dispatchId)
+                ->where('personnel_user_id', $otherStaffId)
+                ->exists()
+        );
     }
 
     /**
@@ -394,7 +445,7 @@ class DispatchReleaseAssignmentAuthorizationTest extends TestCase
             ->postJson('/api/dispatches', [
                 'items' => [['item_id' => $itemId, 'quantity' => 1]],
                 'room_id' => $this->roomId,
-                'release_assigned_to' => $staffId,
+                'personnel_ids' => [$staffId],
             ]);
 
         $response->assertStatus(201);
@@ -409,60 +460,103 @@ class DispatchReleaseAssignmentAuthorizationTest extends TestCase
         // "Approved By" for a legitimate, approval-exempt dispatch.
         $this->assertSame($adminId, (int) $dispatch->approved_by);
         $this->assertNotNull($dispatch->approved_at);
-        // The named release personnel is still recorded, exactly as for a
-        // Head-created dispatch.
-        $this->assertSame($staffId, (int) $dispatch->release_assigned_to);
+        // The named release personnel is still recorded — in the flat roster,
+        // not the now write-once-historical release_assigned_to column.
+        $this->assertTrue(
+            DB::table('dispatch_personnel_assignments')
+                ->where('dispatch_id', $dispatch->id)
+                ->where('personnel_user_id', $staffId)
+                ->exists()
+        );
 
         // Creating still does not touch stock — that remains release-only.
         $this->assertSame(10, (int) DB::table('items')->where('id', $itemId)->value('quantity'));
     }
 
     // -----------------------------------------------------------------
-    // 4. Reassignment window
+    // 4. Roster modification window (add / remove personnel)
     // -----------------------------------------------------------------
 
-    public function test_head_may_reassign_while_pending_and_while_approved(): void
+    public function test_head_may_add_and_remove_personnel_while_pending_and_while_approved(): void
     {
         $headId = $this->seedUser(['role' => 'maintenance_admin', 'department_id' => self::DEPT_COMPUTER]);
         $staffA = $this->seedUser(['role' => 'maintenance_staff', 'department_id' => self::DEPT_COMPUTER]);
         $staffB = $this->seedUser(['role' => 'maintenance_staff', 'department_id' => self::DEPT_COMPUTER]);
         $adminId = $this->seedUser(['role' => 'super_admin']);
         $itemId = $this->seedItem(['name' => 'Mouse', 'quantity' => 10, 'reserved_quantity' => 0]);
-        $dispatchId = $this->seedDispatch($itemId, 2, [
-            'department_id' => self::DEPT_COMPUTER,
-            'release_assigned_to' => $staffA,
-            'release_assigned_by' => $headId,
-        ]);
+        $dispatchId = $this->seedDispatch($itemId, 2, ['department_id' => self::DEPT_COMPUTER], [$staffA]);
 
-        // While pending.
+        // While pending: add staffB, then remove staffA.
         $this->actingAsSessionUserWithFlatKeys($headId, 'maintenance_admin')
-            ->postJson("/api/dispatches/{$dispatchId}/assign-personnel", ['release_assigned_to' => $staffB])
+            ->postJson("/api/dispatches/{$dispatchId}/add-personnel", ['personnel_user_id' => $staffB])
             ->assertOk();
-        $this->assertSame($staffB, (int) DB::table('dispatches')->where('id', $dispatchId)->value('release_assigned_to'));
+        $this->actingAsSessionUserWithFlatKeys($headId, 'maintenance_admin')
+            ->postJson("/api/dispatches/{$dispatchId}/remove-personnel", ['personnel_user_id' => $staffA])
+            ->assertOk();
+
+        $rosterIds = DB::table('dispatch_personnel_assignments')
+            ->where('dispatch_id', $dispatchId)
+            ->pluck('personnel_user_id')
+            ->map(fn ($id) => (int) $id)
+            ->all();
+        $this->assertSame([$staffB], $rosterIds);
 
         $this->actingAsSessionUserWithFlatKeys($adminId, 'super_admin')
             ->postJson("/api/dispatches/{$dispatchId}/approve", ['approved_by' => $adminId])
             ->assertOk();
 
-        // While approved but not released.
+        // While approved but not released: add staffA back.
         $this->actingAsSessionUserWithFlatKeys($headId, 'maintenance_admin')
-            ->postJson("/api/dispatches/{$dispatchId}/assign-personnel", ['release_assigned_to' => $staffA])
+            ->postJson("/api/dispatches/{$dispatchId}/add-personnel", ['personnel_user_id' => $staffA])
             ->assertOk();
-        $this->assertSame($staffA, (int) DB::table('dispatches')->where('id', $dispatchId)->value('release_assigned_to'));
+
+        $rosterIds = DB::table('dispatch_personnel_assignments')
+            ->where('dispatch_id', $dispatchId)
+            ->pluck('personnel_user_id')
+            ->map(fn ($id) => (int) $id)
+            ->sort()
+            ->values()
+            ->all();
+        $expected = [$staffA, $staffB];
+        sort($expected);
+        $this->assertSame($expected, $rosterIds);
     }
 
-    public function test_assignment_becomes_read_only_once_released(): void
+    /**
+     * Removing a roster member down to zero is explicitly ALLOWED per product
+     * decision — a zero-personnel dispatch simply becomes unapprovable (or,
+     * if already approved, un-releasable) until someone is added back. It is
+     * not blocked at removal time.
+     */
+    public function test_removing_the_last_roster_member_is_allowed_and_leaves_the_roster_empty(): void
+    {
+        $headId = $this->seedUser(['role' => 'maintenance_admin', 'department_id' => self::DEPT_COMPUTER]);
+        $staffA = $this->seedUser(['role' => 'maintenance_staff', 'department_id' => self::DEPT_COMPUTER]);
+        $itemId = $this->seedItem(['name' => 'Mouse', 'quantity' => 10, 'reserved_quantity' => 0]);
+        $dispatchId = $this->seedDispatch($itemId, 2, [], [$staffA]);
+
+        $this->actingAsSessionUserWithFlatKeys($headId, 'maintenance_admin')
+            ->postJson("/api/dispatches/{$dispatchId}/remove-personnel", ['personnel_user_id' => $staffA])
+            ->assertOk();
+
+        $this->assertSame(
+            0,
+            DB::table('dispatch_personnel_assignments')->where('dispatch_id', $dispatchId)->count()
+        );
+
+        $this->actingAsSessionUserWithFlatKeys($this->seedUser(['role' => 'super_admin']), 'super_admin')
+            ->postJson("/api/dispatches/{$dispatchId}/approve", ['approved_by' => 1])
+            ->assertStatus(400);
+    }
+
+    public function test_roster_becomes_read_only_once_released(): void
     {
         $headId = $this->seedUser(['role' => 'maintenance_admin', 'department_id' => self::DEPT_COMPUTER]);
         $staffA = $this->seedUser(['role' => 'maintenance_staff', 'department_id' => self::DEPT_COMPUTER]);
         $staffB = $this->seedUser(['role' => 'maintenance_staff', 'department_id' => self::DEPT_COMPUTER]);
         $adminId = $this->seedUser(['role' => 'super_admin']);
         $itemId = $this->seedItem(['name' => 'Mouse', 'quantity' => 10, 'reserved_quantity' => 0]);
-        $dispatchId = $this->seedDispatch($itemId, 2, [
-            'department_id' => self::DEPT_COMPUTER,
-            'release_assigned_to' => $staffA,
-            'release_assigned_by' => $headId,
-        ]);
+        $dispatchId = $this->seedDispatch($itemId, 2, ['department_id' => self::DEPT_COMPUTER], [$staffA]);
 
         $this->actingAsSessionUserWithFlatKeys($adminId, 'super_admin')
             ->postJson("/api/dispatches/{$dispatchId}/approve", ['approved_by' => $adminId])
@@ -472,23 +566,31 @@ class DispatchReleaseAssignmentAuthorizationTest extends TestCase
             ->assertOk();
 
         $this->actingAsSessionUserWithFlatKeys($headId, 'maintenance_admin')
-            ->postJson("/api/dispatches/{$dispatchId}/assign-personnel", ['release_assigned_to' => $staffB])
+            ->postJson("/api/dispatches/{$dispatchId}/add-personnel", ['personnel_user_id' => $staffB])
+            ->assertStatus(403);
+        $this->actingAsSessionUserWithFlatKeys($headId, 'maintenance_admin')
+            ->postJson("/api/dispatches/{$dispatchId}/remove-personnel", ['personnel_user_id' => $staffA])
             ->assertStatus(403);
 
-        $this->assertSame($staffA, (int) DB::table('dispatches')->where('id', $dispatchId)->value('release_assigned_to'));
+        $rosterIds = DB::table('dispatch_personnel_assignments')
+            ->where('dispatch_id', $dispatchId)
+            ->pluck('personnel_user_id')
+            ->map(fn ($id) => (int) $id)
+            ->all();
+        $this->assertSame([$staffA], $rosterIds);
     }
 
     // -----------------------------------------------------------------
     // 5. Staff visibility scoping
     // -----------------------------------------------------------------
 
-    public function test_maintenance_staff_only_see_dispatches_assigned_to_them(): void
+    public function test_maintenance_staff_only_see_dispatches_on_their_roster(): void
     {
         $staffId = $this->seedUser(['role' => 'maintenance_staff', 'department_id' => self::DEPT_COMPUTER]);
         $otherStaffId = $this->seedUser(['role' => 'maintenance_staff', 'department_id' => self::DEPT_COMPUTER]);
         $itemId = $this->seedItem(['name' => 'Mouse', 'quantity' => 30, 'reserved_quantity' => 0]);
-        $mine = $this->seedDispatch($itemId, 1, ['release_assigned_to' => $staffId]);
-        $this->seedDispatch($itemId, 1, ['release_assigned_to' => $otherStaffId]);
+        $mine = $this->seedDispatch($itemId, 1, [], [$staffId]);
+        $this->seedDispatch($itemId, 1, [], [$otherStaffId]);
         $this->seedDispatch($itemId, 1);
 
         $response = $this
@@ -503,12 +605,38 @@ class DispatchReleaseAssignmentAuthorizationTest extends TestCase
         $this->assertSame([$mine], $ids);
     }
 
-    public function test_maintenance_staff_cannot_read_a_dispatch_not_assigned_to_them(): void
+    /**
+     * The visibility-gap fix: a non-first roster member must see the
+     * dispatch too. Under the old release_assigned_to-only scoping this
+     * second person — correctly on the roster, just not "primary" — could
+     * never see a dispatch they were genuinely assigned to.
+     */
+    public function test_a_non_first_roster_member_can_see_the_dispatch_in_their_list(): void
+    {
+        $staffA = $this->seedUser(['role' => 'maintenance_staff', 'department_id' => self::DEPT_COMPUTER]);
+        $staffB = $this->seedUser(['role' => 'maintenance_staff', 'department_id' => self::DEPT_ELECTRICAL]);
+        $itemId = $this->seedItem(['name' => 'Mouse', 'quantity' => 10, 'reserved_quantity' => 0]);
+        $dispatchId = $this->seedDispatch($itemId, 1, [], [$staffA, $staffB]);
+
+        $response = $this
+            ->actingAsSessionUserWithFlatKeys($staffB, 'maintenance_staff')
+            ->getJson('/api/dispatches');
+
+        $response->assertOk();
+        $ids = collect($response->json('data.data'))->pluck('id')->all();
+        $this->assertSame([$dispatchId], $ids);
+
+        $this->actingAsSessionUserWithFlatKeys($staffB, 'maintenance_staff')
+            ->getJson("/api/dispatches/{$dispatchId}")
+            ->assertOk();
+    }
+
+    public function test_maintenance_staff_cannot_read_a_dispatch_not_on_their_roster(): void
     {
         $staffId = $this->seedUser(['role' => 'maintenance_staff', 'department_id' => self::DEPT_COMPUTER]);
         $otherStaffId = $this->seedUser(['role' => 'maintenance_staff', 'department_id' => self::DEPT_COMPUTER]);
         $itemId = $this->seedItem(['name' => 'Mouse', 'quantity' => 10, 'reserved_quantity' => 0]);
-        $dispatchId = $this->seedDispatch($itemId, 1, ['release_assigned_to' => $otherStaffId]);
+        $dispatchId = $this->seedDispatch($itemId, 1, [], [$otherStaffId]);
 
         $this->actingAsSessionUserWithFlatKeys($staffId, 'maintenance_staff')
             ->getJson("/api/dispatches/{$dispatchId}")
@@ -522,8 +650,8 @@ class DispatchReleaseAssignmentAuthorizationTest extends TestCase
         $staffId = $this->seedUser(['role' => 'maintenance_staff', 'department_id' => self::DEPT_COMPUTER]);
         $otherStaffId = $this->seedUser(['role' => 'maintenance_staff', 'department_id' => self::DEPT_ELECTRICAL]);
         $itemId = $this->seedItem(['name' => 'Mouse', 'quantity' => 30, 'reserved_quantity' => 0]);
-        $this->seedDispatch($itemId, 1, ['release_assigned_to' => $staffId]);
-        $this->seedDispatch($itemId, 1, ['release_assigned_to' => $otherStaffId]);
+        $this->seedDispatch($itemId, 1, [], [$staffId]);
+        $this->seedDispatch($itemId, 1, [], [$otherStaffId]);
 
         foreach ([[$headId, 'maintenance_admin'], [$adminId, 'super_admin']] as [$userId, $role]) {
             $response = $this
@@ -547,7 +675,7 @@ class DispatchReleaseAssignmentAuthorizationTest extends TestCase
         $adminId = $this->seedUser(['role' => 'super_admin']);
         $staffId = $this->seedUser(['role' => 'maintenance_staff', 'department_id' => self::DEPT_COMPUTER]);
         $itemId = $this->seedItem(['name' => 'Mouse', 'quantity' => 10, 'reserved_quantity' => 0]);
-        $dispatchId = $this->seedDispatch($itemId, 2, ['release_assigned_to' => $staffId]);
+        $dispatchId = $this->seedDispatch($itemId, 2, [], [$staffId]);
 
         $this->actingAsSessionUserWithFlatKeys($adminId, 'super_admin')
             ->postJson("/api/dispatches/{$dispatchId}/approve", ['approved_by' => $adminId])
@@ -556,7 +684,15 @@ class DispatchReleaseAssignmentAuthorizationTest extends TestCase
         return [$adminId, $staffId, $dispatchId, $itemId];
     }
 
-    private function seedDispatch(int $itemId, int $quantity, array $overrides = []): int
+    /**
+     * Primary/Additional hierarchy removal — $personnelIds writes the flat
+     * roster directly into dispatch_personnel_assignments (the pivot table),
+     * replacing the old single release_assigned_to column override. Pass []
+     * (the default) to seed a dispatch with an empty roster, which is a
+     * legitimate, intentionally-supported state (pre-TASK-13 legacy rows, or
+     * a roster removed down to zero).
+     */
+    private function seedDispatch(int $itemId, int $quantity, array $overrides = [], array $personnelIds = []): int
     {
         $dispatchId = DB::table('dispatches')->insertGetId(array_merge([
             'dispatch_code' => 'DSP-' . uniqid('', true),
@@ -573,12 +709,24 @@ class DispatchReleaseAssignmentAuthorizationTest extends TestCase
             'updated_at' => now(),
         ]);
 
+        foreach ($personnelIds as $personnelId) {
+            DB::table('dispatch_personnel_assignments')->insert([
+                'dispatch_id' => $dispatchId,
+                'personnel_user_id' => $personnelId,
+                'assigned_by' => null,
+                'assigned_at' => now(),
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        }
+
         return $dispatchId;
     }
 
     private function createTestSchema(): void
     {
         Schema::disableForeignKeyConstraints();
+        Schema::dropIfExists('dispatch_personnel_assignments');
         Schema::dropIfExists('dispatch_items');
         Schema::dropIfExists('dispatches');
         Schema::dropIfExists('inventory_transactions');
@@ -601,6 +749,7 @@ class DispatchReleaseAssignmentAuthorizationTest extends TestCase
 
         $this->createDispatchesTable();
         $this->createDispatchItemsTable();
+        $this->createDispatchPersonnelAssignmentsTable();
 
         Schema::enableForeignKeyConstraints();
     }

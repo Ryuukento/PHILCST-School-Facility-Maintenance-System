@@ -26,6 +26,13 @@ class DispatchPersonnelAssignment extends Model
         ];
     }
 
+    // Primary/Additional hierarchy removal — the frontend now renders a flat
+    // roster straight from Dispatch::personnelAssignments, so each row needs
+    // its own name-ready fields rather than making the caller walk the
+    // nested personnel/assignedByUser relations itself. Matches the
+    // *_name-accessor convention already used on Dispatch.
+    protected $appends = ['personnel_name', 'assigned_by_name'];
+
     // -----------------------------------------------------------------------
     // Relationships
     // -----------------------------------------------------------------------
@@ -43,5 +50,19 @@ class DispatchPersonnelAssignment extends Model
     public function assignedByUser(): BelongsTo
     {
         return $this->belongsTo(User::class, 'assigned_by', 'user_id');
+    }
+
+    // -----------------------------------------------------------------------
+    // Accessors
+    // -----------------------------------------------------------------------
+
+    public function getPersonnelNameAttribute(): ?string
+    {
+        return $this->personnel?->full_name;
+    }
+
+    public function getAssignedByNameAttribute(): ?string
+    {
+        return $this->assignedByUser?->full_name;
     }
 }

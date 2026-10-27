@@ -81,8 +81,7 @@ main.inventory-page > .card > .card-header {
 main.inventory-page .inventory-page-header-card .card-body,
 main.inventory-page .inventory-toolbar-card .card-body,
 main.inventory-page .inventory-category-browser-card .card-body,
-main.inventory-page .inventory-items-card .card-body,
-main.inventory-page .inventory-entry-history-card .card-body {
+main.inventory-page .inventory-items-card .card-body {
     padding-top: 24px;
     padding-bottom: 24px;
 }
@@ -224,8 +223,7 @@ main.inventory-page .inventory-toolbar-action {
 }
 
 main.inventory-page .inventory-category-browser-card .card-body,
-main.inventory-page .inventory-items-card .card-body,
-main.inventory-page .inventory-entry-history-card .card-body {
+main.inventory-page .inventory-items-card .card-body {
     padding-bottom: 24px;
 }
 
@@ -234,8 +232,7 @@ main.inventory-page .inventory-category-browser-body {
 }
 
 main.inventory-page .inventory-category-panel-header,
-main.inventory-page .inventory-items-header,
-main.inventory-page .inventory-entry-history-header {
+main.inventory-page .inventory-items-header {
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
@@ -247,8 +244,7 @@ main.inventory-page .inventory-category-panel-header {
 }
 
 main.inventory-page .inventory-category-heading,
-main.inventory-page .inventory-items-title,
-main.inventory-page .inventory-entry-history-header .inventory-section-title {
+main.inventory-page .inventory-items-title {
     margin: 0;
     font-size: 18px;
     line-height: 1.15;
@@ -259,8 +255,7 @@ main.inventory-page .inventory-entry-history-header .inventory-section-title {
 }
 
 main.inventory-page .inventory-panel-subtitle,
-main.inventory-page .inventory-items-subtitle,
-main.inventory-page .inventory-entry-subtitle {
+main.inventory-page .inventory-items-subtitle {
     margin: 6px 0 0;
     font-size: 13px;
     line-height: 1.45;
@@ -952,10 +947,6 @@ main.inventory-page .inventory-action-kebab[aria-expanded="true"] {
     color: #fca5a5;
 }
 
-main.inventory-page .inventory-entry-history-card .inventory-entry-history-header {
-    align-items: flex-start;
-}
-
 main.inventory-page .inventory-loading-skeleton {
     margin-top: 12px;
 }
@@ -1071,8 +1062,7 @@ main.inventory-page .inventory-room-empty-state {
 :root[data-theme-resolved='light'] main.inventory-page .inventory-page-header-card,
 :root[data-theme-resolved='light'] main.inventory-page .inventory-toolbar-card,
 :root[data-theme-resolved='light'] main.inventory-page .inventory-category-browser-card,
-:root[data-theme-resolved='light'] main.inventory-page .inventory-items-card,
-:root[data-theme-resolved='light'] main.inventory-page .inventory-entry-history-card {
+:root[data-theme-resolved='light'] main.inventory-page .inventory-items-card {
     background: #ffffff !important;
     border-color: var(--inventory-card-border) !important;
     box-shadow: var(--inventory-card-shadow) !important;
@@ -1316,7 +1306,6 @@ main.inventory-page .inventory-header-actions .inv-action:focus-visible {
     main.inventory-page .inventory-page-header-row,
     main.inventory-page .inventory-toolbar-grid,
     main.inventory-page .inventory-items-header,
-    main.inventory-page .inventory-entry-history-header,
     main.inventory-page .inventory-category-panel-header {
         flex-direction: column;
         align-items: flex-start;

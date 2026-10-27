@@ -31,7 +31,6 @@ $isSuperAdmin = (($user['role'] ?? '') === 'super_admin');
 $isMaintenanceStaff = (($user['role'] ?? '') === 'maintenance_staff');
 $canAddItems = $isSuperAdmin;
 $canManageCategories = $isSuperAdmin;
-$canCreateInventoryEntries = in_array(($user['role'] ?? ''), ['super_admin', 'maintenance_admin'], true);
 $canAdjustStock = in_array(($user['role'] ?? ''), ['super_admin', 'maintenance_admin'], true);
 
 $pageTitle = 'Inventory - SFMS';
@@ -51,12 +50,18 @@ include __DIR__ . '/../includes/header.php';
                     <h1 class="inventory-title">Inventory</h1>
                     <p class="text-muted inventory-subtitle">Centralized stock and reserve equipment only.<?php if ($isMaintenanceStaff): ?> <strong>(Read-only view)</strong><?php endif; ?></p>
                 </div>
-                <?php /* The three actions are one group. Each keeps its ORIGINAL
+                <?php /* The two actions are one group. Each keeps its ORIGINAL
                          classes, id, href and label — `btn btn-secondary` on the
-                         anchor, `btn btn-primary` on Inventory Entry, the two
-                         two "open..." button ids and the $canCreateInventoryEntries /
-                         $canAdjustStock role gates are all untouched, so every
-                         existing JS binding and permission check still matches.
+                         anchor, the "open..." button id and the $canAdjustStock
+                         role gate are all untouched, so every existing JS
+                         binding and permission check still matches.
+                         (2026-10-26 — the "Inventory Entry" button + its modal
+                         + the "Inventory Entry History" card below were
+                         removed by request: Save Entry had no backing POST
+                         route — confirmed via `php artisan route:list`, only
+                         GET /api/inventory-stock/entries existed — so the
+                         button never actually worked. $canCreateInventoryEntries
+                         removed with it, see below.)
                          The added `inv-action*` classes are presentation-only
                          modifiers: they carry the visual hierarchy (strong /
                          soft / neutral) without redefining what a .btn is.
@@ -66,9 +71,6 @@ include __DIR__ . '/../includes/header.php';
                          accessible name stays exactly its visible text. */ ?>
                 <div class="inventory-header-actions">
                     <a href="<?php echo public_url('/replacement-tracking'); ?>" class="btn btn-secondary inv-action inv-action-strong"><?php echo ui_icon('rotate-ccw', ['size' => 16, 'class' => 'inv-action-icon']); ?><span class="inv-action-label">Replacement Tracking</span></a>
-                    <?php if ($canCreateInventoryEntries): ?>
-                    <button type="button" class="btn btn-primary inv-action inv-action-soft" id="openInventoryEntryButton"><?php echo ui_icon('plus', ['size' => 16, 'class' => 'inv-action-icon']); ?><span class="inv-action-label">Inventory Entry</span></button>
-                    <?php endif; ?>
                     <?php if ($canAdjustStock): ?>
                     <button type="button" class="btn btn-secondary inv-action inv-action-neutral" id="openAdjustStockButton"><?php echo ui_icon('edit', ['size' => 16, 'class' => 'inv-action-icon']); ?><span class="inv-action-label">Adjust Stock</span></button>
                     <?php endif; ?>
@@ -105,8 +107,10 @@ include __DIR__ . '/../includes/header.php';
             <div class="inventory-items-actions">
                 <!-- The "+ Add Item" button (and the create-new-item code path
                      in saveAddItems()) was removed by request — brand-new items
-                     are now only ever added through Inventory Entry / Purchase
-                     Receipt posting. The #addItemsModal itself is kept: it is
+                     are now only ever added through Purchase Receipt posting
+                     (the "Inventory Entry" button/modal mentioned here
+                     previously was removed 2026-10-26 — see the header-actions
+                     comment above). The #addItemsModal itself is kept: it is
                      still the Edit Item modal, opened pre-filled only via
                      startEditInventoryItem() (row kebab menu → Edit). -->
                 <?php if ($canManageCategories): ?>
@@ -145,38 +149,11 @@ include __DIR__ . '/../includes/header.php';
         </div>
     </div>
 
-    <div class="card inventory-entry-history-card">
-        <div class="card-header d-flex justify-between align-center inventory-entry-history-header">
-            <div>
-                <h3 class="inventory-section-title">Inventory Entry History</h3>
-                <p class="text-muted inventory-entry-subtitle">Track receipts, receivers, suppliers, and stock entries added to inventory.</p>
-            </div>
-            <span id="inventory-entry-count" class="text-muted">0 entries</span>
-        </div>
-        <div class="card-body">
-            <div class="inventory-entry-filters-grid">
-                <input type="search" id="inventory-entry-search" class="form-control" placeholder="Search stock entry ID, OR number, supplier, or item..." autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">
-                <select id="inventory-entry-filter-category" class="form-control">
-                    <option value="">All Categories</option>
-                </select>
-                <select id="inventory-entry-filter-department" class="form-control">
-                    <option value="">All Departments</option>
-                </select>
-                <select id="inventory-entry-filter-room" class="form-control">
-                    <option value="">All Laboratories / Rooms</option>
-                </select>
-                <input type="date" id="inventory-entry-filter-date-from" class="form-control" title="Date received from">
-                <input type="date" id="inventory-entry-filter-date-to" class="form-control" title="Date received to">
-                <button type="button" class="btn btn-secondary inventory-entry-clear-btn" id="inventory-entry-clear-filters">Clear Filters</button>
-            </div>
-            <div id="inventory-entry-container">
-                <div class="ui-empty-state ui-fade-in">
-                    <strong>Loading inventory entries...</strong>
-                    <span>Please wait while we collect your stock entry history.</span>
-                </div>
-            </div>
-        </div>
-    </div>
+    <!-- 2026-10-26 — "Inventory Entry History" card removed along with the
+         "Inventory Entry" button/modal above (see header-actions comment):
+         Save Entry had no backing POST route, so no new history could ever
+         be created through this page, and this was the only reader of
+         GET /api/inventory-stock/entries from the UI. -->
 </main>
 
 <div id="addItemsModal" class="inventory-modal" aria-hidden="true">
@@ -273,95 +250,10 @@ include __DIR__ . '/../includes/header.php';
     </div>
 </div>
 
-<?php if ($canCreateInventoryEntries): ?>
-<div id="inventoryEntryModal" class="inventory-modal" aria-hidden="true">
-    <div class="inventory-modal-content">
-        <div class="inventory-modal-header">
-            <h2>Inventory Entry</h2>
-            <button type="button" class="inventory-modal-close" id="closeInventoryEntryModalButton" aria-label="Close">&times;</button>
-        </div>
-        <div class="inventory-modal-body">
-            <div id="inventoryEntryModalMessage" class="inventory-modal-message" hidden></div>
-            <form id="inventoryEntryForm">
-                <div class="inventory-entry-id-banner">
-                    <span class="inventory-entry-id-label">Stock Entry ID</span>
-                    <strong id="inventoryEntryIdPreview">Auto-generated when saved</strong>
-                </div>
-                <div class="inventory-form-grid">
-                    <div class="form-group inventory-form-group">
-                        <label for="inventoryEntryOrNumber">OR Number / Receipt Number *</label>
-                        <input type="text" id="inventoryEntryOrNumber" class="form-control" placeholder="e.g., OR-2026-00124" required>
-                    </div>
-                    <div class="form-group inventory-form-group">
-                        <label for="inventoryEntrySupplierName">Supplier Name *</label>
-                        <input type="text" id="inventoryEntrySupplierName" class="form-control" placeholder="e.g., ABC Industrial Supply" required>
-                    </div>
-                    <div class="form-group inventory-form-group">
-                        <label for="inventoryEntryDateReceived">Date Received *</label>
-                        <input type="date" id="inventoryEntryDateReceived" class="form-control" required>
-                    </div>
-                    <div class="form-group inventory-form-group">
-                        <label for="inventoryEntryCategory">Category *</label>
-                        <select id="inventoryEntryCategory" class="form-control" required>
-                            <option value="">Select category</option>
-                        </select>
-                    </div>
-                    <div class="form-group inventory-form-group">
-                        <label for="inventoryEntryItemName">Item Name *</label>
-                        <input type="text" id="inventoryEntryItemName" class="form-control" placeholder="e.g., Electrical Tape" required>
-                    </div>
-                    <div class="form-group inventory-form-group">
-                        <label for="inventoryEntryQuantity">Quantity *</label>
-                        <input type="number" id="inventoryEntryQuantity" class="form-control" min="1" value="1" required>
-                    </div>
-                    <div class="form-group inventory-form-group">
-                        <label for="inventoryEntryUnitType">Unit Type *</label>
-                        <input type="text" id="inventoryEntryUnitType" class="form-control" placeholder="e.g., box, piece, roll" required>
-                    </div>
-                    <div class="form-group inventory-form-group">
-                        <label for="inventoryEntryDepartment">Department *</label>
-                        <select id="inventoryEntryDepartment" class="form-control" required>
-                            <option value="">Select department</option>
-                        </select>
-                    </div>
-                    <div class="form-group inventory-form-group">
-                        <label for="inventoryEntryRoom">Laboratory / Room</label>
-                        <select id="inventoryEntryRoom" class="form-control">
-                            <option value="">Select laboratory / room</option>
-                        </select>
-                    </div>
-                    <!-- TASK 6B PHASE 2 — the "Warehouse / Main Inventory *"
-                         selector was removed; stock is received into the one
-                         centralized Inventory. -->
-                    <div class="form-group inventory-form-group">
-                        <label for="inventoryEntryCondition">Condition *</label>
-                        <select id="inventoryEntryCondition" class="form-control" required>
-                            <option value="">Select condition</option>
-                            <option value="new">New</option>
-                            <option value="good">Good</option>
-                            <option value="fair">Fair</option>
-                            <option value="damaged">Damaged</option>
-                            <option value="for_repair">For Repair</option>
-                        </select>
-                    </div>
-                    <div class="form-group inventory-form-group">
-                        <label for="inventoryEntryReceiver">Receiver</label>
-                        <input type="text" id="inventoryEntryReceiver" class="form-control" value="<?php echo htmlspecialchars($user['full_name'] ?? ''); ?>" readonly>
-                    </div>
-                </div>
-                <div class="form-group inventory-form-group inventory-full-width">
-                    <label for="inventoryEntryDescription">Description</label>
-                    <textarea id="inventoryEntryDescription" class="form-control" rows="3" placeholder="Optional notes about the received stock"></textarea>
-                </div>
-            </form>
-        </div>
-        <div class="inventory-modal-footer">
-            <button type="button" class="btn btn-secondary" id="cancelInventoryEntryButton">Cancel</button>
-            <button type="button" class="btn btn-primary" id="saveInventoryEntryButton">Save Entry</button>
-        </div>
-    </div>
-</div>
-<?php endif; ?>
+<?php // 2026-10-26 — the "Inventory Entry" modal (#inventoryEntryModal) was
+      // removed by request, together with the button that opened it (see
+      // header-actions comment above) and the History card that showed its
+      // results. ?>
 
 <?php if ($canAdjustStock): ?>
 <div id="adjustStockModal" class="inventory-modal" aria-hidden="true">
@@ -473,8 +365,6 @@ include __DIR__ . '/../includes/header.php';
                     <input type="search" id="categorySearchInput" class="form-control" placeholder="Search category name or code..." autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">
                     <select id="categoryStatusFilter" class="form-control">
                         <option value="all">All Statuses</option>
-                        <option value="active">Active</option>
-                        <option value="inactive">Inactive</option>
                         <option value="with_items">With Items</option>
                         <option value="empty">No Items</option>
                     </select>
@@ -508,15 +398,18 @@ const CATEGORIES_API_BASE = window.SFMS_PUBLIC_URL('/api/inventory-categories');
 const DEPARTMENTS_API_BASE = window.SFMS_PUBLIC_URL('/api/departments');
 const CAN_MANAGE_CATEGORIES = <?php echo $canManageCategories ? 'true' : 'false'; ?>;
 const CAN_ADD_ITEMS = <?php echo $canAddItems ? 'true' : 'false'; ?>;
-const CAN_CREATE_INVENTORY_ENTRIES = <?php echo $canCreateInventoryEntries ? 'true' : 'false'; ?>;
 const CAN_ADJUST_STOCK = <?php echo $canAdjustStock ? 'true' : 'false'; ?>;
 const HIDDEN_CATEGORY_NAMES = new Set(['janitorial', 'medical']);
 
 let inventoryCategoriesCache = [];
 let inventoryDepartmentsCache = [];
+// 2026-10-26 — inventoryEntryRoomsCache name is a holdover from the removed
+// "Inventory Entry" feature, but it's still populated by
+// loadInventoryEntryRoomOptions() below and used to feed the Edit Item
+// modal's "Already Deployed In Room" selector (#inventoryItemRoomSelect) —
+// kept intentionally, not dead code.
 let inventoryEntryRoomsCache = [];
 let inventoryAllItems = [];
-let inventoryEntryHistory = [];
 let inventorySelectedCategoryId = null;
 let inventorySearchTerm = '';
 let inventoryItemsStatusFilter = '';
@@ -591,22 +484,6 @@ function setManageCategoriesMessage(message, type = 'info') {
     box.className = `inventory-modal-message inventory-modal-message-${type}`;
 }
 
-function setInventoryEntryMessage(message, type = 'info') {
-    const box = document.getElementById('inventoryEntryModalMessage');
-    if (!box) return;
-
-    if (!message) {
-        box.hidden = true;
-        box.textContent = '';
-        box.className = 'inventory-modal-message';
-        return;
-    }
-
-    box.hidden = false;
-    box.textContent = message;
-    box.className = `inventory-modal-message inventory-modal-message-${type}`;
-}
-
 function setAdjustStockMessage(message, type = 'info') {
     const box = document.getElementById('adjustStockModalMessage');
     if (!box) return;
@@ -630,7 +507,7 @@ function populateAdjustStockItemOptions(selectedItemId = null) {
     const sortedItems = [...inventoryAllItems].sort((a, b) => String(a.name || '').localeCompare(String(b.name || '')));
 
     select.innerHTML = '<option value="">Select an item...</option>' + sortedItems.map((item) => {
-        const label = `${item.name || 'Unnamed Item'} — ${Number(item.quantity ?? 0)} on hand`;
+        const label = item.name || 'Unnamed Item';
         return `<option value="${Number(item.id)}">${inventoryEscapeHtml(label)}</option>`;
     }).join('');
 
@@ -1349,7 +1226,6 @@ async function refreshCategoriesUI() {
     try {
         await fetchInventoryCategories();
         await loadInventoryCategoriesForSelect();
-        await loadInventoryEntryCategoryOptions();
         populateItemsCategoryFilter();
         renderCategoriesList();
         applySelectedCategoryRules();
@@ -1376,6 +1252,10 @@ async function fetchInventoryDepartments() {
     inventoryDepartmentsCache = departments;
 }
 
+// 2026-10-26 — fetchInventoryEntryRooms() name is a holdover from the
+// removed "Inventory Entry" feature, but it's still called below to feed
+// loadInventoryEntryRoomOptions(), which populates the Edit Item modal's
+// room selector (#inventoryItemRoomSelect) — kept intentionally.
 async function fetchInventoryEntryRooms() {
     const response = await fetch(`${ROOMS_API_BASE}`, { credentials: 'same-origin' });
     const payload = await response.json();
@@ -1387,56 +1267,13 @@ async function fetchInventoryEntryRooms() {
     inventoryEntryRoomsCache = Array.isArray(payload.data?.rooms) ? payload.data.rooms : [];
 }
 
-async function loadInventoryEntryCategoryOptions() {
-    const formSelect = document.getElementById('inventoryEntryCategory');
-    const filterSelect = document.getElementById('inventory-entry-filter-category');
-    const activeCategories = inventoryCategoriesCache.filter((category) => Number(category.is_active || 0) === 1);
-
-    if (formSelect) {
-        formSelect.innerHTML = '<option value="">Select category</option>';
-        activeCategories.forEach((category) => {
-            const option = document.createElement('option');
-            option.value = String(category.id);
-            option.textContent = category.name || 'Unnamed Category';
-            formSelect.appendChild(option);
-        });
-    }
-
-    if (filterSelect) {
-        filterSelect.innerHTML = '<option value="">All Categories</option>';
-        activeCategories.forEach((category) => {
-            const option = document.createElement('option');
-            option.value = String(category.id);
-            option.textContent = category.name || 'Unnamed Category';
-            filterSelect.appendChild(option);
-        });
-    }
-}
-
-async function loadInventoryEntryDepartmentOptions() {
-    const formSelect = document.getElementById('inventoryEntryDepartment');
-    const filterSelect = document.getElementById('inventory-entry-filter-department');
-
-    if (formSelect) {
-        formSelect.innerHTML = '<option value="">Select department</option>';
-        inventoryDepartmentsCache.forEach((department) => {
-            const option = document.createElement('option');
-            option.value = String(department.department_id);
-            option.textContent = department.name || 'Unnamed Department';
-            formSelect.appendChild(option);
-        });
-    }
-
-    if (filterSelect) {
-        filterSelect.innerHTML = '<option value="">All Departments</option>';
-        inventoryDepartmentsCache.forEach((department) => {
-            const option = document.createElement('option');
-            option.value = String(department.department_id);
-            option.textContent = department.name || 'Unnamed Department';
-            filterSelect.appendChild(option);
-        });
-    }
-}
+// 2026-10-26 — loadInventoryEntryCategoryOptions() and
+// loadInventoryEntryDepartmentOptions() were removed along with the
+// "Inventory Entry" modal/filters they exclusively populated
+// (#inventoryEntryCategory, #inventory-entry-filter-category,
+// #inventoryEntryDepartment, #inventory-entry-filter-department — all
+// deleted from the markup). Unlike the room options below, neither touched
+// any element still in use elsewhere, so both were deleted outright.
 
 function loadCategoryDepartmentOptions() {
     const select = document.getElementById('categoryDepartmentInput');
@@ -1453,6 +1290,12 @@ function loadCategoryDepartmentOptions() {
     select.value = previousValue;
 }
 
+// 2026-10-26 — kept intentionally despite the "Entry" name: the
+// #inventoryEntryRoom / #inventory-entry-filter-room selects it also
+// references no longer exist in the markup (null-guarded below, so they
+// silently no-op), but itemRoomSelect/#inventoryItemRoomSelect still does —
+// that's the Edit Item modal's "Already Deployed In Room" selector, and
+// this is the only function that populates it.
 async function loadInventoryEntryRoomOptions() {
     const formSelect = document.getElementById('inventoryEntryRoom');
     const filterSelect = document.getElementById('inventory-entry-filter-room');
@@ -1494,183 +1337,14 @@ async function loadInventoryEntryRoomOptions() {
 // TASK 6B PHASE 2 — loadInventoryEntryInventoryRoomOptions() was removed
 // together with the "Warehouse / Main Inventory" selector it populated.
 
-function formatInventoryEntryCondition(condition) {
-    return String(condition || '')
-        .replace(/_/g, ' ')
-        .replace(/\b\w/g, (char) => char.toUpperCase());
-}
-
-function renderInventoryEntryHistory(entries) {
-    const container = document.getElementById('inventory-entry-container');
-    if (!container) return;
-
-    if (!Array.isArray(entries) || entries.length === 0) {
-        container.innerHTML = '<div class="ui-empty-state ui-fade-in"><strong>No inventory entries found.</strong><span>Inventory receipt and stock entry records will appear here after the first entry is saved.</span></div>';
-        setText('inventory-entry-count', '0 entries');
-        return;
-    }
-
-    let html = '<div class="inventory-entry-table-wrap"><table class="table inventory-entry-table">';
-    html += '<thead><tr>';
-    html += '<th>Stock Entry ID</th><th>Date Received</th><th>Item</th><th>Supplier</th><th>OR / Receipt</th><th>Category</th><th>Department</th><th>Laboratory / Room</th><th>Receiver</th><th>Condition</th><th>Description</th>';
-    html += '</tr></thead><tbody>';
-
-    entries.forEach((entry) => {
-        const dateReceived = entry.date_received
-            ? new Date(String(entry.date_received).replace(' ', 'T')).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
-            : '-';
-        const itemLabel = `${inventoryEscapeHtml(entry.item_name || 'Unnamed Item')} <span class="inventory-entry-qty-pill">${Number(entry.quantity || 0)} ${inventoryEscapeHtml(entry.unit_type || '')}</span>`;
-
-        html += '<tr>';
-        html += `<td><strong>${inventoryEscapeHtml(entry.stock_entry_id || '-')}</strong></td>`;
-        html += `<td>${inventoryEscapeHtml(dateReceived)}</td>`;
-        html += `<td>${itemLabel}</td>`;
-        html += `<td>${inventoryEscapeHtml(entry.supplier_name || '-')}</td>`;
-        html += `<td>${inventoryEscapeHtml(entry.or_number || '-')}</td>`;
-        html += `<td>${inventoryEscapeHtml(entry.category_name || 'Uncategorized')}</td>`;
-        html += `<td>${inventoryEscapeHtml(entry.department_name || '-')}</td>`;
-        html += `<td>${inventoryEscapeHtml(entry.room_name || '-')}</td>`;
-        html += `<td>${inventoryEscapeHtml(entry.receiver_name || '-')}</td>`;
-        html += `<td>${inventoryEscapeHtml(formatInventoryEntryCondition(entry.item_condition || '-'))}</td>`;
-        html += `<td>${inventoryEscapeHtml(entry.description || '-')}</td>`;
-        html += '</tr>';
-    });
-
-    html += '</tbody></table></div>';
-    container.innerHTML = html;
-    setText('inventory-entry-count', `${entries.length} ${entries.length === 1 ? 'entry' : 'entries'}`);
-}
-
-async function loadInventoryEntryHistory() {
-    const container = document.getElementById('inventory-entry-container');
-    if (container) {
-        container.innerHTML = '<div class="ui-empty-state ui-fade-in"><strong>Loading inventory entries...</strong><span>Please wait while we collect your stock entry history.</span></div>';
-    }
-
-    const params = new URLSearchParams();
-    const search = (document.getElementById('inventory-entry-search')?.value || '').trim();
-    const categoryId = document.getElementById('inventory-entry-filter-category')?.value || '';
-    const departmentId = document.getElementById('inventory-entry-filter-department')?.value || '';
-    const roomId = document.getElementById('inventory-entry-filter-room')?.value || '';
-    const dateFrom = document.getElementById('inventory-entry-filter-date-from')?.value || '';
-    const dateTo = document.getElementById('inventory-entry-filter-date-to')?.value || '';
-
-    if (search) params.set('search', search);
-    if (categoryId) params.set('category_id', categoryId);
-    if (departmentId) params.set('department_id', departmentId);
-    if (roomId) params.set('room_id', roomId);
-    if (dateFrom) params.set('date_from', dateFrom);
-    if (dateTo) params.set('date_to', dateTo);
-
-    try {
-        const response = await fetch(`${INVENTORY_STOCK_API_BASE}/entries?${params.toString()}`, {
-            credentials: 'same-origin'
-        });
-        const payload = await response.json();
-
-        if (!response.ok || !payload.success) {
-            throw new Error(payload.message || 'Failed to load inventory entries');
-        }
-
-        inventoryEntryHistory = Array.isArray(payload.data?.entries) ? payload.data.entries : [];
-        renderInventoryEntryHistory(inventoryEntryHistory);
-    } catch (error) {
-        console.error('Inventory entry history load error:', error);
-        if (container) {
-            container.innerHTML = '<div class="alert alert-danger ui-fade-in">Could not load inventory entry history right now.</div>';
-        }
-        setText('inventory-entry-count', '0 entries');
-    }
-}
-
-function openInventoryEntryModal() {
-    const modal = document.getElementById('inventoryEntryModal');
-    if (!modal) return;
-
-    modal.classList.add('show');
-    modal.setAttribute('aria-hidden', 'false');
-    setInventoryEntryMessage('');
-    document.getElementById('inventoryEntryForm')?.reset();
-    const dateInput = document.getElementById('inventoryEntryDateReceived');
-    if (dateInput) {
-        dateInput.value = new Date().toISOString().slice(0, 10);
-    }
-    document.getElementById('inventoryEntryIdPreview').textContent = 'Auto-generated when saved';
-    document.getElementById('inventoryEntryOrNumber')?.focus();
-}
-
-function closeInventoryEntryModal() {
-    const modal = document.getElementById('inventoryEntryModal');
-    if (!modal) return;
-
-    modal.classList.remove('show');
-    modal.setAttribute('aria-hidden', 'true');
-    document.getElementById('inventoryEntryForm')?.reset();
-    setInventoryEntryMessage('');
-    document.getElementById('inventoryEntryIdPreview').textContent = 'Auto-generated when saved';
-}
-
-async function saveInventoryEntry() {
-    const payload = {
-        or_number: (document.getElementById('inventoryEntryOrNumber')?.value || '').trim(),
-        supplier_name: (document.getElementById('inventoryEntrySupplierName')?.value || '').trim(),
-        date_received: document.getElementById('inventoryEntryDateReceived')?.value || '',
-        category_id: document.getElementById('inventoryEntryCategory')?.value || '',
-        item_name: (document.getElementById('inventoryEntryItemName')?.value || '').trim(),
-        quantity: Number(document.getElementById('inventoryEntryQuantity')?.value || 0),
-        unit_type: (document.getElementById('inventoryEntryUnitType')?.value || '').trim(),
-        department_id: document.getElementById('inventoryEntryDepartment')?.value || '',
-        room_id: document.getElementById('inventoryEntryRoom')?.value || '',
-        description: (document.getElementById('inventoryEntryDescription')?.value || '').trim(),
-        item_condition: document.getElementById('inventoryEntryCondition')?.value || '',
-    };
-
-    if (!payload.or_number || !payload.supplier_name || !payload.date_received || !payload.category_id || !payload.item_name || payload.quantity <= 0 || !payload.unit_type || !payload.department_id || !payload.item_condition) {
-        setInventoryEntryMessage('Please complete all required inventory entry fields before saving.', 'danger');
-        return;
-    }
-
-    const saveButton = document.getElementById('saveInventoryEntryButton');
-    const originalLabel = saveButton?.textContent || 'Save Entry';
-    if (saveButton) {
-        saveButton.disabled = true;
-        saveButton.textContent = 'Saving...';
-    }
-
-    setInventoryEntryMessage('Saving inventory entry and updating inventory stock...', 'info');
-
-    try {
-        const response = await fetch(`${INVENTORY_STOCK_API_BASE}/entries`, {
-            method: 'POST',
-            credentials: 'same-origin',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload),
-        });
-        const result = await response.json();
-
-        if (!response.ok || !result.success) {
-            throw new Error(result.message || 'Failed to save inventory entry');
-        }
-
-        const stockEntryId = result.data?.entry?.stock_entry_id || 'Saved';
-        document.getElementById('inventoryEntryIdPreview').textContent = stockEntryId;
-        setInventoryEntryMessage(`Inventory entry ${stockEntryId} saved successfully.`, 'info');
-        await loadInventory();
-        await loadInventoryEntryHistory();
-
-        window.setTimeout(() => {
-            closeInventoryEntryModal();
-        }, 600);
-    } catch (error) {
-        console.error('Save inventory entry error:', error);
-        setInventoryEntryMessage(error.message || 'Failed to save inventory entry.', 'danger');
-    } finally {
-        if (saveButton) {
-            saveButton.disabled = false;
-            saveButton.textContent = originalLabel;
-        }
-    }
-}
+// 2026-10-26 — formatInventoryEntryCondition(), renderInventoryEntryHistory(),
+// loadInventoryEntryHistory(), openInventoryEntryModal(),
+// closeInventoryEntryModal(), and saveInventoryEntry() were removed along
+// with the "Inventory Entry" modal and "Inventory Entry History" card
+// (see header-actions comment near the top of this file) — all of their
+// target elements (#inventory-entry-container, #inventoryEntryModal, its
+// form fields, #saveInventoryEntryButton, etc.) were deleted from the
+// markup, and nothing else in this file called them.
 
 // TASK 6B PHASE 2 — openAddInventoryRoomModal() / closeAddInventoryRoomModal()
 // were removed along with the Add Inventory Room modal itself.
@@ -2131,7 +1805,6 @@ async function saveAddItems() {
 
         closeAddItemsModal();
         await loadInventory();
-        await loadInventoryEntryHistory();
     } catch (error) {
         console.error('Edit item error:', error);
         setAddItemsMessage(error.message || 'Failed to update item.', 'danger');
@@ -2415,7 +2088,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     try {
         await fetchInventoryDepartments();
-        await loadInventoryEntryDepartmentOptions();
     } catch (error) {
         console.error('Inventory bootstrap error (departments):', error);
     }
@@ -2434,16 +2106,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     // row is already rendered — just find and highlight it, mirroring
     // highlightUserFromQuery() in users.php.
     highlightInventoryItemFromQuery();
-    await loadInventoryEntryHistory();
 
-    const inventoryEntryButton = document.getElementById('openInventoryEntryButton');
     const closeButton = document.getElementById('closeAddItemsModalButton');
     const cancelButton = document.getElementById('cancelAddItemsButton');
     const saveButton = document.getElementById('saveAddItemsButton');
-    const inventoryEntryModal = document.getElementById('inventoryEntryModal');
-    const closeInventoryEntryModalButton = document.getElementById('closeInventoryEntryModalButton');
-    const cancelInventoryEntryButton = document.getElementById('cancelInventoryEntryButton');
-    const saveInventoryEntryButton = document.getElementById('saveInventoryEntryButton');
     const openAdjustStockButton = document.getElementById('openAdjustStockButton');
     const closeAdjustStockModalButton = document.getElementById('closeAdjustStockModalButton');
     const cancelAdjustStockButton = document.getElementById('cancelAdjustStockButton');
@@ -2457,13 +2123,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     const closeInventoryHistoryFooterButton = document.getElementById('closeInventoryHistoryFooterButton');
     const categorySelect = document.getElementById('inventoryCategorySelect');
     const inventorySearchInput = document.getElementById('inventory-category-search');
-    const inventoryEntrySearchInput = document.getElementById('inventory-entry-search');
-    const inventoryEntryFilterCategory = document.getElementById('inventory-entry-filter-category');
-    const inventoryEntryFilterDepartment = document.getElementById('inventory-entry-filter-department');
-    const inventoryEntryFilterRoom = document.getElementById('inventory-entry-filter-room');
-    const inventoryEntryFilterDateFrom = document.getElementById('inventory-entry-filter-date-from');
-    const inventoryEntryFilterDateTo = document.getElementById('inventory-entry-filter-date-to');
-    const inventoryEntryClearFiltersButton = document.getElementById('inventory-entry-clear-filters');
     const inventoryItemsStatusFilterInput = document.getElementById('inventory-items-status-filter');
     const inventoryItemsClearFiltersButton = document.getElementById('inventory-items-clear-filters');
     const inventoryQuantityInput = document.getElementById('inventoryQuantityInput');
@@ -2471,22 +2130,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     const categorySearchInput = document.getElementById('categorySearchInput');
     const categoryStatusFilter = document.getElementById('categoryStatusFilter');
 
-    // 'Inventory Entry' modal POSTs to a deprecated backend endpoint
-    // (InventoryStockController::createEntry() returns 410 and is not even
-    // routed for POST — see routes/web.php). Stock intake is now handled
-    // exclusively via Purchase Receipts, so the button navigates there
-    // instead of opening the non-functional modal.
-    if (inventoryEntryButton) inventoryEntryButton.addEventListener('click', () => {
-        window.location.href = window.SFMS_PUBLIC_URL('/purchase-receipts');
-    });
     if (closeButton) closeButton.addEventListener('click', closeAddItemsModal);
     if (cancelButton) cancelButton.addEventListener('click', closeAddItemsModal);
     if (saveButton) saveButton.addEventListener('click', saveAddItems);
     if (closeInventoryHistoryModalButton) closeInventoryHistoryModalButton.addEventListener('click', closeInventoryHistoryModal);
     if (closeInventoryHistoryFooterButton) closeInventoryHistoryFooterButton.addEventListener('click', closeInventoryHistoryModal);
-    if (closeInventoryEntryModalButton) closeInventoryEntryModalButton.addEventListener('click', closeInventoryEntryModal);
-    if (cancelInventoryEntryButton) cancelInventoryEntryButton.addEventListener('click', closeInventoryEntryModal);
-    if (saveInventoryEntryButton) saveInventoryEntryButton.addEventListener('click', saveInventoryEntry);
     if (openAdjustStockButton) openAdjustStockButton.addEventListener('click', openAdjustStockModal);
     if (closeAdjustStockModalButton) closeAdjustStockModalButton.addEventListener('click', closeAdjustStockModal);
     if (cancelAdjustStockButton) cancelAdjustStockButton.addEventListener('click', closeAdjustStockModal);
@@ -2558,23 +2206,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             renderInventoryOverview();
         });
     }
-    if (inventoryEntrySearchInput) inventoryEntrySearchInput.addEventListener('input', loadInventoryEntryHistory);
-    if (inventoryEntryFilterCategory) inventoryEntryFilterCategory.addEventListener('change', loadInventoryEntryHistory);
-    if (inventoryEntryFilterDepartment) inventoryEntryFilterDepartment.addEventListener('change', loadInventoryEntryHistory);
-    if (inventoryEntryFilterRoom) inventoryEntryFilterRoom.addEventListener('change', loadInventoryEntryHistory);
-    if (inventoryEntryFilterDateFrom) inventoryEntryFilterDateFrom.addEventListener('change', loadInventoryEntryHistory);
-    if (inventoryEntryFilterDateTo) inventoryEntryFilterDateTo.addEventListener('change', loadInventoryEntryHistory);
-    if (inventoryEntryClearFiltersButton) {
-        inventoryEntryClearFiltersButton.addEventListener('click', () => {
-            if (inventoryEntrySearchInput) inventoryEntrySearchInput.value = '';
-            if (inventoryEntryFilterCategory) inventoryEntryFilterCategory.value = '';
-            if (inventoryEntryFilterDepartment) inventoryEntryFilterDepartment.value = '';
-            if (inventoryEntryFilterRoom) inventoryEntryFilterRoom.value = '';
-            if (inventoryEntryFilterDateFrom) inventoryEntryFilterDateFrom.value = '';
-            if (inventoryEntryFilterDateTo) inventoryEntryFilterDateTo.value = '';
-            loadInventoryEntryHistory();
-        });
-    }
     if (categorySearchInput) {
         categorySearchInput.addEventListener('input', () => {
             categoryAdminSearchTerm = categorySearchInput.value.trim().toLowerCase();
@@ -2600,14 +2231,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         inventoryHistoryModal.addEventListener('click', (event) => {
             if (event.target === inventoryHistoryModal) {
                 closeInventoryHistoryModal();
-            }
-        });
-    }
-
-    if (inventoryEntryModal) {
-        inventoryEntryModal.addEventListener('click', (event) => {
-            if (event.target === inventoryEntryModal) {
-                closeInventoryEntryModal();
             }
         });
     }

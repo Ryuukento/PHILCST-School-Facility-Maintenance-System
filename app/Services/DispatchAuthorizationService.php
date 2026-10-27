@@ -28,8 +28,9 @@ use Illuminate\Validation\ValidationException;
  *     unchanged); they choose the personnel once, at creation.
  *
  *   Maintenance Staff (maintenance_staff)
- *     releases — but ONLY the dispatch that names them in
- *     release_assigned_to. Role membership alone is explicitly not enough.
+ *     releases — but ONLY a dispatch whose personnel roster
+ *     (dispatch_personnel_assignments) includes them. Role membership alone
+ *     is explicitly not enough.
  *
  * Department-based restriction on WHO may be assigned as Release Personnel
  * (TASK 9/41) was REMOVED per product decision: `dispatches.department_id`
@@ -137,19 +138,23 @@ class DispatchAuthorizationService
     }
 
     /**
-     * The core security rule of this task: identity, not role — role is only
-     * used to keep Administrator out of the pool entirely (see TASK 57).
+     * The core security rule of this task: roster membership, not role — role
+     * is only used to keep Administrator out of the pool entirely (see TASK
+     * 57).
      *
-     * A dispatch may only be released by the exact user recorded in
-     * release_assigned_to. An unassigned dispatch is releasable by nobody —
-     * that is intentional, and it is what makes every pre-TASK-13 dispatch
-     * (which has no assignment) safe by default.
+     * Primary/Additional hierarchy removal — a dispatch may only be released
+     * by a user who appears in its flat personnel roster
+     * (dispatch_personnel_assignments), checked by membership rather than by
+     * comparing against a single release_assigned_to column. A dispatch with
+     * an empty roster is releasable by nobody — that is intentional, and it
+     * is what makes every pre-TASK-13 dispatch (which has no assignment at
+     * all) safe by default.
      *
      * TASK 57 — widened from maintenance_staff-only to also accept
      * maintenance_admin (Head Maintenance), matching the widened assignment
      * pool in assertAssignableReleasePersonnel(). super_admin is still
-     * refused here even if somehow written into release_assigned_to, so a
-     * data anomaly cannot let an Administrator release their own dispatch.
+     * refused here even if somehow present in the roster, so a data anomaly
+     * cannot let an Administrator release their own dispatch.
      */
     public function canReleaseDispatch(array $authUser, Dispatch $dispatch): bool
     {
@@ -157,10 +162,28 @@ class DispatchAuthorizationService
             return false;
         }
 
-        $assignedTo = $dispatch->release_assigned_to !== null ? (int) $dispatch->release_assigned_to : null;
         $userId = (int) ($authUser['user_id'] ?? 0);
+        if ($userId <= 0) {
+            return false;
+        }
 
-        return $assignedTo !== null && $userId > 0 && $assignedTo === $userId;
+        return $dispatch->personnelAssignments()
+            ->where('personnel_user_id', $userId)
+            ->exists();
+    }
+
+    /**
+     * Primary/Additional hierarchy removal — removing a roster member shares
+     * the same gate as adding one: Head Maintenance only, and only while the
+     * dispatch is still pending/approved (not yet released, not cancelled).
+     * Removal is allowed to take the roster down to zero per product
+     * decision — a zero-personnel dispatch simply becomes unapprovable (see
+     * DispatchService::approveDispatch()) until someone is added back, it is
+     * not blocked at removal time.
+     */
+    public function canRemoveDispatchPersonnel(array $authUser, Dispatch $dispatch): bool
+    {
+        return $this->canAssignReleasePersonnel($authUser, $dispatch);
     }
 
     /**

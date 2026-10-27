@@ -250,7 +250,18 @@ class DeployedAssetRegistryTest extends TestCase
         $headId = $this->seedUser(['role' => 'maintenance_admin', 'full_name' => 'Kristine Head']);
         $itemId = $this->seedItem(['name' => 'Desktop PC', 'quantity' => 5]);
         [$dispatchId, $lines] = $this->seedApprovedDispatch([[$itemId, 2]]);
-        DB::table('dispatches')->where('id', $dispatchId)->update(['release_assigned_to' => $headId]);
+        // Primary/Additional hierarchy removal — release eligibility is now
+        // roster (pivot) membership, not the legacy release_assigned_to
+        // column, so the Head must be added to dispatch_personnel_assignments
+        // to be "the assigned release personnel" here.
+        DB::table('dispatch_personnel_assignments')->insert([
+            'dispatch_id' => $dispatchId,
+            'personnel_user_id' => $headId,
+            'assigned_by' => null,
+            'assigned_at' => now(),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
 
         $this->actingAsSessionUserWithFlatKeys($headId, 'maintenance_admin')
             ->postJson("/api/dispatches/{$dispatchId}/release", ['assets' => [$lines[0] => ['HEAD-PC-01', '']]])
@@ -740,7 +751,19 @@ class DeployedAssetRegistryTest extends TestCase
             'dispatch_code' => 'DSP-' . uniqid(),
             'status' => $status,
             'room_id' => $this->roomId,
-            'release_assigned_to' => $this->staffId,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        // Primary/Additional hierarchy removal — canReleaseDispatch() now
+        // checks dispatch_personnel_assignments membership instead of the
+        // release_assigned_to column, so release() (acting as $this->staffId)
+        // needs a matching pivot row here, not just the legacy column.
+        DB::table('dispatch_personnel_assignments')->insert([
+            'dispatch_id' => $dispatchId,
+            'personnel_user_id' => $this->staffId,
+            'assigned_by' => null,
+            'assigned_at' => now(),
             'created_at' => now(),
             'updated_at' => now(),
         ]);

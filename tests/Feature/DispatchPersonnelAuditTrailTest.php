@@ -71,18 +71,29 @@ class DispatchPersonnelAuditTrailTest extends TestCase
             ->postJson('/api/dispatches', [
                 'items' => [['item_id' => $itemId, 'quantity' => 2]],
                 'room_id' => $this->roomId,
-                'release_assigned_to' => $staffId,
+                'personnel_ids' => [$staffId],
             ]);
 
         $response->assertStatus(201);
 
-        $dispatch = DB::table('dispatches')->where('id', $response->json('data.dispatch_id'))->first();
+        $dispatchId = $response->json('data.dispatch_id');
+        $dispatch = DB::table('dispatches')->where('id', $dispatchId)->first();
         $this->assertSame($headId, (int) $dispatch->requested_by);
-        // TASK 13 — the assignment is captured at creation, along with who
-        // made it and when, so the trail records all three from the start.
-        $this->assertSame($staffId, (int) $dispatch->release_assigned_to);
-        $this->assertSame($headId, (int) $dispatch->release_assigned_by);
-        $this->assertNotNull($dispatch->release_assigned_at);
+
+        // Primary/Additional hierarchy removal — the flat roster
+        // (dispatch_personnel_assignments) is now the sole source of truth
+        // for who will release the items; the write-once-historical
+        // release_assigned_to/_by/_at columns stay NULL for every dispatch
+        // created after this change.
+        $this->assertNull($dispatch->release_assigned_to);
+        $assignment = DB::table('dispatch_personnel_assignments')
+            ->where('dispatch_id', $dispatchId)
+            ->where('personnel_user_id', $staffId)
+            ->first();
+        $this->assertNotNull($assignment, 'The chosen staff member must be on the roster.');
+        $this->assertSame($headId, (int) $assignment->assigned_by);
+        $this->assertNotNull($assignment->assigned_at);
+
         $this->assertNull($dispatch->approved_by);
         $this->assertNull($dispatch->released_by);
     }
@@ -110,8 +121,15 @@ class DispatchPersonnelAuditTrailTest extends TestCase
         $this->assertSame($headId, (int) $dispatch->requested_by, 'requested_by must never be overwritten by approval.');
         // TASK 13 — the Administrator may not assign personnel, so approval
         // must leave the existing assignment exactly as the Head set it.
-        $this->assertSame($staffId, (int) $dispatch->release_assigned_to, 'Approval must not touch the assignment.');
-        $this->assertSame($headId, (int) $dispatch->release_assigned_by);
+        // Primary/Additional hierarchy removal — the roster lives in the
+        // pivot table now, not the release_assigned_to column.
+        $this->assertTrue(
+            DB::table('dispatch_personnel_assignments')
+                ->where('dispatch_id', $dispatchId)
+                ->where('personnel_user_id', $staffId)
+                ->exists(),
+            'Approval must not touch the roster.'
+        );
     }
 
     /**
@@ -257,8 +275,19 @@ class DispatchPersonnelAuditTrailTest extends TestCase
         $this->assertSame(1, DB::table('activity_logs')->where('action', 'RELEASE_DISPATCH')->count());
     }
 
+    /**
+     * Primary/Additional hierarchy removal — this raw-insert seed helper
+     * predates the pivot table. canReleaseDispatch() and approveDispatch()
+     * now read dispatch_personnel_assignments, not release_assigned_to, so a
+     * 'release_assigned_to' override here is mirrored into a matching pivot
+     * row — otherwise every test that approves/releases via this helper
+     * would silently fail authorization.
+     */
     private function seedDispatch(int $itemId, int $quantity, array $overrides = []): int
     {
+        $personnelUserId = $overrides['release_assigned_to'] ?? null;
+        $assignedBy = $overrides['release_assigned_by'] ?? null;
+
         $dispatchId = DB::table('dispatches')->insertGetId(array_merge([
             'dispatch_code' => 'DSP-' . uniqid(),
             'status' => 'pending',
@@ -274,12 +303,24 @@ class DispatchPersonnelAuditTrailTest extends TestCase
             'updated_at' => now(),
         ]);
 
+        if ($personnelUserId !== null) {
+            DB::table('dispatch_personnel_assignments')->insert([
+                'dispatch_id' => $dispatchId,
+                'personnel_user_id' => $personnelUserId,
+                'assigned_by' => $assignedBy,
+                'assigned_at' => now(),
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        }
+
         return $dispatchId;
     }
 
     private function createTestSchema(): void
     {
         Schema::disableForeignKeyConstraints();
+        Schema::dropIfExists('dispatch_personnel_assignments');
         Schema::dropIfExists('dispatch_items');
         Schema::dropIfExists('dispatches');
         Schema::dropIfExists('inventory_transactions');
@@ -305,6 +346,7 @@ class DispatchPersonnelAuditTrailTest extends TestCase
 
         $this->createDispatchesTable();
         $this->createDispatchItemsTable();
+        $this->createDispatchPersonnelAssignmentsTable();
 
         Schema::enableForeignKeyConstraints();
     }

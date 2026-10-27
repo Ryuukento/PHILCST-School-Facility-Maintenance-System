@@ -241,21 +241,29 @@
 
 /* REPORT cell — report_id stacked above the title, replacing the old
    standalone ID column. Neither value changed; only where the ID renders.
-   2026-10-08 — justify-content: center added. Every sibling <td> in this
-   row uses the HTML default vertical-align: middle, but this cell's
-   display: flex opts it out of that and defaults to top alignment
-   (flex-start) instead. On a tall row — e.g. a wrapped 2-line "Assigned
-   To" name or a 2-3 line Location — the title then floats at the very top
-   of the cell while every other column sits vertically centred, reading
-   as a stray line/gap splitting the Report cell. Centring the flex column
-   here matches the row's default middle alignment; it does not change
-   which element (title vs. archive tag) stacks on top. */
+   2026-10-08 — justify-content: center added (since reverted, see below).
+   Every sibling <td> in this row uses the HTML default vertical-align:
+   middle, but this cell's display: flex opted it out of that and defaulted
+   to top alignment (flex-start) instead. On a tall row — e.g. a wrapped
+   2-line "Assigned To" name or a 2-3 line Location — the title then
+   floated at the very top of the cell while every other column sat
+   vertically centred. Centring the flex column was meant to match the
+   row's default middle alignment.
+   2026-10-26 — display: flex removed entirely instead. A flex <td> stops
+   being sized as a table-cell: Chrome no longer stretches its box to the
+   row's full height the way it stretches every plain sibling <td>, so this
+   cell's own border-bottom sat well above the row's real bottom edge —
+   visible as a stray divider line cutting across the Report column (most
+   noticeably through short, single-line titles) instead of sitting flush
+   at the row boundary like every other column's. vertical-align: middle
+   is the plain table-cell equivalent of the old justify-content: center —
+   .reports-title is already display: block (see below) and
+   .report-archive-tag is already its own display: flex (block-level), so
+   the title-then-tag stacking this cell relies on is unaffected; only the
+   now-redundant/row-height-breaking flex wrapper is gone. */
 .reports-page-container .reports-table .reports-cell-report {
     white-space: normal;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    gap: 0;
+    vertical-align: middle;
 }
 
 .reports-id {
