@@ -1094,7 +1094,7 @@ function openEditUserModal(userId) {
 
         const fullNameInput = document.getElementById('edit-user-full-name');
         const fullName = fullNameInput.value.trim();
-        const fullNameError = getRequiredNameValidationError(fullName, 'Full name');
+        const fullNameError = getFullNameValidationError(fullName, 'Full name');
         setFieldValidationState(fullNameInput, fullNameError);
         if (fullNameError) return;
 
@@ -1451,6 +1451,33 @@ function getRequiredNameValidationError(value, label) {
     const nameRegex = /^[a-zA-Z\s'-]+$/;
     if (!nameRegex.test(value)) {
         return `${label} can only contain letters, spaces, hyphens, and apostrophes.`;
+    }
+
+    if (value.length < 2) {
+        return `${label} must be at least 2 characters long.`;
+    }
+
+    if (value.length > 100) {
+        return `${label} must not exceed 100 characters.`;
+    }
+
+    return null;
+}
+
+// Full-name validation: for the already-composed "Last, First M." value shown
+// in the Edit User modal. buildFullName() (see below) assembles names in this
+// exact "Lastname, Firstname M." shape, so unlike the name-PART regex above,
+// this one must also allow the comma after the last name and the period after
+// a middle initial -- otherwise re-saving a user's existing, unchanged name
+// (e.g. "Manzo, Kristine Joy D.") always fails validation.
+function getFullNameValidationError(value, label) {
+    if (!value) {
+        return `${label} is required.`;
+    }
+
+    const fullNameRegex = /^[a-zA-Z\s'.,-]+$/;
+    if (!fullNameRegex.test(value)) {
+        return `${label} can only contain letters, spaces, hyphens, apostrophes, commas, and periods.`;
     }
 
     if (value.length < 2) {
