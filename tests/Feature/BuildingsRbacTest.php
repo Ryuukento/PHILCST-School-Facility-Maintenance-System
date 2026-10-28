@@ -341,6 +341,109 @@ class BuildingsRbacTest extends TestCase
             ->assertJson(['success' => true]);
     }
 
+    /**
+     * 2026-10-27 — RoomController::store() already rejects a case-insensitive
+     * exact name match scoped to the same floor (see its $duplicate query).
+     * This locks that behavior in with Feature coverage, since no test
+     * previously exercised it.
+     */
+    public function test_creating_room_with_a_duplicate_name_on_the_same_floor_is_rejected(): void
+    {
+        $adminId = $this->seedUser(['role' => 'super_admin']);
+        $buildingId = $this->seedBuilding();
+        $floorId = $this->seedFloor($buildingId);
+        $this->seedRoom($buildingId, $floorId, ['name' => 'Room 107']);
+
+        $this
+            ->actingAsSessionUser($adminId, 'super_admin')
+            ->postJson('/api/rooms', [
+                'building_id' => $buildingId,
+                'floor_id' => $floorId,
+                // Case-different re-entry of the same name must still collide.
+                'name' => 'room 107',
+            ])
+            ->assertStatus(409)
+            ->assertJson(['success' => false]);
+
+        $this->assertSame(
+            1,
+            DB::table('rooms')->where('floor_id', $floorId)->count(),
+            'The duplicate must not have been inserted.'
+        );
+    }
+
+    /**
+     * The duplicate guard is an exact (case-insensitive) name match only —
+     * it must not flag two merely similar-looking identifiers as the same
+     * room. "Room 107" and "O 107" are different strings and must both be
+     * allowed to coexist on the same floor.
+     */
+    public function test_creating_room_with_a_similar_but_different_name_is_allowed(): void
+    {
+        $adminId = $this->seedUser(['role' => 'super_admin']);
+        $buildingId = $this->seedBuilding();
+        $floorId = $this->seedFloor($buildingId);
+        $this->seedRoom($buildingId, $floorId, ['name' => 'Room 107']);
+
+        $this
+            ->actingAsSessionUser($adminId, 'super_admin')
+            ->postJson('/api/rooms', [
+                'building_id' => $buildingId,
+                'floor_id' => $floorId,
+                'name' => 'O 107',
+            ])
+            ->assertStatus(201)
+            ->assertJson(['success' => true]);
+
+        $this->assertSame(2, DB::table('rooms')->where('floor_id', $floorId)->count());
+    }
+
+    /**
+     * The same exact-match duplicate guard applies on a DIFFERENT floor than
+     * the existing "Room 107" — rooms are only unique within their own
+     * floor, so the same name on another floor of the same building (or a
+     * different building entirely) must be allowed.
+     */
+    public function test_creating_room_with_the_same_name_on_a_different_floor_is_allowed(): void
+    {
+        $adminId = $this->seedUser(['role' => 'super_admin']);
+        $buildingId = $this->seedBuilding();
+        $floorOneId = $this->seedFloor($buildingId);
+        $floorTwoId = $this->seedFloor($buildingId);
+        $this->seedRoom($buildingId, $floorOneId, ['name' => 'Room 107']);
+
+        $this
+            ->actingAsSessionUser($adminId, 'super_admin')
+            ->postJson('/api/rooms', [
+                'building_id' => $buildingId,
+                'floor_id' => $floorTwoId,
+                'name' => 'Room 107',
+            ])
+            ->assertStatus(201)
+            ->assertJson(['success' => true]);
+    }
+
+    public function test_updating_room_into_an_existing_duplicate_name_on_the_same_floor_is_rejected(): void
+    {
+        $adminId = $this->seedUser(['role' => 'super_admin']);
+        $buildingId = $this->seedBuilding();
+        $floorId = $this->seedFloor($buildingId);
+        $this->seedRoom($buildingId, $floorId, ['name' => 'Room 107']);
+        $targetId = $this->seedRoom($buildingId, $floorId, ['name' => 'O 107']);
+
+        $this
+            ->actingAsSessionUser($adminId, 'super_admin')
+            ->patchJson("/api/rooms/{$targetId}", ['name' => 'Room 107'])
+            ->assertStatus(409)
+            ->assertJson(['success' => false]);
+
+        $this->assertSame(
+            'O 107',
+            DB::table('rooms')->where('id', $targetId)->value('name'),
+            'A rejected rename must not have persisted.'
+        );
+    }
+
     public function test_super_admin_can_update_room(): void
     {
         $adminId = $this->seedUser(['role' => 'super_admin']);

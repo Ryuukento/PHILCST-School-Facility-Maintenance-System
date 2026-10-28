@@ -78,7 +78,10 @@ class MaintenanceReportSyncService
             return;
         }
 
-        $maintenanceReport = MaintenanceReport::query()->find($reportId);
+        // updateStatus() already locks this parent before the Damage Report.
+        // Reacquire it as a current read: a plain SELECT can use an older
+        // REPEATABLE READ snapshot even while we hold the current row lock.
+        $maintenanceReport = MaintenanceReport::query()->lockForUpdate()->find($reportId);
         if (!$maintenanceReport) {
             return;
         }

@@ -20,23 +20,10 @@ if (!isset($_SESSION['user'])) {
 $user = $_SESSION['user'];
 $currentUserId = (int)($user['user_id'] ?? 0);
 
-// Sync role from database so stale sessions don't keep admins on staff dashboard.
+// settings.php has already refreshed canonical role/department/status before
+// this page's permission checks. Do not overwrite them with a partial payload.
 require_once __DIR__ . '/../../backend/config/database.php';
 $pdo = getDBConnection();
-
-try {
-    $roleStmt = $pdo->prepare("SELECT role FROM users WHERE user_id = ? LIMIT 1");
-    $roleStmt->execute([(int)($user['user_id'] ?? 0)]);
-    $actualRole = strtolower(trim((string)$roleStmt->fetchColumn()));
-
-    if ($actualRole !== '') {
-        $_SESSION['user']['role'] = $actualRole;
-        $_SESSION['role'] = $actualRole;
-        $user['role'] = $actualRole;
-    }
-} catch (Throwable $e) {
-    // Keep session role if role sync fails.
-}
 
 if (($user['role'] ?? '') !== 'maintenance_staff') {
     if (($user['role'] ?? '') === 'maintenance_admin' || ($user['role'] ?? '') === 'super_admin') {

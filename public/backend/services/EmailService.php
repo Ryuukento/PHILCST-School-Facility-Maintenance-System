@@ -41,7 +41,6 @@ if ($vendorAutoload !== null) {
 
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\SMTP;
-use PHPMailer\PHPMailer\Exception as PHPMailerException;
 
 class EmailService
 {
@@ -75,6 +74,55 @@ class EmailService
         $mail->CharSet = 'UTF-8';
 
         return $mail;
+    }
+
+    /** Log only allowlisted status fields; SMTP replies can echo credentials or message data. */
+    private static function logDeliveryFailure(string $workflow, ?PHPMailer $mail = null, ?Throwable $exception = null): void
+    {
+        $error = [];
+        $reply = '';
+        try {
+            if ($mail !== null) {
+                $smtp = $mail->getSMTPInstance();
+                $error = $smtp->getError();
+                $reply = $smtp->getLastReply();
+            }
+        } catch (Throwable $ignored) {
+            // Diagnostics must never interrupt the caller's failure handling.
+        }
+
+        $code = (string) ($error['smtp_code'] ?? '');
+        $enhanced = (string) ($error['smtp_code_ex'] ?? '');
+        if (!preg_match('/^[245][0-9]{2}$/D', $code)) {
+            $code = preg_match('/^([245][0-9]{2})(?:[ -])/', $reply, $match) ? $match[1] : null;
+        }
+        if (!preg_match('/^[245]\.[0-9]{1,3}\.[0-9]{1,3}$/D', $enhanced)) {
+            $enhanced = preg_match('/^[245][0-9]{2}[ -]([245]\.[0-9]{1,3}\.[0-9]{1,3})(?:\s|$)/', $reply, $match) ? $match[1] : null;
+        }
+
+        // Read free text only to classify it; never write it to logs.
+        $detail = strtolower((string) ($error['error'] ?? '') . ' ' . ($exception ? $exception->getMessage() : ''));
+        $reason = 'unclassified_transport_failure';
+        foreach ([
+            'smtp_data_failure' => '/data not accepted|data command|data end/',
+            'authentication_failure' => '/authenticat|credentials/',
+            'tls_failure' => '/starttls|certificate|tls|ssl/',
+            'connection_failure' => '/connect|timed? out|timeout/',
+            'quota_or_rate_limit' => '/quota|rate limit|too many messages|daily.*limit/',
+            'recipient_rejected' => '/recipient|rcpt/',
+            'sender_rejected' => '/sender|mail from/',
+        ] as $category => $pattern) {
+            if (preg_match($pattern, $detail)) {
+                $reason = $category;
+                break;
+            }
+        }
+        error_log('[EmailService] ' . json_encode([
+            'workflow' => $workflow, 'outcome' => 'failed', 'reason' => $reason,
+            'smtp_code' => $code, 'smtp_code_ex' => $enhanced,
+            'smtp_status_available' => $code !== null || $enhanced !== null,
+            'raw_details' => 'withheld',
+        ], JSON_UNESCAPED_SLASHES));
     }
 
     /**
@@ -143,11 +191,14 @@ class EmailService
         $mail->Body    = self::buildNewReportEmailHTML($report, $priorityColor, $priorityLabel);
         $mail->AltBody = self::buildNewReportEmailText($report);
 
-        $mail->send();
-        error_log('[EmailService] Email sent to ' . $primary['email'] . ' with BCC recipients: ' . count($emails));
+        if (!$mail->send()) {
+            self::logDeliveryFailure('report_notification', $mail);
+            return false;
+        }
+        error_log('[EmailService] Report notification accepted by transport');
         return true;
       } catch (Throwable $e) {
-        error_log('[EmailService] Failed to send admin notification email: ' . $e->getMessage());
+        self::logDeliveryFailure('report_notification', $mail ?? null, $e);
         return false;
       }
     }
@@ -174,11 +225,14 @@ class EmailService
             $mail->Body    = self::buildStatusUpdateEmailHTML($report, $statusLabel);
             $mail->AltBody = "Your maintenance report \"{$report['title']}\" status has been updated to: $statusLabel.";
 
-            $mail->send();
+            if (!$mail->send()) {
+                self::logDeliveryFailure('status_update', $mail);
+                return false;
+            }
             return true;
 
-        } catch (PHPMailerException $e) {
-            error_log('[EmailService] Status update email failed: ' . $e->getMessage());
+        } catch (Throwable $e) {
+            self::logDeliveryFailure('status_update', $mail ?? null, $e);
             return false;
         }
     }
@@ -372,7 +426,7 @@ HTML;
         string $toName = ''
     ): bool {
         if (empty($toEmail) || !filter_var($toEmail, FILTER_VALIDATE_EMAIL)) {
-            error_log('[EmailService] Invalid recipient email: ' . $toEmail);
+            error_log('[EmailService] General email skipped: invalid recipient');
             return false;
         }
 
@@ -386,11 +440,14 @@ HTML;
                 $mail->AltBody = $textBody;
             }
 
-            $mail->send();
-            error_log('[EmailService] Email sent to ' . $toEmail);
+            if (!$mail->send()) {
+                self::logDeliveryFailure('general_email', $mail);
+                return false;
+            }
+            error_log('[EmailService] General email accepted by transport');
             return true;
         } catch (Throwable $e) {
-            error_log('[EmailService] Failed to send email to ' . $toEmail . ': ' . $e->getMessage());
+            self::logDeliveryFailure('general_email', $mail ?? null, $e);
             return false;
         }
     }

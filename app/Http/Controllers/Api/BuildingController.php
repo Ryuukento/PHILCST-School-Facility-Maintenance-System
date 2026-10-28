@@ -260,14 +260,48 @@ class BuildingController extends Controller
         return $this->ok('Deployed items retrieved', ['items' => $items]);
     }
 
+    /**
+     * Shared Building Name validation used by both store() and update().
+     * Letters, numbers, spaces, and hyphens only (rejects things like
+     * "User@123"); must contain at least one letter (rejects number-only
+     * names like "12345"); 3-60 characters after trim + whitespace
+     * collapse. Returns a user-facing error message, or null if valid.
+     */
+    private function validateBuildingName(string $name): ?string
+    {
+        if ($name === '') {
+            return 'Building name is required';
+        }
+
+        if (!preg_match('/^[a-zA-Z0-9\s\-]+$/', $name)) {
+            return 'Building name can only contain letters, numbers, spaces, and hyphens';
+        }
+
+        if (!preg_match('/[a-zA-Z]/', $name)) {
+            return 'Building name must contain at least one letter';
+        }
+
+        if (mb_strlen($name) < 3) {
+            return 'Building name must be at least 3 characters long';
+        }
+
+        if (mb_strlen($name) > 60) {
+            return 'Building name must not exceed 60 characters';
+        }
+
+        return null;
+    }
+
     /** POST /api/buildings */
     public function store(Request $request): JsonResponse
     {
         $name        = trim((string) $request->input('name', ''));
+        $name        = preg_replace('/\s+/', ' ', $name);
         $description = trim((string) $request->input('description', ''));
 
-        if ($name === '') {
-            return $this->fail('Building name is required', 422);
+        $nameError = $this->validateBuildingName($name);
+        if ($nameError !== null) {
+            return $this->fail($nameError, 422);
         }
 
         $exists = DB::table('buildings')
@@ -291,10 +325,12 @@ class BuildingController extends Controller
     public function update(Request $request, int $id): JsonResponse
     {
         $name        = trim((string) $request->input('name', ''));
+        $name        = preg_replace('/\s+/', ' ', $name);
         $description = trim((string) $request->input('description', ''));
 
-        if ($name === '') {
-            return $this->fail('Building name is required', 422);
+        $nameError = $this->validateBuildingName($name);
+        if ($nameError !== null) {
+            return $this->fail($nameError, 422);
         }
 
         $building = DB::table('buildings')->where('id', $id)->first();

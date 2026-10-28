@@ -524,31 +524,43 @@ class DamageReportService
             ]);
         }
 
-        $nextStatus = strtolower(trim((string)($data['status'] ?? $report->status)));
-        $allowedStatuses = ['pending', 'under_review', 'repairing', 'repaired', 'replaced', 'closed'];
-        if (!in_array($nextStatus, $allowedStatuses, true)) {
-            throw ValidationException::withMessages([
-                'status' => 'Invalid status.',
-            ]);
-        }
-
-        $fromStatus = strtolower(trim((string)$report->status));
-        if ($nextStatus !== $fromStatus) {
-            $allowedNext = self::STATUS_TRANSITIONS[$fromStatus] ?? [];
-            if (!in_array($nextStatus, $allowedNext, true)) {
+        return DB::transaction(function () use ($report, $data, $userId, $authUser): DamageReport {
+            // Read identity only to choose the parent lock; never authorize a
+            // replacement or decide status from this unlocked lookup/model.
+            $reportId = DamageReport::query()->whereKey($report->id)->value('report_id');
+            $maintenanceReport = $reportId
+                ? MaintenanceReport::query()->whereKey($reportId)->lockForUpdate()->first()
+                : null;
+            $report = DamageReport::query()->whereKey($report->id)->lockForUpdate()->firstOrFail();
+            if ((int) $report->report_id !== (int) $reportId || ($reportId && !$maintenanceReport)) {
                 throw ValidationException::withMessages([
-                    'status' => "Cannot change status from {$fromStatus} to {$nextStatus}.",
+                    'status' => 'The linked maintenance report changed or is unavailable. Reload this report before proceeding.',
                 ]);
             }
-        }
 
-        $previousNotes = (string)($report->repair_notes ?? '');
-        $repairNotes = array_key_exists('repair_notes', $data)
-            ? trim((string)($data['repair_notes'] ?? ''))
-            : $report->repair_notes;
+            $nextStatus = strtolower(trim((string)($data['status'] ?? $report->status)));
+            $allowedStatuses = ['pending', 'under_review', 'repairing', 'repaired', 'replaced', 'closed'];
+            if (!in_array($nextStatus, $allowedStatuses, true)) {
+                throw ValidationException::withMessages([
+                    'status' => 'Invalid status.',
+                ]);
+            }
 
-        return DB::transaction(function () use ($report, $nextStatus, $repairNotes, $previousNotes, $data, $userId, $authUser): DamageReport {
-            $fromStatus = $report->status;
+            $fromStatus = strtolower(trim((string)$report->status));
+            if ($nextStatus !== $fromStatus) {
+                $allowedNext = self::STATUS_TRANSITIONS[$fromStatus] ?? [];
+                if (!in_array($nextStatus, $allowedNext, true)) {
+                    throw ValidationException::withMessages([
+                        'status' => "Cannot change status from {$fromStatus} to {$nextStatus}.",
+                    ]);
+                }
+            }
+
+            $previousNotes = (string)($report->repair_notes ?? '');
+            $repairNotes = array_key_exists('repair_notes', $data)
+                ? trim((string)($data['repair_notes'] ?? ''))
+                : $report->repair_notes;
+
             $meta = [];
 
             if ($nextStatus === 'replaced') {
@@ -561,8 +573,35 @@ class DamageReportService
                     ]);
                 }
 
-                if ($report->replacement_transaction_id === null) {
-                    $replacementItem = Item::query()->find($replacementItemId);
+                $issuance = $this->resolveNeedChangeIssuance($report, $maintenanceReport);
+                if ($issuance && ((int) $issuance->item_id !== $replacementItemId
+                    || (int) $issuance->quantity !== $replacementQty)) {
+                    throw ValidationException::withMessages([
+                        'replacement_item_id' => 'Replacement item and quantity must match the Administrator-approved issuance.',
+                    ]);
+                }
+
+                if ($report->replacement_transaction_id !== null) {
+                    if (($issuance && (int) $report->replacement_transaction_id !== (int) $issuance->id)
+                        || (int) $report->replacement_item_id !== $replacementItemId
+                        || (int) $report->replacement_quantity !== $replacementQty) {
+                        throw ValidationException::withMessages([
+                            'replacement_item_id' => 'The recorded replacement conflicts with this request. Its issuance requires review.',
+                        ]);
+                    }
+                    if ($fromStatus === 'replaced') {
+                        return $report;
+                    }
+                } elseif ($fromStatus === 'replaced') {
+                    throw ValidationException::withMessages([
+                        'status' => 'The completed replacement has no issuance reference and requires review.',
+                    ]);
+                } elseif ($issuance) {
+                    $report->replacement_item_id = (int) $issuance->item_id;
+                    $report->replacement_quantity = (int) $issuance->quantity;
+                    $report->replacement_transaction_id = (int) $issuance->id;
+                } else {
+                    $replacementItem = Item::query()->lockForUpdate()->find($replacementItemId);
                     if (!$replacementItem) {
                         throw ValidationException::withMessages([
                             'replacement_item_id' => 'Replacement item not found.',
@@ -595,12 +634,6 @@ class DamageReportService
                     $report->replacement_item_id = $replacementItemId;
                     $report->replacement_quantity = $replacementQty;
                     $report->replacement_transaction_id = $tx->id;
-                    $report->replaced_by = $userId;
-                    $report->replaced_at = now();
-
-                    $meta['replacement_transaction_id'] = $tx->id;
-                    $meta['replacement_item_id'] = $replacementItemId;
-                    $meta['replacement_quantity'] = $replacementQty;
 
                     // TASK 52 — fires only on a genuine NORMAL ->
                     // LOW/OUT_OF_STOCK transition. refresh() pulls back the
@@ -614,6 +647,12 @@ class DamageReportService
                         $replacementItem->status
                     );
                 }
+
+                $report->replaced_by = $userId;
+                $report->replaced_at = now();
+                $meta['replacement_transaction_id'] = (int) $report->replacement_transaction_id;
+                $meta['replacement_item_id'] = (int) $report->replacement_item_id;
+                $meta['replacement_quantity'] = (int) $report->replacement_quantity;
             }
 
             if ($nextStatus === 'closed') {
@@ -941,6 +980,70 @@ class DamageReportService
         $image->move($targetDir, $fileName);
 
         return '/frontend/uploads/damage-reports/' . $fileName;
+    }
+
+    /**
+     * A report link alone does not identify a Need Change: standalone damage
+     * reports also have maintenance parents. Historical origin/issuance markers
+     * prevent cleared request fields from falling back to standalone issuance.
+     */
+    private function resolveNeedChangeIssuance(DamageReport $report, ?MaintenanceReport $parent): ?InventoryTransaction
+    {
+        // Current reads also matter under MySQL REPEATABLE READ: the identity
+        // lookup may precede an approval commit while we wait for its lock.
+        $histories = $report->histories()->lockForUpdate()->get();
+        $linked = $parent && ($parent->need_change_item_id !== null
+            || $parent->need_change_status !== null
+            || $parent->need_change_approved_by !== null
+            || $parent->need_change_approved_at !== null
+            || $parent->need_change_deducted_at !== null);
+        $issuances = [];
+        foreach ($histories as $history) {
+            $meta = json_decode((string) $history->meta_json, true);
+            if (is_array($meta) && !empty($meta['auto_linked_from_need_change'])) {
+                $linked = true;
+            }
+            if ($history->action_type === 'need_change_stock_issued') {
+                $linked = true;
+                $issuances[] = [$history, $meta];
+            }
+        }
+        if (!$linked) {
+            return null;
+        }
+
+        $invalid = static fn () => ValidationException::withMessages([
+            'replacement_item_id' => 'A verified Administrator-approved Need Change issuance is required. Missing or conflicting records require review.',
+        ]);
+        if (!$parent || $parent->need_change_status !== 'deducted'
+            || !$parent->need_change_item_id || !$parent->need_change_approved_by
+            || !$parent->need_change_approved_at || !$parent->need_change_deducted_at
+            || count($issuances) !== 1) {
+            throw $invalid();
+        }
+
+        [$history, $meta] = $issuances[0];
+        if (!is_array($meta) || ($meta['source'] ?? null) !== 'need_change_approval'
+            || (int) ($meta['transaction_id'] ?? 0) <= 0
+            || (int) ($meta['report_id'] ?? 0) !== (int) $parent->report_id
+            || (int) ($meta['item_id'] ?? 0) !== (int) $parent->need_change_item_id
+            || (int) ($meta['quantity'] ?? 0) !== max(1, (int) $parent->need_change_quantity)
+            || (int) ($meta['approved_by'] ?? 0) !== (int) $parent->need_change_approved_by
+            || (int) $history->changed_by !== (int) $parent->need_change_approved_by) {
+            throw $invalid();
+        }
+
+        $transaction = InventoryTransaction::query()->lockForUpdate()->find((int) $meta['transaction_id']);
+        if (!$transaction || $transaction->transaction_type !== 'deploy'
+            || (int) $transaction->report_id !== (int) $parent->report_id
+            || (int) $transaction->item_id !== (int) $meta['item_id']
+            || (int) $transaction->quantity !== (int) $meta['quantity']
+            || (int) $transaction->performed_by !== (int) $parent->need_change_approved_by
+            || $transaction->dispatch_id !== null) {
+            throw $invalid();
+        }
+
+        return $transaction;
     }
 
     private function recordHistory(

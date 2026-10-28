@@ -947,8 +947,17 @@ function updateFieldValidation(fieldId, isValid) {
 }
 
 function isValidFullName(name) {
-    // Same rule as backend: letters (with accents), spaces, apostrophes, hyphens, periods
-    return /^(?=.*\p{L})[\p{L} .'-]+$/u.test(name);
+    name = normalizeSignupName(name);
+    const length = Array.from(name).length;
+    return length >= 2 && length <= 255 && /^(?=.*\p{L})[\p{L}\p{M} .,'’\-]+$/u.test(name);
+}
+
+function normalizeSignupName(name) {
+    return String(name).normalize('NFC').replace(/[\p{Z}\s]+/gu, ' ').trim().replace(/ *, */g, ', ')
+        .replace(/ (jr\.?|sr\.?|ii|iii|iv|v)$/iu, (_, suffix) => {
+            const key = suffix.toLowerCase();
+            return ' ' + (key.replace('.', '') === 'jr' ? 'Jr.' : key.replace('.', '') === 'sr' ? 'Sr.' : key.toUpperCase());
+        });
 }
 
 function updatePasswordStrength() {
@@ -1023,7 +1032,7 @@ document.getElementById('register_confirm_password').addEventListener('blur', ()
 document.getElementById('register-form').addEventListener('submit', async (e) => {
     e.preventDefault();
 
-    const fullName = document.getElementById('register_full_name').value.trim();
+    const fullName = normalizeSignupName(document.getElementById('register_full_name').value);
     const username = document.getElementById('register_username').value.trim().toLowerCase();
     const email = document.getElementById('register_email').value.trim();
     const password = document.getElementById('register_password').value;
@@ -1039,7 +1048,7 @@ document.getElementById('register-form').addEventListener('submit', async (e) =>
     if (!fullName || fullName.length < 2 || !isValidFullName(fullName)) {
         updateFieldValidation('register_full_name', false);
         hasErrors = true;
-        errorMessages.push('Name must contain only letters, spaces, apostrophes, and hyphens (no numbers).');
+        errorMessages.push('Name must be 2–255 characters using letters and supported name punctuation (no numbers).');
     } else {
         updateFieldValidation('register_full_name', true);
     }

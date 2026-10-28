@@ -3213,7 +3213,24 @@ function executeBldgPrint() {
 // Populate stats and chart
 async function initDashboard() {
     try {
-        loadDashboardMonthSelection();
+        // ISS-05 (2026-10-27 fix) — this call used to be
+        // `loadDashboardMonthSelection()`, which overwrote selectedYear/
+        // selectedMonth with whatever month was last picked on a DIFFERENT
+        // page (reports.php, super-admin-dashboard.php, staff-dashboard.php,
+        // maintenance-dashboard.php all write the same shared
+        // `sfms:dashboardMonthSelection` localStorage key). The Dashboard
+        // itself has no on-page control to change the month back, so a stale
+        // selection from another page silently zeroed out Reports by Status /
+        // Reports by Priority here with no way to recover short of clearing
+        // browser storage — reported as "the data disappeared" when the real
+        // cause was an inherited February 2026 filter while the system was
+        // actually in October 2026. The Dashboard now always opens on the
+        // real current month (selectedYear/selectedMonth's literal `new
+        // Date()` defaults, set once above) instead of adopting another
+        // page's leftover filter. loadDashboardMonthSelection(),
+        // saveDashboardMonthSelection(), and the sfms:monthSelected listener
+        // are left in place, unused by this call site, in case a future
+        // on-page month control is added here.
         const stats      = await fetchDashboardStats();
         const chartStats = await fetchMonthlyChartStats(selectedYear, selectedMonth);
 

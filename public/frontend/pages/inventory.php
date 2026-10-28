@@ -266,10 +266,22 @@ include __DIR__ . '/../includes/header.php';
             <div id="adjustStockModalMessage" class="inventory-modal-message" hidden></div>
             <form id="adjustStockForm">
                 <div class="form-group inventory-form-group inventory-full-width">
-                    <label for="adjustStockItemSelect">Inventory Item *</label>
-                    <select id="adjustStockItemSelect" class="form-control" required>
-                        <option value="">Select an item...</option>
-                    </select>
+                    <label for="adjustStockItemSearch">Inventory Item *</label>
+                    <!-- TASK — plain <select> replaced with a type-to-filter
+                         search field: with a long inventory list, a flat
+                         dropdown became a long scroll with no way to jump to
+                         a name. Mirrors the search input + hidden id input
+                         pattern used elsewhere in the app (dispatch-create.php
+                         Department/Room/Release Personnel, purchase-receipts.php
+                         Supplier), except filtered against the item list this
+                         page already has in memory (inventoryAllItems) instead
+                         of a server endpoint -- no extra network round trip
+                         since that list is already loaded for the page/table. -->
+                    <div class="adjust-stock-item-picker" style="position:relative;">
+                        <input type="text" id="adjustStockItemSearch" class="form-control" placeholder="Search inventory item…" autocomplete="off">
+                        <input type="hidden" id="adjustStockItemSelect">
+                        <div id="adjustStockItemResults" class="search-dropdown" style="position:absolute;left:0;right:0;z-index:1000;background:#ffffff;border:1px solid #e5e7eb;color:#111827;max-height:220px;overflow:auto;display:none;border-radius:8px;box-shadow:0 4px 6px rgba(15,23,42,0.06);"></div>
+                    </div>
                 </div>
                 <div class="form-group inventory-form-group inventory-full-width">
                     <label for="adjustStockCurrentQuantity">Current Stock</label>
@@ -500,20 +512,66 @@ function setAdjustStockMessage(message, type = 'info') {
     box.className = `inventory-modal-message inventory-modal-message-${type}`;
 }
 
-function populateAdjustStockItemOptions(selectedItemId = null) {
-    const select = document.getElementById('adjustStockItemSelect');
-    if (!select) return;
+function populateAdjustStockItemOptions() {
+    const hiddenInput = document.getElementById('adjustStockItemSelect');
+    const searchInput = document.getElementById('adjustStockItemSearch');
+    if (!hiddenInput || !searchInput) return;
 
+    hiddenInput.value = '';
+    searchInput.value = '';
+    hideAdjustStockItemResults();
+}
+
+function renderAdjustStockItemResults(query) {
+    const list = document.getElementById('adjustStockItemResults');
+    if (!list) return;
+
+    const q = String(query || '').trim().toLowerCase();
     const sortedItems = [...inventoryAllItems].sort((a, b) => String(a.name || '').localeCompare(String(b.name || '')));
+    const matches = q === ''
+        ? sortedItems
+        : sortedItems.filter((item) => String(item.name || '').toLowerCase().includes(q));
 
-    select.innerHTML = '<option value="">Select an item...</option>' + sortedItems.map((item) => {
-        const label = item.name || 'Unnamed Item';
-        return `<option value="${Number(item.id)}">${inventoryEscapeHtml(label)}</option>`;
-    }).join('');
-
-    if (selectedItemId) {
-        select.value = String(selectedItemId);
+    if (matches.length === 0) {
+        list.innerHTML = '<div class="inventory-search-empty" style="padding:12px;color:#6b7280;font-size:14px;">No items found</div>';
+        list.style.display = 'block';
+        return;
     }
+
+    // Cap rendered rows the same way Components.SearchableSelect caps its
+    // page size (50) -- this list is local/in-memory so it's instant either
+    // way, the cap just keeps the dropdown itself from getting enormous.
+    list.innerHTML = matches.slice(0, 50).map((item) => {
+        const label = inventoryEscapeHtml(item.name || 'Unnamed Item');
+        return `<div class="search-item" data-item-id="${Number(item.id)}" style="padding:12px;cursor:pointer;font-size:14px;color:#111827;font-weight:600;border-bottom:1px solid #f1f5f9;background-color:transparent;">${label}</div>`;
+    }).join('');
+    list.style.display = 'block';
+
+    // Inline hover handlers, same as Components.SearchableSelect -- the
+    // global .search-item:hover CSS rule left over from the removed dark
+    // theme paints a dark/purple hover; inline styles here override it so
+    // this list stays consistent with the current light theme.
+    list.querySelectorAll('.search-item').forEach((row) => {
+        row.addEventListener('mouseenter', () => { row.style.backgroundColor = '#e5e7eb'; });
+        row.addEventListener('mouseleave', () => { row.style.backgroundColor = 'transparent'; });
+    });
+}
+
+function hideAdjustStockItemResults() {
+    const list = document.getElementById('adjustStockItemResults');
+    if (list) list.style.display = 'none';
+}
+
+function selectAdjustStockItem(itemId) {
+    const item = inventoryAllItems.find((entry) => Number(entry.id) === Number(itemId));
+    const hiddenInput = document.getElementById('adjustStockItemSelect');
+    const searchInput = document.getElementById('adjustStockItemSearch');
+    if (!hiddenInput || !searchInput) return;
+
+    hiddenInput.value = item ? String(item.id) : '';
+    searchInput.value = item ? (item.name || '') : '';
+    hideAdjustStockItemResults();
+    updateAdjustStockReview();
 }
 
 function updateAdjustStockReview() {
@@ -535,7 +593,7 @@ function updateAdjustStockReview() {
     const available = item.available_quantity !== undefined
         ? Number(item.available_quantity)
         : Math.max(onHand - Number(item.reserved_quantity ?? 0), 0);
-    currentQuantityInput.value = `${onHand} on hand (${available} available)`;
+    currentQuantityInput.value = `${available} available`;
 
     if (!quantity || quantity <= 0) {
         reviewBox.hidden = true;
@@ -559,7 +617,7 @@ function openAdjustStockModal() {
     document.getElementById('adjustStockForm')?.reset();
     populateAdjustStockItemOptions();
     updateAdjustStockReview();
-    document.getElementById('adjustStockItemSelect')?.focus();
+    document.getElementById('adjustStockItemSearch')?.focus();
 }
 
 function closeAdjustStockModal() {
@@ -570,6 +628,7 @@ function closeAdjustStockModal() {
     modal.setAttribute('aria-hidden', 'true');
     document.getElementById('adjustStockForm')?.reset();
     setAdjustStockMessage('');
+    hideAdjustStockItemResults();
     const reviewBox = document.getElementById('adjustStockReview');
     if (reviewBox) reviewBox.hidden = true;
 }
@@ -2114,7 +2173,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     const closeAdjustStockModalButton = document.getElementById('closeAdjustStockModalButton');
     const cancelAdjustStockButton = document.getElementById('cancelAdjustStockButton');
     const saveAdjustStockButton = document.getElementById('saveAdjustStockButton');
-    const adjustStockItemSelect = document.getElementById('adjustStockItemSelect');
+    const adjustStockItemSearchInput = document.getElementById('adjustStockItemSearch');
+    const adjustStockItemResultsList = document.getElementById('adjustStockItemResults');
     const adjustStockDirectionSelect = document.getElementById('adjustStockDirection');
     const adjustStockQuantityInput = document.getElementById('adjustStockQuantity');
     const addItemsModal = document.getElementById('addItemsModal');
@@ -2139,7 +2199,26 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (closeAdjustStockModalButton) closeAdjustStockModalButton.addEventListener('click', closeAdjustStockModal);
     if (cancelAdjustStockButton) cancelAdjustStockButton.addEventListener('click', closeAdjustStockModal);
     if (saveAdjustStockButton) saveAdjustStockButton.addEventListener('click', saveAdjustStock);
-    if (adjustStockItemSelect) adjustStockItemSelect.addEventListener('change', updateAdjustStockReview);
+    if (adjustStockItemSearchInput) {
+        adjustStockItemSearchInput.addEventListener('input', () => renderAdjustStockItemResults(adjustStockItemSearchInput.value));
+        adjustStockItemSearchInput.addEventListener('focus', () => renderAdjustStockItemResults(adjustStockItemSearchInput.value));
+    }
+    if (adjustStockItemResultsList) {
+        adjustStockItemResultsList.addEventListener('click', (e) => {
+            const row = e.target.closest('[data-item-id]');
+            if (!row) return;
+            selectAdjustStockItem(row.dataset.itemId);
+        });
+    }
+    // Close the dropdown on any click outside the search input/results list,
+    // same interaction pattern as Components.SearchableSelect's document-level
+    // click handler.
+    document.addEventListener('click', (e) => {
+        if (!adjustStockItemSearchInput || !adjustStockItemResultsList) return;
+        if (!adjustStockItemSearchInput.contains(e.target) && !adjustStockItemResultsList.contains(e.target)) {
+            hideAdjustStockItemResults();
+        }
+    });
     if (adjustStockDirectionSelect) adjustStockDirectionSelect.addEventListener('change', updateAdjustStockReview);
     if (adjustStockQuantityInput) adjustStockQuantityInput.addEventListener('input', updateAdjustStockReview);
     if (categorySelect) categorySelect.addEventListener('change', applySelectedCategoryRules);

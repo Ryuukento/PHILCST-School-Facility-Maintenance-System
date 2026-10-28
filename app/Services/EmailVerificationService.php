@@ -65,59 +65,71 @@ class EmailVerificationService
         $expiresAt = Carbon::now()->addMinutes(self::OTP_VALIDITY_MINUTES);
 
         try {
-            // Get or create verification record
-            $verification = DB::table('email_verifications')
-                ->where('user_id', $userId)
-                ->where('email', $email)
-                ->first();
+            return DB::transaction(function () use ($userId, $email, $otp, $expiresAt): array {
+                // Get or create verification record
+                $verification = DB::table('email_verifications')
+                    ->where('user_id', $userId)
+                    ->where('email', $email)
+                    ->lockForUpdate()->first();
 
-            if ($verification) {
-                // Update existing record
-                DB::table('email_verifications')
-                    ->where('id', $verification->id)
-                    ->update([
+                // Recheck after the current row lock, including competing resend attempts.
+                if ($verification && $verification->last_otp_sent_at
+                    && Carbon::parse($verification->last_otp_sent_at)->gt(Carbon::now()->subMinute())) {
+                    return ['success' => false, 'message' => 'Please wait before requesting another OTP'];
+                }
+
+                if ($verification) {
+                    // Update existing record
+                    DB::table('email_verifications')
+                        ->where('id', $verification->id)
+                        ->update([
+                            'otp_code' => $otp,
+                            'otp_attempts' => 0,
+                            'otp_expires_at' => $expiresAt,
+                            'last_otp_sent_at' => Carbon::now(),
+                            'is_verified' => false,
+                            'updated_at' => Carbon::now(),
+                        ]);
+                } else {
+                    // Create new record
+                    DB::table('email_verifications')->insert([
+                        'user_id' => $userId,
+                        'email' => $email,
                         'otp_code' => $otp,
                         'otp_attempts' => 0,
                         'otp_expires_at' => $expiresAt,
                         'last_otp_sent_at' => Carbon::now(),
                         'is_verified' => false,
+                        'created_at' => Carbon::now(),
                         'updated_at' => Carbon::now(),
                     ]);
-            } else {
-                // Create new record
-                DB::table('email_verifications')->insert([
-                    'user_id' => $userId,
-                    'email' => $email,
-                    'otp_code' => $otp,
-                    'otp_attempts' => 0,
-                    'otp_expires_at' => $expiresAt,
-                    'last_otp_sent_at' => Carbon::now(),
-                    'is_verified' => false,
-                    'created_at' => Carbon::now(),
-                    'updated_at' => Carbon::now(),
-                ]);
-            }
+                }
 
-            // Get user details for email
-            $user = DB::table('users')->where('user_id', $userId)->first();
-            if (!$user) {
-                return ['success' => false, 'message' => 'User not found'];
-            }
+                // Get user details for email
+                $user = DB::table('users')->where('user_id', $userId)->first();
+                if (!$user) {
+                    return ['success' => false, 'message' => 'User not found'];
+                }
 
-            // Send OTP email (optional - may fail if SMTP not configured)
-            $emailSent = $this->sendOTPEmail($email, $otp, $user->full_name);
+                // Keep a failed attempt's cooldown, but preserve any previously issued code.
+                $emailSent = $this->sendOTPEmail($email, $otp, $user->full_name);
+                if (!$emailSent) {
+                    $this->restorePendingOtp($verification);
+                    return ['success' => false, 'message' => 'Unable to send a verification email. Please wait before trying again.'];
+                }
 
-            // For testing/development: return OTP in response if email not configured
-            // In production with real SMTP, remove the 'otp' key from response
-            $response = ['success' => true, 'message' => 'OTP sent to your email'];
+                // For testing/development: return OTP in response if email not configured
+                // In production with real SMTP, remove the 'otp' key from response
+                $response = ['success' => true, 'message' => 'OTP sent to your email'];
 
-            // DEVELOPMENT MODE: Include OTP in response for testing (remove in production)
-            $response['otp'] = $otp; // TODO: Remove this line in production
-            $response['otp_note'] = '(For testing: OTP shown in response. In production with email configured, this will be removed.)';
+                // DEVELOPMENT MODE: Include OTP in response for testing (remove in production)
+                $response['otp'] = $otp; // TODO: Remove this line in production
+                $response['otp_note'] = '(For testing: OTP shown in response. In production with email configured, this will be removed.)';
 
-            return $response;
-        } catch (\Exception $e) {
-            error_log('Email verification initiation error: ' . $e->getMessage());
+                return $response;
+            });
+        } catch (\Throwable $e) {
+            error_log('Email verification initiation failed; sensitive details withheld');
             return ['success' => false, 'message' => 'Failed to send OTP. Please try again.'];
         }
     }
@@ -195,7 +207,7 @@ class EmailVerificationService
             return ['success' => true, 'message' => 'Email verified successfully'];
         } catch (\Exception $e) {
             DB::rollBack();
-            error_log('Email verification completion error: ' . $e->getMessage());
+            error_log('Email verification completion failed; sensitive details withheld');
             return ['success' => false, 'message' => 'Failed to complete verification. Please try again.'];
         }
     }
@@ -227,8 +239,8 @@ class EmailVerificationService
             ? Carbon::parse($verification->last_otp_sent_at)
             : null;
 
-        if ($lastSentTime && Carbon::now()->diffInMinutes($lastSentTime) < self::RESEND_COOLDOWN_MINUTES) {
-            $minutesRemaining = self::RESEND_COOLDOWN_MINUTES - Carbon::now()->diffInMinutes($lastSentTime);
+        if ($lastSentTime && $lastSentTime->diffInMinutes(Carbon::now()) < self::RESEND_COOLDOWN_MINUTES) {
+            $minutesRemaining = (int) ceil(self::RESEND_COOLDOWN_MINUTES - $lastSentTime->diffInMinutes(Carbon::now()));
             return [
                 'success' => false,
                 'message' => "Please wait {$minutesRemaining} minute(s) before resending"
@@ -240,31 +252,60 @@ class EmailVerificationService
         $expiresAt = Carbon::now()->addMinutes(self::OTP_VALIDITY_MINUTES);
 
         try {
-            // Update verification record
-            DB::table('email_verifications')
-                ->where('id', $verification->id)
-                ->update([
-                    'otp_code' => $otp,
-                    'otp_attempts' => 0,
-                    'otp_expires_at' => $expiresAt,
-                    'last_otp_sent_at' => Carbon::now(),
-                    'updated_at' => Carbon::now(),
-                ]);
+            return DB::transaction(function () use ($userId, $email, $otp, $expiresAt): array {
+                $verification = DB::table('email_verifications')
+                    ->where('user_id', $userId)->where('email', $email)->where('is_verified', false)
+                    ->lockForUpdate()->first();
+                if (!$verification) {
+                    return ['success' => false, 'message' => 'No pending verification for this email'];
+                }
+                if ($verification->last_otp_sent_at
+                    && Carbon::parse($verification->last_otp_sent_at)->gt(Carbon::now()->subMinutes(self::RESEND_COOLDOWN_MINUTES))) {
+                    return ['success' => false, 'message' => 'Please wait before requesting another OTP'];
+                }
+                // Update verification record
+                DB::table('email_verifications')
+                    ->where('id', $verification->id)
+                    ->update([
+                        'otp_code' => $otp,
+                        'otp_attempts' => 0,
+                        'otp_expires_at' => $expiresAt,
+                        'last_otp_sent_at' => Carbon::now(),
+                        'updated_at' => Carbon::now(),
+                    ]);
 
-            // Get user details for email
-            $user = DB::table('users')->where('user_id', $userId)->first();
-            if (!$user) {
-                return ['success' => false, 'message' => 'User not found'];
-            }
+                // Get user details for email
+                $user = DB::table('users')->where('user_id', $userId)->first();
+                if (!$user) {
+                    return ['success' => false, 'message' => 'User not found'];
+                }
 
-            // Send OTP email
-            $this->sendOTPEmail($email, $otp, $user->full_name);
+                // Send OTP email
+                if (!$this->sendOTPEmail($email, $otp, $user->full_name)) {
+                    $this->restorePendingOtp($verification);
+                    return ['success' => false, 'message' => 'Unable to send a verification email. Please wait before trying again.'];
+                }
 
-            return ['success' => true, 'message' => 'New OTP sent to your email'];
-        } catch (\Exception $e) {
-            error_log('OTP resend error: ' . $e->getMessage());
+                return ['success' => true, 'message' => 'New OTP sent to your email'];
+            });
+        } catch (\Throwable $e) {
+            error_log('OTP resend failed; sensitive details withheld');
             return ['success' => false, 'message' => 'Failed to resend OTP. Please try again.'];
         }
+    }
+
+    /** Called inside the locked send transaction; never delete pending verification records. */
+    private function restorePendingOtp(?object $previous): void
+    {
+        if ($previous === null) {
+            return;
+        }
+        DB::table('email_verifications')->where('id', $previous->id)->update([
+            'otp_code' => $previous->otp_code,
+            'otp_attempts' => $previous->otp_attempts,
+            'otp_expires_at' => $previous->otp_expires_at,
+            'is_verified' => $previous->is_verified,
+        ]);
     }
 
     /**
@@ -325,8 +366,8 @@ class EmailVerificationService
                 error_log('EmailService class not available after loading');
                 return false;
             }
-        } catch (\Exception $e) {
-            error_log('Failed to send OTP email: ' . $e->getMessage());
+        } catch (\Throwable $e) {
+            error_log('OTP transport failed; sensitive details withheld');
             return false;
         }
     }

@@ -17,6 +17,9 @@ class EmailVerificationController extends Controller
 
     protected EmailVerificationService $service;
 
+    private const EMAIL_RULES = ['required', 'email', 'max:255', 'regex:/@(?:gmail\.com|yahoo\.com)\z/i'];
+    private const EMAIL_MESSAGES = ['email.regex' => 'Email must use gmail.com or yahoo.com.'];
+
     public function __construct(EmailVerificationService $service)
     {
         $this->service = $service;
@@ -36,8 +39,8 @@ class EmailVerificationController extends Controller
 
         // Validate request
         $validated = $request->validate([
-            'email' => 'required|email|max:255',
-        ]);
+            'email' => self::EMAIL_RULES,
+        ], self::EMAIL_MESSAGES);
 
         // Call service
         $result = $this->service->initiateEmailVerification(
@@ -69,9 +72,9 @@ class EmailVerificationController extends Controller
 
         // Validate request
         $validated = $request->validate([
-            'email' => 'required|email|max:255',
+            'email' => self::EMAIL_RULES,
             'otp' => 'required|string|max:6',
-        ]);
+        ], self::EMAIL_MESSAGES);
 
         // Call service
         $result = $this->service->verifyOTP(
@@ -103,8 +106,8 @@ class EmailVerificationController extends Controller
 
         // Validate request
         $validated = $request->validate([
-            'email' => 'required|email|max:255',
-        ]);
+            'email' => self::EMAIL_RULES,
+        ], self::EMAIL_MESSAGES);
 
         // Call service
         $result = $this->service->resendOtp(

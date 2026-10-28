@@ -49,10 +49,14 @@ include __DIR__ . '/../includes/header.php';
                 <select id="activity-log-module" class="form-control">
                     <option value="">All Modules</option>
                 </select>
-                <label class="text-muted mb-0" for="activity-log-from" style="font-size:13px;">From date</label>
-                <input type="date" id="activity-log-from" class="form-control">
-                <label class="text-muted mb-0" for="activity-log-to" style="font-size:13px;">To date</label>
-                <input type="date" id="activity-log-to" class="form-control">
+                <div class="activity-log-date-field">
+                    <label class="text-muted mb-0" for="activity-log-from">From date</label>
+                    <input type="date" id="activity-log-from" class="form-control">
+                </div>
+                <div class="activity-log-date-field">
+                    <label class="text-muted mb-0" for="activity-log-to">To date</label>
+                    <input type="date" id="activity-log-to" class="form-control">
+                </div>
                 <button type="button" class="btn btn-secondary" id="activity-log-clear">Clear</button>
             </div>
         </div>
@@ -151,6 +155,26 @@ function formatActivityLabel(value) {
         .replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
+// 2026-10-28 — the Role column/detail row used to run the raw role string
+// through the generic formatActivityLabel() title-caser, so this page showed
+// "Super Admin" / "Maintenance Admin" / "Maintenance Staff" while every other
+// screen (User Management's getRoleLabel() in users.php, the sidebar's
+// $roleTitleMap in includes/header.php) displays the same accounts as
+// "Administrator" / "Head" / "EELab Staff". This mirrors that canonical
+// mapping so Activity Logs matches the rest of the app; unrecognized/empty
+// roles still fall back to the generic title-case formatter (e.g. "System").
+function formatActivityRoleLabel(role) {
+    const labels = {
+        super_admin: 'Administrator',
+        maintenance_admin: 'Head',
+        maintenance_staff: 'EELab Staff',
+        user: 'Data Entry',
+        client: 'Client',
+    };
+    const key = String(role || '').toLowerCase();
+    return labels[key] || formatActivityLabel(role);
+}
+
 function formatActivityDate(value) {
     if (!value) return 'N/A';
     return new Date(value).toLocaleString();
@@ -208,7 +232,7 @@ function openActivityLogDetailModal(logId) {
             ${activityLogDetailRow('Action', formatActivityLabel(log.action) || 'N/A')}
             ${activityLogDetailRow('Module', formatActivityLabel(log.module || 'system'))}
             ${activityLogDetailRow('User', userLabel)}
-            ${activityLogDetailRow('User Role', formatActivityLabel(log.user_role || 'system'))}
+            ${activityLogDetailRow('User Role', formatActivityRoleLabel(log.user_role || 'system'))}
             ${activityLogDetailRow('Entity Type', formatActivityLabel(log.entity_type || 'n/a'))}
             ${activityLogDetailRow('Entity ID', log.entity_id ?? 'N/A')}
             ${activityLogDetailRow('IP Address', log.ip_address || 'N/A')}
@@ -323,7 +347,7 @@ async function loadActivityLogs(page = 1) {
             html += '<tr>';
             html += `<td>${escapeActivityHtml(formatActivityDate(log.created_at))}</td>`;
             html += `<td>${escapeActivityHtml(userLabel)}</td>`;
-            html += `<td>${escapeActivityHtml(formatActivityLabel(log.user_role || 'system'))}</td>`;
+            html += `<td>${escapeActivityHtml(formatActivityRoleLabel(log.user_role || 'system'))}</td>`;
             html += `<td>${activityActionBadge(log.action)}</td>`;
             html += `<td>${escapeActivityHtml(formatActivityLabel(log.module))}</td>`;
             html += `<td>${escapeActivityHtml(log.details || 'No description')}</td>`;
@@ -424,6 +448,28 @@ document.addEventListener('DOMContentLoaded', async () => {
     white-space: nowrap;
 }
 
+/* Groups each "From date"/"To date" label with its own date input into a
+   single grid cell, so the two never separate when the row wraps on
+   narrower screens (previously 8 flat flex/grid children let a label land
+   next to the wrong sibling). */
+.activity-log-date-field {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+}
+
+.activity-log-date-field label {
+    flex-shrink: 0;
+    font-size: 13px;
+    white-space: nowrap;
+}
+
+.activity-log-date-field .form-control {
+    flex: 1;
+    min-width: 0;
+}
+
 @media (max-width: 992px) {
     .activity-log-filter-row {
         grid-template-columns: repeat(3, 1fr);
@@ -433,6 +479,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 @media (max-width: 640px) {
     .activity-log-filter-row {
         grid-template-columns: 1fr;
+    }
+
+    .activity-log-date-field {
+        flex-wrap: wrap;
     }
 }
 

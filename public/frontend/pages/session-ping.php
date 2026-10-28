@@ -23,14 +23,14 @@ if (session_status() === PHP_SESSION_NONE) {
 
 header('Content-Type: application/json; charset=UTF-8');
 
-$sessionUser = $_SESSION['user'] ?? $_SESSION['auth_user'] ?? null;
-if ($sessionUser === null) {
+require_once __DIR__ . '/../../backend/config/settings.php';
+require_once __DIR__ . '/../includes/session-guard.php';
+
+if (!sfms_refresh_native_authorization()) {
     http_response_code(401);
     echo json_encode(['success' => false, 'message' => 'Not authenticated']);
     exit;
 }
-
-require_once __DIR__ . '/../../backend/config/settings.php';
 
 $lastActivity = $_SESSION['last_activity'] ?? time();
 if ((time() - (int) $lastActivity) > SESSION_TIMEOUT) {

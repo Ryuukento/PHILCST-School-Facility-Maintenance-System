@@ -418,6 +418,8 @@ class DashboardScopeTruthfulnessTest extends TestCase
                 email VARCHAR(255) NULL,
                 role VARCHAR(50) NULL,
                 status VARCHAR(50) NULL,
+                auth_version INT UNSIGNED NOT NULL DEFAULT 0,
+                force_profile_update TINYINT(1) NOT NULL DEFAULT 0,
                 department_id INT UNSIGNED NULL,
                 created_at TIMESTAMP NULL,
                 updated_at TIMESTAMP NULL

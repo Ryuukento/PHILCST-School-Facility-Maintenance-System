@@ -7,6 +7,7 @@ use App\Models\DispatchItem;
 use App\Models\InventoryTransaction;
 use App\Models\Item;
 use App\Models\User;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -448,34 +449,55 @@ class DispatchService
         });
     }
 
+    public function isCancellationEligible(Dispatch $dispatch): bool
+    {
+        return in_array($dispatch->status, ['pending', 'approved'], true)
+            && !InventoryTransaction::query()
+                ->where('dispatch_id', $dispatch->id)
+                ->where('transaction_type', 'deploy')
+                ->exists();
+    }
+
     public function cancelDispatch(Dispatch $dispatch, string $reason, ?int $actorUserId = null): Dispatch
     {
-        if (!in_array($dispatch->status, ['pending', 'approved'], true)) {
-            throw ValidationException::withMessages([
-                'status' => 'Only pending or approved dispatches can be cancelled.',
+        return DB::transaction(function () use ($dispatch, $reason, $actorUserId): Dispatch {
+            // Release, per-item dispatch, and auto-completion lock this same row.
+            $locked = Dispatch::query()->whereKey($dispatch->id)->lockForUpdate()->firstOrFail();
+            if (!$actorUserId || !User::query()->whereKey($actorUserId)
+                ->where('role', 'super_admin')->where('status', 'active')->exists()) {
+                throw new AuthorizationException('Only the Administrator may cancel dispatches.');
+            }
+            if (!$this->isCancellationEligible($locked)) {
+                throw ValidationException::withMessages([
+                    'status' => 'Only pending or approved dispatches with no deployment history can be cancelled.',
+                ]);
+            }
+
+            $fromStatus = $locked->status;
+            $locked->update([
+                'status' => 'cancelled',
+                'notes' => $locked->notes
+                    ? $locked->notes . ' | CANCELLED: ' . $reason
+                    : 'CANCELLED: ' . $reason,
             ]);
-        }
 
-        $dispatch->update([
-            'status' => 'cancelled',
-            'notes'  => $dispatch->notes
-                ? $dispatch->notes . ' | CANCELLED: ' . $reason
-                : 'CANCELLED: ' . $reason,
-        ]);
-
-        if ($actorUserId) {
-            $this->activityLogService->logFromSession([
+            $audit = $this->activityLogService->logFromSession([
                 'user_id'     => $actorUserId,
+                'user_role'   => 'super_admin',
                 'action'      => 'CANCEL_DISPATCH',
                 'module'      => 'dispatch',
                 'entity_type' => 'dispatch',
-                'entity_id'   => $dispatch->id,
-                'details'     => 'Cancelled dispatch ' . $dispatch->dispatch_code . '. Reason: ' . $reason,
-                'meta'        => ['dispatch_code' => $dispatch->dispatch_code, 'reason' => $reason],
+                'entity_id'   => $locked->id,
+                'details'     => 'Cancelled dispatch ' . $locked->dispatch_code . '. Reason: ' . $reason,
+                'meta'        => ['dispatch_code' => $locked->dispatch_code, 'reason' => $reason, 'from_status' => $fromStatus],
+                'dedupe_window_seconds' => 0,
             ]);
-        }
+            if (!$audit) {
+                throw new \RuntimeException('Cancellation audit could not be persisted.');
+            }
 
-        return $dispatch->fresh('items.item');
+            return $locked->fresh('items.item');
+        });
     }
 
     /**

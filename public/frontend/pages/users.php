@@ -53,7 +53,7 @@ include __DIR__ . '/../includes/header.php';
                          here could never surface a match and silently fell back to
                          "All" when clicked. Removed rather than left as a dead control. -->
                     <button type="button" class="users-role-filter" data-role-filter="maintenance_admin">Head</button>
-                    <button type="button" class="users-role-filter" data-role-filter="maintenance_staff">Staff</button>
+                    <button type="button" class="users-role-filter" data-role-filter="maintenance_staff">EELab Staff</button>
                 </div>
             </div>
             <div class="users-toolbar-actions">
@@ -146,6 +146,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // highlight the card once the grid has actually rendered.
     loadUsers().then(() => highlightUserFromQuery());
     document.getElementById('search-input')?.addEventListener('input', searchUsers);
+    document.getElementById('users-container')?.addEventListener('click', handleUserAction);
     document.getElementById('add-new-user-btn')?.addEventListener('click', () => { openRegisterUserModal(); setTimeout(loadDepartmentsForModal, 50); });
 
     document.querySelectorAll('[data-role-filter]').forEach((button) => {
@@ -192,7 +193,7 @@ async function loadUsers() {
         }
     } catch (error) {
         console.error('Error loading users:', error);
-        container.innerHTML = '<div class="text-center users-error">Error loading users: ' + error.message + '</div>';
+        container.innerHTML = '<div class="text-center users-error">Error loading users: ' + escapeHtml(error.message) + '</div>';
         document.getElementById('users-pagination').innerHTML = '';
         document.getElementById('users-summary').textContent = '';
     }
@@ -311,6 +312,26 @@ function renderUsersPagination() {
     });
 }
 
+function handleUserAction(event) {
+    const button = event.target.closest('button[data-user-action][data-user-id]');
+    if (!button || !event.currentTarget.contains(button) || button.disabled || currentUserRole !== 'super_admin') return;
+
+    const userId = Number(button.dataset.userId);
+    if (!Number.isSafeInteger(userId) || userId <= 0) return;
+    const targetUser = usersState.allUsers.find((user) => Number(user.user_id) === userId);
+    if (!targetUser) return;
+
+    // Names stay data. Modal functions already HTML-escape their display text.
+    switch (button.dataset.userAction) {
+        case 'edit': openEditUserModal(userId); break;
+        case 'approve': openApproveUserModal(userId, targetUser.full_name || ''); break;
+        case 'reject': openRejectUserModal(userId, targetUser.full_name || ''); break;
+        case 'activate': openActivateUserModal(userId, targetUser.full_name || ''); break;
+        case 'deactivate': openInactiveUserModal(userId, targetUser.full_name || ''); break;
+        case 'reset-password': openResetPasswordModal(userId, targetUser.full_name || '', targetUser.email || ''); break;
+    }
+}
+
 function renderUserCard(targetUser) {
     const safeId        = Number(targetUser.user_id || 0);
     const safeName      = escapeHtml(targetUser.full_name || 'N/A');
@@ -336,30 +357,34 @@ function renderUserCard(targetUser) {
     const statusClass = getStatusClass(normalizedStatus);
 
     let actionButtons = '';
-    if (normalizedStatus === 'pending') {
+    if (normalizedRole === 'super_admin') {
+        if (normalizedStatus !== 'pending') {
+            actionButtons = `<button type="button" data-user-action="reset-password" data-user-id="${safeId}" class="users-action-btn users-action-approve">${usersIcon('bell')} Reset Password</button>`;
+        }
+    } else if (normalizedStatus === 'pending') {
         if (currentUserRole === 'super_admin') {
-            actionButtons += `<button type="button" onclick="openApproveUserModal(${safeId}, '${escapeJsString(targetUser.full_name || '')}')" class="users-action-btn users-action-approve">Approve</button>`;
+            actionButtons += `<button type="button" data-user-action="approve" data-user-id="${safeId}" class="users-action-btn users-action-approve">Approve</button>`;
         }
 
-        actionButtons += `<button type="button" onclick="openRejectUserModal(${safeId}, '${escapeJsString(targetUser.full_name || '')}')" class="users-action-btn users-action-reject">Reject</button>`;
+        actionButtons += `<button type="button" data-user-action="reject" data-user-id="${safeId}" class="users-action-btn users-action-reject">Reject</button>`;
     } else if (normalizedStatus === 'inactive') {
         actionButtons = `
-            <button type="button" onclick="openEditUserModal(${safeId})" class="users-action-btn users-action-edit" title="Edit this user's role, department, or designation">${usersIcon('edit')} Edit</button>
-            <button type="button" onclick="openActivateUserModal(${safeId}, '${escapeJsString(targetUser.full_name || '')}')" class="users-action-btn users-action-inactive" title="Set this user to active">Set Active</button>
+            <button type="button" data-user-action="edit" data-user-id="${safeId}" class="users-action-btn users-action-edit" title="Edit this user's role, department, or designation">${usersIcon('edit')} Edit</button>
+            <button type="button" data-user-action="activate" data-user-id="${safeId}" class="users-action-btn users-action-inactive" title="Set this user to active">Set Active</button>
         `;
     } else {
         // Active status - show Reset Password only if pending, otherwise just Set Inactive
-        const editButton = `<button type="button" onclick="openEditUserModal(${safeId})" class="users-action-btn users-action-edit" title="Edit this user's role, department, or designation">${usersIcon('edit')} Edit</button>`;
+        const editButton = `<button type="button" data-user-action="edit" data-user-id="${safeId}" class="users-action-btn users-action-edit" title="Edit this user's role, department, or designation">${usersIcon('edit')} Edit</button>`;
         if (hasPendingPasswordResetRequest) {
             actionButtons = `
                 ${editButton}
-                <button type="button" onclick="openResetPasswordModal(${safeId}, '${escapeJsString(targetUser.full_name || '')}', '${escapeJsString(targetUser.email || '')}')" class="users-action-btn users-action-approve users-action-reset-pending" title="Reset this user's password">${usersIcon('bell')} Reset Password</button>
-                <button type="button" onclick="openInactiveUserModal(${safeId}, '${escapeJsString(targetUser.full_name || '')}')" class="users-action-btn users-action-activate" title="Set this user to inactive">Set Inactive</button>
+                <button type="button" data-user-action="reset-password" data-user-id="${safeId}" class="users-action-btn users-action-approve users-action-reset-pending" title="Reset this user's password">${usersIcon('bell')} Reset Password</button>
+                <button type="button" data-user-action="deactivate" data-user-id="${safeId}" class="users-action-btn users-action-activate" title="Set this user to inactive">Set Inactive</button>
             `;
         } else {
             actionButtons = `
                 ${editButton}
-                <button type="button" onclick="openInactiveUserModal(${safeId}, '${escapeJsString(targetUser.full_name || '')}')" class="users-action-btn users-action-activate" title="Set this user to inactive">Set Inactive</button>
+                <button type="button" data-user-action="deactivate" data-user-id="${safeId}" class="users-action-btn users-action-activate" title="Set this user to inactive">Set Inactive</button>
             `;
         }
     }
@@ -369,7 +394,7 @@ function renderUserCard(targetUser) {
             <div class="users-card-media">
                 ${mediaMarkup}
                 <div class="users-card-badges">
-                    <span class="users-role-pill users-role-${normalizedRole}">${escapeHtml(roleLabel)}</span>
+                    <span class="users-role-pill users-role-${escapeHtml(normalizedRole)}">${escapeHtml(roleLabel)}</span>
                     <span class="users-status-pill ${statusClass}">${escapeHtml(statusLabel)}</span>
                 </div>
             </div>
@@ -377,7 +402,7 @@ function renderUserCard(targetUser) {
                 <div class="users-card-headline">
                     <div class="users-card-name-row">
                         <h3>${safeName}</h3>
-                        <div class="users-mini-avatar">${getInitials(targetUser.full_name || 'U')}</div>
+                        <div class="users-mini-avatar">${escapeHtml(getInitials(targetUser.full_name || 'U'))}</div>
                     </div>
                 </div>
                 <div class="users-card-meta">
@@ -497,7 +522,7 @@ function getRoleLabel(role) {
     const labels = {
         super_admin:       'Administrator',
         maintenance_admin: 'Head',
-        maintenance_staff: 'Staff',
+        maintenance_staff: 'EELab Staff',
         user:              'Data Entry',
         client:            'Client',
     };
@@ -529,13 +554,6 @@ function escapeHtml(value) {
         .replace(/>/g, '&gt;')
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&#39;');
-}
-
-function escapeJsString(value) {
-    return String(value ?? '')
-        .replace(/\\/g, '\\\\')
-        .replace(/'/g, "\\'")
-        .replace(/\r?\n/g, ' ');
 }
 
 // TASK 7 — renders an icon from the shared registry (includes/icon-paths.php,
@@ -587,12 +605,20 @@ function openRegisterUserModal() {
             <div class="users-modal-inline-fields">
                 <div class="users-modal-field users-modal-field-inline">
                     <label for="register-middle-initial" class="users-modal-label">Middle Initial</label>
-                    <input id="register-middle-initial" class="users-modal-input" type="text" placeholder="Optional (e.g., D)" maxlength="1" autocomplete="off" autocapitalize="characters" autocorrect="off" spellcheck="false">
+                    <input id="register-middle-initial" class="users-modal-input" type="text" placeholder="Optional (e.g., D)" maxlength="3" autocomplete="off" autocapitalize="characters" autocorrect="off" spellcheck="false">
                     <div id="register-middle-initial-error" class="users-modal-field-error"></div>
                 </div>
                 <div class="users-modal-field users-modal-field-inline">
                     <label for="register-suffix" class="users-modal-label">Suffix</label>
-                    <input id="register-suffix" class="users-modal-input" type="text" placeholder="Optional (e.g., Jr., Sr., III)" autocomplete="off" autocapitalize="words" autocorrect="off" spellcheck="false">
+                    <select id="register-suffix" class="users-modal-select">
+                        <option value="">None</option>
+                        <option value="Jr.">Jr.</option>
+                        <option value="Sr.">Sr.</option>
+                        <option value="II">II</option>
+                        <option value="III">III</option>
+                        <option value="IV">IV</option>
+                        <option value="V">V</option>
+                    </select>
                     <div id="register-suffix-error" class="users-modal-field-error"></div>
                 </div>
             </div>
@@ -637,7 +663,7 @@ function openRegisterUserModal() {
                     <select id="register-role" class="users-modal-select">
                         <option value="super_admin">Administrator</option>
                         <option value="maintenance_admin">Head</option>
-                        <option value="maintenance_staff" selected>Staff</option>
+                        <option value="maintenance_staff" selected>EELab Staff</option>
                     </select>
                 </div>
 
@@ -758,11 +784,11 @@ function openRegisterUserModal() {
     document.getElementById('confirm-register-btn')?.addEventListener('click', async () => {
         setRegisterModalError('');
 
-        const lastName = lastNameInput.value.trim();
-        const firstName = firstNameInput.value.trim();
-        const middleInitial = middleInitialInput.value.trim();
+        const lastName = normalizeNameWhitespace(lastNameInput.value);
+        const firstName = normalizeNameWhitespace(firstNameInput.value);
+        const middleInitial = normalizeNameWhitespace(middleInitialInput.value);
         const suffix = suffixInput.value.trim();
-        const fullName = buildFullName(lastName, firstName, middleInitial);
+        const fullName = buildFullName(lastName, firstName, middleInitial, suffix);
         const username = usernameInput.value.trim().toLowerCase();
         const password = passwordInput.value;
         const role = document.getElementById('register-role').value;
@@ -783,6 +809,11 @@ function openRegisterUserModal() {
         setFieldValidationState(passwordInput, passwordError);
 
         if (lastNameError || firstNameError || middleInitialError || suffixError || usernameError || passwordError) {
+            return;
+        }
+        const completeNameError = getFullNameValidationError(fullName, 'Full name');
+        if (completeNameError) {
+            setRegisterModalError(completeNameError);
             return;
         }
 
@@ -852,11 +883,9 @@ function openRegisterUserModal() {
 
                 const isUsernameTaken = takenWords(usernameErrors)
                     || (normalized.includes('username') && takenWords(normalized));
-                // Backend's duplicateNameExists() guard (UserController::store())
-                // returns a plain fail() message mentioning "first and last name",
-                // not a per-field `errors` entry — matched by text the same way
-                // the username-taken case above is.
-                const isNameTaken = normalized.includes('first and last name') && takenWords(normalized);
+                // The shared complete-name policy returns field validation
+                // errors without exposing the matching account's identity.
+                const isNameTaken = takenWords([].concat(fieldErrors.full_name || []).join(' ').toLowerCase());
 
                 if (isUsernameTaken) {
                     setFieldValidationState(usernameInput, 'User name is already taken');
@@ -894,7 +923,7 @@ function openApproveUserModal(userId, userName) {
             <div class="users-modal-field">
                 <label for="approve-user-role" class="users-modal-label">Assign role</label>
                 <select id="approve-user-role" class="users-modal-select">
-                    <option value="maintenance_staff" selected>Staff</option>
+                    <option value="maintenance_staff" selected>EELab Staff</option>
                     <option value="maintenance_admin">Head</option>
                 </select>
             </div>
@@ -1024,7 +1053,7 @@ function openEditUserModal(userId) {
             <div class="users-modal-field">
                 <label for="edit-user-role" class="users-modal-label">Role</label>
                 <select id="edit-user-role" class="users-modal-select">
-                    <option value="maintenance_staff"${currentRole === 'maintenance_staff' ? ' selected' : ''}>Staff</option>
+                    <option value="maintenance_staff"${currentRole === 'maintenance_staff' ? ' selected' : ''}>EELab Staff</option>
                     <option value="maintenance_admin"${currentRole === 'maintenance_admin' ? ' selected' : ''}>Head</option>
                 </select>
             </div>
@@ -1094,7 +1123,7 @@ function openEditUserModal(userId) {
 
         const fullNameInput = document.getElementById('edit-user-full-name');
         const fullName = fullNameInput.value.trim();
-        const fullNameError = getFullNameValidationError(fullName, 'Full name');
+        const fullNameError = getFullNameValidationError(fullName, 'Full name', targetUser.full_name || '');
         setFieldValidationState(fullNameInput, fullNameError);
         if (fullNameError) return;
 
@@ -1131,11 +1160,9 @@ function openEditUserModal(userId) {
             } else {
                 const firstError = data.errors ? Object.values(data.errors).flat()[0] : null;
                 const apiMessage = String(data.message || '').trim();
-                // Backend's duplicateNameExists() guard (UserController::update())
-                // returns a plain fail() message rather than a per-field `errors`
-                // entry, since this modal only has one combined full-name input.
-                if (!firstError && apiMessage.toLowerCase().includes('first and last name')) {
-                    setFieldValidationState(fullNameInput, 'An account with this name already exists');
+                // Keep complete-name validation next to the existing input.
+                if (data.errors?.full_name) {
+                    setFieldValidationState(fullNameInput, [].concat(data.errors.full_name)[0]);
                 }
                 setEditModalError(firstError || apiMessage || 'Failed to update user');
             }
@@ -1182,9 +1209,21 @@ function openInactiveUserModal(userId, userName) {
     });
 }
 
-function openResetPasswordModal(userId, userName, userEmail) {
+function clearResetPasswordModal() {
     const existingModal = document.getElementById('reset-password-modal');
-    if (existingModal) existingModal.remove();
+    if (existingModal) {
+        const proof = document.getElementById('reset-actor-current-password');
+        const temporary = document.getElementById('reset-password-input');
+        if (proof) proof.value = '';
+        if (temporary) temporary.value = '';
+        existingModal.remove();
+    }
+}
+
+function openResetPasswordModal(userId, userName, userEmail) {
+    clearResetPasswordModal();
+    const targetUser = usersState.allUsers.find((candidate) => Number(candidate.user_id) === Number(userId));
+    const administratorTarget = String(targetUser?.role || '').toLowerCase().trim() === 'super_admin';
 
     const modal = document.createElement('div');
     modal.id = 'reset-password-modal';
@@ -1214,6 +1253,11 @@ function openResetPasswordModal(userId, userName, userEmail) {
                 </div>
                 <div id="reset-password-error" class="users-modal-field-error"></div>
             </div>
+            ${administratorTarget ? `<div class="users-modal-field">
+                <label for="reset-actor-current-password" class="users-modal-label">Your Current Password</label>
+                <input id="reset-actor-current-password" class="users-modal-input" type="password" autocomplete="current-password" required>
+                <small>Enter your own Administrator password, not the selected account's password.</small>
+            </div>` : ''}
             <div class="users-modal-actions">
                 <button type="button" id="cancel-reset-password-btn" class="users-modal-btn users-modal-btn-secondary">Cancel</button>
                 <button type="button" id="confirm-reset-password-btn" class="users-modal-btn users-modal-btn-primary">Reset Password</button>
@@ -1223,8 +1267,7 @@ function openResetPasswordModal(userId, userName, userEmail) {
     document.body.appendChild(modal);
 
     const closeModal = () => {
-        const el = document.getElementById('reset-password-modal');
-        if (el) el.remove();
+        clearResetPasswordModal();
     };
 
     document.getElementById('cancel-reset-password-btn')?.addEventListener('click', closeModal);
@@ -1246,7 +1289,7 @@ function openResetPasswordModal(userId, userName, userEmail) {
         });
     }
     
-    document.getElementById('confirm-reset-password-btn')?.addEventListener('click', async () => {
+    document.getElementById('confirm-reset-password-btn')?.addEventListener('click', async (event) => {
         const passwordInput = document.getElementById('reset-password-input');
         const errorEl = document.getElementById('reset-password-error');
         const newPassword = String(passwordInput?.value || '');
@@ -1258,8 +1301,21 @@ function openResetPasswordModal(userId, userName, userEmail) {
             return;
         }
 
-        await resetUserPassword(userId, newPassword);
-        closeModal();
+        const proofInput = document.getElementById('reset-actor-current-password');
+        if (administratorTarget && !proofInput?.value) {
+            errorEl.textContent = 'Enter your current Administrator password to authorize this reset.';
+            return;
+        }
+        const button = event.currentTarget || event.target;
+        if (button.disabled) return;
+        button.disabled = true;
+        try {
+            const success = await resetUserPassword(userId, newPassword, administratorTarget ? proofInput.value : undefined);
+            if (success) closeModal();
+        } finally {
+            if (proofInput) proofInput.value = '';
+            button.disabled = false;
+        }
     });
 
     modal.addEventListener('click', (event) => {
@@ -1267,13 +1323,14 @@ function openResetPasswordModal(userId, userName, userEmail) {
     });
 }
 
-async function resetUserPassword(userId, newPassword) {
+async function resetUserPassword(userId, newPassword, currentPassword) {
     try {
         const response = await fetch(window.SFMS_PUBLIC_URL(`/api/users/${userId}/reset-password`), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             credentials: 'include',
-            body: JSON.stringify({ new_password: newPassword })
+            body: JSON.stringify(currentPassword === undefined ? { new_password: newPassword }
+                : { new_password: newPassword, current_password: currentPassword })
         });
 
         const data = await response.json();
@@ -1281,12 +1338,15 @@ async function resetUserPassword(userId, newPassword) {
         if (data.success) {
             showPageAlert('Password reset successfully. Share the temporary password with the user securely.', 'success');
             loadUsers();
+            return true;
         } else {
-            showPageAlert('Error: ' + (data.message || 'Failed to reset password'), 'error');
+            const detail = data.errors ? Object.values(data.errors).flat()[0] : null;
+            showPageAlert('Error: ' + (detail || data.message || 'Failed to reset password'), 'error');
+            return false;
         }
     } catch (error) {
-        console.error('Reset password error:', error);
-        showPageAlert('Failed to reset password: ' + error.message, 'error');
+        showPageAlert('Failed to reset password. Please try again.', 'error');
+        return false;
     }
 }
 
@@ -1441,24 +1501,33 @@ function showPageAlert(message, type = 'success') {
  * Validation functions for user registration form
  */
 
-// Name-part validation: letters, spaces, apostrophes, and hyphens only.
+// Mirror the backend's Unicode-aware personal-name policy.
+function normalizeNameWhitespace(value) {
+    return String(value).normalize('NFC').replace(/[\p{Z}\s]+/gu, ' ').trim();
+}
+
+function normalizeCompleteName(value) {
+    return normalizeNameWhitespace(value).replace(/ *, */g, ', ')
+        .replace(/ (jr\.?|sr\.?|ii|iii|iv|v)$/iu, (_, suffix) => {
+            const key = suffix.toLowerCase();
+            return ' ' + (key.replace('.', '') === 'jr' ? 'Jr.' : key.replace('.', '') === 'sr' ? 'Sr.' : key.toUpperCase());
+        });
+}
+
 function getRequiredNameValidationError(value, label) {
+    value = normalizeNameWhitespace(value);
     if (!value) {
         return `${label} is required.`;
     }
 
-    // Regex: Only allows A-Z, a-z, spaces, hyphens, and apostrophes.
-    const nameRegex = /^[a-zA-Z\s'-]+$/;
+    // Combining marks and typographic apostrophes preserve legitimate names.
+    const nameRegex = /^(?=.*\p{L})[\p{L}\p{M} .'’\-]+$/u;
     if (!nameRegex.test(value)) {
         return `${label} can only contain letters, spaces, hyphens, and apostrophes.`;
     }
 
-    if (value.length < 2) {
-        return `${label} must be at least 2 characters long.`;
-    }
-
-    if (value.length > 100) {
-        return `${label} must not exceed 100 characters.`;
+    if (Array.from(value).length > 255) {
+        return `${label} must not exceed 255 characters.`;
     }
 
     return null;
@@ -1470,22 +1539,24 @@ function getRequiredNameValidationError(value, label) {
 // this one must also allow the comma after the last name and the period after
 // a middle initial -- otherwise re-saving a user's existing, unchanged name
 // (e.g. "Manzo, Kristine Joy D.") always fails validation.
-function getFullNameValidationError(value, label) {
+function getFullNameValidationError(value, label, originalValue = null) {
+    if (originalValue !== null && normalizeNameWhitespace(value) === normalizeNameWhitespace(originalValue)) return null;
+    value = normalizeCompleteName(value);
     if (!value) {
         return `${label} is required.`;
     }
 
-    const fullNameRegex = /^[a-zA-Z\s'.,-]+$/;
+    const fullNameRegex = /^(?=.*\p{L})[\p{L}\p{M} .,'’\-]+$/u;
     if (!fullNameRegex.test(value)) {
         return `${label} can only contain letters, spaces, hyphens, apostrophes, commas, and periods.`;
     }
 
-    if (value.length < 2) {
+    if (Array.from(value).length < 2) {
         return `${label} must be at least 2 characters long.`;
     }
 
-    if (value.length > 100) {
-        return `${label} must not exceed 100 characters.`;
+    if (Array.from(value).length > 255) {
+        return `${label} must not exceed 255 characters.`;
     }
 
     return null;
@@ -1496,21 +1567,22 @@ function getMiddleInitialValidationError(value) {
         return null;
     }
 
-    if (!/^[a-zA-Z]$/.test(value)) {
-        return 'Middle Initial must be a single letter (A-Z).';
+    if (!/^\p{L}\p{M}*\.?$/u.test(normalizeNameWhitespace(value))) {
+        return 'Middle Initial must be a single letter.';
     }
 
     return null;
 }
 
-function buildFullName(lastName, firstName, middleInitial) {
-    const nameParts = [`${lastName},`, firstName];
+function buildFullName(lastName, firstName, middleInitial, suffix = '') {
+    const nameParts = [`${normalizeNameWhitespace(lastName)},`, normalizeNameWhitespace(firstName)];
 
     if (middleInitial) {
-        nameParts.push(`${middleInitial.toUpperCase()}.`);
+        nameParts.push(`${normalizeNameWhitespace(middleInitial).replace(/\.$/, '').toUpperCase()}.`);
     }
 
-    return nameParts.join(' ').trim();
+    if (suffix) nameParts.push(suffix);
+    return normalizeCompleteName(nameParts.join(' '));
 }
 
 // Username validation
@@ -1587,13 +1659,8 @@ function getSuffixValidationError(value) {
         return null;
     }
 
-    if (value.length > 50) {
-        return 'Suffix must be 50 characters or less.';
-    }
-
-    // Allow letters, numbers, periods, commas, and hyphens
-    if (!/^[a-zA-Z0-9.,\-\s]+$/.test(value)) {
-        return 'Suffix can only contain letters, numbers, periods, commas, and hyphens.';
+    if (!/^(?:jr\.?|sr\.?|ii|iii|iv|v)$/iu.test(value)) {
+        return 'Choose None, Jr., Sr., II, III, IV, or V.';
     }
 
     return null;

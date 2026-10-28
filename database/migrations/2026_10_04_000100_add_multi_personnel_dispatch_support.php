@@ -37,8 +37,19 @@ return new class extends Migration
                 $table->timestamp('assigned_at')->nullable();
                 $table->timestamps();
 
-                // Prevent duplicate assignments
-                $table->unique(['dispatch_id', 'personnel_user_id']);
+                // Prevent duplicate assignments. Named explicitly: the
+                // auto-generated name
+                // ("dispatch_personnel_assignments_dispatch_id_personnel_user_id_unique",
+                // 69 chars) exceeds MySQL/MariaDB's 64-character identifier
+                // limit and errors with 1059 on any FRESH database (confirmed
+                // via LegacyMigrationRehearsalTest, which migrates a scratch
+                // DB from empty). The live dev DB never hit this because the
+                // table was originally created under an older, shorter
+                // column name (personnel_id) and later renamed in place by
+                // 2026_10_26_000100_fix_dispatch_personnel_assignments_column_drift.php,
+                // which doesn't rename the index -- so this bug was silent
+                // there but fatal on any clean install/migrate from scratch.
+                $table->unique(['dispatch_id', 'personnel_user_id'], 'dpa_dispatch_personnel_unique');
 
                 $table->foreign('dispatch_id')
                     ->references('id')

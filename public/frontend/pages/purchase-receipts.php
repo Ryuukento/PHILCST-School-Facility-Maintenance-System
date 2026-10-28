@@ -46,6 +46,11 @@ include __DIR__ . '/../includes/header.php';
                 <p class="text-muted mb-0">Record incoming stock with OR number and supplier</p>
             </div>
             <div class="d-flex gap-sm">
+                <!-- 2026-10-27 feedback item D: the Supplier Directory
+                     (suppliers-manage.php) had no entry point anywhere in the
+                     app besides typing its URL directly -- linking it here so
+                     it's actually reachable from the page that most needs it. -->
+                <a href="<?php echo htmlspecialchars(public_url('/suppliers/manage')); ?>" class="btn btn-secondary">Manage Suppliers</a>
                 <button type="button" class="btn btn-secondary" id="printReceiptListBtn" disabled><?php echo ui_icon('file-text'); ?> Print Receipts</button>
                 <?php if ($canPost): ?>
                 <button type="button" class="btn btn-primary" id="newReceiptBtn">+ New Receipt</button>
@@ -135,18 +140,25 @@ include __DIR__ . '/../includes/header.php';
                     </div>
                 </div>
 
-                <!-- Row 2: Supplier Name (full width) -->
+                <!-- Row 2: Supplier (full width)
+                     Type-to-filter against /api/suppliers?q= via the same
+                     Components.SearchableSelect widget dispatch-create.php
+                     already uses for Department/Room/Release Personnel --
+                     plain text input + hidden id input, no icon wrapper
+                     (matching that convention exactly: the widget's own
+                     position:relative container replaces the input's
+                     original parent slot, which would fight an icon span
+                     sibling expecting to anchor to it). -->
                 <div>
-                    <label style="display:block;margin-bottom:6px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;opacity:0.65;">Supplier Name <span style="color:#ef4444;">*</span></label>
-                    <div style="position:relative;">
-                        <span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);pointer-events:none;line-height:0;opacity:0.45;">
-                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M3 9h18v10a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/>
-                                <path d="M3 9l2.45-4.9A2 2 0 017.24 3h9.52a2 2 0 011.79 1.1L21 9"/>
-                                <line x1="12" y1="9" x2="12" y2="21"/>
-                            </svg>
-                        </span>
-                        <input type="text" id="nr-supplier-name" class="form-control" placeholder="Supplier or vendor name" autocomplete="off" style="padding-left:32px;">
+                    <label style="display:block;margin-bottom:6px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;opacity:0.65;">Supplier <span style="color:#ef4444;">*</span></label>
+                    <input type="text" id="nr-supplier-search" class="form-control" placeholder="Search supplier by name…" autocomplete="off">
+                    <input type="hidden" id="nr-supplier-id">
+                    <div style="margin-top:8px;display:flex;gap:16px;align-items:center;">
+                        <button type="button" id="nrAddSupplierBtn" style="background:none;border:none;padding:0;cursor:pointer;font-size:12px;font-weight:600;color:var(--primary-color);text-decoration:underline;">+ Add New Supplier</button>
+                        <!-- Disabled until a supplier is actually selected (prSupplierSelect's
+                             onSelect, or the Add New Supplier success path, enables it) --
+                             there's nothing to show a history of before then. -->
+                        <button type="button" id="nrViewSupplierHistoryBtn" disabled style="background:none;border:none;padding:0;cursor:not-allowed;font-size:12px;font-weight:600;color:var(--primary-color);text-decoration:underline;opacity:0.4;">View Supplier History</button>
                     </div>
                 </div>
 
@@ -221,6 +233,141 @@ include __DIR__ . '/../includes/header.php';
 }
 </style>
 
+<!-- Modal: Add New Supplier
+     Opened from the New Receipt form's "+ Add New Supplier" button, next to
+     its searchable supplier field (#nr-supplier-search / #nr-supplier-id --
+     see prBuildSupplierSelect()). Submitting this creates a real row in the
+     suppliers table (via POST /api/suppliers/quick-create -- the same
+     SupplierController::store() the main Supplier Management page uses,
+     just reached through a second route that also permits
+     maintenance_staff; see routes/web.php), so a supplier created this way
+     is properly linked by supplier_id rather than a disconnected free-text
+     name. On success the new supplier's name/id are written straight into
+     #nr-supplier-search/#nr-supplier-id, and this modal closes back to the
+     New Receipt modal underneath it. -->
+<div id="add-supplier-modal" class="modal" aria-hidden="true" role="dialog" aria-modal="true" style="display:none;">
+    <div class="modal-content" style="max-width:520px;width:100%;padding:0;background:var(--card-color);color:var(--text-primary);border:1px solid var(--border);border-radius:12px;overflow:hidden;max-height:90vh;display:flex;flex-direction:column;">
+
+        <!-- Header -->
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:22px 24px 18px;border-bottom:1px solid var(--border);flex-shrink:0;">
+            <div style="display:flex;align-items:center;gap:14px;">
+                <div style="width:40px;height:40px;border-radius:10px;background:rgba(16,185,129,0.15);border:1px solid rgba(16,185,129,0.3);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M3 9h18v10a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/>
+                        <path d="M3 9l2.45-4.9A2 2 0 017.24 3h9.52a2 2 0 011.79 1.1L21 9"/>
+                        <line x1="12" y1="13" x2="12" y2="17"/>
+                        <line x1="10" y1="15" x2="14" y2="15"/>
+                    </svg>
+                </div>
+                <div>
+                    <h2 style="margin:0;font-size:16px;font-weight:700;line-height:1.3;">Add New Supplier</h2>
+                    <p style="margin:2px 0 0;font-size:12px;opacity:0.55;line-height:1.4;">Registers a new supplier you can reuse on future receipts</p>
+                </div>
+            </div>
+            <button type="button" id="closeAddSupplierModal" aria-label="Close" style="background:none;border:none;cursor:pointer;padding:6px;opacity:0.5;color:inherit;font-size:22px;line-height:1;border-radius:6px;margin-left:12px;">×</button>
+        </div>
+
+        <!-- Form body -->
+        <form id="add-supplier-form" style="overflow-y:auto;flex:1;">
+            <div style="padding:24px;display:flex;flex-direction:column;gap:18px;">
+
+                <div>
+                    <label style="display:block;margin-bottom:6px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;opacity:0.65;">Supplier Name <span style="color:#ef4444;">*</span></label>
+                    <input type="text" id="as-name" class="form-control" placeholder="e.g. ABC Hardware Supply" autocomplete="off" minlength="3" maxlength="100">
+                </div>
+
+                <!-- maxlength/minlength here mirror SupplierController's server-side
+                     validation rules exactly (the authoritative check -- these are
+                     just an early, friendlier stop before the request even goes
+                     out). Name intentionally allows any character: legitimate
+                     business names use "&", commas, periods ("ABC Hardware & Supply",
+                     "J&J Trading", "ABC Co., Ltd."). -->
+                <div class="pr-new-receipt-row" style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+                    <div>
+                        <label style="display:block;margin-bottom:6px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;opacity:0.65;">Contact Person</label>
+                        <input type="text" id="as-contact-person" class="form-control" placeholder="Optional" autocomplete="off" maxlength="255">
+                    </div>
+                    <div>
+                        <label style="display:block;margin-bottom:6px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;opacity:0.65;">Phone</label>
+                        <input type="text" id="as-phone" class="form-control" placeholder="e.g. 0917-123-4567" autocomplete="off" maxlength="50">
+                    </div>
+                </div>
+
+                <div>
+                    <label style="display:block;margin-bottom:6px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;opacity:0.65;">Email</label>
+                    <input type="email" id="as-email" class="form-control" placeholder="Optional" autocomplete="off" maxlength="255">
+                </div>
+
+                <div>
+                    <label style="display:block;margin-bottom:6px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;opacity:0.65;">Address</label>
+                    <textarea id="as-address" class="form-control" rows="2" placeholder="Optional" maxlength="255"></textarea>
+                </div>
+
+                <div>
+                    <label style="display:block;margin-bottom:6px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;opacity:0.65;">Notes</label>
+                    <textarea id="as-notes" class="form-control" rows="2" placeholder="Optional" maxlength="500"></textarea>
+                </div>
+
+                <p id="add-supplier-error" style="color:#ef4444;margin:0;font-size:13px;display:none;"></p>
+            </div>
+
+            <!-- Footer -->
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 24px;border-top:1px solid var(--border);flex-shrink:0;">
+                <span style="font-size:12px;opacity:0.45;">* Required fields</span>
+                <div style="display:flex;gap:10px;align-items:center;">
+                    <button type="button" class="btn btn-secondary" id="cancelAddSupplierModal">Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="submitAddSupplierBtn">Create Supplier</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal: View Supplier History
+     Opened from the New Receipt form's "View Supplier History" link, next to
+     "+ Add New Supplier". Read-only: fetches GET /api/suppliers/{id}/history
+     (SupplierController::history()) and lists that supplier's past purchase
+     receipts (OR#, date, status, item count) so whoever is recording a new
+     receipt can see what's been bought from this supplier before. Receipts
+     created before purchase_receipts.supplier_id existed (pre-2026-10-27)
+     only ever had a free-text supplier name and won't appear here -- that's
+     a data-availability gap, not a bug in this modal. -->
+<div id="supplier-history-modal" class="modal" aria-hidden="true" role="dialog" aria-modal="true" style="display:none;">
+    <div class="modal-content" style="max-width:640px;width:100%;padding:0;background:var(--card-color);color:var(--text-primary);border:1px solid var(--border);border-radius:12px;overflow:hidden;max-height:90vh;display:flex;flex-direction:column;">
+
+        <!-- Header -->
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:22px 24px 18px;border-bottom:1px solid var(--border);flex-shrink:0;">
+            <div style="display:flex;align-items:center;gap:14px;">
+                <div style="width:40px;height:40px;border-radius:10px;background:rgba(59,130,246,0.15);border:1px solid rgba(59,130,246,0.3);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M3 3v5h5"/>
+                        <path d="M3.05 13A9 9 0 1 0 6 5.3L3 8"/>
+                        <path d="M12 7v5l4 2"/>
+                    </svg>
+                </div>
+                <div>
+                    <h2 style="margin:0;font-size:16px;font-weight:700;line-height:1.3;">Supplier History</h2>
+                    <p id="sh-supplier-name" style="margin:2px 0 0;font-size:12px;opacity:0.55;line-height:1.4;">—</p>
+                </div>
+            </div>
+            <button type="button" id="closeSupplierHistoryModal" aria-label="Close" style="background:none;border:none;cursor:pointer;padding:6px;opacity:0.5;color:inherit;font-size:22px;line-height:1;border-radius:6px;margin-left:12px;">×</button>
+        </div>
+
+        <!-- Body -->
+        <div style="padding:20px 24px;overflow-y:auto;flex:1;">
+            <p style="margin:0 0 12px;font-size:12px;opacity:0.65;">Past purchase receipts recorded for this supplier.</p>
+            <div id="sh-receipts-container" class="table-responsive">
+                <div class="ui-empty-state"><strong>Loading...</strong></div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div style="display:flex;align-items:center;justify-content:flex-end;padding:14px 24px;border-top:1px solid var(--border);flex-shrink:0;">
+            <button type="button" class="btn btn-secondary" id="closeSupplierHistoryModalFooter">Close</button>
+        </div>
+    </div>
+</div>
+
 <?php else: ?>
 <!-- ================================================================
      DETAIL VIEW
@@ -236,6 +383,9 @@ include __DIR__ . '/../includes/header.php';
             </div>
             <div class="d-flex gap-sm">
                 <button type="button" class="btn btn-primary" id="printReceiptBtn" disabled><?php echo ui_icon('file-text'); ?> Print Receipt</button>
+                <?php if ($canPost): ?>
+                <a href="<?php echo htmlspecialchars(public_url('/purchase-receipts') . '?reorder=' . $receiptId); ?>" class="btn btn-secondary">Reorder</a>
+                <?php endif; ?>
                 <a href="<?php echo htmlspecialchars(public_url('/purchase-receipts')); ?>" class="btn btn-secondary"><?php echo ui_icon('arrow-left'); ?> Back to List</a>
             </div>
         </div>
@@ -251,7 +401,7 @@ include __DIR__ . '/../includes/header.php';
             <div class="d-flex gap-sm" id="draft-actions" style="display:none;">
                 <button type="button" class="btn btn-secondary" id="addItemBtn">+ Add Items</button>
                 <?php if ($canPost): ?>
-                <button type="button" class="btn btn-primary" id="postReceiptBtn">Post Receipt</button>
+                <button type="button" class="btn btn-primary" id="postReceiptBtn" disabled title="Add at least one item before posting this receipt.">Post Receipt</button>
                 <?php endif; ?>
             </div>
         </div>
@@ -335,11 +485,33 @@ include __DIR__ . '/../includes/header.php';
     </div>
 </div>
 
+<div id="remove-line-modal" class="modal" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="remove-line-title" aria-describedby="remove-line-message" tabindex="-1" style="display:none;">
+    <div class="modal-content pr-remove-modal">
+        <div class="modal-header">
+            <h2 class="modal-title" id="remove-line-title">Remove Item?</h2>
+        </div>
+        <div class="modal-body">
+            <p id="remove-line-message"></p>
+            <p id="remove-line-error" role="alert" hidden></p>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" id="cancelRemoveLine">Cancel</button>
+            <button type="button" class="btn btn-primary" id="confirmRemoveLine">Yes, Remove</button>
+        </div>
+    </div>
+</div>
+
 <!-- Shared, fixed-position suggestion list for the searchable Item field.
      Lives outside the scrolling rows container so it is never clipped. -->
 <div id="pr-item-suggest" class="pr-suggest" role="listbox" hidden></div>
 
 <style>
+.pr-remove-modal { width: min(92vw, 480px); }
+.pr-remove-modal .modal-title { color: var(--primary-color); }
+.pr-remove-modal .modal-body { overflow-wrap: anywhere; }
+.pr-remove-modal .modal-footer { flex-wrap: wrap; }
+#remove-line-error { color: #b91c1c; margin-bottom: 0; }
+
 /* ===========================================================================
    TASK H — bulk line-item entry modal.
    Page-local because this component exists only on the Purchase Receipt detail
@@ -640,11 +812,52 @@ function prStatusBadge(status) {
     return '<span style="background:#fef3c7;color:#92400e;padding:2px 10px;border-radius:12px;font-size:12px;font-weight:500;">Draft</span>';
 }
 
+// --- Modal stacking / accessibility (2026-10-27 feedback item 3) ---------
+// Some modals open on top of another already-open modal -- "+ Add New
+// Supplier" and "View History" both launch from inside the New Receipt
+// modal. Before this, prOpenModal/prCloseModal just toggled display:flex
+// with no regard for what else was open: the modal underneath relied on
+// DOM order for stacking (fragile), stayed fully focusable/clickable
+// through Tab, and Escape wasn't wired to close anything. This tracks a
+// stack of open modal ids so only the most-recently-opened one is "live":
+// it always renders above every modal still open beneath it, is the only
+// one Tab can reach or Escape can close, the one(s) underneath are made
+// `inert` (blocks their focus AND clicks/taps) until it closes, and
+// closing it hands focus back to whatever triggered it -- typically the
+// button inside the modal underneath, restoring that modal to full
+// interactivity without losing any of its own input.
+const prModalStack = [];
+const PR_MODAL_BASE_Z = 2000;
+
+function prFocusableElements(container) {
+    return Array.from(container.querySelectorAll(
+        'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])'
+    )).filter((el) => el.offsetParent !== null);
+}
+
 function prOpenModal(id) {
     const el = document.getElementById(id);
     if (!el) return;
+
+    // Remember what had focus so closing this modal can hand it back.
+    el.__prPreviousFocus = document.activeElement;
+
+    // Whatever was the active modal is now covered -- disable it.
+    const previousTopId = prModalStack[prModalStack.length - 1];
+    if (previousTopId) {
+        const previousTopEl = document.getElementById(previousTopId);
+        if (previousTopEl) previousTopEl.setAttribute('inert', '');
+    }
+
     el.style.display = 'flex';
+    el.style.zIndex = String(PR_MODAL_BASE_Z + prModalStack.length * 10);
     el.removeAttribute('aria-hidden');
+    el.removeAttribute('inert');
+
+    prModalStack.push(id);
+
+    const focusables = prFocusableElements(el);
+    (focusables[0] || el).focus();
 }
 
 function prCloseModal(id) {
@@ -652,6 +865,91 @@ function prCloseModal(id) {
     if (!el) return;
     el.style.display = 'none';
     el.setAttribute('aria-hidden', 'true');
+    el.style.removeProperty('z-index');
+
+    const idx = prModalStack.indexOf(id);
+    if (idx !== -1) prModalStack.splice(idx, 1);
+
+    // Whatever's now on top (if anything) regains interactivity.
+    const newTopId = prModalStack[prModalStack.length - 1];
+    if (newTopId) {
+        const newTopEl = document.getElementById(newTopId);
+        if (newTopEl) newTopEl.removeAttribute('inert');
+    }
+
+    if (el.__prPreviousFocus && typeof el.__prPreviousFocus.focus === 'function') {
+        el.__prPreviousFocus.focus();
+    }
+    el.__prPreviousFocus = null;
+}
+
+// Escape closes only the active (topmost) modal; Tab/Shift+Tab stay inside
+// it instead of wrapping into whatever's behind it.
+document.addEventListener('keydown', (e) => {
+    if (prModalStack.length === 0) return;
+    const topId = prModalStack[prModalStack.length - 1];
+    const topEl = document.getElementById(topId);
+    if (!topEl) return;
+
+    if (e.key === 'Escape') {
+        if (e.defaultPrevented) return; // e.g. the item-suggest dropdown already handled it
+        e.preventDefault();
+        prCloseTopModal(topId);
+        return;
+    }
+
+    if (e.key === 'Tab') {
+        const focusables = prFocusableElements(topEl);
+        if (focusables.length === 0) return;
+        const first = focusables[0];
+        const last = focusables[focusables.length - 1];
+        if (e.shiftKey && document.activeElement === first) {
+            e.preventDefault();
+            last.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+            e.preventDefault();
+            first.focus();
+        } else if (!topEl.contains(document.activeElement)) {
+            // Focus somehow ended up outside the active modal -- pull it
+            // back in rather than letting Tab continue from wherever it was.
+            e.preventDefault();
+            first.focus();
+        }
+    }
+});
+
+// Each modal resets its own form/error state on close (see
+// prCloseAddSupplierModal etc. below), so Escape has to go through the
+// *same* close path as that modal's own Cancel/x button rather than the
+// bare prCloseModal().
+//
+// Corrected 2026-10-27: these four are assigned (not `function`-declared)
+// here at the shared top-level scope, then REASSIGNED (not redeclared) by
+// initListView()/initDetailView() once those per-modal close wrappers are
+// actually defined. A plain `function prCloseAddSupplierModal() {...}`
+// written inside initListView() is scoped to initListView() alone --
+// invisible from this switch, which sits outside it -- function-declaration
+// hoisting only reaches within the SAME enclosing function, not across
+// function boundaries. That mismatch meant Escape silently threw a
+// ReferenceError (caught by the browser's own event dispatch, so nothing
+// crashed, but the keypress did nothing) for every modal except
+// new-receipt-modal's `default` case; declaring the bindings here, at the
+// same scope prCloseTopModal itself lives in, is what actually makes them
+// reachable.
+let prCloseAddSupplierModal     = () => prCloseModal('add-supplier-modal');
+let prCloseSupplierHistoryModal = () => prCloseModal('supplier-history-modal');
+let prCloseAddItems             = () => prCloseModal('add-items-modal');
+let prCloseNewReceiptModal      = () => prCloseModal('new-receipt-modal');
+
+function prCloseTopModal(id) {
+    switch (id) {
+        case 'add-supplier-modal': prCloseAddSupplierModal(); break;
+        case 'supplier-history-modal': prCloseSupplierHistoryModal(); break;
+        case 'add-items-modal': prCloseAddItems(); break;
+        case 'remove-line-modal': prCloseRemoveLineModal(); break;
+        case 'new-receipt-modal': prCloseNewReceiptModal(); break;
+        default: prCloseModal(id);
+    }
 }
 
 async function prFetch(url, options) {
@@ -749,12 +1047,29 @@ async function prFetchReceipt(id) {
     };
 }
 
+// Reorder Previous Receipt: sessionStorage key shared across the hard
+// navigation from list-view (create) to detail-view (consume) -- must live
+// here, before the list/detail script split, since both branches need it.
+function prReorderSessionKey(receiptId) {
+    return 'pr_reorder_items_' + receiptId;
+}
+
 // ---------------------------------------------------------------------------
 // LIST VIEW
 // ---------------------------------------------------------------------------
 <?php if (!$isDetail): ?>
 
 let prListReceipts = [];
+
+// Reorder Previous Receipt: items copied from a prior receipt, staged here
+// after the New Receipt modal is pre-filled with the supplier, then handed
+// off via sessionStorage once the new draft's id is known (see the
+// new-receipt-form submit handler below).
+let prPendingReorderItems = null;
+
+function prClearReorderState() {
+    prPendingReorderItems = null;
+}
 
 function prPrintReceiptList() {
     if (prPrintUnavailable()) return;
@@ -972,6 +1287,7 @@ async function loadReceipts() {
             html += '<td><div class="d-flex gap-sm">'
                 + `<a class="btn btn-sm btn-primary" href="${prEscapeHtml(PURCHASE_PAGE)}?id=${row.id}">View</a>`
                 + `<button type="button" class="btn btn-sm btn-secondary" data-print-receipt="${Number(row.id)}">Print</button>`
+                + (PR_CAN_POST ? `<button type="button" class="btn btn-sm btn-secondary" data-reorder-receipt="${Number(row.id)}">Reorder</button>` : '')
                 + '</div></td>';
             html += '</tr>';
         });
@@ -1018,6 +1334,147 @@ async function loadDepartmentsIntoSelect(selectId) {
             sel.appendChild(opt);
         });
     } catch (_) { /* dropdown is optional — fail silently */ }
+}
+
+// Type-to-filter supplier picker on the New Receipt form. Same
+// Components.SearchableSelect widget dispatch-create.php uses for
+// Department/Room/Release Personnel; status=active keeps the New Receipt
+// form from surfacing a retired supplier. Built once and reused across
+// every modal open (destroying/rebuilding it per-open isn't needed since
+// this field, unlike dispatch-create's multi-add department picker, has no
+// per-open state to reset beyond the input/hidden values themselves).
+let prSupplierSelect = null;
+
+function prBuildSupplierSelect() {
+    if (!(window.Components && typeof Components.SearchableSelect === 'function')) return;
+
+    prSupplierSelect = new Components.SearchableSelect({
+        inputId:    'nr-supplier-search',
+        hiddenId:   'nr-supplier-id',
+        endpoint:   '/api/suppliers?status=active',
+        displayKey: 'name',
+        onSelect:   () => prSetViewHistoryEnabled(true),
+    });
+}
+
+// "View Supplier History" only makes sense once a real supplier is picked --
+// kept disabled otherwise (see the reset in newReceiptBtn's click handler
+// and the enable call here / in the Add New Supplier success path below).
+function prSetViewHistoryEnabled(enabled) {
+    const btn = document.getElementById('nrViewSupplierHistoryBtn');
+    if (!btn) return;
+    btn.disabled = !enabled;
+    btn.style.cursor = enabled ? 'pointer' : 'not-allowed';
+    btn.style.opacity = enabled ? '1' : '0.4';
+}
+
+// Reorder Previous Receipt: pre-fills the New Receipt modal with ONLY the
+// source receipt's supplier (OR Number/Date/Department/Remarks are left
+// blank -- this is a new receipt, not a copy of the old one's paperwork),
+// stages its line items in prPendingReorderItems for the detail page to
+// pick up after creation, then opens the modal. Reachable from: a receipt
+// row's Reorder button, a Reorder button inside the supplier-history-modal
+// table, or a `?reorder=<id>` query param (used by cross-page entry points
+// on dispatch-detail.php-style pages that don't have this modal's HTML).
+async function prStartReorder(sourceReceiptId) {
+    try {
+        const { receipt, items } = await prFetchReceipt(sourceReceiptId);
+
+        document.getElementById('new-receipt-form').reset();
+        const receivedBySel = document.getElementById('nr-received-by');
+        if (receivedBySel && PR_SESSION_USER_ID) receivedBySel.value = PR_SESSION_USER_ID;
+
+        document.getElementById('nr-supplier-search').value = '';
+        document.getElementById('nr-supplier-id').value = '';
+        if (prSupplierSelect) prSupplierSelect.clearSelection();
+        prSetViewHistoryEnabled(false);
+
+        if (receipt.supplier_id && receipt.supplier_name) {
+            document.getElementById('nr-supplier-search').value = receipt.supplier_name;
+            document.getElementById('nr-supplier-id').value = String(receipt.supplier_id);
+            prSetViewHistoryEnabled(true);
+        } else {
+            // Receipts created before purchase_receipts.supplier_id existed
+            // only have the old free-text supplier_name column -- nothing
+            // to pre-fill from, so let the user pick the supplier manually.
+            prNotify('This receipt has no linked supplier record (an older receipt) — please choose the supplier manually.', 'warning');
+        }
+
+        prPendingReorderItems = items.map((it) => ({
+            item_name:         it.item_name,
+            item_id:           it.item_id ?? null,
+            category_id:       it.category_id ?? null,
+            quantity_received: it.quantity_received,
+            unit:              it.unit,
+        }));
+
+        // supplier-history-modal is only ever opened from inside
+        // new-receipt-modal (via "View Supplier History"), so it's the one
+        // nested case worth handling explicitly: close it rather than
+        // stacking another new-receipt-modal on top of the one already open.
+        if (prModalStack.includes('supplier-history-modal')) {
+            prCloseSupplierHistoryModal();
+        }
+        if (!prModalStack.includes('new-receipt-modal')) {
+            prOpenModal('new-receipt-modal');
+        }
+    } catch (err) {
+        prNotify(err.message || 'Unable to load that receipt for reordering.');
+    }
+}
+
+// Fetches SupplierController::history() and renders its purchase_receipts
+// list into the View Supplier History modal. histories/stock_entries are
+// also returned by that endpoint but aren't shown here -- this modal is
+// scoped to what a receipt-entry clerk actually needs: what's been bought
+// from this supplier before.
+async function prOpenSupplierHistory(supplierId, supplierName) {
+    document.getElementById('sh-supplier-name').textContent = supplierName || '—';
+    const container = document.getElementById('sh-receipts-container');
+    container.innerHTML = '<div class="ui-empty-state"><strong>Loading...</strong></div>';
+    prOpenModal('supplier-history-modal');
+
+    try {
+        const { response, data: payload } = await prFetch(
+            window.SFMS_PUBLIC_URL('/api/suppliers/' + encodeURIComponent(supplierId) + '/history'),
+            { credentials: 'same-origin', headers: { 'Accept': 'application/json' } }
+        );
+        if (!response.ok || !payload.success) throw new Error(payload.message || 'Failed to load supplier history');
+
+        const receipts = Array.isArray(payload.data?.purchase_receipts) ? payload.data.purchase_receipts : [];
+
+        if (receipts.length === 0) {
+            container.innerHTML = '<div class="ui-empty-state"><strong>No purchase receipts yet for this supplier.</strong></div>';
+            return;
+        }
+
+        const rows = receipts.map((r) => `
+            <tr>
+                <td>${prEscapeHtml(r.or_number)}</td>
+                <td>${prFormatDate(r.receipt_date)}</td>
+                <td>${prStatusBadge(r.status)}</td>
+                <td style="text-align:center;">${Number(r.item_count) || 0}</td>
+                ${PR_CAN_POST ? `<td><button type="button" class="btn btn-sm btn-secondary" data-reorder-receipt="${Number(r.id)}">Reorder</button></td>` : ''}
+            </tr>
+        `).join('');
+
+        container.innerHTML = `
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>OR Number</th>
+                        <th>Date</th>
+                        <th>Status</th>
+                        <th style="text-align:center;">Items</th>
+                        ${PR_CAN_POST ? '<th>Action</th>' : ''}
+                    </tr>
+                </thead>
+                <tbody>${rows}</tbody>
+            </table>
+        `;
+    } catch (err) {
+        container.innerHTML = `<div class="ui-empty-state"><strong>${prEscapeHtml(err.message || 'Failed to load history.')}</strong></div>`;
+    }
 }
 
 async function loadUsersIntoReceivedBySelect() {
@@ -1069,6 +1526,7 @@ function initListView() {
     loadReceipts();
     loadDepartmentsIntoSelect('nr-department-id');
     loadUsersIntoReceivedBySelect();
+    prBuildSupplierSelect();
 
     // Setup date filter inputs
     const dateFromInput = document.getElementById('prDateFrom');
@@ -1091,28 +1549,175 @@ function initListView() {
     const printListBtn = document.getElementById('printReceiptListBtn');
     if (printListBtn) printListBtn.addEventListener('click', prPrintReceiptList);
 
-    // Row-level Print buttons are re-rendered on every load, so delegate.
+    // Row-level Print/Reorder buttons are re-rendered on every load, so delegate.
     document.getElementById('receipts-container').addEventListener('click', (e) => {
-        const btn = e.target.closest('[data-print-receipt]');
-        if (btn) prPrintReceiptById(Number(btn.dataset.printReceipt));
+        const printBtn = e.target.closest('[data-print-receipt]');
+        if (printBtn) prPrintReceiptById(Number(printBtn.dataset.printReceipt));
+
+        const reorderBtn = e.target.closest('[data-reorder-receipt]');
+        if (reorderBtn) prStartReorder(Number(reorderBtn.dataset.reorderReceipt));
     });
 
     <?php if ($canPost): ?>
     const newReceiptBtn = document.getElementById('newReceiptBtn');
     if (newReceiptBtn) {
         newReceiptBtn.addEventListener('click', () => {
+            // A fresh "+ New Receipt" click is not a reorder -- discard any
+            // items staged by a previous Reorder attempt that was abandoned.
+            prClearReorderState();
+
             // Reset receiver to the logged-in user each time the modal opens
             const receivedBySel = document.getElementById('nr-received-by');
             if (receivedBySel && PR_SESSION_USER_ID) receivedBySel.value = PR_SESSION_USER_ID;
+
+            // Reset the supplier picker back to its default, unselected state
+            // each time the modal opens -- otherwise a supplier picked for a
+            // previous receipt would leak into the next one.
+            document.getElementById('nr-supplier-search').value = '';
+            document.getElementById('nr-supplier-id').value = '';
+            if (prSupplierSelect) prSupplierSelect.clearSelection();
+            prSetViewHistoryEnabled(false);
+
             prOpenModal('new-receipt-modal');
         });
     }
 
-    document.getElementById('closeNewReceiptModal').addEventListener('click',  () => prCloseModal('new-receipt-modal'));
-    document.getElementById('cancelNewReceiptModal').addEventListener('click', () => prCloseModal('new-receipt-modal'));
+    // "+ Add New Supplier" opens a dedicated modal rather than being baked
+    // into the search dropdown itself -- every supplier, new or existing,
+    // ends up as a real suppliers-table row referenced by supplier_id.
+    const nrAddSupplierBtn = document.getElementById('nrAddSupplierBtn');
+    if (nrAddSupplierBtn) {
+        nrAddSupplierBtn.addEventListener('click', () => {
+            prOpenModal('add-supplier-modal');
+        });
+    }
+
+    // Reassigns the shared outer binding (see prCloseTopModal near the top
+    // of this script) so Escape also discards any staged reorder items --
+    // otherwise closing a Reorder-prefilled modal without submitting would
+    // leave prPendingReorderItems stale for the next New Receipt attempt.
+    prCloseNewReceiptModal = function () {
+        prClearReorderState();
+        prCloseModal('new-receipt-modal');
+    };
+
+    document.getElementById('closeNewReceiptModal').addEventListener('click',  prCloseNewReceiptModal);
+    document.getElementById('cancelNewReceiptModal').addEventListener('click', prCloseNewReceiptModal);
 
     document.getElementById('new-receipt-modal').addEventListener('click', (e) => {
-        if (e.target === e.currentTarget) prCloseModal('new-receipt-modal');
+        if (e.target === e.currentTarget) prCloseNewReceiptModal();
+    });
+
+    // --- Add New Supplier modal --------------------------------------------
+    // Cancelling leaves the New Receipt form's own supplier field exactly as
+    // it was before "+ Add New Supplier" was clicked (unlike the old
+    // text-input fallback, nothing on the main form needs to be cleared).
+    prCloseAddSupplierModal = function () {
+        prCloseModal('add-supplier-modal');
+        document.getElementById('add-supplier-form').reset();
+        document.getElementById('add-supplier-error').style.display = 'none';
+    };
+
+    document.getElementById('closeAddSupplierModal').addEventListener('click', prCloseAddSupplierModal);
+    document.getElementById('cancelAddSupplierModal').addEventListener('click', prCloseAddSupplierModal);
+    document.getElementById('add-supplier-modal').addEventListener('click', (e) => {
+        if (e.target === e.currentTarget) prCloseAddSupplierModal();
+    });
+
+    document.getElementById('add-supplier-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const name          = document.getElementById('as-name').value.trim();
+        const contactPerson = document.getElementById('as-contact-person').value.trim();
+        const email         = document.getElementById('as-email').value.trim();
+        const phone         = document.getElementById('as-phone').value.trim();
+        const address       = document.getElementById('as-address').value.trim();
+        const notes         = document.getElementById('as-notes').value.trim();
+        const errEl      = document.getElementById('add-supplier-error');
+        const submitBtn  = document.getElementById('submitAddSupplierBtn');
+
+        errEl.style.display = 'none';
+
+        if (!name) {
+            errEl.textContent = 'Supplier name is required.';
+            errEl.style.display = 'block';
+            return;
+        }
+
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Creating...';
+
+        try {
+            const { response, data: payload } = await prFetch(
+                window.SFMS_PUBLIC_URL('/api/suppliers/quick-create'),
+                {
+                    method: 'POST',
+                    credentials: 'same-origin',
+                    headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                    body: JSON.stringify({
+                        name:            name,
+                        contact_person:  contactPerson || null,
+                        contact_email:   email || null,
+                        phone:           phone || null,
+                        address:         address || null,
+                        notes:           notes || null,
+                    }),
+                }
+            );
+
+            if (!response.ok || !payload.success) {
+                throw new Error(payload.message || 'Failed to create supplier');
+            }
+
+            const newId = payload.data?.supplier_id;
+
+            // Drop the freshly created supplier straight into the New
+            // Receipt form's search field/hidden id, exactly as if the user
+            // had typed its name and picked it from the dropdown.
+            if (newId) {
+                document.getElementById('nr-supplier-search').value = name;
+                document.getElementById('nr-supplier-id').value = String(newId);
+                if (prSupplierSelect) prSupplierSelect.clearSelection();
+                prSetViewHistoryEnabled(true);
+            }
+
+            document.getElementById('add-supplier-form').reset();
+            prCloseModal('add-supplier-modal');
+        } catch (err) {
+            errEl.textContent = err.message || 'An error occurred.';
+            errEl.style.display = 'block';
+        } finally {
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Create Supplier';
+        }
+    });
+
+    // --- View Supplier History modal ---------------------------------------
+    const nrViewSupplierHistoryBtn = document.getElementById('nrViewSupplierHistoryBtn');
+    if (nrViewSupplierHistoryBtn) {
+        nrViewSupplierHistoryBtn.addEventListener('click', () => {
+            const supplierId = document.getElementById('nr-supplier-id').value;
+            const supplierName = document.getElementById('nr-supplier-search').value;
+            if (!supplierId) return; // disabled until a supplier is picked, but guard anyway
+            prOpenSupplierHistory(supplierId, supplierName);
+        });
+    }
+
+    prCloseSupplierHistoryModal = function () {
+        prCloseModal('supplier-history-modal');
+    };
+
+    document.getElementById('closeSupplierHistoryModal').addEventListener('click', prCloseSupplierHistoryModal);
+    document.getElementById('closeSupplierHistoryModalFooter').addEventListener('click', prCloseSupplierHistoryModal);
+    document.getElementById('supplier-history-modal').addEventListener('click', (e) => {
+        if (e.target === e.currentTarget) prCloseSupplierHistoryModal();
+    });
+
+    // Row-level Reorder buttons inside the history table are re-rendered on
+    // every open, so delegate once here rather than rebinding per row.
+    document.getElementById('sh-receipts-container').addEventListener('click', (e) => {
+        const reorderBtn = e.target.closest('[data-reorder-receipt]');
+        if (reorderBtn) prStartReorder(Number(reorderBtn.dataset.reorderReceipt));
     });
 
     document.getElementById('new-receipt-form').addEventListener('submit', async (e) => {
@@ -1120,7 +1725,8 @@ function initListView() {
 
         const orNumber       = document.getElementById('nr-or-number').value.trim();
         const receiptDate    = document.getElementById('nr-receipt-date').value.trim();
-        const supplierName   = document.getElementById('nr-supplier-name').value.trim();
+        const supplierRaw    = document.getElementById('nr-supplier-id').value;
+        const supplierId     = supplierRaw ? parseInt(supplierRaw, 10) : null;
         const departmentId   = document.getElementById('nr-department-id').value;
         const remarks        = document.getElementById('nr-remarks').value.trim();
         const receivedByRaw  = document.getElementById('nr-received-by').value;
@@ -1130,8 +1736,8 @@ function initListView() {
 
         errEl.style.display = 'none';
 
-        if (!orNumber || !receiptDate || !supplierName) {
-            errEl.textContent = 'OR number, receipt date, and supplier name are required.';
+        if (!orNumber || !receiptDate || !supplierId) {
+            errEl.textContent = 'OR number, receipt date, and supplier are required.';
             errEl.style.display = 'block';
             return;
         }
@@ -1149,7 +1755,13 @@ function initListView() {
                     body: JSON.stringify({
                         or_number:             orNumber,
                         receipt_date:          receiptDate,
-                        supplier_name:         supplierName,
+                        // Every supplier -- existing or just-created via the
+                        // Add New Supplier modal -- is a real suppliers-table
+                        // row by this point, so supplier_id is always sent.
+                        // PurchaseReceiptController::store() still accepts a
+                        // bare supplier_name too (back-compat), just unused
+                        // by this form now.
+                        supplier_id:           supplierId,
                         department_id:         departmentId || null,
                         remarks:               remarks || null,
                         received_by_user_id:   receivedById,
@@ -1162,6 +1774,22 @@ function initListView() {
             }
 
             const newId = payload.data?.id;
+
+            // Reorder Previous Receipt: hand the staged items off to the
+            // detail page across this hard navigation via sessionStorage,
+            // keyed by the new receipt's id so it's consumed exactly once.
+            if (prPendingReorderItems && prPendingReorderItems.length && newId) {
+                try {
+                    sessionStorage.setItem(prReorderSessionKey(newId), JSON.stringify(prPendingReorderItems));
+                } catch (_) {
+                    // sessionStorage unavailable (e.g. private browsing) --
+                    // the receipt was already created successfully, so
+                    // just proceed without the item carry-over rather than
+                    // blocking navigation.
+                }
+            }
+            prClearReorderState();
+
             window.location.href = `${PURCHASE_PAGE}?id=${newId}`;
         } catch (err) {
             errEl.textContent = err.message || 'An error occurred.';
@@ -1170,6 +1798,21 @@ function initListView() {
             submitBtn.textContent = 'Create Receipt';
         }
     });
+
+    // Cross-page Reorder entry points (receipt detail page, Supplier
+    // Directory's history modal) can't open new-receipt-modal directly --
+    // it doesn't exist on their pages -- so they redirect here instead.
+    // Strip the param so a page refresh/back-navigation doesn't re-trigger it.
+    const prReorderParam = new URLSearchParams(window.location.search).get('reorder');
+    if (prReorderParam) {
+        const prReorderSourceId = parseInt(prReorderParam, 10);
+        if (prReorderSourceId) {
+            const prReorderUrl = new URL(window.location.href);
+            prReorderUrl.searchParams.delete('reorder');
+            window.history.replaceState({}, '', prReorderUrl.toString());
+            prStartReorder(prReorderSourceId);
+        }
+    }
     <?php endif; ?>
 }
 
@@ -1187,10 +1830,58 @@ let prReceiptStatus = null;
 let prCurrentReceipt = null;
 let prCurrentItems = [];
 
+// 2026-10-27 — a Draft receipt with zero line items could still be posted:
+// the backend already rejected it (PurchaseReceiptPostingService::postReceipt()
+// throws "Cannot post a receipt with no items"), but the button stayed
+// enabled and the "This will add stock to inventory..." confirm dialog still
+// appeared, only to fail afterward. This disables Post Receipt up front
+// whenever prCurrentItems is empty, called every time loadReceiptItems()
+// refreshes the line-item list (initial load, after Add Items, after Remove).
+function prSyncPostButtonState() {
+    const postBtn = document.getElementById('postReceiptBtn');
+    if (!postBtn) return;
+
+    const hasItems = Array.isArray(prCurrentItems) && prCurrentItems.length > 0;
+    postBtn.disabled = !hasItems;
+    postBtn.title = hasItems ? '' : 'Add at least one item before posting this receipt.';
+}
+
 // Removes a mistaken line while the receipt is still a draft (a draft line has
 // not added any stock yet, so this has no inventory effect).
-async function prRemoveLine(lineId, itemName) {
-    if (!window.confirm(`Remove "${itemName}" from this receipt?`)) return;
+let prPendingRemoveLine = null;
+let prRemovingLine = false;
+
+function prRemoveLine(lineId, itemName) {
+    if (prRemovingLine || prPendingRemoveLine || prReceiptStatus !== 'draft') return;
+    prPendingRemoveLine = lineId;
+    document.getElementById('remove-line-message').textContent = `Are you sure you want to remove "${itemName}" from this receipt?`;
+    const error = document.getElementById('remove-line-error');
+    error.textContent = '';
+    error.hidden = true;
+    prOpenModal('remove-line-modal');
+}
+
+function prCloseRemoveLineModal() {
+    if (prRemovingLine) return;
+    prPendingRemoveLine = null;
+    prCloseModal('remove-line-modal');
+}
+
+async function prConfirmRemoveLine() {
+    if (prRemovingLine || !prPendingRemoveLine) return;
+    const lineId = prPendingRemoveLine;
+    const modal = document.getElementById('remove-line-modal');
+    const confirmButton = document.getElementById('confirmRemoveLine');
+    const cancelButton = document.getElementById('cancelRemoveLine');
+    const error = document.getElementById('remove-line-error');
+    prRemovingLine = true;
+    confirmButton.disabled = true;
+    cancelButton.disabled = true;
+    confirmButton.textContent = 'Removing...';
+    modal.setAttribute('aria-busy', 'true');
+    modal.focus();
+    error.textContent = '';
+    error.hidden = true;
     try {
         const { response, data: payload } = await prFetch(
             `${PURCHASE_API}/${PR_RECEIPT_ID}/items/${lineId}`,
@@ -1199,10 +1890,22 @@ async function prRemoveLine(lineId, itemName) {
         if (!response.ok || !payload.success) {
             throw new Error(payload.message || 'Failed to remove item');
         }
+        prPendingRemoveLine = null;
+        prCloseModal('remove-line-modal');
         prNotify(payload.message || 'Item removed from receipt.', 'success');
         await loadReceiptItems();
+        // The removed row's button no longer exists after the refresh.
+        document.getElementById('addItemBtn')?.focus();
     } catch (err) {
-        prNotify(err.message || 'Unable to remove item.');
+        error.textContent = err.message || 'Unable to remove item. Please try again.';
+        error.hidden = false;
+    } finally {
+        prRemovingLine = false;
+        confirmButton.disabled = false;
+        cancelButton.disabled = false;
+        confirmButton.textContent = 'Yes, Remove';
+        modal.removeAttribute('aria-busy');
+        if (prPendingRemoveLine) cancelButton.focus();
     }
 }
 
@@ -1327,6 +2030,7 @@ async function loadReceiptItems(highlightIds) {
         const items = Array.isArray(payload.data?.items) ? payload.data.items : [];
         prCurrentItems = items;
         if (payload.data?.receipt) prCurrentReceipt = payload.data.receipt;
+        prSyncPostButtonState();
 
         if (items.length === 0) {
             container.innerHTML = '<div class="ui-empty-state"><strong>No items added yet.</strong><span>Use the Add Items button to add line items.</span></div>';
@@ -1596,6 +2300,55 @@ function prResetRows() {
     prAddRow(null, false);
 }
 
+// Reorder Previous Receipt: picks up the items staged by prStartReorder()
+// (list-view page) via sessionStorage, keyed by this receipt's own id so
+// it's only ever consumed once -- a page refresh afterwards won't re-apply
+// it. Must run AFTER loadReceiptDetail() has populated prReceiptStatus and
+// the dropdown-dependent prCategoryOptions()/prUnitOptions() data, since
+// prAddRow() needs both.
+async function prConsumePendingReorderItems() {
+    let raw = null;
+    try {
+        raw = sessionStorage.getItem(prReorderSessionKey(PR_RECEIPT_ID));
+        if (raw) sessionStorage.removeItem(prReorderSessionKey(PR_RECEIPT_ID));
+    } catch (_) {
+        return; // sessionStorage unavailable -- nothing to consume
+    }
+    if (!raw) return;
+
+    let items;
+    try {
+        items = JSON.parse(raw);
+    } catch (_) {
+        return;
+    }
+    if (!Array.isArray(items) || items.length === 0) return;
+
+    // This receipt is always a fresh draft when Reorder creates it, but
+    // guard anyway in case the staged data outlives that (e.g. the user
+    // reordered, then posted the receipt before this ever ran).
+    if (prReceiptStatus !== 'draft') return;
+
+    await loadAddItemDropdowns();
+
+    // Build the rows directly rather than calling prResetRows() -- that
+    // helper always leaves one empty row behind, which would show up here
+    // as an unwanted blank line ahead of the copied items.
+    const container = document.getElementById('pr-bulk-rows');
+    if (!container) return;
+    container.innerHTML = '';
+    prRowSeq = 0;
+    prSetBulkError('');
+    items.forEach((item) => prAddRow(item, false));
+    if (prRowElements().length === 0) prAddRow(null, false);
+
+    prOpenModal('add-items-modal');
+    const firstInput = document.querySelector('#pr-bulk-rows .pr-item-input');
+    if (firstInput) firstInput.focus();
+
+    prNotify(`Copied ${items.length} item${items.length === 1 ? '' : 's'} from the previous receipt — review and adjust quantities before posting.`, 'info');
+}
+
 function prSetBulkError(message) {
     const el = document.getElementById('add-items-error');
     el.textContent = message || '';
@@ -1722,7 +2475,23 @@ function prMoveSuggestActive(delta) {
 }
 
 function initDetailView() {
-    loadReceiptDetail();
+    document.getElementById('cancelRemoveLine').addEventListener('click', prCloseRemoveLineModal);
+    document.getElementById('confirmRemoveLine').addEventListener('click', prConfirmRemoveLine);
+    document.getElementById('remove-line-modal').addEventListener('click', (e) => {
+        if (e.target === e.currentTarget) prCloseRemoveLineModal();
+    });
+    document.getElementById('remove-line-modal').addEventListener('keydown', (e) => {
+        // Both buttons are disabled while waiting; keep Tab inside the dialog.
+        if (prRemovingLine && e.key === 'Tab') e.preventDefault();
+    });
+
+    // Reorder's sessionStorage hand-off can only be consumed once
+    // loadReceiptDetail() has populated prReceiptStatus (draft-only guard
+    // above) -- sequence them instead of the previous fire-and-forget call.
+    (async () => {
+        await loadReceiptDetail();
+        await prConsumePendingReorderItems();
+    })();
 
     const printBtn = document.getElementById('printReceiptBtn');
     if (printBtn) {
@@ -1759,10 +2528,10 @@ function initDetailView() {
         });
     }
 
-    function prCloseAddItems() {
+    prCloseAddItems = function () {
         prHideSuggest();
         prCloseModal('add-items-modal');
-    }
+    };
 
     document.getElementById('closeAddItemsModal').addEventListener('click', prCloseAddItems);
     document.getElementById('cancelAddItemsModal').addEventListener('click', prCloseAddItems);
@@ -1929,6 +2698,17 @@ function initDetailView() {
     const postBtn = document.getElementById('postReceiptBtn');
     if (postBtn) {
         postBtn.addEventListener('click', async () => {
+            // Belt-and-suspenders: the button is disabled whenever
+            // prCurrentItems is empty (see prSyncPostButtonState()), so this
+            // normally can't be reached with zero items — but guard the
+            // handler itself too, so a stale/disabled-state race never lets
+            // the "are you sure" dialog appear for a receipt with nothing on
+            // it. The server has the authoritative rejection either way.
+            if (!Array.isArray(prCurrentItems) || prCurrentItems.length === 0) {
+                prNotify('Cannot post a receipt with no items. Add at least one item first.');
+                return;
+            }
+
             // UI_BROWSER_DIALOG_REPLACEMENT — window.UI is always loaded
             // (see includes/footer.php), so this always goes through the
             // shared modal.

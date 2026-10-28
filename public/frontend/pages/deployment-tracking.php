@@ -82,10 +82,20 @@ include __DIR__ . '/../includes/header.php';
                 </select>
             </div>
             <div class="deployment-tracking-toolbar__filter">
-                <label class="deployment-tracking-toolbar__label" for="dt-room">Room</label>
-                <select id="dt-room" class="form-control deployment-tracking-toolbar__control">
-                    <option value="">All Rooms</option>
-                </select>
+                <label class="deployment-tracking-toolbar__label" for="dt-room-search">Room</label>
+                <!-- TASK — plain <select> replaced with a type-to-filter search
+                     field: with a long room list, a flat dropdown became a
+                     long scroll with no way to jump to a name. Mirrors the
+                     text input + hidden id input pattern already used for
+                     Inventory's Adjust Stock item field, filtered locally
+                     against the room list this page already receives in
+                     filter_options (no extra network round trip). "All Rooms"
+                     stays the default/clearable state via the hidden input. -->
+                <div class="dt-room-picker" style="position:relative;">
+                    <input type="text" id="dt-room-search" class="form-control deployment-tracking-toolbar__control" placeholder="All Rooms" autocomplete="off">
+                    <input type="hidden" id="dt-room">
+                    <div id="dt-room-results" class="search-dropdown" style="position:absolute;left:0;right:0;z-index:1000;background:#ffffff;border:1px solid #e5e7eb;color:#111827;max-height:220px;overflow:auto;display:none;border-radius:8px;box-shadow:0 4px 6px rgba(15,23,42,0.06);"></div>
+                </div>
             </div>
             <div class="deployment-tracking-toolbar__filter">
                 <label class="deployment-tracking-toolbar__label" for="dt-dept">Department</label>
@@ -163,6 +173,82 @@ let dtFilterOptionsLoaded = false;
 let dtCurrentPage = 1;
 let dtTotalPages = 1;
 let dtPaginationData = null;
+
+// Room filter — type-to-filter search backed by the room list already
+// delivered in filter_options (see loadDeployed()), not a separate endpoint.
+let dtRoomOptions = [];
+
+function dtRenderRoomResults(query) {
+    const list = document.getElementById('dt-room-results');
+    if (!list) return;
+
+    const q = String(query || '').trim().toLowerCase();
+    const sorted = [...dtRoomOptions].sort((a, b) => String(a.name || '').localeCompare(String(b.name || '')));
+    const matches = q === '' ? sorted : sorted.filter((r) => String(r.name || '').toLowerCase().includes(q));
+
+    let html = '<div class="search-item" data-room-id="" style="padding:12px;cursor:pointer;font-size:14px;color:#111827;font-weight:600;border-bottom:1px solid #f1f5f9;background-color:transparent;">All Rooms</div>';
+
+    if (matches.length === 0) {
+        html += '<div style="padding:12px;color:#6b7280;font-size:14px;">No rooms found</div>';
+    } else {
+        html += matches.slice(0, 50).map((r) => {
+            const label = dtEscapeHtml(r.name || 'Unnamed Room');
+            return `<div class="search-item" data-room-id="${Number(r.id)}" style="padding:12px;cursor:pointer;font-size:14px;color:#111827;font-weight:600;border-bottom:1px solid #f1f5f9;background-color:transparent;">${label}</div>`;
+        }).join('');
+    }
+
+    list.innerHTML = html;
+    list.style.display = 'block';
+
+    // Inline hover handlers -- the global .search-item:hover CSS rule left
+    // over from the removed dark theme paints a dark/purple hover; inline
+    // styles here override it so this list stays consistent with the
+    // current light theme (same fix as Inventory's Adjust Stock item list).
+    list.querySelectorAll('.search-item').forEach((row) => {
+        row.addEventListener('mouseenter', () => { row.style.backgroundColor = '#e5e7eb'; });
+        row.addEventListener('mouseleave', () => { row.style.backgroundColor = 'transparent'; });
+    });
+}
+
+function dtHideRoomResults() {
+    const list = document.getElementById('dt-room-results');
+    if (list) list.style.display = 'none';
+}
+
+// Reverts the visible search text to match whatever room id is actually
+// applied (or clears it for "All Rooms") -- called when the user clicks
+// away without picking a result, so a half-typed search never silently
+// diverges from the filter that's actually in effect.
+function dtSyncRoomSearchDisplay() {
+    const hiddenInput = document.getElementById('dt-room');
+    const searchInput = document.getElementById('dt-room-search');
+    if (!hiddenInput || !searchInput) return;
+
+    if (!hiddenInput.value) {
+        searchInput.value = '';
+        return;
+    }
+    const room = dtRoomOptions.find((r) => String(r.id) === String(hiddenInput.value));
+    searchInput.value = room ? (room.name || '') : '';
+}
+
+function dtSelectRoom(roomId) {
+    const hiddenInput = document.getElementById('dt-room');
+    const searchInput = document.getElementById('dt-room-search');
+    if (!hiddenInput || !searchInput) return;
+
+    if (!roomId) {
+        hiddenInput.value = '';
+        searchInput.value = '';
+    } else {
+        const room = dtRoomOptions.find((r) => String(r.id) === String(roomId));
+        hiddenInput.value = room ? String(room.id) : '';
+        searchInput.value = room ? (room.name || '') : '';
+    }
+    dtHideRoomResults();
+    dtCurrentPage = 1;
+    loadDeployed();
+}
 
 function dtEscapeHtml(value) {
     return String(value ?? '')
@@ -646,16 +732,8 @@ async function loadDeployed() {
         if (!dtFilterOptionsLoaded && payload.data?.filter_options) {
             const opts = payload.data.filter_options;
 
-            const roomSel = document.getElementById('dt-room');
-            const currentRoom = roomSel.value;
-            while (roomSel.options.length > 1) roomSel.remove(1);
-            (opts.rooms || []).forEach((r) => {
-                const opt = document.createElement('option');
-                opt.value = r.id;
-                opt.textContent = r.name;
-                if (String(r.id) === currentRoom) opt.selected = true;
-                roomSel.appendChild(opt);
-            });
+            dtRoomOptions = Array.isArray(opts.rooms) ? opts.rooms : [];
+            dtSyncRoomSearchDisplay();
 
             const deptSel = document.getElementById('dt-dept');
             const currentDept = deptSel.value;
@@ -760,14 +838,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     const yearSel = document.getElementById('dt-year');
     const monthSel = document.getElementById('dt-month');
     const semesterSel = document.getElementById('dt-semester');
-    const roomSel = document.getElementById('dt-room');
     const deptSel = document.getElementById('dt-dept');
     const searchInp = document.getElementById('dt-search');
+    const roomSearchInput = document.getElementById('dt-room-search');
+    const roomResultsList = document.getElementById('dt-room-results');
 
     if (yearSel) yearSel.addEventListener('change', () => { dtCurrentPage = 1; loadDeployed(); });
     if (monthSel) monthSel.addEventListener('change', () => { dtCurrentPage = 1; loadDeployed(); });
     if (semesterSel) semesterSel.addEventListener('change', () => { dtCurrentPage = 1; loadDeployed(); });
-    if (roomSel) roomSel.addEventListener('change', loadDeployed);
     if (deptSel) deptSel.addEventListener('change', loadDeployed);
     if (searchInp) searchInp.addEventListener('keydown', (e) => {
         if (e.key === 'Enter') { dtCurrentPage = 1; loadDeployed(); }
@@ -776,11 +854,37 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('dt-search').addEventListener('keydown', (e) => {
         if (e.key === 'Enter') loadDeployed();
     });
-    document.getElementById('dt-room').addEventListener('change', loadDeployed);
     document.getElementById('dt-dept').addEventListener('change', loadDeployed);
+
+    // Room search widget -- typing only filters the dropdown; the actual
+    // room_id filter (and reload) only changes when a result (or "All
+    // Rooms") is clicked. Clicking outside without picking anything reverts
+    // the visible text back to whatever is actually applied.
+    if (roomSearchInput) {
+        roomSearchInput.addEventListener('input', () => dtRenderRoomResults(roomSearchInput.value));
+        roomSearchInput.addEventListener('focus', () => dtRenderRoomResults(roomSearchInput.value));
+    }
+    if (roomResultsList) {
+        roomResultsList.addEventListener('click', (e) => {
+            const row = e.target.closest('[data-room-id]');
+            if (!row) return;
+            dtSelectRoom(row.dataset.roomId);
+        });
+    }
+    document.addEventListener('click', (e) => {
+        if (!roomSearchInput || !roomResultsList) return;
+        const picker = roomSearchInput.closest('.dt-room-picker');
+        if (picker && !picker.contains(e.target)) {
+            dtHideRoomResults();
+            dtSyncRoomSearchDisplay();
+        }
+    });
+
     document.getElementById('dt-filter-clear').addEventListener('click', () => {
         document.getElementById('dt-search').value = '';
         document.getElementById('dt-room').value = '';
+        document.getElementById('dt-room-search').value = '';
+        dtHideRoomResults();
         document.getElementById('dt-dept').value = '';
         loadDeployed();
     });

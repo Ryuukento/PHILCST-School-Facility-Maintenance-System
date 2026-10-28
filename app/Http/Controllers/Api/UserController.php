@@ -3,14 +3,17 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Middleware\EnsureApiAuthenticated;
 use App\Models\User;
 use App\Services\ActivityLogService;
 use App\Services\RoleNormalizerService;
 use App\Support\ApiResponder;
+use App\Support\UserNamePolicy;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 class UserController extends Controller
 {
@@ -43,6 +46,7 @@ class UserController extends Controller
 
     public function store(Request $request)
     {
+        $request->merge(['full_name' => UserNamePolicy::forCreation($request->all())]);
         $validated = $request->validate([
             'full_name'     => ['required', 'string', 'max:255'],
             'username'      => ['required', 'string', 'min:3', 'max:50', 'unique:users,username'],
@@ -69,16 +73,7 @@ class UserController extends Controller
             'department_id.required' => 'Department is required for this role.',
         ]);
 
-        // Duplicate-account guard: the Add New User modal already produced
-        // three near-identical "Manzo, Kristine ... " accounts (a typo'd
-        // re-entry) because nothing stopped it. Block a new account whenever
-        // its Last Name + First Name already matches an existing one —
-        // across every status, since "Set Inactive" never deletes the row
-        // (see deactivate()), so an inactive near-duplicate would otherwise
-        // still slip past a check scoped to active users only.
-        if ($this->duplicateNameExists($validated['full_name'])) {
-            return $this->fail('An account with this first and last name already exists.', 422);
-        }
+        UserNamePolicy::assertAvailable($validated['full_name']);
 
         $userId = DB::table('users')->insertGetId([
             'full_name'            => $validated['full_name'],
@@ -93,36 +88,60 @@ class UserController extends Controller
             'updated_at'           => now(),
         ]);
 
-        return $this->ok('User created successfully', ['user_id' => $userId], 201);
+        return $this->ok('User created successfully', ['user_id' => $userId, 'full_name' => $validated['full_name']], 201);
     }
 
     public function resetPassword(Request $request, User $user)
     {
+        $auth = (array) $request->session()->get('auth_user', $request->session()->get('user', []));
+        $actorId = (int) ($auth['user_id'] ?? 0);
+        if ($actorId <= 0 || RoleNormalizerService::normalize($auth['role'] ?? '') !== 'super_admin') {
+            return $this->fail('Forbidden', 403);
+        }
         $validated = $request->validate([
             'new_password' => ['required', 'string', 'min:8'],
         ]);
 
-        $user->update([
-            'password'             => Hash::make($validated['new_password']),
-            'force_profile_update' => 1,
-        ]);
+        DB::transaction(function () use ($request, $user, $actorId, $auth, $validated): void {
+            // Stable ordering also covers two Administrators recovering each
+            // other's accounts. Never lock actor/target in opposing orders.
+            $accounts = User::query()->whereIn('user_id', [$actorId, $user->user_id])
+                ->orderBy('user_id')->lockForUpdate()->get()->keyBy('user_id');
+            $actor = $accounts->get($actorId);
+            $target = $accounts->get($user->user_id);
+            if (!$actor || $actor->status !== 'active' || RoleNormalizerService::normalize($actor->role) !== 'super_admin'
+                || !EnsureApiAuthenticated::versionMatches($auth['auth_version'] ?? 0, (int) $actor->auth_version)) {
+                throw ValidationException::withMessages(['current_password' => 'Unable to authorize this password reset.']);
+            }
+            if (!$target) abort(404);
+            if ((int) $target->user_id === $actorId || $target->status === 'pending') {
+                throw ValidationException::withMessages(['user' => 'This account cannot be reset through this action.']);
+            }
+            $administratorTarget = RoleNormalizerService::normalize($target->role) === 'super_admin';
+            $proof = $request->input('current_password');
+            if ($administratorTarget && (!is_string($proof) || $proof === '' || !Hash::check($proof, $actor->password))) {
+                throw ValidationException::withMessages(['current_password' => 'Unable to verify password reset authorization.']);
+            }
+            $target->password = Hash::make($validated['new_password']);
+            $target->force_profile_update = 1;
+            $target->auth_version = (int) $target->auth_version + 1;
+            if (!$target->save()) throw new \RuntimeException('Password reset could not be saved.');
 
-        // Resolve any pending "Password Reset Request" notification(s) for
-        // this user now that an Administrator has actually reset the
-        // password — otherwise index()'s has_pending_password_reset_request
-        // flag (and the "Reset Password" quick action it drives) stays
-        // stuck on forever, since nothing else ever marks it read.
-        DB::table('notifications')
-            ->where('entity_type', 'user')
-            ->where('entity_id', $user->user_id)
-            ->where('title', 'Password Reset Request')
-            ->where('is_read', 0)
-            ->update(['is_read' => 1]);
+            DB::table('notifications')->where('entity_type', 'user')->where('entity_id', $target->user_id)
+                ->where('title', 'Password Reset Request')->where('is_read', 0)->update(['is_read' => 1]);
+            $audit = $this->activityLogService->log([
+                'user_id' => $actorId, 'user_role' => 'super_admin', 'action' => 'RESET_USER_PASSWORD',
+                'module' => 'user_management', 'entity_type' => 'user', 'entity_id' => (int) $target->user_id,
+                'details' => 'Administrator reset credentials for user #' . $target->user_id . '.',
+                'meta' => ['administrator_target' => $administratorTarget], 'dedupe_window_seconds' => 0,
+            ], $request);
+            if ($audit === null || !$audit->exists) throw new \RuntimeException('Password reset audit could not be saved.');
+        });
 
         return $this->ok('Password reset successfully');
     }
 
-    public function index()
+    public function index(Request $request)
     {
         $users = DB::table('users as u')
             ->select([
@@ -147,7 +166,8 @@ class UserController extends Controller
                 ['user', 'Password Reset Request']
             )
             ->leftJoin('departments as d', 'd.department_id', '=', 'u.department_id')
-            ->whereRaw('LOWER(u.role) <> ?', ['super_admin'])
+            // Other Administrators are visible for credential recovery only.
+            ->where('u.user_id', '<>', (int) $request->session()->get('auth_user.user_id', 0))
             ->orderByDesc('u.created_at')
             ->get();
 
@@ -249,6 +269,9 @@ class UserController extends Controller
             return $this->fail('Pending users must be approved before they can be edited', 400);
         }
 
+        $request->merge(['full_name' => UserNamePolicy::forUpdate(
+            $request->input('full_name'), (string) $user->full_name, (int) $user->user_id
+        )]);
         $validated = $request->validate([
             'full_name' => ['required', 'string', 'max:255'],
             'role'      => ['required', 'string', Rule::in(RoleNormalizerService::rawValuesFor([
@@ -264,13 +287,6 @@ class UserController extends Controller
         ], [
             'department_id.required' => 'Department is required for this role.',
         ]);
-
-        // Same duplicate-name guard as store() — renaming into an existing
-        // Last Name + First Name combo would recreate the same "Manzo,
-        // Kristine ..." collision, just via Edit instead of Add New User.
-        if ($this->duplicateNameExists($validated['full_name'], (int)$user->user_id)) {
-            return $this->fail('An account with this first and last name already exists.', 422);
-        }
 
         $previousRole = (string)$user->role;
 
@@ -396,163 +412,217 @@ class UserController extends Controller
             return $this->fail('Unauthorized', 401);
         }
 
-        $currentUser = DB::table('users')->where('user_id', $userId)->first();
-        if (!$currentUser) {
-            return $this->fail('User not found', 404);
-        }
-
-        $fullName        = trim((string)$request->input('full_name', $currentUser->full_name ?? ''));
-        $username        = strtolower(trim((string)$request->input('username', '')));
-        $currentPassword = (string)$request->input('current_password', '');
-        // Deliberately NOT trimmed: every other password-set path in this
-        // codebase (register(), UserController::store(), resetPassword())
-        // hashes the raw input, and AuthController::
-        // login() compares the raw input via Hash::check() without trimming.
-        // Trimming only here silently stored a different string than what
-        // the user actually typed, so a new password containing a leading/
-        // trailing space would hash correctly on save but never match again
-        // at login. Keeping this consistent with the rest of the app fixes
-        // that mismatch.
-        $newPassword     = (string)$request->input('new_password', '');
-        $isForcedSetup   = !empty($currentUser->force_profile_update);
-
-        // 2026-10-26 — phone number used to only reach users.phone through the
-        // OTP-verified PhoneVerificationController flow (see the now-removed
-        // "Send Code" UI this endpoint's old comment referred to). That step
-        // was retired as redundant, so phone is now accepted here directly,
-        // the same way full_name/username already are.
-        //
-        // 2026-10-26 (later same day) — tightened to PH-mobile-only format:
-        // exactly 11 digits, must start with "09" (e.g. 09171234713). This
-        // is the EXACT format already proven to work with the IPROG SMS
-        // gateway (see SmsService::send(), which does zero normalization
-        // and sends users.phone raw) and matches the 2 existing live rows
-        // in users.phone. The account.php "+63" badge is decorative only —
-        // the value that reaches this endpoint is still plain 09XXXXXXXXX,
-        // never a "+63"-prefixed string, so no format change is needed here
-        // to support it. Client-side mirror: PHONE_PATTERN in account.php.
-        $phone = trim((string)$request->input('phone', $currentUser->phone ?? ''));
-        if ($phone !== '' && !preg_match('/^09\d{9}$/', $phone)) {
-            return $this->fail('Phone number must be 11 digits starting with 09 (e.g. 09171234713)', 422);
-        }
-
-        if ($fullName === '') {
-            return $this->fail('Full name is required', 422);
-        }
-
-        if ($username !== '' && !preg_match('/^[a-z0-9_]{3,50}$/', $username)) {
-            return $this->fail('Username must be 3-50 characters: lowercase letters, numbers, underscores only', 422);
-        }
-
-        if ($username !== '' && $username !== ($currentUser->username ?? '')) {
-            $taken = DB::table('users')
-                ->where('username', $username)
-                ->where('user_id', '!=', $userId)
-                ->exists();
-            if ($taken) {
-                return $this->fail('Username is already taken', 422);
-            }
-        }
-
-        if ($isForcedSetup) {
-            if ($newPassword === '') {
-                return $this->fail('For first-time account setup, setting a new password is required', 422);
-            }
-
-            // 2026-10-15 — an Administrator-created account must supply a
-            // phone (for SMS report alerts) and a reachable, OTP-verified
-            // email before it's allowed to start using the system, not just
-            // a new password. (2026-10-26: phone no longer needs its own OTP
-            // step — see the $phone block above — so this is now a plain
-            // non-empty check on the value just submitted, same as
-            // full_name.) Email still only ever reaches users.verified_email
-            // via EmailVerificationController, never through this endpoint,
-            // so checking it here on the freshly-read $currentUser row is
-            // proof that OTP step actually completed.
-            if ($phone === '') {
-                return $this->fail('Please enter your phone number before continuing', 422);
-            }
-
-            if (empty($currentUser->verified_email)) {
-                return $this->fail('Please verify your email address before continuing', 422);
-            }
-        }
-
-        $passwordHash = null;
-        if ($newPassword !== '') {
-            if ($currentPassword === '') {
-                return $this->fail('Current password is required to change your password', 422);
-            }
-            if (!Hash::check($currentPassword, $currentUser->password ?? '')) {
-                return $this->fail('Current password is incorrect', 422);
-            }
-            if (strlen($newPassword) < 8) {
-                return $this->fail('New password must be at least 8 characters', 422);
-            }
-            $passwordHash = Hash::make($newPassword);
-        }
-
-        $avatarPath = $currentUser->avatar ?? null;
-        if ($request->hasFile('profile_picture')) {
-            $file         = $request->file('profile_picture');
-            $allowedMimes = [
-                'image/jpeg' => 'jpg', 'image/jpg' => 'jpg',
-                'image/png'  => 'png', 'image/webp' => 'webp', 'image/gif' => 'gif',
-            ];
-            $mime = $file->getMimeType();
-            if (!isset($allowedMimes[$mime])) {
-                return $this->fail('Only JPG, PNG, WEBP, or GIF images are allowed', 422);
-            }
-            if ($file->getSize() > 3 * 1024 * 1024) {
-                return $this->fail('Profile picture must be 3MB or less', 422);
-            }
-            $uploadDir = public_path('frontend/assets/uploads/avatars');
-            if (!is_dir($uploadDir)) {
-                @mkdir($uploadDir, 0755, true);
-            }
-            $ext      = $allowedMimes[$mime];
-            $fileName = 'avatar_' . $userId . '_' . time() . '.' . $ext;
-            $file->move($uploadDir, $fileName);
-
-            if (!empty($avatarPath) && str_contains((string)$avatarPath, '/frontend/assets/uploads/avatars/')) {
-                $oldPath = public_path(str_replace('/School_Facility_Maintenance_System/', '', (string)$avatarPath));
-                if (is_file($oldPath)) {
-                    @unlink($oldPath);
+        $newAvatarPath = null;
+        $oldAvatarPath = null;
+        try {
+            $result = DB::transaction(function () use ($request, $authUser, $userId, &$newAvatarPath, &$oldAvatarPath) {
+                $currentUser = DB::table('users')->where('user_id', $userId)->lockForUpdate()->first();
+                if (!$currentUser) {
+                    return $this->fail('User not found', 404);
                 }
+                if ($currentUser->status !== 'active'
+                    || !EnsureApiAuthenticated::versionMatches($authUser['auth_version'] ?? 0, (int) $currentUser->auth_version)) {
+                    return $this->fail('Your session has expired. Please sign in again.', 401);
+                }
+
+                $fullName        = UserNamePolicy::forUpdate($request->input('full_name', $currentUser->full_name),
+                    (string) $currentUser->full_name, $userId);
+                $username        = strtolower(trim((string)$request->input('username', '')));
+                $currentPassword = (string)$request->input('current_password', '');
+                // Deliberately NOT trimmed: every other password-set path in this
+                // codebase (register(), UserController::store(), resetPassword())
+                // hashes the raw input, and AuthController::
+                // login() compares the raw input via Hash::check() without trimming.
+                // Trimming only here silently stored a different string than what
+                // the user actually typed, so a new password containing a leading/
+                // trailing space would hash correctly on save but never match again
+                // at login. Keeping this consistent with the rest of the app fixes
+                // that mismatch.
+                $newPassword     = (string)$request->input('new_password', '');
+                $isForcedSetup   = !empty($currentUser->force_profile_update);
+
+                // 2026-10-26 — phone number used to only reach users.phone through the
+                // OTP-verified PhoneVerificationController flow (see the now-removed
+                // "Send Code" UI this endpoint's old comment referred to). That step
+                // was retired as redundant, so phone is now accepted here directly,
+                // the same way full_name/username already are.
+                //
+                // 2026-10-26 (later same day) — tightened to PH-mobile-only format:
+                // exactly 11 digits, must start with "09" (e.g. 09171234713). This
+                // is the EXACT format already proven to work with the IPROG SMS
+                // gateway (see SmsService::send(), which does zero normalization
+                // and sends users.phone raw) and matches the 2 existing live rows
+                // in users.phone. The account.php "+63" badge is decorative only —
+                // the value that reaches this endpoint is still plain 09XXXXXXXXX,
+                // never a "+63"-prefixed string, so no format change is needed here
+                // to support it. Client-side mirror: PHONE_PATTERN in account.php.
+                $phone = trim((string)$request->input('phone', $currentUser->phone ?? ''));
+                if ($phone !== '' && !preg_match('/^09\d{9}$/', $phone)) {
+                    return $this->fail('Phone number must be 11 digits starting with 09 (e.g. 09171234713)', 422);
+                }
+
+                if ($fullName === '') {
+                    return $this->fail('Full name is required', 422);
+                }
+
+                if ($username !== '' && !preg_match('/^[a-z0-9_]{3,50}$/', $username)) {
+                    return $this->fail('Username must be 3-50 characters: lowercase letters, numbers, underscores only', 422);
+                }
+
+                if ($username !== '' && $username !== ($currentUser->username ?? '')) {
+                    $taken = DB::table('users')
+                        ->where('username', $username)
+                        ->where('user_id', '!=', $userId)
+                        ->exists();
+                    if ($taken) {
+                        return $this->fail('Username is already taken', 422);
+                    }
+                }
+
+                if ($isForcedSetup) {
+                    if ($newPassword === '') {
+                        return $this->fail('For first-time account setup, setting a new password is required', 422);
+                    }
+
+                    // 2026-10-15 — an Administrator-created account must supply a
+                    // phone (for SMS report alerts) and a reachable, OTP-verified
+                    // email before it's allowed to start using the system, not just
+                    // a new password. (2026-10-26: phone no longer needs its own OTP
+                    // step — see the $phone block above — so this is now a plain
+                    // non-empty check on the value just submitted, same as
+                    // full_name.) Email still only ever reaches users.verified_email
+                    // via EmailVerificationController, never through this endpoint,
+                    // so checking it here on the freshly-read $currentUser row is
+                    // proof that OTP step actually completed.
+                    if ($phone === '') {
+                        return $this->fail('Please enter your phone number before continuing', 422);
+                    }
+
+                    if (empty($currentUser->verified_email)) {
+                        return $this->fail('Please verify your email address before continuing', 422);
+                    }
+                }
+
+                $passwordHash = null;
+                if ($newPassword !== '') {
+                    if ($currentPassword === '') {
+                        return $this->fail('Current password is required to change your password', 422);
+                    }
+                    if (!Hash::check($currentPassword, $currentUser->password ?? '')) {
+                        return $this->fail('Current password is incorrect', 422);
+                    }
+                    if ($isForcedSetup && Hash::check($newPassword, $currentUser->password)) {
+                        return $this->fail('Choose a new password different from your temporary password', 422);
+                    }
+                    if (strlen($newPassword) < 8) {
+                        return $this->fail('New password must be at least 8 characters', 422);
+                    }
+                    $passwordHash = Hash::make($newPassword);
+                }
+
+                $avatarPath = $currentUser->avatar ?? null;
+                if ($request->hasFile('profile_picture')) {
+                    $file         = $request->file('profile_picture');
+                    $allowedMimes = [
+                        'image/jpeg' => 'jpg', 'image/jpg' => 'jpg',
+                        'image/png'  => 'png', 'image/webp' => 'webp', 'image/gif' => 'gif',
+                    ];
+                    $mime = $file->getMimeType();
+                    if (!isset($allowedMimes[$mime])) {
+                        return $this->fail('Only JPG, PNG, WEBP, or GIF images are allowed', 422);
+                    }
+                    if ($file->getSize() > 3 * 1024 * 1024) {
+                        return $this->fail('Profile picture must be 3MB or less', 422);
+                    }
+                    $uploadDir = public_path('frontend/assets/uploads/avatars');
+                    if (!is_dir($uploadDir)) {
+                        @mkdir($uploadDir, 0755, true);
+                    }
+                    $ext      = $allowedMimes[$mime];
+                    $fileName = 'avatar_' . $userId . '_' . bin2hex(random_bytes(12)) . '.' . $ext;
+                    $file->move($uploadDir, $fileName);
+                    $newAvatarPath = $uploadDir . DIRECTORY_SEPARATOR . $fileName;
+
+                    if (!empty($avatarPath) && str_contains((string)$avatarPath, '/frontend/assets/uploads/avatars/')) {
+                        $oldPath = public_path(str_replace('/School_Facility_Maintenance_System/', '', (string)$avatarPath));
+                        if (is_file($oldPath) && realpath(dirname($oldPath)) === realpath($uploadDir)) $oldAvatarPath = $oldPath;
+                    }
+                    $avatarPath = '/School_Facility_Maintenance_System/frontend/assets/uploads/avatars/' . $fileName;
+                }
+
+                $updates = [
+                    'full_name'            => $fullName,
+                    'username'             => $username !== '' ? $username : ($currentUser->username ?? null),
+                    'phone'                => $phone !== '' ? $phone : null,
+                    'avatar'               => $avatarPath,
+                    'force_profile_update' => 0,
+                    'updated_at'           => now(),
+                ];
+                if ($passwordHash) {
+                    $updates['password'] = $passwordHash;
+                    $updates['auth_version'] = (int) $currentUser->auth_version + 1;
+                }
+
+                DB::table('users')->where('user_id', $userId)->update($updates);
+                if ($passwordHash) {
+                    $audit = $this->activityLogService->log([
+                        'user_id' => $userId, 'user_role' => RoleNormalizerService::normalize($currentUser->role),
+                        'action' => 'CHANGE_PASSWORD', 'module' => 'auth', 'entity_type' => 'user', 'entity_id' => $userId,
+                        'details' => 'User changed their password.', 'meta' => ['forced_setup' => $isForcedSetup],
+                        'dedupe_window_seconds' => 0,
+                    ], $request);
+                    if ($audit === null || !$audit->exists) throw new \RuntimeException('Password change audit could not be saved.');
+                }
+                return ['updates' => $updates, 'forced' => $isForcedSetup,
+                    'role' => RoleNormalizerService::normalize($currentUser->role), 'department_id' => $currentUser->department_id];
+            });
+        } catch (\Throwable $e) {
+            if ($newAvatarPath && is_file($newAvatarPath)) @unlink($newAvatarPath);
+            throw $e;
+        }
+        if ($result instanceof \Illuminate\Http\JsonResponse) {
+            if ($result->getStatusCode() === 401) {
+                $request->session()->invalidate();
+                $request->session()->regenerateToken();
+                $_SESSION = [];
             }
-            $avatarPath = '/School_Facility_Maintenance_System/frontend/assets/uploads/avatars/' . $fileName;
+            return $result;
         }
-
-        $updates = [
-            'full_name'            => $fullName,
-            'username'             => $username !== '' ? $username : ($currentUser->username ?? null),
-            'phone'                => $phone !== '' ? $phone : null,
-            'avatar'               => $avatarPath,
-            'force_profile_update' => 0,
-            'updated_at'           => now(),
-        ];
-        if ($passwordHash) {
-            $updates['password'] = $passwordHash;
-        }
-
-        DB::table('users')->where('user_id', $userId)->update($updates);
+        if ($oldAvatarPath && is_file($oldAvatarPath)) @unlink($oldAvatarPath);
+        $updates = $result['updates'];
 
         $updatedAuthUser = array_merge((array)$authUser, [
-            'full_name' => $fullName,
-            'avatar'    => $avatarPath,
+            'full_name' => $updates['full_name'],
+            'avatar'    => $updates['avatar'],
             'phone'     => $updates['phone'],
+            'force_profile_update' => false,
+            'auth_version' => $updates['auth_version'] ?? (int) ($authUser['auth_version'] ?? 0),
+            'role' => $result['role'], 'department_id' => $result['department_id'],
         ]);
-        $request->session()->put('auth_user', $updatedAuthUser);
-        $request->session()->put('user', $updatedAuthUser);
+        if ($result['forced']) {
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+            $_SESSION = [];
+        } else {
+            foreach (['auth_user', 'user'] as $key) {
+                $request->session()->put($key, $updatedAuthUser);
+                if (session_status() === PHP_SESSION_ACTIVE || isset($_SESSION[$key])) $_SESSION[$key] = $updatedAuthUser;
+            }
+            foreach (['auth_version', 'force_profile_update', 'role', 'department_id'] as $key) {
+                $request->session()->put($key, $updatedAuthUser[$key]);
+                if (session_status() === PHP_SESSION_ACTIVE || !empty($_SESSION['auth_user'])) $_SESSION[$key] = $updatedAuthUser[$key];
+            }
+        }
 
         return $this->ok('Profile updated successfully', [
             'user' => [
                 'user_id'              => $userId,
-                'full_name'            => $fullName,
-                'avatar'               => $avatarPath,
+                'full_name'            => $updates['full_name'],
+                'avatar'               => $updates['avatar'],
                 'force_profile_update' => 0,
                 'phone'                => $updates['phone'],
             ],
+            'requires_reauthentication' => $result['forced'],
         ]);
     }
 
@@ -579,55 +649,6 @@ class UserController extends Controller
             self::DEPARTMENT_REQUIRED_ROLES,
             true
         );
-    }
-
-    /**
-     * True when some OTHER user already has the same Last Name + First Name
-     * as $fullName. `full_name` is stored as one free-text column (no
-     * separate first_name/last_name in the schema) built by the frontend's
-     * buildFullName() as "Lastname, Firstname MI." — so both sides of the
-     * comparison are derived the same way: split once on the first comma for
-     * the last name, then take only the first word of whatever follows for
-     * the first name (dropping middle initial/suffix, matching the "Last +
-     * First only" duplicate policy so "Manzo, Kristine D." collides with
-     * "Manzo, Kristine Joy D.").
-     *
-     * Checked against every status (active/inactive/suspended/pending), not
-     * just active — deactivate()/activate() only flip the status column and
-     * never delete the row, so an inactivated near-duplicate would otherwise
-     * still slip through undetected.
-     */
-    private function duplicateNameExists(string $fullName, ?int $excludeUserId = null): bool
-    {
-        $key = $this->nameKey($fullName);
-        if ($key === '') {
-            return false;
-        }
-
-        return User::query()
-            ->when($excludeUserId !== null, fn ($query) => $query->where('user_id', '!=', $excludeUserId))
-            ->pluck('full_name')
-            ->contains(fn (?string $existingFullName): bool => $this->nameKey((string)$existingFullName) === $key);
-    }
-
-    private function nameKey(string $fullName): string
-    {
-        $fullName = trim($fullName);
-        if ($fullName === '') {
-            return '';
-        }
-
-        [$lastName, $rest] = array_pad(explode(',', $fullName, 2), 2, '');
-        $lastName = mb_strtolower(trim($lastName));
-
-        $rest = trim($rest);
-        $firstName = $rest === '' ? '' : mb_strtolower((string)strtok($rest, " \t\n\r\0\x0B"));
-
-        if ($lastName === '' || $firstName === '') {
-            return '';
-        }
-
-        return $lastName . '|' . $firstName;
     }
 
     private function logStatusChange(Request $request, string $action, int $targetUserId, string $details): void

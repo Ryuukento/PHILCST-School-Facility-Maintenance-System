@@ -335,6 +335,14 @@ Route::prefix('api')->group(function (): void {
             Route::get('', [\App\Http\Controllers\Api\SupplierController::class, 'index']);
             Route::post('', [\App\Http\Controllers\Api\SupplierController::class, 'store'])
                 ->middleware(EnsureRole::class . ':super_admin,maintenance_admin');
+            // Lets Purchase Receipts' "+ Add New Supplier" modal create a real
+            // suppliers-table row without widening who can use the main
+            // Supplier Management page (suppliers-manage.php calls the route
+            // above, which stays super_admin/maintenance_admin only). Same
+            // controller action, same validation/dedup/audit-log behavior --
+            // only the allowed roles for this specific URL differ.
+            Route::post('quick-create', [\App\Http\Controllers\Api\SupplierController::class, 'store'])
+                ->middleware(EnsureRole::class . ':super_admin,maintenance_admin,maintenance_staff');
             Route::get('{supplier}', [\App\Http\Controllers\Api\SupplierController::class, 'show']);
             Route::patch('{supplier}', [\App\Http\Controllers\Api\SupplierController::class, 'update'])
                 ->middleware(EnsureRole::class . ':super_admin,maintenance_admin');
@@ -404,7 +412,7 @@ Route::prefix('api')->group(function (): void {
             Route::post('{dispatch}/release', [\App\Http\Controllers\Api\DispatchController::class, 'release'])
                 ->middleware(\App\Http\Middleware\EnsureRole::class . ':maintenance_admin,maintenance_staff');
             Route::post('{dispatch}/cancel', [\App\Http\Controllers\Api\DispatchController::class, 'cancel'])
-                ->middleware(\App\Http\Middleware\EnsureRole::class . ':super_admin,maintenance_admin');
+                ->middleware(\App\Http\Middleware\EnsureRole::class . ':super_admin');
             Route::get('{dispatch}/print', [\App\Http\Controllers\Api\DispatchController::class, 'print']);
             // Multi-Personnel Dispatch: Dispatch an item by a specific personnel
             Route::post('{dispatch}/items/{dispatchItem}/dispatch', [\App\Http\Controllers\Api\DispatchController::class, 'dispatchItem'])

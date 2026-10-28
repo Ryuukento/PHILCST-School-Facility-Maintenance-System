@@ -40,7 +40,7 @@ include __DIR__ . '/../includes/header.php';
         <div class="dispatches-page__title-group">
             <p class="dispatches-page__eyebrow">Inventory Deployment</p>
             <h1 class="dispatches-page__title">Dispatches</h1>
-            <p class="dispatches-page__description">Manage item deployment from inventory rooms to rooms and laboratories.</p>
+            <p class="dispatches-page__description">Manage item deployment to rooms and labs.</p>
         </div>
         <div class="dispatches-page__actions">
             <button type="button" id="dispatch-print-btn" class="btn dispatches-page__secondary-action">Print</button>
@@ -55,7 +55,7 @@ include __DIR__ . '/../includes/header.php';
         <div class="dispatches-toolbar">
             <div class="dispatches-toolbar__search">
                 <label class="dispatches-toolbar__label" for="dispatch-search">Search</label>
-                <input type="search" id="dispatch-search" class="form-control dispatches-toolbar__control" placeholder="Search by dispatch code...">
+                <input type="search" id="dispatch-search" class="form-control dispatches-toolbar__control" placeholder="Search dispatch code...">
             </div>
             <div class="dispatches-toolbar__filter">
                 <label class="dispatches-toolbar__label" for="dispatch-status">Status</label>

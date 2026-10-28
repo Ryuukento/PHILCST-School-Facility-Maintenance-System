@@ -35,7 +35,9 @@ if (!empty($user['user_id'])) {
     require_once __DIR__ . '/../../backend/config/database.php';
     $pdo = getDBConnection();
     $stmt = $pdo->prepare(
-        'SELECT user_id, email, full_name, username, phone, avatar, role, department_id, verified_email, force_profile_update FROM users WHERE user_id = ? LIMIT 1'
+        // Authorization was refreshed before page checks by settings.php.
+        // This later lookup updates profile display fields only.
+        'SELECT user_id, email, full_name, username, phone, avatar, verified_email, force_profile_update FROM users WHERE user_id = ? LIMIT 1'
     );
     $stmt->execute([(int) $user['user_id']]);
     $freshUser = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -157,7 +159,7 @@ $forceProfileUpdate = !empty($currentUser['force_profile_update']);
 
                                         <!-- Email Input and Send OTP Button -->
                                         <div id="email-form" style="display: flex; gap: 8px;">
-                                            <input type="email" id="new-email" class="form-control settings-input" placeholder="Enter your email address" style="flex: 1; background: #fff;">
+                                            <input type="email" id="new-email" class="form-control settings-input" placeholder="Enter your email address" maxlength="255" style="flex: 1; background: #fff;">
                                             <button type="button" id="send-otp-btn" class="btn btn-secondary" style="white-space: nowrap;">Send Code</button>
                                         </div>
 
@@ -357,6 +359,27 @@ if (phoneInputEl) {
 // starting with "9" — hence the fixed leading 9 here, not \d.
 const PHONE_PATTERN = /^9\d{9}$/;
 
+const originalAccountFullName = document.getElementById('full_name').value;
+
+function normalizeAccountNameWhitespace(value) {
+    return String(value).normalize('NFC').replace(/[\p{Z}\s]+/gu, ' ').trim();
+}
+
+function accountNameValidationError(value, originalValue) {
+    value = normalizeAccountNameWhitespace(value);
+    if (value === normalizeAccountNameWhitespace(originalValue)) return null;
+    value = value.replace(/ *, */g, ', ')
+        .replace(/ (jr\.?|sr\.?|ii|iii|iv|v)$/iu, (_, suffix) => {
+            const key = suffix.toLowerCase();
+            return ' ' + (key.replace('.', '') === 'jr' ? 'Jr.' : key.replace('.', '') === 'sr' ? 'Sr.' : key.toUpperCase());
+        });
+    const length = Array.from(value).length;
+    if (length < 2 || length > 255 || !/^(?=.*\p{L})[\p{L}\p{M} .,'’\-]+$/u.test(value)) {
+        return 'Full name must be 2–255 characters using letters and supported name punctuation (no numbers).';
+    }
+    return null;
+}
+
 document.getElementById('account-settings-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     const fullName = document.getElementById('full_name').value.trim();
@@ -366,6 +389,11 @@ document.getElementById('account-settings-form').addEventListener('submit', asyn
 
     if (!fullName) {
         showSettingsToast('Please enter your full name', 'error');
+        return;
+    }
+    const nameError = accountNameValidationError(fullName, originalAccountFullName);
+    if (nameError) {
+        showSettingsToast(nameError, 'error');
         return;
     }
 
@@ -465,7 +493,7 @@ document.getElementById('account-settings-form').addEventListener('submit', asyn
             popup.classList.add('is-hidden');
         }
 
-        if (forceProfileSetup) {
+        if (forceProfileSetup || response.data?.requires_reauthentication) {
             // TASK 55 — a forced first-time (or admin-reset) password change
             // must not just continue into the same session: the whole point
             // of forcing it is to prove the account holder now knows the new
@@ -473,12 +501,8 @@ document.getElementById('account-settings-form').addEventListener('submit', asyn
             // Log the session out server-side and native $_SESSION alike,
             // then send them to the login form to re-authenticate with it.
             showSettingsToast('Password changed. Logging you out...');
-            setTimeout(async () => {
-                try {
-                    await API.logout();
-                } catch (error) {
-                    console.error('Post-setup logout error:', error);
-                }
+            // Session invalidation has already committed on the server.
+            setTimeout(() => {
                 window.location.href = window.SFMS_PUBLIC_URL('/login?password_changed=1');
             }, 1200);
             return;
@@ -588,8 +612,8 @@ sendOtpBtn.addEventListener('click', async () => {
         return;
     }
 
-    if (!email.includes('@')) {
-        showEmailStatus('Please enter a valid email address', true);
+    if (email.length > 255 || !newEmailInput.checkValidity() || !/^[^\s@]+@(?:gmail\.com|yahoo\.com)$/i.test(email)) {
+        showEmailStatus('Enter a valid email using gmail.com or yahoo.com (maximum 255 characters).', true);
         return;
     }
 

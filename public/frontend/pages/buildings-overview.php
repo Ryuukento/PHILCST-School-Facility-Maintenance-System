@@ -237,6 +237,7 @@ include __DIR__ . '/../includes/header.php';
                 <div class="form-group">
                     <label for="buildingNameInput">Building Name *</label>
                     <input type="text" id="buildingNameInput" class="form-control" placeholder="e.g., Science Wing" required>
+                    <small class="text-muted">Only letters, numbers, spaces, and hyphens are allowed. 3-60 characters.</small>
                 </div>
                 <div class="form-group">
                     <label for="buildingDescInput">Description</label>
@@ -262,6 +263,7 @@ include __DIR__ . '/../includes/header.php';
                 <div class="form-group">
                     <label for="editBuildingNameInput">Building Name *</label>
                     <input type="text" id="editBuildingNameInput" class="form-control" required>
+                    <small class="text-muted">Only letters, numbers, spaces, and hyphens are allowed. 3-60 characters.</small>
                 </div>
                 <div class="form-group">
                     <label for="editBuildingDescInput">Description</label>
@@ -2726,14 +2728,15 @@ function closeEditBuildingModal() {
 }
 
 async function saveEditBuilding() {
-    const name = document.getElementById('editBuildingNameInput').value.trim();
+    const name = document.getElementById('editBuildingNameInput').value.trim().replace(/\s+/g, ' ');
     const description = document.getElementById('editBuildingDescInput').value.trim();
     if (!currentEditBuildingId) {
         Components.alert('No building selected for edit.', 'warning');
         return;
     }
-    if (!name) {
-        Components.alert('Please enter building name', 'warning');
+    const nameError = getBuildingNameValidationError(name);
+    if (nameError) {
+        Components.alert(nameError, 'warning');
         return;
     }
     try {
@@ -2861,6 +2864,30 @@ async function saveEditFloor() {
     }
 }
 
+// Shared Building Name validation, mirroring
+// BuildingController::validateBuildingName() on the backend so invalid
+// names (e.g. "User@123", "12345", "AB") are caught instantly instead of
+// waiting for a round trip -- the backend rule is still the one that
+// actually decides, this is just faster feedback.
+function getBuildingNameValidationError(value) {
+    if (!value) {
+        return 'Building name is required';
+    }
+    if (!/^[a-zA-Z0-9\s\-]+$/.test(value)) {
+        return 'Building name can only contain letters, numbers, spaces, and hyphens';
+    }
+    if (!/[a-zA-Z]/.test(value)) {
+        return 'Building name must contain at least one letter';
+    }
+    if (value.length < 3) {
+        return 'Building name must be at least 3 characters long';
+    }
+    if (value.length > 60) {
+        return 'Building name must not exceed 60 characters';
+    }
+    return null;
+}
+
 function openBuildingModal() {
     document.getElementById('buildingModal').classList.add('show');
     document.getElementById('buildingNameInput').focus();
@@ -2872,11 +2899,12 @@ function closeBuildingModal() {
 }
 
 async function saveBuildingData() {
-    const buildingName = document.getElementById('buildingNameInput').value.trim();
+    const buildingName = document.getElementById('buildingNameInput').value.trim().replace(/\s+/g, ' ');
     const buildingDesc = document.getElementById('buildingDescInput').value.trim();
 
-    if (!buildingName) {
-        Components.alert('Please enter a building name', 'warning');
+    const nameError = getBuildingNameValidationError(buildingName);
+    if (nameError) {
+        Components.alert(nameError, 'warning');
         return;
     }
 

@@ -2,12 +2,15 @@
 
 namespace App\Services;
 
+use App\Models\DamageReport;
+use App\Models\DamageReportHistory;
 use App\Models\InventoryTransaction;
 use App\Models\Item;
 use App\Models\MaintenanceReport;
 use App\Models\User;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\ValidationException;
 
 class NeedChangeService
@@ -80,12 +83,27 @@ class NeedChangeService
                 throw new ModelNotFoundException('Maintenance report not found');
             }
 
+            // Shared order with DamageReportService: maintenance report,
+            // damage report, then inventory item. Some isolated callers have
+            // no damage-report module/schema at all.
+            $damageReport = Schema::hasTable('damage_reports')
+                ? DamageReport::query()->where('report_id', $locked->report_id)->lockForUpdate()->first()
+                : null;
+
             // Duplicate-approval guard: need_change_deducted_at is only ever set
             // once, inside this same locked transaction, so a second concurrent
             // or repeated approval call observes it already set and no-ops here
             // instead of creating a second InventoryTransaction.
             if ($locked->need_change_deducted_at !== null) {
                 return $locked;
+            }
+
+            if ($damageReport && ($damageReport->replacement_transaction_id !== null
+                || $damageReport->status === 'replaced'
+                || $damageReport->histories()->where('action_type', 'need_change_stock_issued')->lockForUpdate()->first() !== null)) {
+                throw ValidationException::withMessages([
+                    'need_change_status' => 'This damage report already records a replacement. Its issuance requires review.',
+                ]);
             }
 
             if (empty($locked->need_change_item_id)) {
@@ -191,6 +209,28 @@ class NeedChangeService
                 'need_change_approved_at' => $now,
                 'need_change_deducted_at' => $now,
             ]);
+
+            if ($damageReport) {
+                // Issuance is not physical completion. Keep replacement_* and
+                // replaced_* empty until maintenance confirms installation.
+                DamageReportHistory::query()->create([
+                    'damage_report_id' => $damageReport->id,
+                    'action_type' => 'need_change_stock_issued',
+                    'from_status' => $damageReport->status,
+                    'to_status' => $damageReport->status,
+                    'notes' => 'Replacement stock issued by Administrator approval; physical replacement is pending.',
+                    'meta_json' => json_encode([
+                        'source' => 'need_change_approval',
+                        'report_id' => (int) $locked->report_id,
+                        'transaction_id' => (int) $transaction->id,
+                        'item_id' => (int) $item->id,
+                        'quantity' => $quantity,
+                        'approved_by' => $approvedBy,
+                    ], JSON_THROW_ON_ERROR),
+                    'changed_by' => $approvedBy,
+                    'created_at' => $now,
+                ]);
+            }
 
             // TASK 52 — fires only on a genuine NORMAL -> LOW/OUT_OF_STOCK
             // transition. $item->refresh() pulls back the status the

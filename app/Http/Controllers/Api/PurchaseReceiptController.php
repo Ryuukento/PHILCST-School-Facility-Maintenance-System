@@ -153,8 +153,34 @@ class PurchaseReceiptController extends Controller
         $departmentId = ($rawDept !== null && $rawDept !== '') ? (int) $rawDept : null;
         $remarks = trim((string) $request->input('remarks', ''));
 
+        // 2026-10-27 — Supplier catalog linkage. The frontend's supplier field
+        // is now "pick an existing supplier OR type a brand-new name": when an
+        // existing supplier is picked it sends supplier_id and no
+        // supplier_name; when a brand-new name is typed (including every
+        // receipt created before this change, and any other API caller that
+        // hasn't been updated) it sends supplier_name and no supplier_id —
+        // identical to the old, only, behaviour. Both paths are accepted so
+        // this stays non-breaking either way.
+        //
+        // When supplier_id IS sent, it is the source of truth: supplier_name
+        // is overwritten from the matched supplier's own name rather than
+        // trusting whatever the client also sent, so the two can never end up
+        // out of sync. This also means every existing read path
+        // (index/show/search) keeps working unchanged — they already just
+        // select pr.supplier_name, and that column is still populated exactly
+        // as before.
+        $rawSupplierId = $request->input('supplier_id');
+        $supplierId = ($rawSupplierId !== null && $rawSupplierId !== '') ? (int) $rawSupplierId : null;
+        if ($supplierId !== null) {
+            $supplier = DB::table('suppliers')->where('id', $supplierId)->first();
+            if (!$supplier) {
+                return $this->fail('Selected supplier was not found', 422);
+            }
+            $supplierName = $supplier->name;
+        }
+
         if ($orNumber === '' || $receiptDate === '' || $supplierName === '') {
-            return $this->fail('OR number, receipt date, and supplier name are required', 422);
+            return $this->fail('OR number, receipt date, and supplier are required', 422);
         }
 
         $parsed = \DateTime::createFromFormat('Y-m-d', $receiptDate);
@@ -180,6 +206,7 @@ class PurchaseReceiptController extends Controller
             'or_number' => $orNumber,
             'receipt_date' => $receiptDate,
             'supplier_name' => $supplierName,
+            'supplier_id' => $supplierId,
             'department_id' => $departmentId,
             'received_by' => $receivedBy,
             'remarks' => $remarks !== '' ? $remarks : null,
@@ -199,7 +226,7 @@ class PurchaseReceiptController extends Controller
     {
         $receipt = DB::table('purchase_receipts as pr')
             ->select([
-                'pr.id', 'pr.or_number', 'pr.receipt_date', 'pr.supplier_name',
+                'pr.id', 'pr.or_number', 'pr.receipt_date', 'pr.supplier_name', 'pr.supplier_id',
                 'pr.department_id', 'd.name as department_name',
                 'pr.received_by', 'u.full_name as received_by_name',
                 'pr.remarks', 'pr.status', 'pr.proof_image', 'pr.created_at', 'pr.updated_at',
@@ -318,15 +345,17 @@ class PurchaseReceiptController extends Controller
             return $this->fail($shapeError, 422);
         }
 
-        if ($receiptError = $this->draftReceiptError($id)) {
-            return $this->fail($receiptError[0], $receiptError[1]);
-        }
+        return DB::transaction(function () use ($id, $line): JsonResponse {
+            if ($receiptError = $this->draftReceiptError($id)) {
+                return $this->fail($receiptError[0], $receiptError[1]);
+            }
 
-        if ($refError = $this->validateLineReferences($line)) {
-            return $this->fail($refError, 422);
-        }
+            if ($refError = $this->validateLineReferences($line)) {
+                return $this->fail($refError, 422);
+            }
 
-        return $this->ok('Item added to receipt', ['id' => $this->insertLine($id, $line)], 201);
+            return $this->ok('Item added to receipt', ['id' => $this->insertLine($id, $line)], 201);
+        });
     }
 
     /**
@@ -363,23 +392,25 @@ class PurchaseReceiptController extends Controller
      */
     public function removeItem(Request $request, int $id, int $lineId): JsonResponse
     {
-        if ($receiptError = $this->draftReceiptError($id)) {
-            $message = $receiptError[1] === 422 ? 'Cannot remove items from a posted receipt' : $receiptError[0];
-            return $this->fail($message, $receiptError[1]);
-        }
+        return DB::transaction(function () use ($id, $lineId): JsonResponse {
+            if ($receiptError = $this->draftReceiptError($id)) {
+                $message = $receiptError[1] === 422 ? 'Cannot remove items from a posted receipt' : $receiptError[0];
+                return $this->fail($message, $receiptError[1]);
+            }
 
-        $deleted = DB::table('purchase_receipt_items')
-            ->where('id', $lineId)
-            ->where('purchase_receipt_id', $id)
-            ->delete();
+            $deleted = DB::table('purchase_receipt_items')
+                ->where('id', $lineId)
+                ->where('purchase_receipt_id', $id)
+                ->delete();
 
-        if ($deleted === 0) {
-            return $this->fail('Line item not found on this receipt', 404);
-        }
+            if ($deleted === 0) {
+                return $this->fail('Line item not found on this receipt', 404);
+            }
 
-        DB::table('purchase_receipts')->where('id', $id)->update(['updated_at' => now()]);
+            DB::table('purchase_receipts')->where('id', $id)->update(['updated_at' => now()]);
 
-        return $this->ok('Item removed from receipt', ['id' => $lineId]);
+            return $this->ok('Item removed from receipt', ['id' => $lineId]);
+        });
     }
 
     public function addItems(Request $request, int $id): JsonResponse
@@ -396,57 +427,55 @@ class PurchaseReceiptController extends Controller
             );
         }
 
-        if ($receiptError = $this->draftReceiptError($id)) {
-            return $this->fail($receiptError[0], $receiptError[1]);
-        }
-
-        // Validate every row first — nothing is written until all of them pass.
-        $lines = [];
-        $errors = [];
-
-        foreach (array_values($rawLines) as $index => $raw) {
-            if (!is_array($raw)) {
-                $errors[] = ['index' => $index, 'message' => 'Invalid line item payload'];
-                continue;
+        return DB::transaction(function () use ($id, $rawLines): JsonResponse {
+            if ($receiptError = $this->draftReceiptError($id)) {
+                return $this->fail($receiptError[0], $receiptError[1]);
             }
 
-            $line = $this->normalizeLineInput($raw);
-            $error = $this->validateLineShape($line) ?? $this->validateLineReferences($line);
+            // Validate every row first — nothing is written until all of them pass.
+            $lines = [];
+            $errors = [];
 
-            if ($error !== null) {
-                $errors[] = ['index' => $index, 'message' => 'Row ' . ($index + 1) . ': ' . $error];
-                continue;
+            foreach (array_values($rawLines) as $index => $raw) {
+                if (!is_array($raw)) {
+                    $errors[] = ['index' => $index, 'message' => 'Invalid line item payload'];
+                    continue;
+                }
+
+                $line = $this->normalizeLineInput($raw);
+                $error = $this->validateLineShape($line) ?? $this->validateLineReferences($line);
+
+                if ($error !== null) {
+                    $errors[] = ['index' => $index, 'message' => 'Row ' . ($index + 1) . ': ' . $error];
+                    continue;
+                }
+
+                $lines[] = $line;
             }
 
-            $lines[] = $line;
-        }
+            if ($errors !== []) {
+                return $this->fail($errors[0]['message'], 422, ['errors' => $errors]);
+            }
 
-        if ($errors !== []) {
-            return $this->fail($errors[0]['message'], 422, ['errors' => $errors]);
-        }
+            [$lines, $combinedCount, $conflict] = $this->combineDuplicateLines($lines);
 
-        [$lines, $combinedCount, $conflict] = $this->combineDuplicateLines($lines);
+            if ($conflict !== null) {
+                return $this->fail($conflict, 422);
+            }
 
-        if ($conflict !== null) {
-            return $this->fail($conflict, 422);
-        }
-
-        $ids = DB::transaction(function () use ($id, $lines): array {
-            $inserted = [];
+            $ids = [];
             foreach ($lines as $line) {
-                $inserted[] = $this->insertLine($id, $line);
+                $ids[] = $this->insertLine($id, $line);
             }
 
-            return $inserted;
+            $count = count($ids);
+
+            return $this->ok(
+                $count === 1 ? '1 item added to receipt' : $count . ' items added to receipt',
+                ['ids' => $ids, 'count' => $count, 'combined' => $combinedCount],
+                201
+            );
         });
-
-        $count = count($ids);
-
-        return $this->ok(
-            $count === 1 ? '1 item added to receipt' : $count . ' items added to receipt',
-            ['ids' => $ids, 'count' => $count, 'combined' => $combinedCount],
-            201
-        );
     }
 
     /**
@@ -494,12 +523,15 @@ class PurchaseReceiptController extends Controller
     /**
      * Returns [message, status] when the receipt cannot accept new lines,
      * or null when it can. Draft-only is existing business logic, preserved.
+     * Called inside the three line-mutation transactions so posting and editing
+     * serialize on the same parent row before checking its current status.
      */
     private function draftReceiptError(int $id): ?array
     {
         $receipt = DB::table('purchase_receipts')
             ->select('id', 'status')
             ->where('id', $id)
+            ->lockForUpdate()
             ->first();
 
         if (!$receipt) {

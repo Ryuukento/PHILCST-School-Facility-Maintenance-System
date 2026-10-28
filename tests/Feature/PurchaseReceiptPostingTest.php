@@ -606,6 +606,15 @@ class PurchaseReceiptPostingTest extends TestCase
             $table->string('or_number')->unique();
             $table->date('receipt_date');
             $table->string('supplier_name');
+            // 2026_10_27_000100_add_supplier_id_to_purchase_receipts — nullable,
+            // no FK here (no suppliers table in this fixture and no test in
+            // this file exercises a real supplier_id), matching how
+            // department_id above is also a plain nullable column with no
+            // foreign() in this fixture. Required so that
+            // PurchaseReceiptController::store()'s insertGetId() (which always
+            // writes this key, even as null) does not hit a missing-column
+            // SQL error the moment any test here posts a fully valid receipt.
+            $table->unsignedInteger('supplier_id')->nullable();
             $table->unsignedInteger('department_id')->nullable();
             $table->unsignedInteger('received_by');
             $table->text('remarks')->nullable();

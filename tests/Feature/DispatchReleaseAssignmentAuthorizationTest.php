@@ -484,7 +484,12 @@ class DispatchReleaseAssignmentAuthorizationTest extends TestCase
         $staffB = $this->seedUser(['role' => 'maintenance_staff', 'department_id' => self::DEPT_COMPUTER]);
         $adminId = $this->seedUser(['role' => 'super_admin']);
         $itemId = $this->seedItem(['name' => 'Mouse', 'quantity' => 10, 'reserved_quantity' => 0]);
-        $dispatchId = $this->seedDispatch($itemId, 2, ['department_id' => self::DEPT_COMPUTER], [$staffA]);
+        // 2026-10-28 — canAssignReleasePersonnel() now also requires the
+        // actor be this dispatch's creator OR already on its roster (not
+        // just "any Head Maintenance account"). $headId is the one managing
+        // this roster below, so it must be recorded as the creator, exactly
+        // as the real create flow would have recorded it.
+        $dispatchId = $this->seedDispatch($itemId, 2, ['department_id' => self::DEPT_COMPUTER, 'requested_by' => $headId], [$staffA]);
 
         // While pending: add staffB, then remove staffA.
         $this->actingAsSessionUserWithFlatKeys($headId, 'maintenance_admin')
@@ -523,6 +528,65 @@ class DispatchReleaseAssignmentAuthorizationTest extends TestCase
     }
 
     /**
+     * 2026-10-28 — THE fix for the reported bug: an uninvolved Head
+     * Maintenance account (one who neither created this dispatch nor is on
+     * its roster) must no longer be able to manage it, even though "any
+     * maintenance_admin" used to be sufficient. Mirrors the real-world
+     * report: Head A's dispatch assigns Head/Staff B as release personnel;
+     * an unrelated Head C must not see or be able to use Add/Remove
+     * Personnel on it.
+     */
+    public function test_an_uninvolved_head_cannot_add_or_remove_personnel_on_someone_elses_dispatch(): void
+    {
+        $creatorHeadId = $this->seedUser(['role' => 'maintenance_admin', 'department_id' => self::DEPT_COMPUTER]);
+        $uninvolvedHeadId = $this->seedUser(['role' => 'maintenance_admin', 'department_id' => self::DEPT_COMPUTER]);
+        $staffA = $this->seedUser(['role' => 'maintenance_staff', 'department_id' => self::DEPT_COMPUTER]);
+        $otherStaff = $this->seedUser(['role' => 'maintenance_staff', 'department_id' => self::DEPT_COMPUTER]);
+        $itemId = $this->seedItem(['name' => 'Mouse', 'quantity' => 10, 'reserved_quantity' => 0]);
+        $dispatchId = $this->seedDispatch($itemId, 2, ['requested_by' => $creatorHeadId], [$staffA]);
+
+        $this->actingAsSessionUserWithFlatKeys($uninvolvedHeadId, 'maintenance_admin')
+            ->postJson("/api/dispatches/{$dispatchId}/add-personnel", ['personnel_user_id' => $otherStaff])
+            ->assertStatus(403);
+        $this->actingAsSessionUserWithFlatKeys($uninvolvedHeadId, 'maintenance_admin')
+            ->postJson("/api/dispatches/{$dispatchId}/remove-personnel", ['personnel_user_id' => $staffA])
+            ->assertStatus(403);
+
+        $rosterIds = DB::table('dispatch_personnel_assignments')
+            ->where('dispatch_id', $dispatchId)
+            ->pluck('personnel_user_id')
+            ->map(fn ($id) => (int) $id)
+            ->all();
+        $this->assertSame([$staffA], $rosterIds, 'An uninvolved Head must not be able to change a roster they have no part in.');
+    }
+
+    /**
+     * 2026-10-28 — the mirror-image positive case: a Head who did NOT create
+     * the dispatch, but who IS on its roster (a genuinely valid scenario
+     * since TASK 57 widened Release Personnel eligibility to include Head
+     * Maintenance), must still be able to manage that roster.
+     */
+    public function test_a_head_who_is_on_the_roster_but_did_not_create_the_dispatch_can_still_manage_it(): void
+    {
+        $creatorHeadId = $this->seedUser(['role' => 'maintenance_admin', 'department_id' => self::DEPT_COMPUTER]);
+        $rosterHeadId = $this->seedUser(['role' => 'maintenance_admin', 'department_id' => self::DEPT_COMPUTER]);
+        $staffA = $this->seedUser(['role' => 'maintenance_staff', 'department_id' => self::DEPT_COMPUTER]);
+        $itemId = $this->seedItem(['name' => 'Mouse', 'quantity' => 10, 'reserved_quantity' => 0]);
+        $dispatchId = $this->seedDispatch($itemId, 2, ['requested_by' => $creatorHeadId], [$rosterHeadId]);
+
+        $this->actingAsSessionUserWithFlatKeys($rosterHeadId, 'maintenance_admin')
+            ->postJson("/api/dispatches/{$dispatchId}/add-personnel", ['personnel_user_id' => $staffA])
+            ->assertOk();
+
+        $this->assertTrue(
+            DB::table('dispatch_personnel_assignments')
+                ->where('dispatch_id', $dispatchId)
+                ->where('personnel_user_id', $staffA)
+                ->exists()
+        );
+    }
+
+    /**
      * Removing a roster member down to zero is explicitly ALLOWED per product
      * decision — a zero-personnel dispatch simply becomes unapprovable (or,
      * if already approved, un-releasable) until someone is added back. It is
@@ -533,7 +597,10 @@ class DispatchReleaseAssignmentAuthorizationTest extends TestCase
         $headId = $this->seedUser(['role' => 'maintenance_admin', 'department_id' => self::DEPT_COMPUTER]);
         $staffA = $this->seedUser(['role' => 'maintenance_staff', 'department_id' => self::DEPT_COMPUTER]);
         $itemId = $this->seedItem(['name' => 'Mouse', 'quantity' => 10, 'reserved_quantity' => 0]);
-        $dispatchId = $this->seedDispatch($itemId, 2, [], [$staffA]);
+        // 2026-10-28 — see the sibling test above: $headId must be recorded
+        // as the creator so canAssignReleasePersonnel()'s per-dispatch check
+        // allows the removal below.
+        $dispatchId = $this->seedDispatch($itemId, 2, ['requested_by' => $headId], [$staffA]);
 
         $this->actingAsSessionUserWithFlatKeys($headId, 'maintenance_admin')
             ->postJson("/api/dispatches/{$dispatchId}/remove-personnel", ['personnel_user_id' => $staffA])

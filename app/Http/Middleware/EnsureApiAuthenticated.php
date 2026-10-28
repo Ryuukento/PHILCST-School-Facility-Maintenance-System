@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use App\Models\User;
+use App\Services\RoleNormalizerService;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -37,10 +38,22 @@ class EnsureApiAuthenticated
         // was established). AuthController::login() already refuses to
         // authenticate a pending/inactive user; a session predating the
         // deactivation must not be able to keep bypassing that same check.
-        $sessionUser = $request->session()->get('auth_user') ?? $request->session()->get('user');
+        $sessionUser = $request->session()->get('auth_user');
+        if (empty($sessionUser)) $sessionUser = $request->session()->get('user');
         $userId = is_array($sessionUser) ? ($sessionUser['user_id'] ?? null) : null;
 
-        if ($userId === null || strtolower((string) User::query()->whereKey($userId)->value('status')) !== 'active') {
+        // Replace the status-only lookup: the account, not either cached
+        // session payload, owns current authorization. Never read request input.
+        $account = filter_var($userId, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]) !== false
+            ? User::query()->select(['user_id', 'role', 'department_id', 'status', 'auth_version', 'force_profile_update'])->find($userId)
+            : null;
+
+        $versions = $request->attributes->get('sfms.auth_versions', [$sessionUser['auth_version'] ?? 0]);
+        $versionsValid = $account && count($versions) > 0;
+        foreach ($versions as $version) {
+            if (!$account || !self::versionMatches($version, (int) $account->auth_version)) $versionsValid = false;
+        }
+        if (!$account || strtolower((string) $account->status) !== 'active' || !$versionsValid) {
             $request->session()->forget('auth_user');
             $request->session()->forget('user');
             $request->session()->forget('user_id');
@@ -62,6 +75,62 @@ class EnsureApiAuthenticated
             return redirect('/frontend/pages/index.php?session_expired=1');
         }
 
+        $authorization = [
+            'user_id' => (int) $account->user_id,
+            'role' => RoleNormalizerService::normalize($account->role),
+            'department_id' => $account->department_id !== null ? (int) $account->department_id : null,
+            'status' => strtolower((string) $account->status),
+            'auth_version' => (int) $account->auth_version,
+            'force_profile_update' => (bool) $account->force_profile_update,
+        ];
+        // A CLI/Laravel-only request may have no writable native session.
+        // Do not manufacture one; the bridge starts it for real HTTP requests.
+        $syncNative = session_status() === PHP_SESSION_ACTIVE
+            || !empty($_SESSION['auth_user']) || !empty($_SESSION['user']) || isset($_SESSION['user_id']);
+        foreach (['user', 'auth_user'] as $key) {
+            $payload = $request->session()->get($key, $sessionUser);
+            if (!is_array($payload) || (int) ($payload['user_id'] ?? 0) !== (int) $account->user_id) $payload = $sessionUser;
+            $request->session()->put($key, array_replace(is_array($payload) ? $payload : [], $authorization));
+            if ($syncNative) {
+                $nativePayload = $_SESSION[$key] ?? $sessionUser;
+                if (!is_array($nativePayload) || (int) ($nativePayload['user_id'] ?? 0) !== (int) $account->user_id) $nativePayload = $sessionUser;
+                $_SESSION[$key] = array_replace(is_array($nativePayload) ? $nativePayload : [], $authorization);
+            }
+        }
+        foreach ($authorization as $key => $value) {
+            $request->session()->put($key, $value);
+            if ($syncNative) $_SESSION[$key] = $value;
+        }
+
+        if ($account->force_profile_update && !$this->allowsForcedSetup($request)) {
+            return $request->is('api/*') || $request->expectsJson()
+                ? response()->json(['success' => false, 'message' => 'Please complete your required password change.',
+                    'code' => 'PASSWORD_CHANGE_REQUIRED', 'redirect' => '/account?setup=1'], 403)
+                : redirect('/account?setup=1');
+        }
+
         return $next($request);
+    }
+
+    public static function versionMatches(mixed $version, int $current): bool
+    {
+        $version = filter_var($version, FILTER_VALIDATE_INT, ['options' => ['min_range' => 0]]);
+        return $version !== false && $version === $current;
+    }
+
+    private function allowsForcedSetup(Request $request): bool
+    {
+        $action = $request->route()?->getActionName();
+        $allowed = [
+            'App\\Http\\Controllers\\Api\\UserController@updateProfile' => 'PATCH',
+            'App\\Http\\Controllers\\Api\\AuthController@check' => 'GET',
+            'App\\Http\\Controllers\\Api\\AuthController@logout' => 'POST',
+            'App\\Http\\Controllers\\Api\\EmailVerificationController@initiate' => 'POST',
+            'App\\Http\\Controllers\\Api\\EmailVerificationController@verifyOtp' => 'POST',
+            'App\\Http\\Controllers\\Api\\EmailVerificationController@resendOtp' => 'POST',
+            'App\\Http\\Controllers\\Api\\EmailVerificationController@getStatus' => 'GET',
+        ];
+        return (isset($allowed[$action]) && $request->method() === $allowed[$action])
+            || ($request->route()?->getName() === 'logout' && $request->isMethod('GET'));
     }
 }

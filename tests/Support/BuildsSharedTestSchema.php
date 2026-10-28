@@ -38,6 +38,8 @@ trait BuildsSharedTestSchema
             $table->string('role', 50)->default('maintenance_admin');
             $table->unsignedInteger('department_id')->nullable();
             $table->string('status', 50)->default('active');
+            $table->boolean('force_profile_update')->default(false);
+            $table->unsignedInteger('auth_version')->default(0);
             $table->string('avatar')->nullable();
             // Present in the real schema since migration
             // 2026_09_08_000100_add_out_of_band_user_and_report_columns and
@@ -304,6 +306,38 @@ trait BuildsSharedTestSchema
         Schema::create('asset_code_sequences', function (Blueprint $table): void {
             $table->unsignedSmallInteger('year')->primary();
             $table->unsignedInteger('last_value')->default(0);
+            $table->timestamps();
+        });
+    }
+
+    /**
+     * Mirrors 2026_05_15_000300_create_suppliers_and_histories_and_add_supplier_id.php.
+     * Opt-in (not called from every test's createTestSchema()) -- call it
+     * from whichever test needs SupplierController's routes.
+     */
+    protected function createSuppliersTable(): void
+    {
+        Schema::create('suppliers', function (Blueprint $table): void {
+            $table->increments('id');
+            $table->string('name')->unique();
+            $table->string('contact_person')->nullable();
+            $table->string('contact_email')->nullable();
+            $table->string('phone')->nullable();
+            $table->text('address')->nullable();
+            $table->text('notes')->nullable();
+            $table->string('status', 20)->default('active');
+            $table->timestamps();
+        });
+    }
+
+    protected function createSupplierHistoriesTable(): void
+    {
+        Schema::create('supplier_histories', function (Blueprint $table): void {
+            $table->bigIncrements('id');
+            $table->unsignedInteger('supplier_id');
+            $table->string('action');
+            $table->text('details')->nullable();
+            $table->unsignedInteger('performed_by')->nullable();
             $table->timestamps();
         });
     }

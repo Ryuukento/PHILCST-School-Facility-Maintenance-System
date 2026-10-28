@@ -14,7 +14,11 @@ use Illuminate\Validation\ValidationException;
  *
  *   Head Maintenance (maintenance_admin)
  *     creates the dispatch AND picks the Release Personnel, may reassign
- *     while the dispatch is not yet released, may NOT approve, may NOT release.
+ *     while the dispatch is not yet released, may NOT approve, may NOT
+ *     release. Reassignment is further scoped per dispatch (2026-10-28):
+ *     only the Head who created it, or a Head already on its roster, may
+ *     manage that specific dispatch's roster — NOT every Head Maintenance
+ *     account system-wide (see canAssignReleasePersonnel()).
  *
  *   Administrator (super_admin)
  *     approves or rejects Head-created dispatches. May NOT release.
@@ -127,6 +131,23 @@ class DispatchAuthorizationService
      * department-based release-personnel restriction (see class doc comment)
      * — a Head reassigning the releaser of a dispatch they created should not
      * be blocked by a reporting tag unrelated to who may hand off stock.
+     *
+     * 2026-10-28 — narrowed from "any Head Maintenance account, system-wide"
+     * to "a Head Maintenance account actually tied to THIS dispatch": either
+     * the person who created it, or a Head already on its personnel roster.
+     * Previously every Head Maintenance user could manage every dispatch's
+     * roster regardless of involvement, which let an uninvolved Head (e.g.
+     * one who heads a different section) see and use "Add Personnel" on a
+     * dispatch created and staffed entirely by someone else.
+     *
+     * The creator carve-out is deliberate, not incidental: a Head routinely
+     * builds a roster out of OTHER people (EELab Staff, or another Head)
+     * without ever adding themselves to it, and must still be able to manage
+     * the roster they built — including adding someone back after removing
+     * everyone, which the product explicitly allows (see
+     * canRemoveDispatchPersonnel()). Without this carve-out that recovery
+     * path would be a dead end: nobody (not even the creator) could re-add
+     * anyone to a dispatch whose roster had been emptied.
      */
     public function canAssignReleasePersonnel(array $authUser, Dispatch $dispatch): bool
     {
@@ -134,7 +155,22 @@ class DispatchAuthorizationService
             return false;
         }
 
-        return in_array($dispatch->status, ['pending', 'approved'], true);
+        if (!in_array($dispatch->status, ['pending', 'approved'], true)) {
+            return false;
+        }
+
+        $userId = (int) ($authUser['user_id'] ?? 0);
+        if ($userId <= 0) {
+            return false;
+        }
+
+        if ((int) ($dispatch->requested_by ?? 0) === $userId) {
+            return true;
+        }
+
+        return $dispatch->personnelAssignments()
+            ->where('personnel_user_id', $userId)
+            ->exists();
     }
 
     /**

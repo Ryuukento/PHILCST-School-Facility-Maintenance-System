@@ -493,10 +493,16 @@ class InventoryStockController extends Controller
 
         DB::beginTransaction();
         try {
-            $existing = $this->fetchStockItemById($id);
+            // Serialize metadata/status changes with stock movements on this item.
+            $existing = DB::table('items')
+                ->where('id', $id)
+                ->where('item_type', 'inventory_stock')
+                ->lockForUpdate()
+                ->first();
             if (! $existing) {
                 throw new \RuntimeException('Inventory stock item not found');
             }
+            $existing = (array) $existing;
 
             // ── Resolve each field: incoming value if sent, else keep current ──
             //    Mirrors array_key_exists() checks in the legacy PHP.
@@ -505,11 +511,8 @@ class InventoryStockController extends Controller
                 ? trim((string) $validated['name'])
                 : (string) $existing['name'];
 
-            // Quantity is intentionally never accepted from this endpoint — Manual
-            // Stock Adjustment (InventoryAdjustmentService, via items/{id}/adjust-stock)
-            // is the only sanctioned path for changing on-hand quantity, so it goes
-            // through InventoryTransaction -> InventoryTransactionObserver with proper
-            // ledger history, activity logging, and analytics cache invalidation.
+            // Read the locked balance only to derive status. Metadata updates
+            // never write quantity or reservations; stock movements own them.
             $quantity = (int) $existing['quantity'];
 
             $reorderLevel = $request->has('reorder_level')
@@ -571,13 +574,12 @@ class InventoryStockController extends Controller
 
             DB::update(
                 "UPDATE items
-                 SET name = ?, quantity = ?, reorder_level = ?, description = ?,
+                 SET name = ?, reorder_level = ?, description = ?,
                      category_id = ?, unit_type = ?,
                      brand = ?, model = ?, item_condition = ?, status = ?, updated_at = NOW()
                  WHERE id = ? AND item_type = 'inventory_stock'",
                 [
                     $name,
-                    $quantity,
                     $reorderLevel,
                     $description !== '' ? $description : null,
                     $categoryId,

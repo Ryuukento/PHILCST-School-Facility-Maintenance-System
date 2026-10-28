@@ -47,9 +47,9 @@ include __DIR__ . '/../includes/header.php';
         <div class="card-header d-flex justify-between align-center">
             <div>
                 <h2>Create Dispatch Request</h2>
-                <p class="text-muted mb-0">Request items to be moved from inventory stock to a room or lab.</p>
+                <p class="text-muted mb-0">Move items from inventory to a room or lab.</p>
             </div>
-            <a href="<?php echo htmlspecialchars(public_url('/dispatches')); ?>" class="btn btn-secondary"><?php echo ui_icon('arrow-left'); ?> Back to Dispatches</a>
+            <a href="<?php echo htmlspecialchars(public_url('/dispatches')); ?>" class="btn btn-secondary"><?php echo ui_icon('arrow-left'); ?> Back</a>
         </div>
         <div class="card-body">
             <form id="dc-form" novalidate>
@@ -59,7 +59,7 @@ include __DIR__ . '/../includes/header.php';
                         <span class="form-section-index">1</span>
                         <div>
                             <h3 class="form-section-title">Dispatch Details</h3>
-                            <p class="form-section-subtitle">Destination department and room for this dispatch.</p>
+                            <p class="form-section-subtitle">Destination department and room.</p>
                         </div>
                     </div>
                     <div class="form-section-body">
@@ -71,7 +71,7 @@ include __DIR__ . '/../includes/header.php';
                         <div class="form-row-2">
                             <div class="form-group">
                                 <label for="dc-dept-search">Department <span class="text-muted" style="font-weight:400;">(reporting only)</span></label>
-                                <input type="text" id="dc-dept-search" class="form-control" placeholder="Search and add departments…" autocomplete="off" style="margin-bottom:8px;">
+                                <input type="text" id="dc-dept-search" class="form-control" placeholder="Search departments…" autocomplete="off" style="margin-bottom:8px;">
                                 <input type="hidden" id="dc-dept-id">
                                 <div id="dc-dept-list" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;"></div>
                                 <!-- Attribution tag for Analytics' department-usage
@@ -79,10 +79,10 @@ include __DIR__ . '/../includes/header.php';
                                      restricted to one department, and this
                                      selection no longer affects who can be
                                      picked as Release Personnel below. -->
-                                <small class="text-muted">Add multiple departments for reporting. Used for department usage reports only.</small>
+                                <small class="text-muted">For reporting only.</small>
                             </div>
                             <div class="form-group">
-                                <label for="dc-room-search">Room / Lab <span style="color:#ef4444;">*</span></label>
+                                <label for="dc-room-search">Location <span style="color:#ef4444;">*</span></label>
                                 <!-- TASK 60 — the free-text "Location Details"
                                      supplement (room_note) that used to sit below
                                      this field was removed: in practice it was
@@ -105,9 +105,9 @@ include __DIR__ . '/../includes/header.php';
                                      which already supported search + pagination
                                      server-side. No new component, no new
                                      dependency, no backend change. -->
-                                <input type="text" id="dc-room-search" class="form-control" placeholder="Search room or lab…" autocomplete="off">
+                                <input type="text" id="dc-room-search" class="form-control" placeholder="Search location…" autocomplete="off">
                                 <input type="hidden" id="dc-room-id">
-                                <small class="text-muted">Where the Release Personnel should go to hand off these items.</small>
+                                <small class="text-muted">Where items will be handed off.</small>
                             </div>
                         </div>
 
@@ -125,10 +125,10 @@ include __DIR__ . '/../includes/header.php';
                              helper text below is the same for every role. -->
                         <div class="form-group">
                             <label for="dc-release-personnel-search">Release Personnel <span style="color:#ef4444;">*</span></label>
-                            <input type="text" id="dc-release-personnel-search" class="form-control" placeholder="Search and add EELab staff…" autocomplete="off" style="margin-bottom:8px;">
+                            <input type="text" id="dc-release-personnel-search" class="form-control" placeholder="Search EELab staff…" autocomplete="off" style="margin-bottom:8px;">
                             <input type="hidden" id="dc-release-personnel-id">
                             <div id="dc-release-personnel-list" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;"></div>
-                            <small class="text-muted">At least one person is required. Add everyone who will be responsible for releasing this dispatch.</small>
+                            <small class="text-muted">At least one person required.</small>
                         </div>
                     </div>
                 </div>
@@ -144,7 +144,7 @@ include __DIR__ . '/../includes/header.php';
                         <span class="form-section-index">2</span>
                         <div>
                             <h3 class="form-section-title">Items to Dispatch</h3>
-                            <p class="form-section-subtitle">At least one item is required. The number beside each item is its available stock.</p>
+                            <p class="form-section-subtitle">At least one item required.</p>
                         </div>
                     </div>
                     <div class="form-section-body">
@@ -164,7 +164,7 @@ include __DIR__ . '/../includes/header.php';
 
                 <!-- Submit row -->
                 <div class="d-flex gap-sm create-report-actions">
-                    <button type="submit" id="dc-submit-btn" class="btn btn-primary">Submit Dispatch Request</button>
+                    <button type="submit" id="dc-submit-btn" class="btn btn-primary">Submit</button>
                     <a href="<?php echo htmlspecialchars(public_url('/dispatches')); ?>" class="btn btn-secondary">Cancel</a>
                 </div>
 
@@ -172,6 +172,27 @@ include __DIR__ . '/../includes/header.php';
         </div>
     </div>
 </main>
+
+<style>
+.dc-item-picker { position: relative; min-width: 0; }
+.dc-item-picker .dc-item-results {
+    position: absolute; left: 0; right: 0; top: calc(100% + 4px); z-index: 1000;
+    max-height: 240px; overflow-y: auto; overscroll-behavior: contain;
+    background: #fff; color: #111827; border: 1px solid #ddd6fe;
+    border-radius: 8px; box-shadow: 0 4px 12px rgba(76,29,149,.12);
+}
+.dc-item-picker .dc-item-option, .dc-item-picker .dc-item-more {
+    display: block; width: 100%; padding: 10px 12px; border: 0;
+    border-bottom: 1px solid #f1f5f9; text-align: left; background: #fff;
+    color: #111827; font: inherit; cursor: pointer; overflow-wrap: anywhere;
+}
+.dc-item-picker .dc-item-option:hover:not(:disabled),
+.dc-item-picker .dc-item-option.is-active, .dc-item-picker .dc-item-more:hover { background: #f0e7ff; }
+.dc-item-picker .dc-item-option:disabled { color: #6b7280; cursor: not-allowed; }
+.dc-item-picker .dc-item-option[aria-selected="true"] { box-shadow: inset 3px 0 #8a2be2; }
+.dc-item-stock { display: block; font-size: 12px; margin-top: 3px; }
+.dc-item-empty { padding: 12px; margin: 0; font-size: 14px; }
+</style>
 
 <script>
 // NOTE: these are RAW paths — Components.fetchJson / resolveAppUrl will add
@@ -192,6 +213,8 @@ const DC_IS_ADMIN = <?php echo $_dcIsAdmin ? 'true' : 'false'; ?>;
 
 let dcItems      = [];
 let dcRowCounter = 0;
+let dcItemChoices = [];
+let dcOpenItemPicker = null;
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -325,26 +348,35 @@ function dcBuildRoomSelect() {
 
 async function loadItems() {
     try {
-        const { response, data: payload } = await dcFetch(
-            `${DC_ITEMS_API}?per_page=200&item_type=inventory_stock`,
-            { credentials: 'same-origin', headers: { 'Accept': 'application/json' } }
-        );
+        const loaded = [];
+        let page = 1;
+        let lastPage = 1;
+        do {
+            const { response, data: payload } = await dcFetch(
+                `${DC_ITEMS_API}?per_page=200&item_type=inventory_stock&page=${page}`,
+                { credentials: 'same-origin', headers: { 'Accept': 'application/json' } }
+            );
 
-        if (!response.ok || !payload.success) return;
+            if (!response.ok || !payload.success) throw new Error('Unable to load inventory items.');
 
-        // Handle both paginator shapes the Laravel API may return
-        const d = payload.data;
-        if (Array.isArray(d?.data)) {
-            dcItems = d.data;                          // paginator at root
-        } else if (Array.isArray(d?.items?.data)) {
-            dcItems = d.items.data;                    // named key + paginator
-        } else if (Array.isArray(d?.items)) {
-            dcItems = d.items;                         // named key, plain array
-        } else if (Array.isArray(d)) {
-            dcItems = d;                               // plain array
-        }
-    } catch (_) {
-        // fail silently — addItemRow will show empty select
+            // Handle both paginator shapes the Laravel API may return.
+            const d = payload.data;
+            if (Array.isArray(d?.data)) {
+                loaded.push(...d.data);                // paginator at root
+            } else if (Array.isArray(d?.items?.data)) {
+                loaded.push(...d.items.data);          // named key + paginator
+            } else if (Array.isArray(d?.items)) {
+                loaded.push(...d.items);               // named key, plain array
+            } else if (Array.isArray(d)) {
+                loaded.push(...d);                     // plain array
+            }
+            lastPage = Number(d?.last_page ?? d?.items?.last_page) || 1;
+            page++;
+        } while (page <= lastPage);
+        dcItems = loaded;
+        dcPrepareItemChoices();
+    } catch (err) {
+        dcShowError('Unable to load inventory items. Please reload the page.');
     }
 }
 
@@ -365,49 +397,162 @@ function dcFindItem(itemId) {
     return dcItems.find((item) => String(item.id) === String(itemId)) || null;
 }
 
+function dcPrepareItemChoices() {
+    // Sort and normalize once, shared by every row; render results in bounded batches.
+    dcItemChoices = dcItems.map((item) => ({ item, searchName: String(item.name || '').toLocaleLowerCase() }))
+        .sort((a, b) => Number(dcAvailableStock(b.item) > 0) - Number(dcAvailableStock(a.item) > 0)
+            || String(a.item.name || '').localeCompare(String(b.item.name || '')));
+}
+
+function dcBuildItemPicker(sel, rowId) {
+    const container = document.createElement('div');
+    container.className = 'dc-item-picker';
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.className = 'dc-item-search form-control';
+    input.placeholder = 'Search inventory items…';
+    input.autocomplete = 'off';
+    input.setAttribute('aria-label', 'Item to dispatch');
+    input.setAttribute('role', 'combobox');
+    input.setAttribute('aria-autocomplete', 'list');
+    input.setAttribute('aria-expanded', 'false');
+    input.setAttribute('aria-required', 'true');
+    const list = document.createElement('div');
+    list.className = 'search-dropdown dc-item-results';
+    list.id = 'dc-item-results-' + rowId;
+    list.setAttribute('role', 'listbox');
+    list.setAttribute('aria-label', 'Inventory items');
+    list.hidden = true;
+    input.setAttribute('aria-controls', list.id);
+    container.appendChild(input);
+    container.appendChild(sel);
+    container.appendChild(list);
+
+    let matches = [];
+    let visibleCount = 100;
+    let active = -1;
+    const picker = { container, close };
+
+    function close() {
+        list.hidden = true;
+        input.setAttribute('aria-expanded', 'false');
+        input.removeAttribute('aria-activedescendant');
+        if (dcOpenItemPicker === picker) dcOpenItemPicker = null;
+    }
+    function choose(item) {
+        if (dcAvailableStock(item) <= 0) return;
+        sel.value = String(item.id);
+        input.value = String(item.name || '');
+        sel.dispatchEvent(new Event('change'));
+        close();
+        input.focus();
+        // focus may reopen results when selection was made with touch/mouse.
+        close();
+    }
+    function paint() {
+        list.replaceChildren();
+        if (!matches.length) {
+            const empty = document.createElement('p');
+            empty.className = 'dc-item-empty';
+            empty.setAttribute('role', 'status');
+            empty.textContent = 'No matching items found';
+            list.appendChild(empty);
+        }
+        matches.slice(0, visibleCount).forEach(({ item }, index) => {
+            const option = document.createElement('button');
+            option.type = 'button';
+            option.className = 'dc-item-option' + (index === active ? ' is-active' : '');
+            option.id = list.id + '-option-' + index;
+            option.tabIndex = -1;
+            option.setAttribute('role', 'option');
+            option.setAttribute('aria-selected', String(String(item.id) === sel.value));
+            const available = dcAvailableStock(item);
+            option.disabled = available <= 0;
+            option.setAttribute('aria-disabled', String(option.disabled));
+            const name = document.createElement('span');
+            name.textContent = String(item.name || '');
+            const stock = document.createElement('small');
+            stock.className = 'dc-item-stock';
+            stock.textContent = available > 0 ? `Available: ${available}` : 'Out of stock — Available: 0';
+            option.appendChild(name);
+            option.appendChild(stock);
+            option.addEventListener('pointerdown', (e) => e.preventDefault());
+            option.addEventListener('click', () => choose(item));
+            list.appendChild(option);
+        });
+        if (matches.length > visibleCount) {
+            const more = document.createElement('button');
+            more.type = 'button';
+            more.className = 'dc-item-more';
+            more.textContent = `Show more items (${Math.min(visibleCount, matches.length)} of ${matches.length})`;
+            more.addEventListener('pointerdown', (e) => e.preventDefault());
+            more.addEventListener('click', () => { visibleCount += 100; paint(); });
+            list.appendChild(more);
+        }
+        if (active >= 0) {
+            input.setAttribute('aria-activedescendant', list.id + '-option-' + active);
+            document.getElementById(list.id + '-option-' + active)?.scrollIntoView({ block: 'nearest' });
+        } else {
+            input.removeAttribute('aria-activedescendant');
+        }
+    }
+    function open(query) {
+        if (dcOpenItemPicker && dcOpenItemPicker !== picker) dcOpenItemPicker.close();
+        dcOpenItemPicker = picker;
+        const needle = query.trim().toLocaleLowerCase();
+        matches = dcItemChoices.filter((choice) => choice.searchName.includes(needle));
+        visibleCount = 100;
+        active = -1;
+        paint();
+        list.hidden = false;
+        input.setAttribute('aria-expanded', 'true');
+    }
+    input.addEventListener('focus', () => open(sel.value ? '' : input.value));
+    input.addEventListener('click', () => { if (list.hidden) open(sel.value ? '' : input.value); });
+    input.addEventListener('input', () => {
+        // Text alone is never an item ID; clear stale selection before filtering.
+        sel.value = '';
+        sel.dispatchEvent(new Event('change'));
+        open(input.value);
+    });
+    input.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') { e.preventDefault(); close(); return; }
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            if (!list.hidden && active >= 0) choose(matches[active].item);
+            return;
+        }
+        if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
+        e.preventDefault();
+        if (list.hidden) open(sel.value ? '' : input.value);
+        const enabled = matches.map(({ item }, index) => dcAvailableStock(item) > 0 ? index : -1).filter((index) => index >= 0);
+        if (!enabled.length) return;
+        const current = enabled.indexOf(active);
+        const next = current < 0 ? 0 : Math.max(0, Math.min(enabled.length - 1, current + (e.key === 'ArrowDown' ? 1 : -1)));
+        active = enabled[next];
+        if (active >= visibleCount) visibleCount = Math.ceil((active + 1) / 100) * 100;
+        paint();
+    });
+    container.addEventListener('focusout', (e) => { if (!container.contains(e.relatedTarget)) close(); });
+    return picker;
+}
+
+// One listener for all rows; removing a row does not leave document handlers behind.
+document.addEventListener('pointerdown', (e) => {
+    if (dcOpenItemPicker && !dcOpenItemPicker.container.contains(e.target)) dcOpenItemPicker.close();
+});
+
 function addItemRow() {
     dcRowCounter++;
 
     const row = document.createElement('div');
     row.className = 'dc-item-row';
 
-    // Item select — "Name — 12" for items with stock (listed first), and
-    // "Name — Out of stock" for the rest, greyed out and not selectable,
-    // since the server would refuse to dispatch them anyway.
-    const sel = document.createElement('select');
-    sel.className = 'dc-item-select form-control';
-    const placeholder = document.createElement('option');
-    placeholder.value       = '';
-    placeholder.textContent = '— Select item —';
-    sel.appendChild(placeholder);
-
-    const byName  = (a, b) => String(a.name || '').localeCompare(String(b.name || ''));
-    const inStock = dcItems.filter((item) => dcAvailableStock(item) > 0).sort(byName);
-    const noStock = dcItems.filter((item) => dcAvailableStock(item) <= 0).sort(byName);
-
-    inStock.forEach((item) => {
-        const opt = document.createElement('option');
-        opt.value = item.id;
-        // textContent never parses HTML, so the name is set as-is (escaping
-        // it here would show "&amp;" literally for a name containing "&").
-        opt.textContent = `${item.name} — ${dcAvailableStock(item)}`;
-        sel.appendChild(opt);
-    });
-
-    if (inStock.length && noStock.length) {
-        const divider = document.createElement('option');
-        divider.disabled    = true;
-        divider.textContent = '──────────';
-        sel.appendChild(divider);
-    }
-
-    noStock.forEach((item) => {
-        const opt = document.createElement('option');
-        opt.value       = item.id;
-        opt.disabled    = true;
-        opt.textContent = `${item.name} — Out of stock`;
-        sel.appendChild(opt);
-    });
+    // Keep the original payload selector/value contract; only its UI changes.
+    const sel = document.createElement('input');
+    sel.type = 'hidden';
+    sel.className = 'dc-item-select';
+    const picker = dcBuildItemPicker(sel, dcRowCounter);
 
     // Quantity input, with the selected item's available stock beneath it.
     // Wrapped in one element so the row keeps the shared 3-column grid
@@ -452,10 +597,11 @@ function addItemRow() {
     rem.textContent = 'Remove';
     rem.addEventListener('click', () => {
         if (document.querySelectorAll('.dc-item-row').length <= 1) return;
+        picker.close();
         row.remove();
     });
 
-    row.appendChild(sel);
+    row.appendChild(picker.container);
     row.appendChild(qtyWrap);
     row.appendChild(rem);
 
@@ -571,7 +717,7 @@ document.getElementById('dc-form').addEventListener('submit', async (e) => {
     // DispatchController::store()) so the obvious case doesn't need a round
     // trip; the server rule is still the one that decides.
     if (!roomId) {
-        dcShowError('Please select the Room / Lab this dispatch is going to.');
+        dcShowError('Please select the Location this dispatch is going to.');
         return;
     }
 

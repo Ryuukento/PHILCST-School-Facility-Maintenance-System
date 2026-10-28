@@ -41,8 +41,8 @@ $_ddRole = strtolower(trim((string)($_ddUser['role'] ?? '')));
 $canApprove = ($_ddRole === 'super_admin');
 $canAssign  = ($_ddRole === 'maintenance_admin');
 $canRelease = in_array($_ddRole, ['maintenance_admin', 'maintenance_staff'], true);
-// Cancel keeps its pre-existing audience (Administrator + Head Maintenance).
-$canCancel  = in_array($_ddRole, ['super_admin', 'maintenance_admin'], true);
+// Cancellation is Administrator-only; eligibility is supplied by the API.
+$canCancel  = ($_ddRole === 'super_admin');
 // Any action section at all — used only to decide whether to render the
 // container that holds the buttons.
 $canAct     = $canApprove || $canAssign || $canRelease || $canCancel;
@@ -418,11 +418,40 @@ include __DIR__ . '/../includes/header.php';
    ============================================================ */
 .dispatch-detail-page .dd-release-modal-content {
     max-width: 640px;
+    max-height: 90vh;
+    max-height: 90dvh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    box-sizing: border-box;
+}
+
+.dispatch-detail-page .dd-release-modal-content .modal-header,
+.dispatch-detail-page .dd-release-modal-content .modal-footer {
+    flex: 0 0 auto;
+}
+
+.dispatch-detail-page .dd-release-modal-content .modal-footer {
+    flex-wrap: wrap;
 }
 
 .dispatch-detail-page .dd-release-modal-content .modal-body {
-    max-height: min(70vh, 640px);
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
+    max-height: none;
+    /* Short-screen fallback; the asset list normally handles its own scrolling. */
     overflow-y: auto;
+}
+
+.dispatch-detail-page .dd-release-modal-content .modal-body > :not(.dd-asset-lines) {
+    flex-shrink: 0;
+}
+
+.dispatch-detail-page #dd-release-remarks {
+    min-height: 56px;
+    max-height: 120px;
 }
 
 .dispatch-detail-page .dd-asset-intro {
@@ -436,9 +465,25 @@ include __DIR__ . '/../includes/header.php';
     flex-direction: column;
     gap: 10px;
     margin-bottom: 16px;
+    flex: 0 1 auto;
+    min-height: 80px;
+    max-height: min(42vh, 360px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-gutter: stable;
+    scroll-padding: 6px;
+    padding: 4px;
+}
+
+.dispatch-detail-page .dd-asset-lines:focus-visible {
+    outline: 2px solid var(--primary, #7c3aed);
+    outline-offset: -2px;
 }
 
 .dispatch-detail-page .dd-asset-line {
+    flex-shrink: 0;
+    min-width: 0;
+    overflow-wrap: anywhere;
     border: 1px solid var(--border, #e5e7eb);
     border-radius: var(--radius-md, 10px);
     background: var(--card-color, #ffffff);
@@ -501,7 +546,7 @@ include __DIR__ . '/../includes/header.php';
 
 .dispatch-detail-page .dd-asset-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(min(220px, 100%), 1fr));
     gap: 10px;
 }
 
@@ -577,7 +622,7 @@ include __DIR__ . '/../includes/header.php';
         <div class="card-header">
             <h3 style="margin:0;">Release Assignment</h3>
             <p class="text-muted mb-0" style="font-size:13px;margin-top:2px;">
-                Who is responsible for physically releasing this dispatch's inventory, and which Head Maintenance assigned them.
+                Who will release this dispatch.
             </p>
         </div>
         <div class="card-body">
@@ -592,7 +637,7 @@ include __DIR__ . '/../includes/header.php';
         <div class="card-header">
             <h3 style="margin:0;">Tracked Assets</h3>
             <p class="text-muted mb-0" style="font-size:13px;margin-top:2px;">
-                Units from this dispatch that have their own Asset Code. Use these codes when reporting a problem with a specific unit.
+                Units with their own Asset Code.
             </p>
         </div>
         <div class="card-body">
@@ -607,8 +652,7 @@ include __DIR__ . '/../includes/header.php';
         <div class="card-header">
             <h3 style="margin:0;">Dispatch Timeline</h3>
             <p class="text-muted mb-0" style="font-size:13px;margin-top:2px;">
-                This dispatch record's own release workflow — separate from any earlier
-                Need Change / Replacement Request approval on the originating report.
+                This dispatch's release workflow.
             </p>
         </div>
         <div class="card-body">
@@ -659,7 +703,11 @@ include __DIR__ . '/../includes/header.php';
                 Dispatch Item
             </button>
             <?php endif; ?>
-            <!-- Cancel button removed - dispatch workflow no longer supports cancellation -->
+            <?php if ($canCancel): ?>
+            <button type="button" id="dd-cancel-btn" class="btn btn-danger" style="display:none;">
+                Cancel Dispatch
+            </button>
+            <?php endif; ?>
             <!-- TASK 13 — the shared inline error slot that used to live here
                  was only ever written to by the old modal-less Release action.
                  Every action now runs through its own dialog and reports
@@ -669,7 +717,26 @@ include __DIR__ . '/../includes/header.php';
     </div>
     <?php endif; ?>
 
-    <!-- Cancel button and modal removed - no longer part of dispatch workflow -->
+    <?php if ($canCancel): ?>
+    <div id="dd-cancel-modal" class="modal" style="display:none;" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="dd-cancel-modal-title">
+        <div class="modal-content" style="max-width:560px;">
+            <div class="modal-header">
+                <h3 class="modal-title" id="dd-cancel-modal-title">Cancel Dispatch</h3>
+                <button type="button" class="modal-close" id="dd-cancel-modal-close" aria-label="Close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p style="margin-bottom:12px;color:#374151;">Confirm cancellation of this dispatch. This action cannot be undone.</p>
+                <label for="dd-cancel-reason" style="font-weight:600;display:block;margin-bottom:6px;">Reason <span style="color:#ef4444;">*</span></label>
+                <textarea id="dd-cancel-reason" rows="3" class="form-control" required minlength="3" maxlength="500" placeholder="Cancellation reason..." style="width:100%;resize:vertical;"></textarea>
+                <p id="dd-cancel-error" role="alert" style="color:#ef4444;font-size:13px;margin-top:6px;display:none;"></p>
+            </div>
+            <div class="modal-footer" style="display:flex;gap:8px;justify-content:flex-end;">
+                <button type="button" class="btn btn-secondary" id="dd-cancel-modal-dismiss">Keep Dispatch</button>
+                <button type="button" class="btn btn-danger" id="dd-cancel-confirm-btn">Confirm Cancellation</button>
+            </div>
+        </div>
+    </div>
+    <?php endif; ?>
 
     <?php if ($canApprove): ?>
     <!-- TASK 13 — Approval Review Dialog.
@@ -715,7 +782,7 @@ include __DIR__ . '/../includes/header.php';
             <div class="modal-body">
                 <p style="margin-bottom:12px;color:#374151;">Please provide a reason for rejecting this dispatch. This action cannot be undone.</p>
                 <label for="dd-reject-reason" style="font-weight:600;display:block;margin-bottom:6px;">Reason <span style="color:#ef4444;">*</span></label>
-                <textarea id="dd-reject-reason" rows="3" class="form-control" placeholder="Enter rejection reason..." style="width:100%;resize:vertical;"></textarea>
+                <textarea id="dd-reject-reason" rows="3" class="form-control" placeholder="Rejection reason..." style="width:100%;resize:vertical;"></textarea>
                 <p id="dd-reject-error" style="color:#ef4444;font-size:13px;margin-top:6px;display:none;"></p>
             </div>
             <div class="modal-footer" style="display:flex;gap:8px;justify-content:flex-end;">
@@ -793,9 +860,9 @@ include __DIR__ . '/../includes/header.php';
                     <strong>Track as Assets</strong> — use asset tracking when each deployed unit needs its own asset identity for maintenance reporting.
                     Leave it off for consumables and supplies.
                 </p>
-                <div id="dd-release-assets" class="dd-asset-lines"></div>
+                <div id="dd-release-assets" class="dd-asset-lines" role="region" aria-label="Asset codes for dispatch items" tabindex="0"></div>
                 <label for="dd-release-remarks" style="font-weight:600;display:block;margin-bottom:6px;">Release Remarks <span style="color:#6b7280;font-weight:400;">(optional)</span></label>
-                <textarea id="dd-release-remarks" rows="3" class="form-control" placeholder="e.g. Handed over at the maintenance office front desk." style="width:100%;resize:vertical;"></textarea>
+                <textarea id="dd-release-remarks" rows="3" class="form-control" placeholder="e.g. Handed over at front desk." style="width:100%;resize:vertical;"></textarea>
                 <p id="dd-release-error" style="color:#ef4444;font-size:13px;margin-top:10px;display:none;"></p>
             </div>
             <div class="modal-footer" style="display:flex;gap:8px;justify-content:flex-end;">
@@ -823,6 +890,7 @@ const DSP_USER_ID = <?php echo (int)($_ddUser['user_id'] ?? $_ddUser['id'] ?? 0)
 // TASK 4 — Approve & Release Workflow: holds the most recently loaded
 // dispatch payload so the action dialogs can read from it.
 let DD_CURRENT_DISPATCH = null;
+let DD_CANCEL_SUBMITTING = false;
 // Primary/Additional hierarchy removal — the Add Personnel dialog's
 // searchable select (the approve dialog is purely informational and has no
 // select of its own).
@@ -1162,11 +1230,11 @@ function renderReleaseAssignment(dispatch) {
 
     // Removal is only ever offered on this page's own card (never in the
     // read-only approval dialog), and only while the server would actually
-    // accept it — mirrors DispatchAuthorizationService::canRemoveDispatchPersonnel()
-    // (maintenance_admin, status pending|approved). Cosmetic only: the server
-    // re-checks this on every POST /remove-personnel.
-    const status = String(dispatch.status || '').toLowerCase();
-    const canRemove = DSP_CAN_ASSIGN && (status === 'pending' || status === 'approved');
+    // accept it — mirrors DispatchAuthorizationService::canRemoveDispatchPersonnel(),
+    // which mirrors canAssignReleasePersonnel(): the dispatch's creator, or a
+    // Head already on ITS roster — not every Head Maintenance account.
+    // Cosmetic only: the server re-checks this on every POST /remove-personnel.
+    const canRemove = ddCanManageRoster(dispatch);
 
     body.innerHTML = ddAssignmentBlock(dispatch, { canRemove });
     body.querySelectorAll('.dd-roster-remove-btn').forEach((btn) => {
@@ -1405,15 +1473,18 @@ function renderDispatchTimeline(dispatch) {
 // Mirrors DispatchAuthorizationService exactly:
 //   Approve / Reject  → Administrator, while status === 'pending'
 //   Add Personnel     → Head Maintenance, while status is 'pending' or
-//                       'approved' (never once released) — mirrors
-//                       canAssignReleasePersonnel()/canRemoveDispatchPersonnel().
+//                       'approved' (never once released), AND only a Head
+//                       who created this dispatch or is already on ITS
+//                       roster (2026-10-28 — see ddCanManageRoster()) —
+//                       mirrors canAssignReleasePersonnel()/
+//                       canRemoveDispatchPersonnel().
 //   Release           → Maintenance Staff, while status === 'approved', AND
 //                       only when this user is ON THE ROSTER. The roster
 //                       membership check is the point of the whole task, so
 //                       it is done here as well as server-side; the server
 //                       check in DispatchAuthorizationService::canReleaseDispatch()
 //                       is the one that actually enforces it.
-//   Cancel            → Administrator / Head Maintenance, pending or approved
+//   Cancel            → Administrator only, with current server eligibility
 // ---------------------------------------------------------------------------
 
 function ddShowButton(id, visible) {
@@ -1423,6 +1494,22 @@ function ddShowButton(id, visible) {
     return visible;
 }
 
+// 2026-10-28 — roster management (Add Personnel / Remove Personnel) is no
+// longer "any Head Maintenance account, system-wide". It mirrors the server
+// check in DispatchAuthorizationService::canAssignReleasePersonnel(): only
+// the Head who created this dispatch, or a Head already on ITS roster, may
+// manage it. The creator carve-out matters because a Head routinely builds a
+// roster out of OTHER people without adding themselves to it, and must still
+// be able to manage (and, if emptied, recover) the roster they built. This
+// is cosmetic only — the server re-checks on every POST.
+function ddCanManageRoster(dispatch) {
+    if (!DSP_CAN_ASSIGN || DSP_USER_ID <= 0) return false;
+    const status = String(dispatch.status || '').toLowerCase();
+    if (status !== 'pending' && status !== 'approved') return false;
+    if (Number(dispatch.requested_by) === DSP_USER_ID) return true;
+    return ddRosterList(dispatch).some((a) => Number(a.personnel_user_id) === DSP_USER_ID);
+}
+
 function ddRenderActionButtons(dispatch) {
     const status     = String(dispatch.status || '').toLowerCase();
     const isOnRoster = DSP_USER_ID > 0 && ddRosterList(dispatch).some((a) => Number(a.personnel_user_id) === DSP_USER_ID);
@@ -1430,9 +1517,9 @@ function ddRenderActionButtons(dispatch) {
     let anyVisible = false;
     anyVisible = ddShowButton('dd-approve-btn',       DSP_CAN_APPROVE && status === 'pending') || anyVisible;
     anyVisible = ddShowButton('dd-reject-btn',        DSP_CAN_APPROVE && status === 'pending') || anyVisible;
-    anyVisible = ddShowButton('dd-add-personnel-btn', DSP_CAN_ASSIGN  && (status === 'pending' || status === 'approved')) || anyVisible;
+    anyVisible = ddShowButton('dd-add-personnel-btn', ddCanManageRoster(dispatch)) || anyVisible;
     anyVisible = ddShowButton('dd-release-btn',       DSP_CAN_RELEASE && status === 'approved' && isOnRoster) || anyVisible;
-    anyVisible = ddShowButton('dd-cancel-btn',        DSP_CAN_CANCEL  && (status === 'pending' || status === 'approved')) || anyVisible;
+    anyVisible = ddShowButton('dd-cancel-btn',        DSP_CAN_CANCEL && dispatch.can_cancel === true) || anyVisible;
 
     const section = document.getElementById('dd-action-section');
     if (section) {
@@ -1445,6 +1532,9 @@ function ddRenderActionButtons(dispatch) {
 // ---------------------------------------------------------------------------
 
 async function loadDispatchDetail() {
+    // Hide stale eligibility until a successful detail response supplies it.
+    ddShowButton('dd-cancel-btn', false);
+    if (DD_CURRENT_DISPATCH) DD_CURRENT_DISPATCH.can_cancel = false;
     if (DSP_ID <= 0) {
         document.getElementById('dd-header-container').innerHTML =
             '<div class="ui-empty-state"><strong>Dispatch not found.</strong><span>No valid ID was provided in the URL.</span></div>';
@@ -1480,6 +1570,7 @@ async function loadDispatchDetail() {
         if (!dispatch) {
             throw new Error('Invalid response: missing dispatch data');
         }
+        dispatch.can_cancel = payload.data?.can_cancel === true;
 
         // TASK 4 — Approve & Release Workflow: keep the last-loaded dispatch
         // around so the Approve & Release dialog can read its Dispatch
@@ -2138,6 +2229,7 @@ async function ddLoadTrackedAssets(dispatch) {
 // ---------------------------------------------------------------------------
 
 function ddOpenCancelModal() {
+    if (!DSP_CAN_CANCEL || DD_CURRENT_DISPATCH?.can_cancel !== true || DD_CANCEL_SUBMITTING) return;
     document.getElementById('dd-cancel-reason').value = '';
     document.getElementById('dd-cancel-error').style.display = 'none';
     ddOpenModal('dd-cancel-modal');
@@ -2149,17 +2241,19 @@ function ddCloseCancelModal() {
 }
 
 async function doCancel() {
+    if (!DSP_CAN_CANCEL || DD_CURRENT_DISPATCH?.can_cancel !== true || DD_CANCEL_SUBMITTING) return;
     const reason  = document.getElementById('dd-cancel-reason').value.trim();
     const errEl   = document.getElementById('dd-cancel-error');
 
-    if (reason.length < 3) {
-        errEl.textContent   = 'Please enter a reason (at least 3 characters).';
+    if (reason.length < 3 || reason.length > 500) {
+        errEl.textContent   = 'Please enter a reason (3–500 characters).';
         errEl.style.display = 'block';
         return;
     }
 
     const confirmBtn      = document.getElementById('dd-cancel-confirm-btn');
     const origText        = confirmBtn.textContent;
+    DD_CANCEL_SUBMITTING  = true;
     confirmBtn.disabled   = true;
     confirmBtn.textContent = 'Cancelling...';
     errEl.style.display   = 'none';
@@ -2181,10 +2275,12 @@ async function doCancel() {
         }
 
         ddCloseCancelModal();
-        loadDispatchDetail();
+        await loadDispatchDetail();
     } catch (err) {
         errEl.textContent       = err.message || 'An error occurred while cancelling.';
         errEl.style.display     = 'block';
+    } finally {
+        DD_CANCEL_SUBMITTING    = false;
         confirmBtn.disabled     = false;
         confirmBtn.textContent  = origText;
     }

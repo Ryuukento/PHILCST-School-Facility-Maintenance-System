@@ -187,3 +187,13 @@ if (!function_exists('public_url')) {
         return ($basePath !== '' ? $basePath : '') . '/' . ltrim((string)$path, '/');
     }
 }
+
+// Native frontend pages read permissions before including the shared header.
+// Only their actual HTTP entrypoints refresh here: never Laravel, CLI tests,
+// or unrelated legacy scripts. Anonymous sessions do not open a connection.
+if (PHP_SAPI !== 'cli' && !defined('LARAVEL_START')) {
+    require_once __DIR__ . '/../../frontend/includes/session-guard.php';
+    if (sfms_native_authorization_entrypoint()) {
+        if (sfms_refresh_native_authorization()) sfms_enforce_forced_setup();
+    }
+}

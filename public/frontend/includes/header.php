@@ -43,7 +43,9 @@ if (!in_array($currentPage, $publicPages) && !isset($_SESSION['user'])) {
 // as far as a database insert and leak a raw SQLSTATE foreign-key error.
 // The actual check lives in session-guard.php so it is implemented exactly
 // once and shared with the pages that render their own standalone layout
-// instead of including this file (edit-report.php, suppliers-manage.php).
+// instead of including this file (edit-report.php). suppliers-manage.php
+// used to be one of these too; as of 2026-10-27 it includes this file like
+// any other page.
 if (!in_array($currentPage, $publicPages)) {
     require_once __DIR__ . '/session-guard.php';
     sfms_reject_stale_session();

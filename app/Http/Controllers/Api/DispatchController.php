@@ -6,11 +6,14 @@ use App\Exceptions\DuplicateDeploymentException;
 use App\Http\Controllers\Controller;
 use App\Models\Dispatch;
 use App\Models\DispatchItem;
+use App\Models\User;
 use App\Services\ActivityLogService;
 use App\Services\DispatchAuthorizationService;
 use App\Services\DispatchService;
 use App\Services\PersonnelDirectoryService;
 use App\Support\ApiResponder;
+use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -389,7 +392,13 @@ class DispatchController extends Controller
         }
 
         $dispatch->load(['items.item', 'department', 'room', 'requestedByUser', 'approvedByUser', 'releasedByUser', 'receiverUser', 'personnelAssignments.personnel', 'report:report_id,title,status,created_by', 'report.creator:user_id,full_name']);
-        return $this->ok('Dispatch retrieved', ['dispatch' => $dispatch]);
+        return $this->ok('Dispatch retrieved', [
+            'dispatch' => $dispatch,
+            'can_cancel' => ($authUser['role'] ?? '') === 'super_admin'
+                && User::query()->whereKey((int) ($authUser['user_id'] ?? 0))
+                    ->where('role', 'super_admin')->where('status', 'active')->exists()
+                && $this->dispatchService->isCancellationEligible($dispatch),
+        ]);
     }
 
     /**
@@ -566,25 +575,31 @@ class DispatchController extends Controller
 
     public function cancel(Request $request, Dispatch $dispatch)
     {
+        $authUser = $this->authUser($request);
+        $actorUserId = (int) ($authUser['user_id'] ?? 0);
+        if (($authUser['role'] ?? '') !== 'super_admin' || $actorUserId <= 0) {
+            return $this->fail('Only the Administrator may cancel dispatches.', 403);
+        }
+
         $validated = $request->validate(['reason' => ['required', 'string', 'min:3', 'max:500']]);
         try {
-            $this->dispatchService->cancelDispatch($dispatch, $validated['reason'], (int)$request->session()->get('user_id'));
+            $this->dispatchService->cancelDispatch($dispatch, $validated['reason'], $actorUserId);
+        } catch (AuthorizationException $e) {
+            return $this->fail($e->getMessage(), 403);
+        } catch (ModelNotFoundException $e) {
+            return $this->fail('Dispatch not found.', 404);
         } catch (\Throwable $e) {
             $code = $e instanceof \Illuminate\Validation\ValidationException ? 400 : 500;
             $message = $e instanceof \Illuminate\Validation\ValidationException
                 ? (collect($e->errors())->flatten()->first() ?: 'Failed to cancel dispatch')
-                : 'Failed to cancel dispatch: ' . $e->getMessage();
+                : 'Failed to cancel dispatch. Please try again.';
+            if ($code === 500) {
+                report($e);
+            }
             return $this->fail($message, $code);
         }
 
-        $this->activityLogService->log([
-            'action' => 'CANCEL_DISPATCH',
-            'module' => 'dispatch',
-            'entity_type' => 'dispatch',
-            'entity_id' => $dispatch->id,
-            'details' => 'Cancelled dispatch ' . $dispatch->dispatch_code . ': ' . $validated['reason'] . '.',
-        ], $request);
-
+        // The service records the authoritative audit inside its transaction.
         return $this->ok('Dispatch cancelled successfully');
     }
 
@@ -707,12 +722,9 @@ class DispatchController extends Controller
             return $this->fail('This item does not belong to this dispatch.', 404);
         }
 
-        $validated = $request->validate([
-            'dispatched_by' => ['required', 'integer', 'exists:users,user_id'],
-        ]);
-
         $authUser = $this->authUser($request);
-        $actorUserId = (int) $request->session()->get('user_id');
+        // Ignore client-supplied dispatched_by, including legacy payloads.
+        $actorUserId = (int) ($authUser['user_id'] ?? 0);
 
         // Only Maintenance Staff (maintenance_staff) can dispatch items
         if ($authUser['role'] !== 'maintenance_staff') {
@@ -730,24 +742,27 @@ class DispatchController extends Controller
             return $this->fail(collect($e->errors())->flatten()->first() ?: 'Invalid asset details.', 400);
         }
 
-        if ($assets !== [] && !$this->dispatchAuthorizationService->canReleaseDispatch($authUser, $dispatch)) {
-            return $this->fail('Only the assigned release personnel may register assets for this dispatch.', 403);
-        }
-
         try {
             // One transaction: if completing the dispatch fails (insufficient
             // stock, invalid asset code), the item is not left marked as
             // dispatched on an unreleased dispatch.
-            DB::transaction(function () use ($item, $dispatch, $validated, $actorUserId, $assets): void {
+            DB::transaction(function () use ($item, $dispatch, $authUser, $actorUserId, $assets): void {
+                // Share the parent lock with release and roster removal. Check
+                // membership before marking any line, with or without assets.
+                $locked = Dispatch::query()->whereKey($dispatch->id)->lockForUpdate()->firstOrFail();
+                if (!$this->dispatchAuthorizationService->canReleaseDispatch($authUser, $locked)) {
+                    throw new AuthorizationException('Only the assigned release personnel may dispatch items for this dispatch.');
+                }
+
                 $this->dispatchService->dispatchItem(
                     $item,
-                    (int) $validated['dispatched_by'],
+                    $actorUserId,
                     $actorUserId
                 );
 
                 $completed = $this->dispatchService->completeDispatchIfAllItemsDispatched(
-                    $dispatch,
-                    (int) $validated['dispatched_by'],
+                    $locked,
+                    $actorUserId,
                     $actorUserId,
                     $assets
                 );
@@ -763,6 +778,8 @@ class DispatchController extends Controller
             });
 
             return $this->ok('Item dispatched successfully');
+        } catch (AuthorizationException $e) {
+            return $this->fail($e->getMessage(), 403);
         } catch (ValidationException $e) {
             return $this->fail(collect($e->errors())->flatten()->first() ?: 'Unable to dispatch item', 400);
         } catch (DuplicateDeploymentException $e) {

@@ -12,6 +12,7 @@ use App\Services\ReportArchiveService;
 use App\Services\ReportAuthorizationService;
 use App\Support\ApiResponder;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 class DamageReportController extends Controller
@@ -187,22 +188,38 @@ class DamageReportController extends Controller
         }
 
         try {
-            $updated = $this->damageService->updateStatus($damageReport, $validated, $authUser);
-            $updated->load([
-                'item:id,name,brand,model',
-                'room:id,name',
-                'department:department_id,name',
-                'replacementItem:id,name,brand,model',
-            ]);
+            // The service transaction nests inside this one. Its writes and
+            // the controller audit must commit together, retaining the same
+            // parent -> Damage Report -> inventory locking order.
+            $updated = DB::transaction(function () use ($damageReport, $validated, $authUser, $request): DamageReport {
+                $updated = $this->damageService->updateStatus($damageReport, $validated, $authUser);
+                $updated->load([
+                    'item:id,name,brand,model',
+                    'room:id,name',
+                    'department:department_id,name',
+                    'replacementItem:id,name,brand,model',
+                ]);
 
-            $this->activityLogService->log([
-                'action' => 'UPDATE_DAMAGE_REPORT_STATUS',
-                'module' => 'damage_reports',
-                'entity_type' => 'damage_report',
-                'entity_id' => $damageReport->id,
-                'details' => 'Updated damage report ' . $damageReport->damage_report_code
-                    . ' status to ' . $validated['status'] . '.',
-            ], $request);
+                // R5 returns a freshly locked, unchanged model for a matching
+                // replacement retry. Do not rely on a time-window audit guard.
+                if ($validated['status'] !== 'replaced' || $updated->wasChanged()) {
+                    $audit = $this->activityLogService->log([
+                        'user_id' => (int) $authUser['user_id'],
+                        'user_role' => $authUser['role'] ?? null,
+                        'action' => 'UPDATE_DAMAGE_REPORT_STATUS',
+                        'module' => 'damage_reports',
+                        'entity_type' => 'damage_report',
+                        'entity_id' => $updated->id,
+                        'details' => 'Updated damage report ' . $updated->damage_report_code
+                            . ' status to ' . $validated['status'] . '.',
+                    ], $request);
+                    if ($audit === null || !$audit->exists) {
+                        throw new \RuntimeException('Damage report status audit could not be saved.');
+                    }
+                }
+
+                return $updated;
+            });
 
             return $this->ok('Damage report updated successfully', [
                 'report' => $updated,

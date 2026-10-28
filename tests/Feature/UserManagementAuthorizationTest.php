@@ -1316,9 +1316,6 @@ class UserManagementAuthorizationTest extends TestCase
         // 2026_09_08_000100_add_out_of_band_user_and_report_columns, and the
         // shared blueprint had simply drifted from it. Adding it a second
         // time here now fails with "duplicate column name: designation".
-        Schema::table('users', function (Blueprint $table): void {
-            $table->boolean('force_profile_update')->default(0);
-        });
 
         // 2026-10-15 — UserController::updateProfile() now also reads
         // users.verified_email (forced-setup save requires it alongside
@@ -1348,17 +1345,11 @@ class UserManagementAuthorizationTest extends TestCase
     }
 
     /**
-     * TASK 53 — the Add New User modal had no protection against creating a
-     * second account with the same Last Name + First Name as an existing
-     * one; the live system had accumulated three near-identical "Manzo,
-     * Kristine ..." accounts this way. UserController::store()/update() now
-     * reject a Last+First match via duplicateNameExists(), matched on the
-     * "Lastname, Firstname" prefix of full_name (the format
-     * users.php::buildFullName() always produces) so a differing middle
-     * initial or trailing name (e.g. "Kristine" vs "Kristine Joy") still
-     * collides, but a genuinely different first name does not.
+     * UM-04 explicitly compares the complete name. Additional given names
+     * identify a different key; the earlier first-token-only rejection is
+     * intentionally replaced by the approved policy.
      */
-    public function test_store_rejects_a_duplicate_last_and_first_name(): void
+    public function test_store_distinguishes_additional_given_names(): void
     {
         $adminId = $this->seedUser(['role' => 'super_admin']);
         $this->seedUser(['role' => 'maintenance_staff', 'full_name' => 'Manzo, Kristine D.']);
@@ -1371,8 +1362,56 @@ class UserManagementAuthorizationTest extends TestCase
                 'role'      => 'super_admin',
             ]));
 
-        $response->assertStatus(422);
-        $this->assertDatabaseMissingUser('kristinejoy');
+        $response->assertCreated();
+        $this->assertSame('Manzo, Kristine Joy D.', DB::table('users')->where('username', 'kristinejoy')->value('full_name'));
+    }
+
+    /**
+     * UM-04 prohibits sorting surname/given-name components: swapping them
+     * must not automatically conflate two complete names.
+     */
+    public function test_store_does_not_sort_last_and_first_components(): void
+    {
+        $adminId = $this->seedUser(['role' => 'super_admin']);
+        $this->seedUser(['role' => 'maintenance_staff', 'full_name' => 'Manzo, Kristine D.']);
+
+        $response = $this
+            ->actingAsSessionUser($adminId, 'super_admin')
+            ->postJson('/api/users', $this->registerUserPayload([
+                'full_name' => 'Kristine, Manzo D.',
+                'username'  => 'swappedname',
+                'role'      => 'super_admin',
+            ]));
+
+        $response->assertCreated();
+        $this->assertSame('Kristine, Manzo D.', DB::table('users')->where('username', 'swappedname')->value('full_name'));
+    }
+
+    public function test_update_does_not_conflate_swapped_name_components(): void
+    {
+        $adminId = $this->seedUser(['role' => 'super_admin']);
+        $departmentId = $this->seedDepartment('Electrical');
+        $this->seedUser(['role' => 'maintenance_staff', 'full_name' => 'Manzo, Kristine D.']);
+        $targetId = $this->seedUser([
+            'role'          => 'maintenance_staff',
+            'department_id' => $departmentId,
+            'full_name'     => 'Cruz, Juan',
+        ]);
+
+        $response = $this
+            ->actingAsSessionUser($adminId, 'super_admin')
+            ->patchJson("/api/users/{$targetId}", [
+                'full_name'     => 'Kristine, Manzo D.',
+                'role'          => 'maintenance_staff',
+                'department_id' => $departmentId,
+            ]);
+
+        $response->assertOk();
+        $this->assertSame(
+            'Kristine, Manzo D.',
+            DB::table('users')->where('user_id', $targetId)->value('full_name'),
+            'A distinct complete name is allowed under UM-04.'
+        );
     }
 
     public function test_store_allows_a_different_first_name_with_the_same_last_name(): void

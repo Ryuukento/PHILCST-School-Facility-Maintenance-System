@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Department;
 use App\Models\User;
+use App\Support\UserNamePolicy;
 use App\Services\ActivityLogService;
 use App\Services\RoleNormalizerService;
 use App\Support\ApiResponder;
@@ -112,6 +113,7 @@ class AuthController extends Controller
             // account could log in and navigate freely despite the flag
             // being 1 in the database.
             'force_profile_update' => (bool) $user->force_profile_update,
+            'auth_version'         => (int) $user->auth_version,
         ];
 
         $request->session()->put('auth_user', $sessionUser);
@@ -157,13 +159,17 @@ class AuthController extends Controller
         // identifier anymore, but it is still a real, independent user
         // attribute (contact info; see class doc + forgotPasswordRequest()
         // below), so it is deliberately NOT removed here.
-        $validator = Validator::make($request->all(), [
-            'full_name' => ['required', 'string', 'max:255', "regex:/^(?=.*\\p{L})[\\p{L} .'-]+$/u"],
+        $registration = $request->all();
+        if (isset($registration['full_name']) && is_string($registration['full_name'])) {
+            $registration['full_name'] = UserNamePolicy::normalize($registration['full_name']);
+        }
+        $validator = Validator::make($registration, [
+            'full_name' => UserNamePolicy::rules(),
             'username' => ['required', 'string', 'min:3', 'max:50', 'unique:users,username'],
             'email' => ['required', 'email', 'max:255', 'unique:users,email'],
             'password' => ['required', 'string', 'min:8'],
         ], [
-            'full_name.regex' => 'Name must contain only letters, spaces, apostrophes, and hyphens (no numbers).',
+            'full_name.regex' => 'Name must contain letters and supported name punctuation (no numbers).',
         ]);
 
         if ($validator->fails()) {
@@ -173,6 +179,8 @@ class AuthController extends Controller
         }
 
         $validated = $validator->validated();
+
+        UserNamePolicy::assertAvailable($validated['full_name']);
 
         $departmentId = Department::query()
             ->where('status', 'active')
