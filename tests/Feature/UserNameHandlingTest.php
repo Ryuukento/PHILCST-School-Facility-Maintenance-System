@@ -364,7 +364,7 @@ class UserNameHandlingTest extends TestCase
             $id = $this->seedUser(['full_name' => $name, 'role' => 'maintenance_staff', 'department_id' => $this->department]);
             $this->seedUser(['full_name' => $name, 'status' => 'inactive']);
             $this->edit($id, $name, ['designation' => 'Updated designation'])->assertOk();
-            $this->profile($id, ['full_name' => $name, 'phone' => '09171234567'])->assertOk();
+            $this->profile($id, ['full_name' => $name, 'phone' => sprintf('0917123%04d', $id)])->assertOk();
             $this->assertSame($name, DB::table('users')->where('user_id', $id)->value('full_name'));
             $this->assertSame('Updated designation', DB::table('users')->where('user_id', $id)->value('designation'));
         }

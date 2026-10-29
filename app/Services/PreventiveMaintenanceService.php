@@ -104,12 +104,24 @@ class PreventiveMaintenanceService
             }
         }
 
-        $tasks = PreventiveMaintenanceTask::query()->whereIn('id', array_unique(array_map('intval', $taskIds)))->get();
-        foreach ($tasks as $task) {
-            $this->updateTask($task, ['assigned_user_id' => $assigneeId], $actorUserId);
-        }
+        return DB::transaction(function () use ($taskIds, $assigneeId, $actorUserId): int {
+            $tasks = PreventiveMaintenanceTask::query()->whereIn('id', array_unique(array_map('intval', $taskIds)))
+                ->orderBy('id')->lockForUpdate()->get();
+            foreach ($tasks as $task) {
+                $this->assertTaskActive($task);
+            }
+            foreach ($tasks as $task) {
+                $this->updateTask($task, ['assigned_user_id' => $assigneeId], $actorUserId);
+            }
+            return $tasks->count();
+        });
+    }
 
-        return $tasks->count();
+    private function assertTaskActive(PreventiveMaintenanceTask $task): void
+    {
+        if (!$task->is_active || $task->trashed()) {
+            throw ValidationException::withMessages(['is_active' => 'Archived maintenance plans are read-only. Unarchive the plan first.']);
+        }
     }
 
     /**
@@ -274,6 +286,7 @@ class PreventiveMaintenanceService
             }
 
             $previousAssignee = $locked->assigned_user_id !== null ? (int) $locked->assigned_user_id : null;
+            $this->assertTaskActive($locked);
 
             // 'category'/'title'/'frequency' are simple overwrite-if-present
             // fields. The location/assignment fields below are nullable by
@@ -341,23 +354,27 @@ class PreventiveMaintenanceService
      */
     public function setActive(PreventiveMaintenanceTask $task, bool $active, ?int $actorUserId = null): PreventiveMaintenanceTask
     {
-        $task->update([
-            'is_active' => $active,
-            'updated_by' => $actorUserId,
-        ]);
-
-        if ($actorUserId) {
-            $this->activityLogService->logFromSession([
-                'user_id' => $actorUserId,
-                'action' => $active ? 'REACTIVATE_PREVENTIVE_MAINTENANCE_TASK' : 'ARCHIVE_PREVENTIVE_MAINTENANCE_TASK',
-                'module' => 'preventive_maintenance',
-                'entity_type' => 'preventive_maintenance_task',
-                'entity_id' => $task->id,
-                'details' => ($active ? 'Reactivated' : 'Archived') . ' preventive maintenance task "' . $task->title . '".',
+        return DB::transaction(function () use ($task, $active, $actorUserId): PreventiveMaintenanceTask {
+            $task = PreventiveMaintenanceTask::query()->whereKey($task->id)->lockForUpdate()->firstOrFail();
+            if ($task->is_active === $active) return $task->fresh();
+            $task->update([
+                'is_active' => $active,
+                'updated_by' => $actorUserId,
             ]);
-        }
 
-        return $task->fresh();
+            if ($actorUserId) {
+                $this->activityLogService->logFromSession([
+                    'user_id' => $actorUserId,
+                    'action' => $active ? 'REACTIVATE_PREVENTIVE_MAINTENANCE_TASK' : 'ARCHIVE_PREVENTIVE_MAINTENANCE_TASK',
+                    'module' => 'preventive_maintenance',
+                    'entity_type' => 'preventive_maintenance_task',
+                    'entity_id' => $task->id,
+                    'details' => ($active ? 'Reactivated' : 'Archived') . ' preventive maintenance task "' . $task->title . '".',
+                ]);
+            }
+
+            return $task->fresh();
+        });
     }
 
     /**
@@ -380,6 +397,7 @@ class PreventiveMaintenanceService
             }
 
             $completedDate = Carbon::parse($data['completed_date'] ?? Carbon::today()->toDateString());
+            $this->assertTaskActive($locked);
             $nextDue = !empty($locked->scheduled_months)
                 ? $this->calculateNextDueDateFromMonths($locked->scheduled_months, $completedDate, false)
                 : $this->calculateNextDueDate($locked->frequency, $completedDate);
@@ -459,6 +477,10 @@ class PreventiveMaintenanceService
     public function createRepairReport(PreventiveMaintenanceHistory $history, array $data, array $authUser): MaintenanceReport
     {
         return DB::transaction(function () use ($history, $data, $authUser): MaintenanceReport {
+            // Use the same parent-first order as completion and archive/reactivate.
+            $task = PreventiveMaintenanceTask::query()->withTrashed()
+                ->whereKey($history->preventive_maintenance_task_id)->lockForUpdate()->firstOrFail();
+            $this->assertTaskActive($task);
             $locked = PreventiveMaintenanceHistory::query()->whereKey($history->id)->lockForUpdate()->first();
             if (!$locked) {
                 throw ValidationException::withMessages(['id' => 'Inspection record not found.']);
@@ -474,7 +496,6 @@ class PreventiveMaintenanceService
                 ]);
             }
 
-            $task = PreventiveMaintenanceTask::query()->withTrashed()->findOrFail($locked->preventive_maintenance_task_id);
             [$problemType, $problemTypeOther] = $this->resolveReportProblemType($task, $data['problem_type'] ?? null);
             $location = $task->location_label ?: null;
             $completedOn = $locked->completed_date instanceof Carbon

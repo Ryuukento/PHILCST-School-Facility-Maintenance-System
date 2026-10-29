@@ -133,6 +133,36 @@ include __DIR__ . '/../includes/header.php';
     </div>
 </main>
 
+<style>
+#replacement-disposal-modal[hidden] { display: none !important; }
+#replacement-disposal-modal { position: fixed; inset: 0; z-index: 3000; display: flex; align-items: center; justify-content: center; padding: 16px; background: rgba(15, 23, 42, .45); }
+#replacement-disposal-modal .replacement-disposal-dialog { width: 100%; max-width: 480px; max-height: 90vh; overflow-y: auto; border: 1px solid #d7c6f2; border-radius: 16px; background: #fff; color: #1e293b; box-shadow: 0 20px 60px rgba(15, 23, 42, .2); }
+#replacement-disposal-modal .replacement-disposal-header, #replacement-disposal-modal .replacement-disposal-actions { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 18px 22px; }
+#replacement-disposal-modal .replacement-disposal-header { border-bottom: 1px solid #ede9fe; }
+#replacement-disposal-modal h2 { margin: 0; font-size: 18px; color: #6d28d9; }
+#replacement-disposal-modal .replacement-disposal-body { padding: 18px 22px; }
+#replacement-disposal-modal textarea { width: 100%; max-width: 100%; resize: vertical; }
+#replacement-disposal-modal .replacement-disposal-actions { justify-content: flex-end; flex-wrap: wrap; border-top: 1px solid #ede9fe; }
+#replacement-disposal-modal button:focus-visible, #replacement-disposal-modal textarea:focus-visible { outline: 2px solid #7c3aed; outline-offset: 3px; }
+</style>
+<div id="replacement-disposal-modal" hidden role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="replacement-disposal-title" aria-describedby="replacement-disposal-message">
+    <div class="replacement-disposal-dialog">
+        <div class="replacement-disposal-header">
+            <h2 id="replacement-disposal-title">Confirm Disposal</h2>
+            <button type="button" id="replacement-disposal-close" class="btn btn-secondary" aria-label="Close disposal confirmation">&times;</button>
+        </div>
+        <div class="replacement-disposal-body">
+            <p id="replacement-disposal-message">Mark this old replaced item as disposed? This is recorded permanently in the replacement history.</p>
+            <label for="replacement-disposal-note">Disposal note <span class="text-muted">(optional)</span></label>
+            <textarea id="replacement-disposal-note" class="form-control" rows="3" maxlength="255" placeholder="e.g. turned over to Property Custodian"></textarea>
+        </div>
+        <div class="replacement-disposal-actions">
+            <button type="button" id="replacement-disposal-cancel" class="btn btn-secondary">Cancel</button>
+            <button type="button" id="replacement-disposal-confirm" class="btn btn-primary">Yes, Mark as Disposed</button>
+        </div>
+    </div>
+</div>
+
 <?php include __DIR__ . '/../includes/footer.php'; ?>
 
 <script>
@@ -346,35 +376,81 @@ function renderReplacementCards(records) {
     bindReplacementDisposeButtons();
 }
 
-// DISPOSAL ARCHIVE — confirms the physical disposal of the old, replaced
-// item. Optional note is collected via the shared browser-dialog
-// replacement (UI.systemPrompt if available; falls back to window.prompt so
-// this page still works standalone). Re-fetches the full list afterward so
-// the card moves from "For Disposal" into the "Disposed (Archived)" bucket
-// using the server's own re-derived tracking_status, not a client-side guess.
+const replacementDisposalsInProgress = new Set();
+let replacementDisposalPromptOpen = false;
+
+// null means cancellation. An empty string means explicit confirmation with no note.
+function requestReplacementDisposalNote() {
+    if (replacementDisposalPromptOpen) return Promise.resolve(null);
+    const modal = document.getElementById('replacement-disposal-modal');
+    const note = document.getElementById('replacement-disposal-note');
+    const cancel = document.getElementById('replacement-disposal-cancel');
+    const close = document.getElementById('replacement-disposal-close');
+    const confirm = document.getElementById('replacement-disposal-confirm');
+    replacementDisposalPromptOpen = true;
+    note.value = '';
+    modal.hidden = false;
+    modal.setAttribute('aria-hidden', 'false');
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    return new Promise(resolve => {
+        let settled = false;
+        const finish = value => {
+            if (settled) return;
+            settled = true;
+            modal.hidden = true;
+            modal.setAttribute('aria-hidden', 'true');
+            document.body.style.overflow = previousOverflow;
+            replacementDisposalPromptOpen = false;
+            cancel.removeEventListener('click', onCancel);
+            close.removeEventListener('click', onCancel);
+            confirm.removeEventListener('click', onConfirm);
+            modal.removeEventListener('click', onBackdrop);
+            document.removeEventListener('keydown', onKeyDown, true);
+            resolve(value);
+        };
+        const onCancel = () => finish(null);
+        const onConfirm = () => finish(note.value);
+        const onBackdrop = event => { if (event.target === modal) finish(null); };
+        const onKeyDown = event => {
+            if (event.key === 'Escape') {
+                event.preventDefault();
+                event.stopPropagation();
+                finish(null);
+            } else if (event.key === 'Tab') {
+                const controls = [close, note, cancel, confirm];
+                const first = controls[0], last = controls[controls.length - 1];
+                if (event.shiftKey && document.activeElement === first) {
+                    event.preventDefault(); last.focus();
+                } else if (!event.shiftKey && document.activeElement === last) {
+                    event.preventDefault(); first.focus();
+                }
+            }
+        };
+        cancel.addEventListener('click', onCancel);
+        close.addEventListener('click', onCancel);
+        confirm.addEventListener('click', onConfirm);
+        modal.addEventListener('click', onBackdrop);
+        document.addEventListener('keydown', onKeyDown, true);
+        note.focus();
+    });
+}
+
+// Re-fetch after success; the server remains authoritative for eligibility and status.
 function bindReplacementDisposeButtons() {
     document.querySelectorAll('.replacement-dispose-btn').forEach((btn) => {
         btn.addEventListener('click', async () => {
             const reportId = btn.getAttribute('data-report-id');
-
-            let notes = '';
-            if (window.UI && typeof window.UI.systemPrompt === 'function') {
-                notes = await window.UI.systemPrompt({
-                    title: 'Confirm disposal',
-                    message: 'Mark this old replaced item as disposed? This is recorded permanently in the replacement history.',
-                    placeholder: 'Optional note (e.g. turned over to Property Custodian)',
-                }) || '';
-            } else {
-                notes = window.prompt('Mark this old replaced item as disposed?\nOptional note:') || '';
-            }
-            if (notes === null) {
-                return;
-            }
-
+            if (!CAN_CONFIRM_DISPOSAL || replacementDisposalPromptOpen || btn.disabled || replacementDisposalsInProgress.has(reportId)) return;
+            replacementDisposalsInProgress.add(reportId);
+            const originalLabel = btn.textContent;
             btn.disabled = true;
-            btn.textContent = 'Marking...';
-
+            let succeeded = false;
             try {
+                const notes = await requestReplacementDisposalNote();
+                if (notes === null) return;
+                btn.textContent = 'Marking...';
                 const response = await fetch(`${REPLACEMENT_TRACKING_API_BASE}/${reportId}/dispose`, {
                     method: 'POST',
                     credentials: 'include',
@@ -389,12 +465,18 @@ function bindReplacementDisposeButtons() {
                 if (!response.ok || !data.success) {
                     throw new Error(data.message || 'Failed to mark item as disposed');
                 }
+                succeeded = true;
                 await loadReplacementTracking();
             } catch (error) {
                 console.error('Mark as disposed error:', error);
                 alert(error.message || 'Failed to mark item as disposed');
-                btn.disabled = false;
-                btn.textContent = 'Mark as Disposed';
+            } finally {
+                replacementDisposalsInProgress.delete(reportId);
+                if (!succeeded) {
+                    btn.disabled = false;
+                    btn.textContent = originalLabel;
+                    if (btn.isConnected) btn.focus();
+                }
             }
         });
     });

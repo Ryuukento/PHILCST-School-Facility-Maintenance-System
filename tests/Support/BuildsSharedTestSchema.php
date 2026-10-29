@@ -17,6 +17,10 @@ trait BuildsSharedTestSchema
 {
     protected function createUsersTable(): void
     {
+        if (!app()->environment('testing') || DB::connection()->getDriverName() !== 'sqlite'
+            || DB::connection()->getDatabaseName() !== ':memory:') {
+            throw new \LogicException('User fixtures require isolated in-memory SQLite testing.');
+        }
         Schema::create('users', function (Blueprint $table): void {
             $table->increments('user_id');
             $table->string('full_name');
@@ -48,6 +52,23 @@ trait BuildsSharedTestSchema
             $table->string('designation', 100)->nullable();
             $table->timestamps();
         });
+        // Equivalent test schema only; never execute the deployment migration.
+        Schema::create('user_contact_claims', function (Blueprint $table): void {
+            $table->bigIncrements('id');
+            $table->string('contact_type', 8);
+            $table->string('normalized_value', 255);
+            $table->unsignedInteger('user_id');
+            $table->unique(['contact_type', 'normalized_value'], 'user_contact_claims_value_unique');
+            $table->foreign('user_id')->references('user_id')->on('users')->cascadeOnDelete();
+        });
+        if (!Schema::hasTable('migrations')) {
+            Schema::create('migrations', function (Blueprint $table): void {
+                $table->increments('id');
+                $table->string('migration');
+                $table->integer('batch');
+            });
+        }
+        DB::table('migrations')->insert(['migration' => \App\Support\UserContactPolicy::MIGRATION, 'batch' => 1]);
     }
 
     /**

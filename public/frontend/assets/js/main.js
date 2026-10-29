@@ -50,8 +50,12 @@ const AccessibilityManager = {
     storageKey: 'sfms_settings_font_size',
 
     getSavedFontSize() {
-        const size = localStorage.getItem(this.storageKey);
-        return ['small', 'medium', 'large'].includes(size) ? size : 'medium';
+        try {
+            const size = localStorage.getItem(this.storageKey);
+            return ['small', 'medium', 'large'].includes(size) ? size : 'medium';
+        } catch {
+            return 'medium';
+        }
     },
 
     getScale(size) {
@@ -75,7 +79,7 @@ const AccessibilityManager = {
         root.style.setProperty('--ui-zoom', '1');
 
         if (persist) {
-            localStorage.setItem(this.storageKey, safeSize);
+            try { localStorage.setItem(this.storageKey, safeSize); } catch { /* Storage is optional. */ }
         }
     },
 
@@ -94,8 +98,7 @@ function updateGlobalHeaderKicker() {
 
     const now = new Date();
     const hour = now.getHours();
-    const user = Session.get('user');
-    const userName = (user && (user.full_name || user.username)) ? String(user.full_name || user.username) : 'User';
+    const userName = document.getElementById('header-user-name')?.textContent.trim() || 'User';
 
     let greeting = 'Good evening';
     if (hour < 12) {
@@ -145,13 +148,8 @@ document.addEventListener('DOMContentLoaded', function() {
  * Initialize navigation
  */
 function initializeNavigation() {
-    // Check if user is logged in
-    const user = Session.get('user');
-    
-    if (!user && window.location.pathname !== '/index.php' && !window.location.pathname.includes('login')) {
-        window.location.href = window.SFMS_PUBLIC_URL ? window.SFMS_PUBLIC_URL('/login') : '/login';
-        return;
-    }
+    // Native/Laravel guards authenticate and authorize before rendering the page.
+    // localStorage is only a cache; its absence must not override that decision.
     
     // Set up logout buttons (with confirmation modal)
     const logoutButtons = document.querySelectorAll('[data-logout]');
@@ -169,7 +167,7 @@ function initializeNavigation() {
         } catch (error) {
             // Ignore API failures and fall back to server-side logout.
         } finally {
-            Session.clear();
+            try { Session.clear(); } catch { /* Always reach server-side logout, even if storage is blocked. */ }
             window.location.href = window.SFMS_PUBLIC_URL ? window.SFMS_PUBLIC_URL('/logout') : '/logout';
         }
     }
@@ -198,14 +196,8 @@ function initializeNavigation() {
         });
     }
     
-    // Update user display
-    if (user) {
-        const userNameEl = document.querySelector('[data-user-name]');
-        const userAvatarEl = document.querySelector('[data-user-avatar]');
-        
-        if (userNameEl) userNameEl.textContent = user.full_name;
-        if (userAvatarEl) userAvatarEl.textContent = user.full_name.charAt(0).toUpperCase();
-    }
+    // Keep server-rendered profile and permission display intact instead of
+    // replacing it with potentially stale or malformed cached account data.
 }
 
 /**

@@ -198,10 +198,19 @@ include __DIR__ . '/../includes/header.php';
                         <p class="pm-table-panel__description">Every existing PM plan &mdash; equipment, location, frequency, and current status.</p>
                     </div>
                 </div>
-                <div id="pm-overview-plans-container" class="pm-table-shell pm-table-shell--scroll">
+                <div role="tablist" aria-label="Maintenance plans" style="display:flex;flex-wrap:wrap;gap:8px;padding:12px 16px;">
+                    <button type="button" id="pm-plans-active" role="tab" aria-selected="true" aria-controls="pm-overview-plans-container" class="btn btn-primary">Active Plans</button>
+                    <button type="button" id="pm-plans-archived" role="tab" aria-selected="false" aria-controls="pm-overview-plans-container" class="btn btn-secondary">Archived Plans (…)</button>
+                </div>
+                <div id="pm-overview-plans-container" role="tabpanel" aria-labelledby="pm-plans-active" class="pm-table-shell pm-table-shell--scroll">
                     <div class="ui-empty-state ui-fade-in" aria-live="polite">
                         <strong>Loading maintenance plans...</strong>
                     </div>
+                </div>
+                <div id="pm-archived-pagination" hidden style="padding:12px 16px;">
+                    <button type="button" id="pm-archived-prev" class="btn btn-secondary">Previous</button>
+                    <span id="pm-archived-page" aria-live="polite"></span>
+                    <button type="button" id="pm-archived-next" class="btn btn-secondary">Next</button>
                 </div>
             </div>
         </div>
@@ -547,6 +556,14 @@ let pmActiveTab = 'overview';
 let pmOptions = { categories: [], frequencies: {}, due_soon_days: 14 };
 let pmScheduleRows = [];
 let pmScheduleRowsById = {};
+let pmPlansView = 'active';
+let pmArchivedRows = [];
+let pmArchivedPage = 1;
+let pmArchivedLastPage = 1;
+let pmArchivedRequest = 0;
+let pmArchivedLoading = false;
+let pmArchivedError = '';
+const pmActivationPending = new Set();
 let pmChecklistItems = [];
 let pmChecklistItemsById = {};
 let pmChecklistYear = new Date().getFullYear();
@@ -926,10 +943,18 @@ function pmRenderDueWeek() {
 function pmRenderPlansList() {
     const container = document.getElementById('pm-overview-plans-container');
     if (!container) return;
+    if (pmPlansView === 'archived' && pmArchivedLoading) {
+        container.innerHTML = pmGetLoadingMarkup('Loading archived plans...');
+        return;
+    }
+    if (pmPlansView === 'archived' && pmArchivedError) {
+        container.innerHTML = `<div class="ui-empty-state" role="alert"><strong>${pmEscapeHtml(pmArchivedError)}</strong><span>Select Archived Plans to retry.</span></div>`;
+        return;
+    }
 
-    const rows = pmScheduleRows;
+    const rows = pmPlansView === 'archived' ? pmArchivedRows : pmScheduleRows.filter((row) => row.is_active);
     if (!rows.length) {
-        container.innerHTML = '<div class="ui-empty-state ui-fade-in"><strong>No preventive maintenance tasks found.</strong></div>';
+        container.innerHTML = `<div class="ui-empty-state ui-fade-in"><strong>${pmPlansView === 'archived' ? 'No archived maintenance plans.' : 'No preventive maintenance tasks found.'}</strong></div>`;
         return;
     }
 
@@ -955,6 +980,51 @@ function pmRenderPlansList() {
 
     html += '</tbody></table>';
     container.innerHTML = html;
+}
+
+async function pmLoadArchivedPlans(page = 1) {
+    const request = ++pmArchivedRequest;
+    pmArchivedLoading = true;
+    pmArchivedError = '';
+    if (pmPlansView === 'archived') pmRenderPlansList();
+    try {
+        const { response, data: payload } = await Components.fetchJson(`${PM_API_BASE}?is_active=0&per_page=20&page=${page}`, {
+            credentials: 'same-origin', headers: { Accept: 'application/json' },
+        });
+        if (!response.ok || !payload.success) throw new Error(payload.message || 'Unable to load archived plans.');
+        if (request !== pmArchivedRequest) return;
+        pmArchivedLoading = false;
+        const data = payload.data;
+        pmArchivedRows = Array.isArray(data?.data) ? data.data : [];
+        pmArchivedPage = Number(data.current_page) || 1;
+        pmArchivedLastPage = Number(data.last_page) || 1;
+        document.getElementById('pm-plans-archived').textContent = `Archived Plans (${Number(data.total) || 0})`;
+        if (!pmArchivedRows.length && pmArchivedPage > pmArchivedLastPage) return pmLoadArchivedPlans(pmArchivedLastPage);
+        document.getElementById('pm-archived-page').textContent = `Page ${pmArchivedPage} of ${pmArchivedLastPage}`;
+        document.getElementById('pm-archived-prev').disabled = pmArchivedPage <= 1;
+        document.getElementById('pm-archived-next').disabled = pmArchivedPage >= pmArchivedLastPage;
+        if (pmPlansView === 'archived') pmRenderPlansList();
+    } catch (error) {
+        if (request !== pmArchivedRequest) return;
+        pmArchivedLoading = false;
+        pmArchivedError = error.message || 'Unable to load archived plans.';
+        document.getElementById('pm-plans-archived').textContent = 'Archived Plans (unavailable)';
+        if (pmPlansView === 'archived') pmRenderPlansList();
+    }
+}
+
+function pmSwitchPlansView(view) {
+    pmPlansView = view;
+    for (const key of ['active', 'archived']) {
+        const button = document.getElementById('pm-plans-' + key);
+        button.setAttribute('aria-selected', String(key === view));
+        button.classList.toggle('btn-primary', key === view);
+        button.classList.toggle('btn-secondary', key !== view);
+    }
+    document.getElementById('pm-overview-plans-container').setAttribute('aria-labelledby', 'pm-plans-' + view);
+    document.getElementById('pm-archived-pagination').hidden = view !== 'archived';
+    if (view === 'archived') pmLoadArchivedPlans(1);
+    else pmRenderPlansList();
 }
 
 function pmRenderOverview() {
@@ -994,7 +1064,7 @@ function pmScheduleActionsCell(row, options = {}) {
         html += button('assign', row.assigned_user_id ? 'Reassign' : 'Assign');
     }
 
-    if (canManage) {
+    if (canManage && row.is_active) {
         html += button('edit', 'Edit');
     }
     if (canComplete && row.is_active) {
@@ -1002,7 +1072,7 @@ function pmScheduleActionsCell(row, options = {}) {
     }
 
     if (PM_CAN_ARCHIVE) {
-        html += row.is_active ? button('archive', 'Archive') : button('activate', 'Reactivate');
+        html += row.is_active ? button('archive', 'Archive') : button('activate', 'Unarchive');
     }
 
     return `<div class="pm-actions-cell${options.compact ? ' pm-actions-cell--compact' : ''}">${html}</div>`;
@@ -1187,6 +1257,8 @@ async function pmLoadChecklist() {
         if (!response.ok || !payload.success) throw new Error(payload.message || 'Failed to load the monthly checklist');
 
         const items = Array.isArray(payload.data?.items) ? payload.data.items : [];
+        // The existing checklist endpoint returns active plans only and omits is_active.
+        items.forEach((item) => { item.is_active = true; });
         pmChecklistItems = items;
         pmChecklistItemsById = {};
         items.forEach((it) => { pmChecklistItemsById[it.id] = it; });
@@ -1710,7 +1782,7 @@ function pmHistoryRowMarkup(h) {
             const report = h.maintenance_report || {};
             const status = report.status ? ` · ${pmEscapeHtml(String(report.status).replace(/_/g, ' '))}` : '';
             reportLine = `<a class="pm-report-link" href="<?php echo htmlspecialchars(public_url('/maintenance-report-detail')); ?>?id=${encodeURIComponent(h.maintenance_report_id)}">Repair report #${pmEscapeHtml(h.maintenance_report_id)}${status} &rarr;</a>`;
-        } else if (pmHistoryRow && pmCanCompleteTask(pmHistoryRow)) {
+        } else if (pmHistoryRow?.is_active && pmCanCompleteTask(pmHistoryRow)) {
             reportLine = `<button type="button" class="pm-action-btn pm-action-btn--complete" data-action="create-repair-report" data-history-id="${h.id}">Create repair report</button>`;
         } else {
             reportLine = '<span class="pm-cell-secondary">No repair report raised yet.</span>';
@@ -1926,15 +1998,21 @@ function pmCloseHistoryModal() {
 // ---------------------------------------------------------------------
 
 async function pmToggleActive(row, activate) {
+    if (!PM_CAN_ARCHIVE || pmActivationPending.has(row.id)) return;
+    pmActivationPending.add(row.id);
     const verb = activate ? 'reactivate' : 'archive';
-    const confirmed = await Components.confirm(
-        `Are you sure you want to ${verb} "${row.title}"?`,
-        activate ? 'Reactivate' : 'Archive',
-        'Cancel'
-    );
-    if (!confirmed) return;
-
+    const buttons = Array.from(document.querySelectorAll(`.pm-action-btn[data-id="${Number(row.id)}"]`));
+    buttons.forEach((button) => { button.disabled = true; });
     try {
+        const confirmed = await Components.confirm(
+            activate
+                ? `<h3>Unarchive Maintenance Plan?</h3><p>Are you sure you want to restore "${pmEscapeHtml(row.title)}" to Active Plans?</p>`
+                : `Are you sure you want to archive "${pmEscapeHtml(row.title)}"?`,
+            activate ? 'Yes, Unarchive' : 'Archive',
+            'Cancel', activate ? 'primary' : 'danger'
+        );
+        if (!confirmed) return;
+
         const { response, data: payload } = await Components.fetchJson(`${PM_API_BASE}/${row.id}/${activate ? 'activate' : 'archive'}`, {
             method: 'POST',
             credentials: 'same-origin',
@@ -1943,10 +2021,13 @@ async function pmToggleActive(row, activate) {
         if (!response.ok || !payload.success) throw new Error(payload.message || `Failed to ${verb} task`);
 
         Components.toast(payload.message || `Task ${activate ? 'reactivated' : 'archived'}.`, 'success');
-        pmReloadActiveTab();
-        pmLoadSummary();
+        await Promise.all([pmLoadArchivedPlans(pmArchivedPage), pmLoadScheduleGrid(), pmLoadSummary()]);
+        if (pmActiveTab === 'checklist') pmLoadChecklist();
     } catch (error) {
         pmNotify(error.message || `Unable to ${verb} this task.`);
+    } finally {
+        pmActivationPending.delete(row.id);
+        buttons.forEach((button) => { button.disabled = false; });
     }
 }
 
@@ -2072,6 +2153,11 @@ document.addEventListener('DOMContentLoaded', () => {
     pmLoadDepartmentsFilter();
     pmLoadSummary();
     pmLoadScheduleGrid();
+    pmLoadArchivedPlans();
+    document.getElementById('pm-plans-active').addEventListener('click', () => pmSwitchPlansView('active'));
+    document.getElementById('pm-plans-archived').addEventListener('click', () => pmSwitchPlansView('archived'));
+    document.getElementById('pm-archived-prev').addEventListener('click', () => pmLoadArchivedPlans(Math.max(1, pmArchivedPage - 1)));
+    document.getElementById('pm-archived-next').addEventListener('click', () => pmLoadArchivedPlans(Math.min(pmArchivedLastPage, pmArchivedPage + 1)));
 
     document.getElementById('pm-tab-overview').addEventListener('click', () => pmSwitchTab('overview'));
     document.getElementById('pm-tab-schedule').addEventListener('click', () => pmSwitchTab('schedule'));
@@ -2182,7 +2268,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('pm-overview-plans-container').addEventListener('click', (e) => {
         const btn = e.target.closest('.pm-action-btn');
         if (!btn) return;
-        const row = pmScheduleRowsById[btn.dataset.id];
+        const row = pmPlansView === 'archived' ? pmArchivedRows.find((row) => String(row.id) === btn.dataset.id) : pmScheduleRowsById[btn.dataset.id];
         if (!row) return;
 
         const action = btn.dataset.action;

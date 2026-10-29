@@ -940,15 +940,10 @@ class UserManagementAuthorizationTest extends TestCase
     }
 
     /**
-     * 2026-10-15 — a freshly Administrator-created account must prove it has
-     * a reachable phone (for SMS report alerts) and a reachable email before
-     * force_profile_update is allowed to clear, not just a new password.
-     * Without a verified phone on file, the save must be rejected even
-     * though the password change itself is otherwise valid — and the flag
-     * must still be 1 afterward, i.e. header.php's forced-setup redirect
-     * keeps the account locked to /account.
+     * A database-verified legacy email qualifies without a phone. Mandatory
+     * password change and forced-setup reauthentication still apply.
      */
-    public function test_forced_setup_rejects_profile_save_without_a_verified_phone(): void
+    public function test_forced_setup_accepts_verified_email_without_phone(): void
     {
         $userId = $this->seedUser([
             'username' => 'nophoneyet',
@@ -966,20 +961,22 @@ class UserManagementAuthorizationTest extends TestCase
                 'current_password' => 'TempPass123!',
                 'new_password' => 'PermanentPass123!',
             ])
-            ->assertStatus(422)
-            ->assertJsonPath('success', false);
+            ->assertStatus(200)
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('data.requires_reauthentication', true);
 
         $this->assertSame(
-            1,
+            0,
             (int) DB::table('users')->where('user_id', $userId)->value('force_profile_update')
         );
+        $this->assertSame('nophoneyet@example.com', DB::table('users')->where('user_id', $userId)->value('verified_email'));
+        $this->assertTrue(Hash::check('PermanentPass123!', DB::table('users')->where('user_id', $userId)->value('password')));
     }
 
     /**
-     * Mirror of the phone check above, for the email side of the same new
-     * requirement.
+     * A valid Philippine mobile qualifies without a verified email.
      */
-    public function test_forced_setup_rejects_profile_save_without_a_verified_email(): void
+    public function test_forced_setup_accepts_valid_phone_without_verified_email(): void
     {
         $userId = $this->seedUser([
             'username' => 'noemailyet',
@@ -997,13 +994,16 @@ class UserManagementAuthorizationTest extends TestCase
                 'current_password' => 'TempPass123!',
                 'new_password' => 'PermanentPass123!',
             ])
-            ->assertStatus(422)
-            ->assertJsonPath('success', false);
+            ->assertStatus(200)
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('data.requires_reauthentication', true);
 
         $this->assertSame(
-            1,
+            0,
             (int) DB::table('users')->where('user_id', $userId)->value('force_profile_update')
         );
+        $this->assertSame('09171234567', DB::table('users')->where('user_id', $userId)->value('phone'));
+        $this->assertTrue(Hash::check('PermanentPass123!', DB::table('users')->where('user_id', $userId)->value('password')));
     }
 
     /**

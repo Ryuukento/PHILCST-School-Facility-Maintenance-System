@@ -47,7 +47,16 @@ class PreventiveMaintenanceControllerTest extends TestCase
     {
         parent::setUp();
 
+        $this->assertTrue($this->app->environment('testing'));
+        $this->assertSame('sqlite', config('database.default'));
+        $this->assertSame(':memory:', config('database.connections.sqlite.database'));
+        config(['database.connections' => ['sqlite' => config('database.connections.sqlite')]]);
         $this->useInMemoryDatabase('preventive_maintenance_controller_testing');
+        $this->assertSame('sqlite', DB::connection()->getDriverName());
+        $this->assertSame(':memory:', DB::connection()->getDatabaseName());
+        \Illuminate\Support\Facades\Http::preventStrayRequests();
+        \Illuminate\Support\Facades\Mail::fake();
+        \Illuminate\Support\Facades\Notification::fake();
         $this->createTestSchema();
 
         $this->forceLocalTestUrl();
@@ -1176,6 +1185,101 @@ class PreventiveMaintenanceControllerTest extends TestCase
             $table->date('next_due_date_snapshot')->nullable();
             $table->timestamps();
         });
+    }
+
+    public function test_archived_list_pagination_reports_full_total_and_excludes_active_tasks(): void
+    {
+        $admin = $this->seedUser(['role' => 'super_admin']);
+        for ($i = 0; $i < 23; $i++) $this->seedTask(['is_active' => false]);
+        $this->seedTask();
+        $response = $this->actingAsSessionUserWithFlatKeys($admin, 'super_admin')
+            ->getJson('/api/preventive-maintenance?is_active=0&per_page=20&page=2')->assertOk();
+        $response->assertJsonPath('data.total', 23)->assertJsonPath('data.current_page', 2)->assertJsonCount(3, 'data.data');
+        foreach ($response->json('data.data') as $task) $this->assertFalse($task['is_active']);
+    }
+
+    public function test_archived_mutations_are_rejected_and_mixed_bulk_assignment_is_atomic(): void
+    {
+        $admin = $this->seedUser(['role' => 'super_admin']);
+        $head = $this->seedUser(['role' => 'maintenance_admin']);
+        $staff = $this->seedUser(['role' => 'maintenance_staff']);
+        $active = $this->seedTask();
+        $archived = $this->seedTask(['is_active' => false, 'assigned_user_id' => $staff]);
+        $history = DB::table('preventive_maintenance_history')->insertGetId([
+            'preventive_maintenance_task_id' => $archived, 'completed_date' => '2026-01-01',
+            'condition_result' => 'needs_repair', 'findings' => 'Synthetic findings',
+        ]);
+        $before = DB::table('preventive_maintenance_tasks')->orderBy('id')->get()->toJson();
+        foreach ([[$admin, 'super_admin'], [$staff, 'maintenance_staff']] as [$id, $role]) {
+            $this->actingAsSessionUserWithFlatKeys($id, $role)->patchJson("/api/preventive-maintenance/{$archived}", ['title' => 'Must not change'])->assertStatus(400);
+        }
+        $this->actingAsSessionUserWithFlatKeys($head, 'maintenance_admin')->postJson('/api/preventive-maintenance/assign', ['task_ids' => [$active, $archived], 'assigned_user_id' => $staff])->assertStatus(422)->assertJsonPath('message', 'Archived maintenance plans are read-only. Unarchive the plan first.');
+        $this->actingAsSessionUserWithFlatKeys($staff, 'maintenance_staff')->postJson("/api/preventive-maintenance/{$archived}/complete", ['completed_date' => '2026-01-02', 'condition_result' => 'working'])->assertStatus(400);
+        $this->actingAsSessionUserWithFlatKeys($staff, 'maintenance_staff')->postJson("/api/preventive-maintenance/history/{$history}/repair-report", [])->assertStatus(422);
+        $this->assertSame($before, DB::table('preventive_maintenance_tasks')->orderBy('id')->get()->toJson());
+        $this->assertSame(1, DB::table('preventive_maintenance_history')->count());
+        $this->assertSame(0, DB::table('maintenance_reports')->count());
+        $this->assertSame(0, DB::table('notifications')->count());
+    }
+
+    public function test_restore_preserves_plan_history_reports_and_overdue_dates_without_notifications(): void
+    {
+        $admin = $this->seedUser(['role' => 'super_admin']);
+        $staff = $this->seedUser(['role' => 'maintenance_staff']);
+        $task = $this->seedTask(['is_active' => false, 'assigned_user_id' => $staff,
+            'scheduled_months' => json_encode([1, 7]), 'last_completed_date' => '2025-01-01',
+            'next_due_date' => '2025-07-01', 'notes' => 'Keep these notes', 'location_name' => 'Synthetic location']);
+        $report = DB::table('maintenance_reports')->insertGetId([
+            'title' => 'Existing linked report', 'description' => 'Synthetic history link', 'status' => 'pending', 'created_by' => $staff,
+        ], 'report_id');
+        DB::table('preventive_maintenance_history')->insert([
+            'preventive_maintenance_task_id' => $task, 'completed_date' => '2025-01-01',
+            'condition_result' => 'needs_repair', 'maintenance_report_id' => $report,
+        ]);
+        $before = (array) DB::table('preventive_maintenance_tasks')->where('id', $task)->first();
+        $history = DB::table('preventive_maintenance_history')->get()->toJson();
+        foreach ([1, 2] as $attempt) {
+            $response = $this->actingAsSessionUserWithFlatKeys($admin, 'super_admin')->postJson("/api/preventive-maintenance/{$task}/activate")->assertOk();
+            $response->assertJsonPath('data.task.status', 'overdue');
+        }
+        $after = (array) DB::table('preventive_maintenance_tasks')->where('id', $task)->first();
+        foreach ($before as $key => $value) if (!in_array($key, ['is_active', 'updated_at', 'updated_by'], true)) $this->assertSame($value, $after[$key], $key);
+        $this->assertSame(1, DB::table('preventive_maintenance_tasks')->count());
+        $this->assertSame($history, DB::table('preventive_maintenance_history')->get()->toJson());
+        $this->assertSame(1, DB::table('maintenance_reports')->count());
+        $this->assertSame(0, DB::table('notifications')->count());
+        $this->actingAsSessionUserWithFlatKeys($admin, 'super_admin')->getJson("/api/preventive-maintenance/{$task}/history")->assertOk()->assertJsonCount(1, 'data.history.data');
+        $this->actingAsSessionUserWithFlatKeys($admin, 'super_admin')->getJson('/api/preventive-maintenance/summary')->assertOk()->assertJsonPath('data.active_plans', 1);
+    }
+
+    public function test_only_administrator_can_activate_and_soft_deleted_plans_are_not_restored(): void
+    {
+        $task = $this->seedTask(['is_active' => false]);
+        foreach (['maintenance_admin', 'maintenance_staff', 'staff'] as $role) {
+            $actor = $this->seedUser(['role' => $role]);
+            $this->actingAsSessionUserWithFlatKeys($actor, $role)->postJson("/api/preventive-maintenance/{$task}/activate")->assertForbidden();
+        }
+        $this->assertSame(0, DB::table('preventive_maintenance_tasks')->where('id', $task)->value('is_active'));
+        $admin = $this->seedUser(['role' => 'super_admin']);
+        DB::table('preventive_maintenance_tasks')->where('id', $task)->update(['deleted_at' => now()]);
+        $this->actingAsSessionUserWithFlatKeys($admin, 'super_admin')->postJson("/api/preventive-maintenance/{$task}/activate")->assertNotFound();
+    }
+
+    public function test_stale_active_model_cannot_edit_archived_plan_and_restore_rechecks_current_state(): void
+    {
+        $id = $this->seedTask(['title' => 'Original']);
+        $stale = \App\Models\PreventiveMaintenanceTask::findOrFail($id);
+        DB::table('preventive_maintenance_tasks')->where('id', $id)->update(['is_active' => false]);
+        $service = app(\App\Services\PreventiveMaintenanceService::class);
+        try {
+            $service->updateTask($stale, ['title' => 'Must not persist']);
+            $this->fail('Archived update must be rejected after locking the current row.');
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            $this->assertArrayHasKey('is_active', $e->errors());
+        }
+        $this->assertSame('Original', DB::table('preventive_maintenance_tasks')->where('id', $id)->value('title'));
+        $this->assertTrue($service->setActive($stale, true)->is_active);
+        $this->assertSame(0, DB::table('preventive_maintenance_history')->count());
     }
 
     private function seedBuilding(array $overrides = []): int

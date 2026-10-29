@@ -28,16 +28,20 @@ use Illuminate\Support\Facades\Route;
 // Authentication routes (no auth middleware)
 Route::get('/', function () {
     if (request()->session()->has('auth_user') || request()->session()->has('user')) {
-        return redirect('/frontend/pages/dashboard.php');
+        return redirect(\App\Support\ScannedDispatchDestination::id(request()->query('next_dispatch')) === null
+            ? '/frontend/pages/dashboard.php'
+            : \App\Support\ScannedDispatchDestination::destination(request()->query('next_dispatch')));
     }
-    return redirect('/frontend/pages/index.php');
+    return redirect(\App\Support\ScannedDispatchDestination::carry('/frontend/pages/index.php', request()->query('next_dispatch')));
 })->name('login');
 
 Route::get('/login', function () {
     if (request()->session()->has('auth_user') || request()->session()->has('user')) {
-        return redirect('/frontend/pages/dashboard.php');
+        return redirect(\App\Support\ScannedDispatchDestination::id(request()->query('next_dispatch')) === null
+            ? '/frontend/pages/dashboard.php'
+            : \App\Support\ScannedDispatchDestination::destination(request()->query('next_dispatch')));
     }
-    return redirect('/frontend/pages/index.php');
+    return redirect(\App\Support\ScannedDispatchDestination::carry('/frontend/pages/index.php', request()->query('next_dispatch')));
 })->name('auth.login');
 
 // Web routes that require authentication

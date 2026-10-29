@@ -2,6 +2,9 @@
 
 namespace App\Services;
 
+use App\Support\UserContactPolicy;
+use Illuminate\Validation\ValidationException;
+
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Carbon;
 
@@ -24,13 +27,13 @@ class EmailVerificationService
      */
     public function isEmailUnique(string $email, ?int $excludeUserId = null): bool
     {
-        $query = DB::table('users')->where('verified_email', $email);
-
-        if ($excludeUserId) {
-            $query->where('user_id', '!=', $excludeUserId);
+        try {
+            UserContactPolicy::assertEmailAvailable($email, $excludeUserId);
+            return true;
+        } catch (ValidationException $e) {
+            if (UserContactPolicy::publicMessage($e) === UserContactPolicy::EMAIL_TAKEN) return false;
+            throw $e;
         }
-
-        return $query->count() === 0;
     }
 
     /**
@@ -45,14 +48,16 @@ class EmailVerificationService
         }
 
         // Check if email is unique
-        if (!$this->isEmailUnique($email, $userId)) {
-            return ['success' => false, 'message' => 'This email is already in use'];
+        try {
+            UserContactPolicy::assertEmailAvailable($email, $userId);
+        } catch (ValidationException $e) {
+            return ['success' => false, 'message' => UserContactPolicy::publicMessage($e) ?? 'Unable to validate email ownership.'];
         }
 
         // Check rate limiting - max 1 OTP per minute per email
         $recentOTP = DB::table('email_verifications')
             ->where('user_id', $userId)
-            ->where('email', $email)
+            ->whereRaw('LOWER(TRIM(email)) = ?', [UserContactPolicy::email($email)])
             ->where('last_otp_sent_at', '>', Carbon::now()->subMinutes(1))
             ->exists();
 
@@ -66,10 +71,13 @@ class EmailVerificationService
 
         try {
             return DB::transaction(function () use ($userId, $email, $otp, $expiresAt): array {
+                $user = DB::table('users')->where('user_id', $userId)->lockForUpdate()->first();
+                if (!$user) return ['success' => false, 'message' => 'User not found'];
+                UserContactPolicy::assertEmailAvailable($email, $userId);
                 // Get or create verification record
                 $verification = DB::table('email_verifications')
                     ->where('user_id', $userId)
-                    ->where('email', $email)
+                    ->whereRaw('LOWER(TRIM(email)) = ?', [UserContactPolicy::email($email)])
                     ->lockForUpdate()->first();
 
                 // Recheck after the current row lock, including competing resend attempts.
@@ -105,12 +113,6 @@ class EmailVerificationService
                     ]);
                 }
 
-                // Get user details for email
-                $user = DB::table('users')->where('user_id', $userId)->first();
-                if (!$user) {
-                    return ['success' => false, 'message' => 'User not found'];
-                }
-
                 // Keep a failed attempt's cooldown, but preserve any previously issued code.
                 $emailSent = $this->sendOTPEmail($email, $otp, $user->full_name);
                 if (!$emailSent) {
@@ -129,6 +131,7 @@ class EmailVerificationService
                 return $response;
             });
         } catch (\Throwable $e) {
+            if ($message = UserContactPolicy::publicMessage($e)) return ['success' => false, 'message' => $message];
             error_log('Email verification initiation failed; sensitive details withheld');
             return ['success' => false, 'message' => 'Failed to send OTP. Please try again.'];
         }
@@ -145,68 +148,73 @@ class EmailVerificationService
             return ['success' => false, 'message' => 'Invalid OTP format'];
         }
 
-        // Find verification record
-        $verification = DB::table('email_verifications')
-            ->where('user_id', $userId)
-            ->where('email', $email)
-            ->where('is_verified', false)
-            ->first();
-
-        if (!$verification) {
-            return ['success' => false, 'message' => 'No pending verification for this email'];
-        }
-
-        // Check if OTP is expired
-        if (Carbon::now()->isAfter($verification->otp_expires_at)) {
-            return ['success' => false, 'message' => 'OTP has expired. Please request a new one.'];
-        }
-
-        // Check if max attempts exceeded
-        if ($verification->otp_attempts >= self::MAX_OTP_ATTEMPTS) {
-            return ['success' => false, 'message' => 'Too many failed attempts. Please request a new OTP.'];
-        }
-
-        // Check if OTP matches
-        if ($verification->otp_code !== $otp) {
-            // Increment failed attempts
-            DB::table('email_verifications')
-                ->where('id', $verification->id)
-                ->increment('otp_attempts');
-
-            $remaining = self::MAX_OTP_ATTEMPTS - $verification->otp_attempts - 1;
-            return [
-                'success' => false,
-                'message' => $remaining > 0
-                    ? "Incorrect OTP. {$remaining} attempts remaining."
-                    : 'Too many failed attempts. Please request a new OTP.'
-            ];
-        }
-
-        // OTP verified! Mark as verified and update user's verified_email
         try {
-            DB::beginTransaction();
+            return DB::transaction(function () use ($userId, $email, $otp): array {
+                $user = DB::table('users')->where('user_id', $userId)->lockForUpdate()->first();
+                if (!$user) return ['success' => false, 'message' => 'User not found'];
+                UserContactPolicy::assertEmailAvailable($email, $userId);
+                // Account -> OTP -> sorted contact keys is the common mutation order.
+                $verification = DB::table('email_verifications')
+                    ->where('user_id', $userId)
+                    ->whereRaw('LOWER(TRIM(email)) = ?', [UserContactPolicy::email($email)])
+                    ->where('is_verified', false)
+                    ->lockForUpdate()->first();
 
-            // Mark verification as complete
-            DB::table('email_verifications')
-                ->where('id', $verification->id)
-                ->update([
-                    'is_verified' => true,
-                    'updated_at' => Carbon::now(),
-                ]);
+                if (!$verification) {
+                    return ['success' => false, 'message' => 'No pending verification for this email'];
+                }
 
-            // Update user's verified_email
-            DB::table('users')
-                ->where('user_id', $userId)
-                ->update([
-                    'verified_email' => $email,
-                    'updated_at' => Carbon::now(),
-                ]);
+                // Check if OTP is expired
+                if (Carbon::now()->isAfter($verification->otp_expires_at)) {
+                    return ['success' => false, 'message' => 'OTP has expired. Please request a new one.'];
+                }
 
-            DB::commit();
+                // Check if max attempts exceeded
+                if ($verification->otp_attempts >= self::MAX_OTP_ATTEMPTS) {
+                    return ['success' => false, 'message' => 'Too many failed attempts. Please request a new OTP.'];
+                }
 
-            return ['success' => true, 'message' => 'Email verified successfully'];
-        } catch (\Exception $e) {
-            DB::rollBack();
+                // Check if OTP matches
+                if ($verification->otp_code !== $otp) {
+                    // Increment failed attempts
+                    DB::table('email_verifications')
+                        ->where('id', $verification->id)
+                        ->increment('otp_attempts');
+
+                    $remaining = self::MAX_OTP_ATTEMPTS - $verification->otp_attempts - 1;
+                    return [
+                        'success' => false,
+                        'message' => $remaining > 0
+                            ? "Incorrect OTP. {$remaining} attempts remaining."
+                            : 'Too many failed attempts. Please request a new OTP.'
+                    ];
+                }
+
+                // OTP verified! Mark as verified and update user's verified_email
+                return UserContactPolicy::synchronize($userId, [
+                    'phone' => $user->phone ?? null, 'email' => $user->email ?? null, 'verified_email' => $email,
+                ], function () use ($verification, $userId, $email): array {
+                    // Mark verification as complete
+                    DB::table('email_verifications')
+                        ->where('id', $verification->id)
+                        ->update([
+                            'is_verified' => true,
+                            'updated_at' => Carbon::now(),
+                        ]);
+
+                    // Update user's verified_email
+                    DB::table('users')
+                        ->where('user_id', $userId)
+                        ->update([
+                            'verified_email' => $email,
+                            'updated_at' => Carbon::now(),
+                        ]);
+
+                    return ['success' => true, 'message' => 'Email verified successfully'];
+                });
+            });
+        } catch (\Throwable $e) {
+            if ($message = UserContactPolicy::publicMessage($e)) return ['success' => false, 'message' => $message];
             error_log('Email verification completion failed; sensitive details withheld');
             return ['success' => false, 'message' => 'Failed to complete verification. Please try again.'];
         }
@@ -222,11 +230,16 @@ class EmailVerificationService
         if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
             return ['success' => false, 'message' => 'Invalid email format'];
         }
+        try {
+            UserContactPolicy::assertEmailAvailable($email, $userId);
+        } catch (ValidationException $e) {
+            return ['success' => false, 'message' => UserContactPolicy::publicMessage($e) ?? 'Unable to validate email ownership.'];
+        }
 
         // Find verification record
         $verification = DB::table('email_verifications')
             ->where('user_id', $userId)
-            ->where('email', $email)
+            ->whereRaw('LOWER(TRIM(email)) = ?', [UserContactPolicy::email($email)])
             ->where('is_verified', false)
             ->first();
 
@@ -253,8 +266,11 @@ class EmailVerificationService
 
         try {
             return DB::transaction(function () use ($userId, $email, $otp, $expiresAt): array {
+                $user = DB::table('users')->where('user_id', $userId)->lockForUpdate()->first();
+                if (!$user) return ['success' => false, 'message' => 'User not found'];
+                UserContactPolicy::assertEmailAvailable($email, $userId);
                 $verification = DB::table('email_verifications')
-                    ->where('user_id', $userId)->where('email', $email)->where('is_verified', false)
+                    ->where('user_id', $userId)->whereRaw('LOWER(TRIM(email)) = ?', [UserContactPolicy::email($email)])->where('is_verified', false)
                     ->lockForUpdate()->first();
                 if (!$verification) {
                     return ['success' => false, 'message' => 'No pending verification for this email'];
@@ -274,12 +290,6 @@ class EmailVerificationService
                         'updated_at' => Carbon::now(),
                     ]);
 
-                // Get user details for email
-                $user = DB::table('users')->where('user_id', $userId)->first();
-                if (!$user) {
-                    return ['success' => false, 'message' => 'User not found'];
-                }
-
                 // Send OTP email
                 if (!$this->sendOTPEmail($email, $otp, $user->full_name)) {
                     $this->restorePendingOtp($verification);
@@ -289,6 +299,7 @@ class EmailVerificationService
                 return ['success' => true, 'message' => 'New OTP sent to your email'];
             });
         } catch (\Throwable $e) {
+            if ($message = UserContactPolicy::publicMessage($e)) return ['success' => false, 'message' => $message];
             error_log('OTP resend failed; sensitive details withheld');
             return ['success' => false, 'message' => 'Failed to resend OTP. Please try again.'];
         }

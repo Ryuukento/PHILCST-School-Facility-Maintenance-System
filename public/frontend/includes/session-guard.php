@@ -1,4 +1,7 @@
 <?php
+// This guard is also loaded directly by native entrypoints without Composer bootstrap.
+require_once __DIR__ . '/../../../app/Support/ScannedDispatchDestination.php';
+
 /**
  * TASK 21 — Stale Session After User Deletion (shared check).
  *
@@ -100,7 +103,7 @@ if (!function_exists('sfms_enforce_forced_setup')) {
     {
         if (!empty($_SESSION['auth_user']['force_profile_update'])
             && !sfms_native_setup_allowed($_SERVER['SCRIPT_FILENAME'] ?? '')) {
-            header('Location: ' . public_url('/account?setup=1'));
+            header('Location: ' . public_url(\App\Support\ScannedDispatchDestination::carry('/account?setup=1', \App\Support\ScannedDispatchDestination::nativeReference())));
             exit;
         }
     }
@@ -121,7 +124,7 @@ if (!function_exists('sfms_reject_stale_session')) {
             ? public_url('/login')
             : '/login';
 
-        header('Location: ' . $target . '?session_expired=1');
+        header('Location: ' . \App\Support\ScannedDispatchDestination::carry($target . '?session_expired=1', \App\Support\ScannedDispatchDestination::nativeReference()));
         exit;
     }
 }
@@ -161,7 +164,7 @@ if (!function_exists('sfms_enforce_idle_timeout')) {
                 ? public_url('/login')
                 : '/login';
 
-            header('Location: ' . $target . '?session_expired=1&reason=idle');
+            header('Location: ' . \App\Support\ScannedDispatchDestination::carry($target . '?session_expired=1&reason=idle', \App\Support\ScannedDispatchDestination::nativeReference()));
             exit;
         }
 

@@ -502,11 +502,14 @@ function buildCardMediaMarkup(targetUser) {
 function normalizeAvatarUrl(avatar) {
     const value = String(avatar || '').trim();
     if (!value) return '';
-    if (/^https?:\/\//i.test(value) || value.startsWith('/')) return value;
+    if (/^(?:https?:)?\/\//i.test(value)) return value;
+    if (/^(?:javascript|data|vbscript):/i.test(value)) return '';
+    const match = value.match(/^\/?(?:School_Facility_Maintenance_System\/)?(?:public\/)?(frontend\/assets\/uploads\/avatars\/[^/?#]+)([?#].*)?$/);
+    if (!match) return value;
     if (window.SFMS_PUBLIC_URL) {
-        return window.SFMS_PUBLIC_URL('/' + value.replace(/^\/?/, ''));
+        return window.SFMS_PUBLIC_URL('/' + match[1]) + (match[2] || '');
     }
-    return '/' + value.replace(/^\/?/, '');
+    return '/' + match[1] + (match[2] || '');
 }
 
 function getInitials(name) {
@@ -514,7 +517,7 @@ function getInitials(name) {
         .trim()
         .split(/\s+/)
         .slice(0, 2)
-        .map((part) => part.charAt(0).toUpperCase())
+        .map((part) => (Array.from(part)[0] || '').toUpperCase())
         .join('') || 'U';
 }
 

@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Support\UserContactPolicy;
+
 use App\Http\Controllers\Controller;
 use App\Http\Middleware\EnsureApiAuthenticated;
 use App\Models\User;
@@ -460,6 +462,9 @@ class UserController extends Controller
                 if ($phone !== '' && !preg_match('/^09\d{9}$/', $phone)) {
                     return $this->fail('Phone number must be 11 digits starting with 09 (e.g. 09171234713)', 422);
                 }
+                UserContactPolicy::assertAvailable([
+                    'phone' => $phone, 'email' => $currentUser->email ?? null, 'verified_email' => $currentUser->verified_email ?? null,
+                ], $userId);
 
                 if ($fullName === '') {
                     return $this->fail('Full name is required', 422);
@@ -484,22 +489,11 @@ class UserController extends Controller
                         return $this->fail('For first-time account setup, setting a new password is required', 422);
                     }
 
-                    // 2026-10-15 — an Administrator-created account must supply a
-                    // phone (for SMS report alerts) and a reachable, OTP-verified
-                    // email before it's allowed to start using the system, not just
-                    // a new password. (2026-10-26: phone no longer needs its own OTP
-                    // step — see the $phone block above — so this is now a plain
-                    // non-empty check on the value just submitted, same as
-                    // full_name.) Email still only ever reaches users.verified_email
-                    // via EmailVerificationController, never through this endpoint,
-                    // so checking it here on the freshly-read $currentUser row is
-                    // proof that OTP step actually completed.
-                    if ($phone === '') {
-                        return $this->fail('Please enter your phone number before continuing', 422);
-                    }
-
-                    if (empty($currentUser->verified_email)) {
-                        return $this->fail('Please verify your email address before continuing', 422);
+                    // A nonempty phone has already passed PH mobile validation.
+                    // Verification proof comes only from the locked database row;
+                    // existing verified legacy-domain emails remain qualifying.
+                    if ($phone === '' && empty($currentUser->verified_email)) {
+                        return $this->fail('Provide at least one contact method: a valid Phone Number or Verified Email.', 422);
                     }
                 }
 
@@ -563,21 +557,26 @@ class UserController extends Controller
                     $updates['auth_version'] = (int) $currentUser->auth_version + 1;
                 }
 
-                DB::table('users')->where('user_id', $userId)->update($updates);
-                if ($passwordHash) {
-                    $audit = $this->activityLogService->log([
-                        'user_id' => $userId, 'user_role' => RoleNormalizerService::normalize($currentUser->role),
-                        'action' => 'CHANGE_PASSWORD', 'module' => 'auth', 'entity_type' => 'user', 'entity_id' => $userId,
-                        'details' => 'User changed their password.', 'meta' => ['forced_setup' => $isForcedSetup],
-                        'dedupe_window_seconds' => 0,
-                    ], $request);
-                    if ($audit === null || !$audit->exists) throw new \RuntimeException('Password change audit could not be saved.');
-                }
-                return ['updates' => $updates, 'forced' => $isForcedSetup,
-                    'role' => RoleNormalizerService::normalize($currentUser->role), 'department_id' => $currentUser->department_id];
+                return UserContactPolicy::synchronize($userId, [
+                    'phone' => $updates['phone'], 'email' => $currentUser->email ?? null, 'verified_email' => $currentUser->verified_email ?? null,
+                ], function () use ($updates, $userId, $passwordHash, $currentUser, $isForcedSetup, $request) {
+                    DB::table('users')->where('user_id', $userId)->update($updates);
+                    if ($passwordHash) {
+                        $audit = $this->activityLogService->log([
+                            'user_id' => $userId, 'user_role' => RoleNormalizerService::normalize($currentUser->role),
+                            'action' => 'CHANGE_PASSWORD', 'module' => 'auth', 'entity_type' => 'user', 'entity_id' => $userId,
+                            'details' => 'User changed their password.', 'meta' => ['forced_setup' => $isForcedSetup],
+                            'dedupe_window_seconds' => 0,
+                        ], $request);
+                        if ($audit === null || !$audit->exists) throw new \RuntimeException('Password change audit could not be saved.');
+                    }
+                    return ['updates' => $updates, 'forced' => $isForcedSetup,
+                        'role' => RoleNormalizerService::normalize($currentUser->role), 'department_id' => $currentUser->department_id];
+                });
             });
         } catch (\Throwable $e) {
             if ($newAvatarPath && is_file($newAvatarPath)) @unlink($newAvatarPath);
+            if ($message = UserContactPolicy::publicMessage($e)) return $this->fail($message, 422);
             throw $e;
         }
         if ($result instanceof \Illuminate\Http\JsonResponse) {

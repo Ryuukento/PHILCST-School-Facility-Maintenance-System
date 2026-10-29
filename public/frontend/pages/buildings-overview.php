@@ -33,7 +33,7 @@ $pageTitle = 'Buildings Overview - SFMS';
 include __DIR__ . '/../includes/header.php';
 ?>
 
-<link rel="stylesheet" href="<?php echo htmlspecialchars(public_url('/frontend/assets/css/buildings-redesign.css?v=20260921-2')); ?>">
+<link rel="stylesheet" href="<?php echo htmlspecialchars(public_url('/frontend/assets/css/buildings-redesign.css?v=20261029-item-quantity')); ?>">
 
 <main class="container buildings-page-container">
     <section class="buildings-page-hero">
@@ -90,19 +90,6 @@ include __DIR__ . '/../includes/header.php';
                      equipment was recorded directly, which didn't match what
                      the room actually had. -->
                 <p class="buildings-stat-desc">Units deployed (dispatch + existing)</p>
-            </div>
-        </div>
-        <div class="buildings-stat-card buildings-stat-card--pending">
-            <div class="buildings-stat-icon"><?php echo ui_icon('alert-triangle'); ?></div>
-            <div class="buildings-stat-body">
-                <p class="buildings-stat-label">Pending Requests</p>
-                <p class="buildings-stat-value" id="statPendingRequests">&mdash;</p>
-                <!-- TASK 5 — was "Requires attention". This card reads
-                     /api/dashboard/stats `pending`, which is semester-scoped
-                     (DashboardController::stats()), so the caption now states
-                     that scope. The Dashboard's "Pending Tasks" card now reads
-                     the same field, so the two agree. -->
-                <p class="buildings-stat-desc">This semester</p>
             </div>
         </div>
     </section>
@@ -694,27 +681,7 @@ async function loadDeployedItemsSummary() {
     }
 }
 
-// TASK 46 — reuses the existing /api/dashboard/stats endpoint (already
-// powering the main dashboard's "Pending" KPI) for the Pending Requests
-// stat card. That endpoint's `pending` figure is semester-scoped and can be
-// null when no semester is currently active (see DashboardController::stats);
-// in that case the card shows an em dash instead of a fabricated number.
-async function loadPendingRequestsCount() {
-    try {
-        const res = await fetch(window.SFMS_PUBLIC_URL('/api/dashboard/stats'), {
-            credentials: 'include'
-        });
-        const data = await res.json();
-        if (!data.success) return null;
-        const payload = data.data || {};
-        return typeof payload.pending === 'number' ? payload.pending : null;
-    } catch (err) {
-        console.error('Error loading pending requests count', err);
-        return null;
-    }
-}
-
-function renderBuildingStats(buildings, deployedTotal, pendingCount) {
+function renderBuildingStats(buildings, deployedTotal) {
     const totalBuildings = buildings.length;
     const totalFloors = buildings.reduce((sum, b) => sum + (Number(b.floor_count) || 0), 0);
     const totalRooms = buildings.reduce((sum, b) => sum + (Number(b.room_count) || 0), 0);
@@ -728,7 +695,6 @@ function renderBuildingStats(buildings, deployedTotal, pendingCount) {
     setStat('statTotalFloors', String(totalFloors));
     setStat('statTotalRooms', String(totalRooms));
     setStat('statDeployedItems', String(deployedTotal || 0));
-    setStat('statPendingRequests', pendingCount === null ? '—' : String(pendingCount));
 }
 
 function getSortedFilteredBuildings() {
@@ -1625,17 +1591,11 @@ async function loadBuildings() {
                 return;
             }
 
-            // TASK 46 — Deployed Items and Pending Requests stat cards reuse
-            // existing endpoints (deployed-items, dashboard/stats); fetched
-            // alongside so the building cards' per-building item counts and
-            // the summary row populate together.
-            const [deployedSummary, pendingCount] = await Promise.all([
-                loadDeployedItemsSummary(),
-                loadPendingRequestsCount(),
-            ]);
+            // Reuse the deployed-items summary for the building cards and totals.
+            const deployedSummary = await loadDeployedItemsSummary();
             buildingItemCounts = deployedSummary.byBuilding;
 
-            renderBuildingStats(buildings, deployedSummary.total, pendingCount);
+            renderBuildingStats(buildings, deployedSummary.total);
             // TASK 101B — the Building control's option list is built from the
             // same response the cards are, then the view renders through the
             // cascade so the results always reflect the current filter depth.
@@ -2226,6 +2186,29 @@ function renderItemsOverview() {
 // createItemCard() above so both sections look like one family, but drops
 // the delete control and the asset_code/brand/model/status fields that only
 // make sense for a room_asset row.
+function createItemQuantityRow(item) {
+    const row = document.createElement('div');
+    row.className = 'item-quantity-row';
+    const label = document.createElement('span');
+    label.className = 'item-detail-label';
+    label.textContent = 'Quantity';
+    const badge = document.createElement('span');
+    badge.className = 'item-quantity-badge';
+    const raw = item.quantity;
+    const validType = typeof raw === 'number' || (typeof raw === 'string' && /^\d+$/.test(raw.trim()));
+    const quantity = validType ? Number(raw) : NaN;
+    if (Number.isSafeInteger(quantity) && quantity >= 0) {
+        const unit = typeof item.unit_type === 'string' && item.unit_type.trim()
+            ? item.unit_type.trim() : (typeof item.unit === 'string' ? item.unit.trim() : '');
+        badge.textContent = `${quantity} ${unit || (quantity === 1 ? 'pc' : 'pcs')}`;
+    } else {
+        badge.textContent = 'Not available';
+    }
+    row.appendChild(label);
+    row.appendChild(badge);
+    return row;
+}
+
 function createDeployedItemCard(item) {
     const div = document.createElement('div');
     div.className = 'item-asset-card';
@@ -2293,11 +2276,11 @@ function createDeployedItemCard(item) {
     // so this field is safe to render as-is again.
     const detailGrid = document.createElement('div');
     detailGrid.className = 'item-detail-grid';
-    detailGrid.appendChild(detailField('Quantity', item.quantity));
     detailGrid.appendChild(detailField('Asset Code', item.asset_code));
     detailGrid.appendChild(detailField('Date Deployed', item.date_dispatched ? boFormatDateOnly(item.date_dispatched) : null));
     detailGrid.appendChild(detailField('Dispatch Code', item.dispatch_code, true));
     div.appendChild(detailGrid);
+    div.appendChild(createItemQuantityRow(item));
 
     return div;
 }
@@ -2398,6 +2381,7 @@ function createItemCard(item) {
     detailGrid.className = 'item-detail-grid';
     detailGrid.appendChild(detailField('Asset Code', item.asset_code, true));
     div.appendChild(detailGrid);
+    div.appendChild(createItemQuantityRow(item));
 
     // TASK 58 (Fix 3) — .card-delete keeps its existing absolute top-right
     // positioning/handler/API call/confirmation flow, unchanged. It floats

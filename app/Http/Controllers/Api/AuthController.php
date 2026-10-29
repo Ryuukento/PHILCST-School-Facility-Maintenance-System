@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Support\UserContactPolicy;
+
 use App\Http\Controllers\Controller;
 use App\Models\Department;
 use App\Models\User;
@@ -166,7 +168,7 @@ class AuthController extends Controller
         $validator = Validator::make($registration, [
             'full_name' => UserNamePolicy::rules(),
             'username' => ['required', 'string', 'min:3', 'max:50', 'unique:users,username'],
-            'email' => ['required', 'email', 'max:255', 'unique:users,email'],
+            'email' => ['required', 'email', 'max:255'],
             'password' => ['required', 'string', 'min:8'],
         ], [
             'full_name.regex' => 'Name must contain letters and supported name punctuation (no numbers).',
@@ -187,25 +189,36 @@ class AuthController extends Controller
             ->orderBy('department_id')
             ->value('department_id');
 
-        $user = User::query()->create([
-            'full_name' => $validated['full_name'],
-            'username' => strtolower(trim($validated['username'])),
-            'email' => $validated['email'],
-            'password' => Hash::make($validated['password']),
-            'role' => 'user',
-            'department_id' => $departmentId,
-            'status' => 'pending',
-        ]);
+        try {
+            $user = DB::transaction(function () use ($validated, $departmentId, $request) {
+                UserContactPolicy::assertEmailAvailable($validated['email']);
+                $user = User::query()->create([
+                    'full_name' => $validated['full_name'],
+                    'username' => strtolower(trim($validated['username'])),
+                    'email' => $validated['email'],
+                    'password' => Hash::make($validated['password']),
+                    'role' => 'user',
+                    'department_id' => $departmentId,
+                    'status' => 'pending',
+                ]);
 
-        $this->activityLogService->log([
-            'user_id' => $user->user_id,
-            'user_role' => 'user',
-            'action' => 'REGISTER',
-            'module' => 'auth',
-            'entity_type' => 'user',
-            'entity_id' => $user->user_id,
-            'details' => 'Self-registered account (pending approval).',
-        ], $request);
+                return UserContactPolicy::synchronize((int) $user->user_id, ['email' => $user->email], function () use ($user, $request) {
+                    $this->activityLogService->log([
+                        'user_id' => $user->user_id,
+                        'user_role' => 'user',
+                        'action' => 'REGISTER',
+                        'module' => 'auth',
+                        'entity_type' => 'user',
+                        'entity_id' => $user->user_id,
+                        'details' => 'Self-registered account (pending approval).',
+                    ], $request);
+                    return $user;
+                });
+            });
+        } catch (\Throwable $e) {
+            if ($message = UserContactPolicy::publicMessage($e)) return $this->fail($message, 422);
+            throw $e;
+        }
 
         return $this->ok('Registration submitted. Your account is pending Administrator approval.', [
             'user_id' => $user->user_id,

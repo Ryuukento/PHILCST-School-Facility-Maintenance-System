@@ -77,7 +77,7 @@
          visibly flip to dark a moment after load, which looks exactly like "the
          toggle removal didn't work". Bumping the token is what forces the old
          switching code out of cache. -->
-    <script src="<?php echo htmlspecialchars(public_url('/frontend/assets/js/main.js?v=20260920')); ?>"></script>
+    <script src="<?php echo htmlspecialchars(public_url('/frontend/assets/js/main.js?v=20261029-session-navigation')); ?>"></script>
     <!-- TASK 18 — cache-buster bumped again because notification.js gained
          3 new ENTITY_ROUTES entries (purchase_receipt, inventory, building)
          and an allowedRoles override in resolveNotificationTarget()'s

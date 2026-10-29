@@ -5,6 +5,7 @@
  */
 
 // Get current page to set active state
+require_once __DIR__ . '/avatar.php';
 $current_page = basename($_SERVER['PHP_SELF']);
 ?>
 
@@ -497,11 +498,9 @@ $current_page = basename($_SERVER['PHP_SELF']);
         <?php if (!empty($user)): ?>
         <div class="user-profile sidebar-user-profile" title="<?php echo htmlspecialchars($user['full_name'] ?? 'User'); ?>">
             <div class="user-avatar-wrap sidebar-user-avatar-wrap">
-                <?php if (!empty($user['avatar'])): ?>
-                    <img src="<?php echo htmlspecialchars($user['avatar']); ?>" alt="avatar" class="avatar-img" id="header-user-avatar" />
-                <?php else: ?>
-                    <div class="avatar-circle" data-user-avatar id="header-user-avatar-fallback"><?php echo strtoupper($user['full_name'][0] ?? 'U'); ?></div>
-                <?php endif; ?>
+                <?php $sidebarAvatarUrl = sfms_avatar_url($user['avatar'] ?? null); ?>
+                <img <?php if ($sidebarAvatarUrl !== ''): ?>src="<?php echo htmlspecialchars($sidebarAvatarUrl, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); ?>"<?php endif; ?> alt="avatar" class="avatar-img" id="header-user-avatar" style="display:<?php echo $sidebarAvatarUrl !== '' ? 'block' : 'none'; ?>;" onerror="this.onerror=null;this.style.display='none';this.nextElementSibling.style.display='flex';" />
+                <div class="avatar-circle" id="header-user-avatar-fallback" style="display:<?php echo $sidebarAvatarUrl !== '' ? 'none' : 'flex'; ?>;"><?php echo htmlspecialchars(sfms_avatar_initials($user['full_name'] ?? null), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); ?></div>
             </div>
             <div class="user-profile-meta sidebar-user-meta">
                 <div class="user-name" id="header-user-name"><?php echo htmlspecialchars($user['full_name'] ?? 'User'); ?></div>

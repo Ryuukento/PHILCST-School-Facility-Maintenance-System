@@ -1,6 +1,7 @@
 <?php
 // Clean URLs: public_url() is used below, before header.php loads settings.
 require_once __DIR__ . '/../../backend/config/settings.php';
+require_once __DIR__ . '/../includes/avatar.php';
 if (session_status() === PHP_SESSION_NONE) {
     session_set_cookie_params(['lifetime'=>0,'path'=>'/','secure'=>false,'httponly'=>true,'samesite'=>'Lax']);
     if (!@session_start()) {
@@ -53,6 +54,17 @@ $currentUser = $user;
 $forceProfileUpdate = !empty($currentUser['force_profile_update']);
 ?>
 
+<style>
+.settings-page .settings-form-group { min-width: 0; }
+.settings-page .contact-field-error { color: #b91c1c; font-size: 12px; line-height: 1.5; margin-top: 6px; overflow-wrap: anywhere; }
+.settings-page .contact-field-error:not([hidden]) { display: block; }
+.settings-page .contact-field-error[hidden], .settings-page #send-otp-btn[hidden] { display: none !important; }
+.settings-page .settings-input[aria-invalid="true"] { border-color: #dc2626 !important; box-shadow: inset 0 0 0 1px #dc2626; }
+.settings-page .settings-phone-control.has-contact-error { border-color: #dc2626 !important; }
+.settings-page #phone, .settings-page #new-email { min-width: 0; }
+.settings-page #email-form { flex-wrap: wrap; }
+.settings-page #new-email { flex: 1 1 180px !important; max-width: 100%; }
+</style>
 <main class="container settings-page <?php echo $forceProfileUpdate ? 'force-profile-setup' : ''; ?>">
     <div class="settings-shell">
         <section class="settings-content-column">
@@ -110,7 +122,7 @@ $forceProfileUpdate = !empty($currentUser['force_profile_update']);
                                     <label for="phone" class="settings-label" style="display: flex; align-items: center; gap: 8px;">
                                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 18px; height: 18px;"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
                                         Phone Number
-                                        <?php if ($forceProfileUpdate): ?><span style="color:#ef4444;font-weight:600;font-size:12px;">(Required)</span><?php endif; ?>
+                                        <?php if ($forceProfileUpdate): ?><span style="color:#64748b;font-weight:600;font-size:12px;">(Phone or Verified Email required)</span><?php endif; ?>
                                     </label>
                                     <!-- 2026-10-26 — PH-only validation, international-notation style:
                                          the "+63" badge replaces the leading "0" (not just a decorative
@@ -121,7 +133,7 @@ $forceProfileUpdate = !empty($currentUser['force_profile_update']);
                                          SmsService::send() and the two live users.phone rows) — so
                                          UserController::updateProfile and IPROG see no format change at
                                          all; only this input's display changed. -->
-                                    <div style="display:flex; align-items:stretch; border:1px solid #d7c6f2; border-radius:10px; background:#fff; overflow:hidden;">
+                                    <div id="phone-control" class="settings-phone-control" style="display:flex; align-items:stretch; border:1px solid #d7c6f2; border-radius:10px; background:#fff; overflow:hidden;">
                                         <span style="display:flex; align-items:center; padding:0 12px; background:#f3effc; color:#6d28d9; font-weight:700; font-size:14px; border-right:1px solid #d7c6f2; white-space:nowrap;">+63</span>
                                         <?php
                                         // 2026-10-26 (later) — the "+63" badge now stands in for the
@@ -133,18 +145,19 @@ $forceProfileUpdate = !empty($currentUser['force_profile_update']);
                                         // is display-only and does NOT change the saved format.
                                         $phoneTenDigitDisplay = (preg_match('/^0(\d{10})$/', (string)($user['phone'] ?? ''), $phoneMatch)) ? $phoneMatch[1] : '';
                                         ?>
-                                        <input type="text" id="phone" name="phone" class="form-control settings-input" placeholder="9171234713" value="<?php echo htmlspecialchars($phoneTenDigitDisplay); ?>" inputmode="numeric" autocomplete="tel" maxlength="10" style="border:none; border-radius:0; flex:1; min-height:42px; background:transparent;">
+                                        <input type="text" id="phone" name="phone" class="form-control settings-input" placeholder="9171234713" value="<?php echo htmlspecialchars($phoneTenDigitDisplay); ?>" inputmode="numeric" autocomplete="tel" maxlength="10" aria-invalid="false" aria-describedby="phone-help phone-error" style="border:none; border-radius:0; flex:1; min-height:42px; background:transparent;">
                                     </div>
-                                    <small id="phone-help" style="color:#64748b;font-size:12px;">Used to send you an SMS alert for new reports / Need Change requests assigned to you. Format: 10 digits after +63 (e.g. 9171234713 for 0917-123-4713), Philippine mobile numbers only.</small>
+                                    <small id="phone-error" class="contact-field-error" role="alert" aria-live="polite" aria-atomic="true" hidden></small>
+                                    <small id="phone-help" style="color:#64748b;font-size:12px;">For SMS alerts. Enter a 10-digit Philippine mobile number.</small>
                                 </div>
 
                                 <!-- Email Verification Section — placed beside Phone Number to use
                                      the empty grid cell instead of its own full-width row below. -->
                                 <div class="settings-form-group">
-                                    <label class="settings-label" style="display: flex; align-items: center; gap: 8px;">
+                                    <label for="new-email" class="settings-label" style="display: flex; align-items: center; gap: 8px;">
                                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 18px; height: 18px;"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M2 6l10 7 10-7"/></svg>
                                         Email Address
-                                        <?php if ($forceProfileUpdate): ?><span style="color:#ef4444;font-weight:600;font-size:12px;">(Required)</span><?php endif; ?>
+                                        <?php if ($forceProfileUpdate): ?><span style="color:#64748b;font-weight:600;font-size:12px;">(Phone or Verified Email required)</span><?php endif; ?>
                                     </label>
 
                                     <!-- Card wrapper so this (multi-control) group reads as one cohesive
@@ -159,9 +172,10 @@ $forceProfileUpdate = !empty($currentUser['force_profile_update']);
 
                                         <!-- Email Input and Send OTP Button -->
                                         <div id="email-form" style="display: flex; gap: 8px;">
-                                            <input type="email" id="new-email" class="form-control settings-input" placeholder="Enter your email address" maxlength="255" style="flex: 1; background: #fff;">
+                                            <input type="email" id="new-email" class="form-control settings-input" placeholder="Enter your email address" maxlength="255" aria-invalid="false" aria-describedby="email-error" style="flex: 1; background: #fff;">
                                             <button type="button" id="send-otp-btn" class="btn btn-secondary" style="white-space: nowrap;">Send Code</button>
                                         </div>
+                                        <small id="email-error" class="contact-field-error" role="alert" aria-live="polite" aria-atomic="true" hidden></small>
 
                                         <!-- OTP Verification Form (Hidden initially) -->
                                         <div id="otp-form" style="display: none; background: #fff; padding: 14px; border-radius: 8px; border: 1px solid #e2e8f0; margin-top: 12px;">
@@ -186,11 +200,9 @@ $forceProfileUpdate = !empty($currentUser['force_profile_update']);
                                     <label for="profile_picture" class="settings-label">Profile Picture</label>
                                     <input type="file" id="profile_picture" name="profile_picture" class="form-control settings-input" accept="image/*">
                                     <div class="settings-avatar-row">
-                                        <?php if (!empty($user['avatar'])): ?>
-                                            <img src="<?php echo htmlspecialchars($user['avatar']); ?>" alt="Profile Preview" id="settings-avatar-preview" style="width: 56px; height: 56px; border-radius: 50%; object-fit: cover; border: 2px solid #d7c0f2;">
-                                        <?php else: ?>
-                                            <div id="settings-avatar-preview-fallback" style="width: 56px; height: 56px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 700; background: #8A2BE2;"><?php echo strtoupper(substr($user['full_name'] ?? 'U', 0, 1)); ?></div>
-                                        <?php endif; ?>
+                                        <?php $settingsAvatarUrl = sfms_avatar_url($user['avatar'] ?? null); ?>
+                                        <img <?php if ($settingsAvatarUrl !== ''): ?>src="<?php echo htmlspecialchars($settingsAvatarUrl, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); ?>"<?php endif; ?> alt="Profile Preview" id="settings-avatar-preview" style="display:<?php echo $settingsAvatarUrl !== '' ? 'block' : 'none'; ?>; width: 56px; height: 56px; border-radius: 50%; object-fit: cover; border: 2px solid #d7c0f2;" onerror="this.onerror=null;this.style.display='none';this.nextElementSibling.style.display='flex';">
+                                        <div id="settings-avatar-preview-fallback" style="width: 56px; height: 56px; border-radius: 50%; display:<?php echo $settingsAvatarUrl !== '' ? 'none' : 'flex'; ?>; align-items: center; justify-content: center; color: #fff; font-weight: 700; background: #8A2BE2;"><?php echo htmlspecialchars(sfms_avatar_initials($user['full_name'] ?? null), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); ?></div>
                                         <span class="settings-help-text">Upload JPG, PNG, WEBP, or GIF (max 3MB)</span>
                                     </div>
                                 </div>
@@ -209,7 +221,7 @@ $forceProfileUpdate = !empty($currentUser['force_profile_update']);
 <div class="force-setup-popup" id="force-setup-popup" role="dialog" aria-modal="true" aria-labelledby="force-setup-title">
     <div class="force-setup-popup-card">
         <h2 id="force-setup-title">Profile Setup Required</h2>
-        <p>This account was created by an Administrator. Before continuing, please update your Full Name, Phone Number, verify your Email Address, and set a new Password.</p>
+        <p>Change your temporary password and provide at least one contact method: Phone Number or Verified Email.</p>
         <button type="button" id="force-setup-continue" class="btn btn-primary settings-primary-btn">Update Now</button>
     </div>
 </div>
@@ -250,6 +262,7 @@ window.Session = window.Session || {
 };
 
 const forceProfileSetup = <?php echo $forceProfileUpdate ? 'true' : 'false'; ?>;
+const scannedDispatchReloginPath = <?php echo json_encode(\App\Support\ScannedDispatchDestination::carry('/login?password_changed=1', $_GET['next_dispatch'] ?? null), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>;
 
 let settingsToastTimer;
 function showSettingsToast(message, type = 'success') {
@@ -287,6 +300,37 @@ document.querySelectorAll('.toggle-password-btn').forEach((button) => {
     });
 });
 
+function normalizeAccountAvatarUrl(avatar) {
+    const value = String(avatar || '').trim();
+    if (!value || /^(?:https?:)?\/\//i.test(value) || /^blob:/i.test(value)) return value;
+    if (/^(?:javascript|data|vbscript):/i.test(value)) return '';
+    const match = value.match(/^\/?(?:School_Facility_Maintenance_System\/)?(?:public\/)?(frontend\/assets\/uploads\/avatars\/[^/?#]+)([?#].*)?$/);
+    if (!match) return value;
+    return window.SFMS_PUBLIC_URL('/' + match[1]) + (match[2] || '');
+}
+
+function renderAccountAvatar(imageId, fallbackId, userData) {
+    const image = document.getElementById(imageId);
+    const fallback = document.getElementById(fallbackId);
+    if (!image || !fallback) return;
+    fallback.textContent = String(userData.full_name || 'U').trim().split(/\s+/).slice(0, 2)
+        .map(part => Array.from(part)[0] || '').join('').toUpperCase() || 'U';
+    const showFallback = () => {
+        image.style.display = 'none';
+        fallback.style.display = 'flex';
+    };
+    image.onerror = showFallback;
+    const url = normalizeAccountAvatarUrl(userData.avatar);
+    if (!url) {
+        image.removeAttribute('src');
+        showFallback();
+        return;
+    }
+    image.style.display = 'block';
+    fallback.style.display = 'none';
+    image.src = url;
+}
+
 function renderHeaderAvatar(userData) {
     const headerName = document.getElementById('header-user-name');
     if (headerName && userData.full_name) {
@@ -301,30 +345,11 @@ function renderHeaderAvatar(userData) {
     const profileContainer = document.querySelector('.user-avatar-wrap');
     if (!profileContainer) return;
 
-    if (userData.avatar) {
-        profileContainer.innerHTML = `<img src="${userData.avatar}" alt="avatar" class="avatar-img" id="header-user-avatar" />`;
-    } else {
-        const initial = (userData.full_name || 'U').trim().charAt(0).toUpperCase();
-        profileContainer.innerHTML = `<div class="avatar-circle" data-user-avatar id="header-user-avatar-fallback">${initial}</div>`;
-    }
+    renderAccountAvatar('header-user-avatar', 'header-user-avatar-fallback', userData);
 }
 
 function renderSettingsAvatar(userData) {
-    const previewImg = document.getElementById('settings-avatar-preview');
-    const fallback = document.getElementById('settings-avatar-preview-fallback');
-
-    if (userData.avatar) {
-        if (previewImg) {
-            previewImg.src = userData.avatar;
-        } else if (fallback && fallback.parentNode) {
-            fallback.outerHTML = `<img src="${userData.avatar}" alt="Profile Preview" id="settings-avatar-preview" style="width: 56px; height: 56px; border-radius: 50%; object-fit: cover; border: 2px solid #d7c0f2;">`;
-        }
-    } else {
-        const initial = (userData.full_name || 'U').trim().charAt(0).toUpperCase();
-        if (fallback) {
-            fallback.textContent = initial;
-        }
-    }
+    renderAccountAvatar('settings-avatar-preview', 'settings-avatar-preview-fallback', userData);
 }
 
 document.getElementById('profile_picture').addEventListener('change', function(e) {
@@ -350,6 +375,7 @@ const phoneInputEl = document.getElementById('phone');
 if (phoneInputEl) {
     phoneInputEl.addEventListener('input', () => {
         phoneInputEl.value = phoneInputEl.value.replace(/\D/g, '').slice(0, 10);
+        clearAccountContactError('phone');
     });
 }
 
@@ -358,6 +384,72 @@ if (phoneInputEl) {
 // "09" + 9 digits, so stripping that leading "0" always leaves something
 // starting with "9" — hence the fixed leading 9 here, not \d.
 const PHONE_PATTERN = /^9\d{9}$/;
+// Initially rendered from the database; updated only after successful OTP verification.
+const initialVerifiedEmail = document.getElementById('verified-email-display')?.textContent.trim() || '';
+let accountEmailVerified = initialVerifiedEmail !== '' && initialVerifiedEmail !== 'Not set';
+
+function clearAccountContactError(field) {
+    const input = document.getElementById(field === 'phone' ? 'phone' : 'new-email');
+    const error = document.getElementById(field + '-error');
+    input.setAttribute('aria-invalid', 'false');
+    error.textContent = '';
+    error.hidden = true;
+    if (field === 'phone') document.getElementById('phone-control').classList.remove('has-contact-error');
+}
+
+function focusAccountInvalidField(input) {
+    input.focus({ preventScroll: true });
+    input.scrollIntoView?.({ behavior: 'smooth', block: 'center' });
+}
+
+function showAccountContactErrors(payload, focusFirst = false) {
+    const source = payload?.payload || payload || {};
+    const errors = source.errors || source.data?.errors || {};
+    const message = source.message || '';
+    const firstMessage = value => (Array.isArray(value) ? value : [value]).find(value => typeof value === 'string' && value.trim());
+    const messages = {
+        phone: firstMessage(errors.phone),
+        email: firstMessage(errors.email) || firstMessage(errors.verified_email),
+    };
+    if (message === 'This phone number is already registered.') messages.phone = message;
+    if (message === 'This email address is already registered.') messages.email = message;
+    let firstInput = null;
+    for (const field of ['phone', 'email']) {
+        if (!messages[field]) continue;
+        const input = document.getElementById(field === 'phone' ? 'phone' : 'new-email');
+        const error = document.getElementById(field + '-error');
+        error.textContent = messages[field];
+        error.hidden = false;
+        input.setAttribute('aria-invalid', 'true');
+        if (field === 'phone') document.getElementById('phone-control').classList.add('has-contact-error');
+        if (field === 'email' && document.getElementById('email-form').style.display === 'none') {
+            // Keep the pending OTP and its controls intact; Cancel still permits changing email.
+            document.getElementById('email-form').style.display = 'flex';
+            input.readOnly = true;
+            document.getElementById('send-otp-btn').hidden = true;
+        }
+        firstInput = firstInput || input;
+    }
+    if (firstInput && focusFirst) {
+        focusAccountInvalidField(firstInput);
+    }
+    return Boolean(firstInput);
+}
+
+async function updateAccountProfile(formData) {
+    // Same multipart POST/PATCH contract as API.updateProfile, retaining validation details locally.
+    formData.append('_method', 'PATCH');
+    const response = await fetch(window.SFMS_PUBLIC_URL('/api/users/profile'), {
+        method: 'POST', credentials: 'include', body: formData,
+    });
+    const data = await response.json();
+    if (!response.ok || !data.success) {
+        const error = new Error(data.message || 'Failed to save account settings');
+        error.payload = data;
+        throw error;
+    }
+    return data;
+}
 
 const originalAccountFullName = document.getElementById('full_name').value;
 
@@ -389,46 +481,44 @@ document.getElementById('account-settings-form').addEventListener('submit', asyn
 
     if (!fullName) {
         showSettingsToast('Please enter your full name', 'error');
+        focusAccountInvalidField(document.getElementById('full_name'));
         return;
     }
     const nameError = accountNameValidationError(fullName, originalAccountFullName);
     if (nameError) {
         showSettingsToast(nameError, 'error');
+        focusAccountInvalidField(document.getElementById('full_name'));
         return;
     }
 
     if (username && !/^[a-z0-9_]{3,50}$/.test(username)) {
         showSettingsToast('Username must be 3-50 characters: lowercase letters, numbers, underscores only.', 'error');
+        focusAccountInvalidField(document.getElementById('username'));
         return;
     }
 
     if (forceProfileSetup) {
         if (!currentPassword || !newPassword) {
             showSettingsToast('For first-time setup, current and new password are required', 'error');
+            focusAccountInvalidField(document.getElementById(!currentPassword ? 'current_password' : 'new_password'));
             return;
         }
 
-        // 2026-10-15 — first-time setup also requires a phone number and a
-        // verified email, not just a new password. (2026-10-26: phone no
-        // longer needs OTP verification — see the Phone Number field note
-        // above — so this is now a plain non-empty + format check, same
-        // spirit as Full Name.) Server-side (UserController::updateProfile)
-        // enforces the same rule directly — this check is only here to give
-        // an immediate, specific error instead of a generic failed-save
-        // message.
+        if (document.getElementById('new_password').value === currentPassword) {
+            showSettingsToast('Choose a new password different from your temporary password', 'error');
+            focusAccountInvalidField(document.getElementById('new_password'));
+            return;
+        }
         const phoneValue = document.getElementById('phone')?.value.trim() || '';
-        if (!phoneValue) {
-            showSettingsToast('Please enter your phone number before continuing', 'error');
-            return;
-        }
-        if (!PHONE_PATTERN.test(phoneValue)) {
+        if (phoneValue && !PHONE_PATTERN.test(phoneValue)) {
             showSettingsToast('Phone number must be 10 digits (e.g. 9171234713 for +63 917 123 4713)', 'error');
+            focusAccountInvalidField(document.getElementById('phone'));
             return;
         }
 
-        const emailVerified = verifiedEmailDisplay && verifiedEmailDisplay.textContent.trim() !== '' && verifiedEmailDisplay.textContent.trim() !== 'Not set';
-        if (!emailVerified) {
-            showSettingsToast('Please verify your email address before continuing', 'error');
+        if (!phoneValue && !accountEmailVerified) {
+            showSettingsToast('Provide at least one contact method: a valid Phone Number or Verified Email.', 'error');
+            focusAccountInvalidField(document.getElementById('phone'));
             return;
         }
     }
@@ -441,6 +531,7 @@ document.getElementById('account-settings-form').addEventListener('submit', asyn
         const phoneValueOptional = document.getElementById('phone')?.value.trim() || '';
         if (phoneValueOptional && !PHONE_PATTERN.test(phoneValueOptional)) {
             showSettingsToast('Phone number must be 10 digits (e.g. 9171234713 for +63 917 123 4713)', 'error');
+            focusAccountInvalidField(document.getElementById('phone'));
             return;
         }
     }
@@ -465,11 +556,12 @@ document.getElementById('account-settings-form').addEventListener('submit', asyn
         const phoneTyped = document.getElementById('phone')?.value.trim() || '';
         formData.set('phone', phoneTyped ? ('0' + phoneTyped) : '');
 
-        const response = await API.updateProfile(formData);
+        const response = await updateAccountProfile(formData);
 
         if (!response.success) {
             throw new Error(response.message || 'Failed to save account settings');
         }
+        clearAccountContactError('phone');
 
         const updatedUser = response.data?.user || { full_name: fullName };
         renderHeaderAvatar(updatedUser);
@@ -503,7 +595,7 @@ document.getElementById('account-settings-form').addEventListener('submit', asyn
             showSettingsToast('Password changed. Logging you out...');
             // Session invalidation has already committed on the server.
             setTimeout(() => {
-                window.location.href = window.SFMS_PUBLIC_URL('/login?password_changed=1');
+                window.location.href = window.SFMS_PUBLIC_URL(typeof scannedDispatchReloginPath === 'string' ? scannedDispatchReloginPath : '/login?password_changed=1');
             }, 1200);
             return;
         }
@@ -511,7 +603,20 @@ document.getElementById('account-settings-form').addEventListener('submit', asyn
         showSettingsToast('Account settings saved successfully!');
     } catch (error) {
         console.error('Save account settings error:', error);
-        showSettingsToast(error.message || 'Failed to save account settings', 'error');
+        const errors = error.payload?.errors || error.payload?.data?.errors || {};
+        const firstInvalid = ['full_name', 'username', 'current_password', 'new_password', 'phone', 'email', 'verified_email', 'profile_picture']
+            .find(field => errors[field]);
+        const contactErrorShown = showAccountContactErrors(error, !firstInvalid);
+        if (firstInvalid) {
+            focusAccountInvalidField(document.getElementById(['email', 'verified_email'].includes(firstInvalid) ? 'new-email' : firstInvalid));
+        }
+        const otherError = Object.entries(errors)
+            .filter(([field]) => !['phone', 'email', 'verified_email'].includes(field))
+            .flatMap(([, messages]) => Array.isArray(messages) ? messages : [messages])
+            .find(message => typeof message === 'string' && message.trim());
+        if (!contactErrorShown || otherError) {
+            showSettingsToast(otherError || error.message || 'Failed to save account settings', 'error');
+        }
     } finally {
         submitButton.disabled = false;
         submitButton.textContent = originalLabel;
@@ -556,6 +661,7 @@ const emailStatusDiv = document.getElementById('email-status');
 const otpTimerDiv = document.getElementById('otp-timer');
 const otpEmailDisplay = document.getElementById('otp-email-display');
 const verifiedEmailDisplay = document.getElementById('verified-email-display');
+newEmailInput.addEventListener('input', () => clearAccountContactError('email'));
 
 // NOTE (2026-10-13): the current verified email used to be loaded here via
 // fetch('/api/users/profile'), but no GET route for that URI has ever been
@@ -566,7 +672,11 @@ const verifiedEmailDisplay = document.getElementById('verified-email-display');
 // load, so no client-side fetch is needed for the initial display.
 
 // Show status message
-function showEmailStatus(message, isError = false) {
+function showEmailStatus(message, isError = false, payload = null) {
+    if (isError && showAccountContactErrors(payload || { message }, true)) {
+        emailStatusDiv.style.display = 'none';
+        return;
+    }
     emailStatusDiv.textContent = message;
     emailStatusDiv.className = 'alert ' + (isError ? 'alert-error' : 'alert-success');
     emailStatusDiv.style.display = 'block';
@@ -575,6 +685,7 @@ function showEmailStatus(message, isError = false) {
 // Hide status message
 function hideEmailStatus() {
     emailStatusDiv.style.display = 'none';
+    clearAccountContactError('email');
 }
 
 // Start OTP timer countdown
@@ -608,12 +719,14 @@ sendOtpBtn.addEventListener('click', async () => {
     const email = newEmailInput.value.trim();
 
     if (!email) {
-        showEmailStatus('Please enter an email address', true);
+        showEmailStatus('Please enter an email address', true, { errors: { email: ['Please enter an email address'] } });
         return;
     }
 
     if (email.length > 255 || !newEmailInput.checkValidity() || !/^[^\s@]+@(?:gmail\.com|yahoo\.com)$/i.test(email)) {
-        showEmailStatus('Enter a valid email using gmail.com or yahoo.com (maximum 255 characters).', true);
+        showEmailStatus('Enter a valid email using gmail.com or yahoo.com (maximum 255 characters).', true, {
+            errors: { email: ['Enter a valid email using gmail.com or yahoo.com (maximum 255 characters).'] },
+        });
         return;
     }
 
@@ -641,7 +754,7 @@ sendOtpBtn.addEventListener('click', async () => {
             const expiresAt = Date.now() + (5 * 60 * 1000);
             startOtpTimer(expiresAt);
         } else {
-            showEmailStatus(data.message || 'Failed to send OTP', true);
+            showEmailStatus(data.message || 'Failed to send OTP', true, data);
         }
     } catch (err) {
         console.error('OTP send error:', err);
@@ -679,14 +792,17 @@ verifyOtpBtn.addEventListener('click', async () => {
             hideEmailStatus();
             otpForm.style.display = 'none';
             emailForm.style.display = 'flex';
+            newEmailInput.readOnly = false;
+            sendOtpBtn.hidden = false;
             newEmailInput.value = '';
             otpCodeInput.value = '';
             verifiedEmailDisplay.textContent = email;
+            accountEmailVerified = true;
 
             showSettingsToast('Email verified successfully!', 'success');
             clearInterval(otpTimer);
         } else {
-            showEmailStatus(data.message || 'Verification failed', true);
+            showEmailStatus(data.message || 'Verification failed', true, data);
         }
     } catch (err) {
         console.error('OTP verification error:', err);
@@ -715,6 +831,7 @@ resendOtpBtn.addEventListener('click', async () => {
         const data = await response.json();
 
         if (response.ok) {
+            hideEmailStatus();
             otpCodeInput.value = '';
             otpCodeInput.focus();
             resendOtpBtn.style.display = 'none';
@@ -724,7 +841,7 @@ resendOtpBtn.addEventListener('click', async () => {
 
             showSettingsToast('New OTP sent', 'success');
         } else {
-            showEmailStatus(data.message || 'Failed to resend OTP', true);
+            showEmailStatus(data.message || 'Failed to resend OTP', true, data);
         }
     } catch (err) {
         console.error('Resend OTP error:', err);
@@ -739,6 +856,8 @@ resendOtpBtn.addEventListener('click', async () => {
 cancelOtpBtn.addEventListener('click', () => {
     otpForm.style.display = 'none';
     emailForm.style.display = 'flex';
+    newEmailInput.readOnly = false;
+    sendOtpBtn.hidden = false;
     newEmailInput.value = '';
     otpCodeInput.value = '';
     hideEmailStatus();

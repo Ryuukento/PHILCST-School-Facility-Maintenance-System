@@ -4,6 +4,7 @@ namespace App\Http\Middleware;
 
 use App\Models\User;
 use App\Services\RoleNormalizerService;
+use App\Support\ScannedDispatchDestination;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -12,6 +13,9 @@ class EnsureApiAuthenticated
 {
     public function handle(Request $request, Closure $next): Response
     {
+        // Capture only the existing dispatch-detail GET, never an API/action request.
+        $scannedDispatch = $request->isMethod('GET') && $request->route()?->getName() === 'dispatches.show'
+            ? ScannedDispatchDestination::id($request->route('id')) : null;
         // Check for either 'auth_user' (new) or 'user' (old PHP compat)
         if (!$request->session()->has('auth_user') && !$request->session()->has('user')) {
             if ($request->is('api/*') || $request->expectsJson()) {
@@ -22,7 +26,7 @@ class EnsureApiAuthenticated
             }
 
             // Web requests should redirect to the login page.
-            return redirect('/login');
+            return redirect(ScannedDispatchDestination::carry('/login', $scannedDispatch));
         }
 
         // TASK 21 — Stale Session After User Deletion: a session can keep
@@ -72,7 +76,7 @@ class EnsureApiAuthenticated
                 ], Response::HTTP_UNAUTHORIZED);
             }
 
-            return redirect('/frontend/pages/index.php?session_expired=1');
+            return redirect(ScannedDispatchDestination::carry('/frontend/pages/index.php?session_expired=1', $scannedDispatch));
         }
 
         $authorization = [
@@ -106,7 +110,7 @@ class EnsureApiAuthenticated
             return $request->is('api/*') || $request->expectsJson()
                 ? response()->json(['success' => false, 'message' => 'Please complete your required password change.',
                     'code' => 'PASSWORD_CHANGE_REQUIRED', 'redirect' => '/account?setup=1'], 403)
-                : redirect('/account?setup=1');
+                : redirect(ScannedDispatchDestination::carry('/account?setup=1', $scannedDispatch));
         }
 
         return $next($request);
