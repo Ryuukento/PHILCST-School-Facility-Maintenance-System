@@ -178,10 +178,17 @@ class BuildingController extends Controller
                 'b.id as building_id',
                 'r.id as room_id',
                 'di.id as dispatch_item_id',
+                'r.floor_id',
+                'f.name as floor_name',
+                DB::raw("'dispatch' as source_type"),
+                'di.id as source_record_id',
+                'i.id as item_id',
+                'd.id as dispatch_id',
             ])
             ->join('dispatch_items as di', 'd.id', '=', 'di.dispatch_id')
             ->join('items as i', 'di.item_id', '=', 'i.id')
             ->leftJoin('rooms as r', 'd.room_id', '=', 'r.id')
+            ->leftJoin('floors as f', 'r.floor_id', '=', 'f.id')
             ->leftJoin('buildings as b', 'r.building_id', '=', 'b.id')
             ->leftJoin('inventory_categories as c', 'i.category_id', '=', 'c.id')
             ->where('d.status', 'released');
@@ -202,8 +209,15 @@ class BuildingController extends Controller
                 'b2.id as building_id',
                 'r2.id as room_id',
                 DB::raw('NULL as dispatch_item_id'),
+                'r2.floor_id',
+                'f2.name as floor_name',
+                DB::raw("'direct' as source_type"),
+                'ri.id as source_record_id',
+                'ri.id as item_id',
+                DB::raw('NULL as dispatch_id'),
             ])
             ->join('rooms as r2', 'ri.room_id', '=', 'r2.id')
+            ->leftJoin('floors as f2', 'r2.floor_id', '=', 'f2.id')
             ->leftJoin('buildings as b2', 'r2.building_id', '=', 'b2.id')
             ->leftJoin('inventory_categories as c2', 'ri.category_id', '=', 'c2.id')
             ->where('ri.item_type', 'room_asset');

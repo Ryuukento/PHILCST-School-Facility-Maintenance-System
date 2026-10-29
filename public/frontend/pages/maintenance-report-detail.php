@@ -245,13 +245,14 @@ $pageStylesheets = [
 
     <div class="card mt-lg" id="need-change-approval-card" style="display:none;">
         <div class="card-header">
-            <h2>Need Change Approval</h2>
-            <p class="text-muted mb-0">Approve or reject replacement request. Stock is deducted only after approval.</p>
+            <h2 id="need-change-approval-title">Need Change Approval</h2>
+            <p class="text-muted mb-0" id="need-change-approval-description">Approve or reject replacement request. Stock is deducted only after approval.</p>
         </div>
         <div class="card-body">
             <div id="need-change-approval-meta" class="need-change-approval-meta"></div>
-            <div id="need-change-approval-alert"></div>
-            <div class="d-flex gap-sm">
+            <div id="need-change-approval-alert" role="status" aria-live="polite"></div>
+            <button type="button" class="btn btn-secondary" id="check-need-change-status-btn" hidden>Check Current Status</button>
+            <div class="d-flex gap-sm" id="need-change-approval-actions">
                 <button type="button" class="btn btn-success" id="approve-need-change-btn"><?php echo ui_icon('check'); ?> Approve Request</button>
                 <button type="button" class="btn btn-danger" id="reject-need-change-btn"><?php echo ui_icon('x'); ?> Reject Request</button>
             </div>
@@ -267,6 +268,12 @@ $pageStylesheets = [
      UI.systemConfirm() modal via the showSystemConfirm() wrapper below. -->
 
 <style>
+.need-change-success { border-left: 4px solid #16a34a; background: #f0fdf4; padding: 14px; border-radius: 8px; color: #166534; overflow-wrap: anywhere; }
+.need-change-success > div + div { margin-top: 6px; }
+.need-change-success-badge { display: inline-flex; align-items: center; gap: 6px; font-weight: 700; }
+.need-change-spinner { display: inline-block; width: 14px; height: 14px; margin-right: 6px; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: need-change-spin .8s linear infinite; }
+@keyframes need-change-spin { to { transform: rotate(360deg); } }
+#check-need-change-status-btn[hidden] { display: none; }
 /* Report Archive card (see applyArchiveUI()). */
 .report-archive-card[hidden] { display: none; }
 .report-archive-card { border-left: 4px solid #8b5cf6; }
@@ -439,6 +446,9 @@ const assignmentTargetsByRole = <?php echo json_encode($assignmentTargetsByRole,
 const defaultAssignmentRoleFilter = <?php echo json_encode($defaultAssignmentRoleFilter); ?>;
 const assignmentPlaceholder = <?php echo json_encode($assignmentPlaceholder, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
 let currentReport = null;
+let needChangeApprovalBusy = false;
+let needChangeStateUncertain = false;
+let needChangeReleaseAcknowledged = false;
 let activeAssignmentRole = defaultAssignmentRoleFilter;
 // TASK 44 — set for the whole duration of a status/assignment submit,
 // including while the cross-department confirmation dialog is open, so a
@@ -752,12 +762,28 @@ function showSystemConfirm(options = {}) {
     return UI.systemConfirm(message, String(options.confirmText || 'OK'), String(options.cancelText || 'Cancel'), variant);
 }
 
+function needChangePresentation(report) {
+    const status = String(report.need_change_status || 'pending').toLowerCase();
+    const released = Boolean(report.need_change_deducted_at) || status === 'deducted';
+    const processed = released || status === 'approved' || status === 'rejected';
+    return { status, released, processed,
+        label: released ? 'Approved & Released' : (status === 'approved' ? 'Approved' : (status === 'rejected' ? 'Rejected' : 'Awaiting Approval')) };
+}
+
+function showNeedChangeFeedback(message, kind = 'info') {
+    const alert = document.getElementById('need-change-approval-alert');
+    alert.innerHTML = `<div class="alert alert-${kind}">${UI.escapeHtml(String(message))}</div>`;
+}
+
 function updateNeedChangeApprovalUI(report) {
     const approvalCard = document.getElementById('need-change-approval-card');
     const approvalMeta = document.getElementById('need-change-approval-meta');
-    const approvalAlert = document.getElementById('need-change-approval-alert');
     const approvalBtn = document.getElementById('approve-need-change-btn');
     const rejectBtn = document.getElementById('reject-need-change-btn');
+    const actions = document.getElementById('need-change-approval-actions');
+    const title = document.getElementById('need-change-approval-title');
+    const description = document.getElementById('need-change-approval-description');
+    const checkBtn = document.getElementById('check-need-change-status-btn');
 
     if (!approvalCard || !approvalMeta || !approvalBtn) {
         return;
@@ -768,43 +794,83 @@ function updateNeedChangeApprovalUI(report) {
         return;
     }
 
+    title.textContent = 'Need Change Approval';
+    description.textContent = 'Approve or reject replacement request. Stock is deducted only after approval.';
+    actions.style.display = 'flex';
+    checkBtn.hidden = !needChangeStateUncertain;
+    checkBtn.disabled = needChangeApprovalBusy;
+    approvalBtn.setAttribute('aria-busy', needChangeApprovalBusy ? 'true' : 'false');
+    approvalMeta.classList.toggle('need-change-success', false);
+
     if (!(report.need_change_item_id || report.need_change_item_name)) {
         approvalCard.style.display = 'block';
         approvalMeta.innerHTML = '<div><strong>Need Change Status:</strong> No replacement request for this report.</div>';
         approvalBtn.disabled = true;
         approvalBtn.textContent = 'Approve';
+        actions.style.display = 'none';
         if (rejectBtn) {
             rejectBtn.disabled = true;
         }
         return;
     }
 
-    const status = String(report.need_change_status || 'pending').toLowerCase();
-    const isApproved = Boolean(report.need_change_deducted_at) || status === 'deducted' || status === 'approved';
+    const state = needChangePresentation(report);
     approvalCard.style.display = 'block';
-    approvalAlert.innerHTML = '';
 
     approvalMeta.innerHTML = `
-        <div><strong>Replacement Item:</strong> ${UI.escapeHtml(report.need_change_item_name) || ('Item #' + report.need_change_item_id)}</div>
-        <div><strong>Current Need Change Status:</strong> ${UI.escapeHtml(status.replace(/_/g, ' ').toUpperCase())}</div>
+        <div><strong>Replacement Item:</strong> ${UI.escapeHtml(report.need_change_item_name) || ('Item #' + UI.escapeHtml(String(report.need_change_item_id)))}</div>
+        <div><strong>Status:</strong> ${UI.escapeHtml(state.label)}</div>
+        <div><strong>Stock Deduction:</strong> ${state.released ? 'Completed' : 'Not confirmed'}</div>
         ${report.need_change_deducted_at ? `<div><strong>Deducted At:</strong> ${UI.escapeHtml(report.need_change_deducted_at)}</div>` : ''}
     `;
+    approvalMeta.classList.toggle('need-change-success', state.released);
 
-    if (isApproved) {
+    if (state.processed) {
+        title.textContent = state.released ? 'Replacement Approved & Released' : (state.status === 'rejected' ? 'Replacement Request Rejected' : 'Replacement Approved');
+        description.textContent = 'Already Processed — no further approval or rejection is required.';
+        actions.style.display = 'none';
+        if (state.released) approvalMeta.innerHTML = '<div class="need-change-success-badge"><span aria-hidden="true">✓</span> Replacement issued successfully</div>' + approvalMeta.innerHTML;
         approvalBtn.disabled = true;
         approvalBtn.textContent = 'Approved & Released';
         if (rejectBtn) {
             rejectBtn.disabled = true;
         }
     } else {
-        approvalBtn.disabled = false;
+        const blocked = needChangeApprovalBusy || needChangeStateUncertain || isArchiveLocked(report)
+            || !['pending', 'failed'].includes(state.status);
+        approvalBtn.disabled = blocked;
         // Approval IS the hand-off for a replacement item (there is no
         // separate release step), so the label says what it does.
-        approvalBtn.textContent = 'Approve & Release Item';
+        approvalBtn.innerHTML = needChangeApprovalBusy
+            ? '<span class="need-change-spinner" aria-hidden="true"></span>Processing...'
+            : 'Approve & Release Item';
         if (rejectBtn) {
-            rejectBtn.disabled = false;
+            rejectBtn.disabled = blocked;
         }
     }
+}
+
+async function refreshNeedChangeState() {
+    const response = await fetch(window.SFMS_PUBLIC_URL(`/api/reports/${reportId}`), {
+        credentials: 'include', cache: 'no-store', headers: { Accept: 'application/json' }
+    });
+    const payload = await response.json();
+    const report = payload?.data?.report;
+    if (!response.ok || payload.success !== true || !report || Number(report.report_id) !== Number(reportId)) {
+        throw new Error('Unable to verify the current replacement status.');
+    }
+    currentReport = report;
+    needChangeStateUncertain = needChangeReleaseAcknowledged && !needChangePresentation(report).processed;
+    const badge = document.getElementById('report-need-change-status');
+    if (badge) {
+        const state = needChangePresentation(report);
+        badge.textContent = state.label;
+        badge.className = 'badge ' + (state.released || state.status === 'approved' ? 'badge-success'
+            : (state.status === 'rejected' ? 'badge-danger' : 'badge-warning'));
+    }
+    updateNeedChangeApprovalUI(report);
+    applyArchiveUI(report);
+    return report;
 }
 
 
@@ -860,7 +926,7 @@ async function loadReport() {
         html += `<div class="report-info-row"><dt>Status</dt><dd>${renderStatusBadge(report.status)}</dd></div>`;
         if (report.need_change_item_id || report.need_change_item_name) {
             const needChangeStatusRaw = String(report.need_change_status || 'pending').toLowerCase();
-            const needChangeStatusLabel = needChangeStatusRaw.replace(/_/g, ' ').toUpperCase();
+            const needChangeStatusLabel = needChangePresentation(report).label;
             // Task 28.3: badge-only presentation (was plain text + a separate
             // "Deducted" badge shown side-by-side, duplicating the same value).
             // Color mapping mirrors reports.php's existing need-change badge
@@ -877,7 +943,7 @@ async function loadReport() {
             }
             html += `<div class="report-info-row"><dt>Need Change</dt><dd>Yes</dd></div>`;
             html += `<div class="report-info-row"><dt>Replacement Item</dt><dd><strong>${UI.escapeHtml(report.need_change_item_name) || ('Item #' + report.need_change_item_id)}</strong>${report.need_change_item_quantity ? ` <span class="text-muted">(Stock: ${UI.escapeHtml(report.need_change_item_quantity)})</span>` : ''}</dd></div>`;
-            html += `<div class="report-info-row"><dt>Need Change Status</dt><dd><span class="badge ${needChangeStatusBadgeClass}">${UI.escapeHtml(needChangeStatusLabel)}</span></dd></div>`;
+            html += `<div class="report-info-row"><dt>Need Change Status</dt><dd><span id="report-need-change-status" class="badge ${needChangeStatusBadgeClass}">${UI.escapeHtml(needChangeStatusLabel)}</span></dd></div>`;
         } else {
             html += `<div class="report-info-row"><dt>Need Change</dt><dd class="report-unassigned">Not requested</dd></div>`;
         }
@@ -1138,39 +1204,45 @@ document.getElementById('status-update-form')?.addEventListener('submit', async 
 });
 
 document.getElementById('approve-need-change-btn')?.addEventListener('click', async () => {
-    const approvalBtn = document.getElementById('approve-need-change-btn');
-    const rejectBtn = document.getElementById('reject-need-change-btn');
-    const approvalAlert = document.getElementById('need-change-approval-alert');
-
-    if (!currentReport) {
+    if (!currentReport || !isSuperAdminUser || isArchiveLocked(currentReport)
+        || needChangeApprovalBusy || needChangeStateUncertain) return;
+    if (needChangePresentation(currentReport).processed) {
+        updateNeedChangeApprovalUI(currentReport);
+        showNeedChangeFeedback('Already Processed — no further approval is needed.');
         return;
     }
+    if (!['pending', 'failed'].includes(needChangePresentation(currentReport).status)) return;
 
-    const status = String(currentReport.need_change_status || 'pending').toLowerCase();
-    const isAlreadyApproved = Boolean(currentReport.need_change_deducted_at) || status === 'deducted' || status === 'approved';
-    if (isAlreadyApproved) {
-        approvalAlert.innerHTML = '<div class="alert alert-info">Need Change is already approved.</div>';
-        return;
-    }
-
-    const isConfirmed = await showSystemConfirm({
+    // Hold the guard across confirmation as well as the request.
+    needChangeApprovalBusy = true;
+    updateNeedChangeApprovalUI(currentReport);
+    let isConfirmed;
+    try {
+        isConfirmed = await showSystemConfirm({
         title: 'Approve & Release Item',
         message: 'Approve this replacement request and release the item?\n\nThe item will be deducted from inventory now.',
         confirmText: 'Approve & Release',
         cancelText: 'Cancel',
         confirmClass: 'btn btn-success'
-    });
-
-    if (!isConfirmed) {
-        approvalAlert.innerHTML = '<div class="alert alert-info">Approval cancelled.</div>';
+        });
+    } catch (_) {
+        needChangeApprovalBusy = false;
+        updateNeedChangeApprovalUI(currentReport);
+        showNeedChangeFeedback('Unable to open confirmation. No approval was submitted.', 'danger');
         return;
     }
 
-    const originalText = approvalBtn.textContent;
-    approvalBtn.disabled = true;
-    rejectBtn.disabled = true;
-    approvalBtn.textContent = 'Approving...';
-    approvalAlert.innerHTML = '';
+    if (!isConfirmed) {
+        needChangeApprovalBusy = false;
+        updateNeedChangeApprovalUI(currentReport);
+        showNeedChangeFeedback('Approval cancelled.');
+        return;
+    }
+
+    needChangeStateUncertain = true;
+    showNeedChangeFeedback('Processing replacement approval and release…');
+    let outcome = 'unknown';
+    let failureMessage = '';
 
     try {
         const response = await fetch(
@@ -1187,21 +1259,65 @@ document.getElementById('approve-need-change-btn')?.addEventListener('click', as
         );
 
         const data = await response.json();
-        if (!data.success) {
-            throw new Error(data.message || 'Failed to approve Need Change');
+        if (response.ok && data.success === true) {
+            outcome = 'success';
+            needChangeReleaseAcknowledged = true;
+        } else if (response.status >= 400 && response.status < 500 && data.success === false) {
+            outcome = 'failure';
+            failureMessage = data.message || 'The replacement approval was not accepted.';
         }
+    } catch (_) {
+        // A lost response can follow a committed deduction. Reconcile by GET;
+        // never automatically repeat the approval PATCH.
+    }
 
-        approvalAlert.innerHTML = '<div class="alert alert-success">Need Change approved successfully. Inventory updated.</div>';
-        loadReport();
-    } catch (error) {
-        approvalAlert.innerHTML = '<div class="alert alert-danger">' + error.message + '</div>';
-        approvalBtn.disabled = false;
-        rejectBtn.disabled = false;
-        approvalBtn.textContent = originalText;
+    try {
+        const report = await refreshNeedChangeState();
+        if (needChangePresentation(report).released) {
+            showNeedChangeFeedback('Replacement approved and released successfully.', 'success');
+            UI.toast('Replacement approved and released successfully.', 'success');
+        } else if (needChangePresentation(report).processed) {
+            showNeedChangeFeedback('Already Processed — the current replacement status has been refreshed.');
+        } else if (outcome === 'failure') {
+            showNeedChangeFeedback(failureMessage, 'danger');
+        } else {
+            showNeedChangeFeedback(outcome === 'success'
+                ? 'Approval was confirmed, but release details are not yet confirmed. Check current status before continuing.'
+                : 'The approval response could not be confirmed. The current record still awaits approval; no automatic retry was made.', 'warning');
+        }
+    } catch (_) {
+        needChangeStateUncertain = true;
+        showNeedChangeFeedback(outcome === 'success'
+            ? 'Approval was confirmed, but current details could not be refreshed. Actions are paused; check current status.'
+            : (outcome === 'failure' ? failureMessage + ' Current status could not be verified. Actions are paused; check current status.'
+                : 'Unable to confirm whether approval completed. Actions are paused; check current status.'), outcome === 'failure' ? 'danger' : 'warning');
+    } finally {
+        needChangeApprovalBusy = false;
+        updateNeedChangeApprovalUI(currentReport);
+    }
+});
+
+document.getElementById('check-need-change-status-btn')?.addEventListener('click', async () => {
+    if (!isSuperAdminUser || needChangeApprovalBusy) return;
+    needChangeApprovalBusy = true;
+    updateNeedChangeApprovalUI(currentReport);
+    try {
+        const report = await refreshNeedChangeState();
+        showNeedChangeFeedback(needChangePresentation(report).released
+            ? 'Replacement approved and released successfully.'
+            : (needChangeStateUncertain ? 'Release details are not yet confirmed. Actions remain paused.' : 'Current replacement status verified.'),
+            needChangePresentation(report).released ? 'success' : 'info');
+    } catch (_) {
+        needChangeStateUncertain = true;
+        showNeedChangeFeedback('Current status could not be verified. Actions remain paused; check again when connected.', 'warning');
+    } finally {
+        needChangeApprovalBusy = false;
+        updateNeedChangeApprovalUI(currentReport);
     }
 });
 
 document.getElementById('reject-need-change-btn')?.addEventListener('click', async () => {
+    if (needChangeApprovalBusy || needChangeStateUncertain) return;
     const approvalBtn = document.getElementById('approve-need-change-btn');
     const rejectBtn = document.getElementById('reject-need-change-btn');
     const approvalAlert = document.getElementById('need-change-approval-alert');

@@ -33,7 +33,7 @@ $pageTitle = 'Buildings Overview - SFMS';
 include __DIR__ . '/../includes/header.php';
 ?>
 
-<link rel="stylesheet" href="<?php echo htmlspecialchars(public_url('/frontend/assets/css/buildings-redesign.css?v=20261029-item-quantity')); ?>">
+<link rel="stylesheet" href="<?php echo htmlspecialchars(public_url('/frontend/assets/css/buildings-redesign.css?v=20261029-deployed-overview-refined')); ?>">
 
 <main class="container buildings-page-container">
     <section class="buildings-page-hero">
@@ -72,7 +72,7 @@ include __DIR__ . '/../includes/header.php';
                 <p class="buildings-stat-desc">Classrooms, offices, labs</p>
             </div>
         </div>
-        <div class="buildings-stat-card buildings-stat-card--items">
+        <div class="buildings-stat-card buildings-stat-card--items" id="deployedOverviewCard" <?php if (($user['role'] ?? '') === 'super_admin'): ?>role="button" tabindex="0" aria-haspopup="dialog" aria-controls="deployedOverviewModal" aria-label="View deployed items overview"<?php endif; ?>>
             <div class="buildings-stat-icon"><?php echo ui_icon('package'); ?></div>
             <div class="buildings-stat-body">
                 <p class="buildings-stat-label">Deployed Items</p>
@@ -493,6 +493,39 @@ include __DIR__ . '/../includes/header.php';
     </div>
 </div>
 
+<?php if (($user['role'] ?? '') === 'super_admin'): ?>
+<div id="deployedOverviewModal" class="deo-overlay" hidden>
+    <section class="deo-dialog" role="dialog" aria-modal="true" aria-labelledby="deoTitle" aria-describedby="deoDescription">
+        <header class="deo-header">
+            <div><h2 id="deoTitle">Deployed Items Overview</h2><p id="deoDescription">Recorded deployments by item and location—not a current-condition count.</p></div>
+            <button type="button" class="btn btn-secondary" id="deoClose" aria-label="Close deployed items overview">&times;</button>
+        </header>
+        <div class="deo-scroll">
+            <div id="deoStatus" role="status" aria-live="polite"></div>
+            <button type="button" class="btn btn-secondary" id="deoRetry" hidden>Retry</button>
+            <div id="deoContent" hidden>
+                <div class="deo-overview-top">
+                    <div class="deo-summary"><div><span>Recorded Deployments</span><strong id="deoTotal"></strong><small>Across all recorded locations</small></div><div><span>Filtered Quantity</span><strong id="deoFilteredTotal"></strong><small>Matches your current filters</small></div></div>
+                    <section class="deo-ranking-panel" aria-labelledby="deoRankingTitle"><h3 id="deoRankingTitle">Top 5 Most Deployed Items</h3><p class="deo-help">Ranked by quantity within the current filters.</p><div id="deoRanking"></div></section>
+                </div>
+                <details class="deo-notes"><summary>About these quantities</summary><p class="deo-help">Recorded quantities from released dispatches and direct room items include historical and damaged/replaced records. This is not an active-equipment count. Quantities retain their recorded units; boxes, sets and pieces are not converted. Rankings group displayed names and compatible units—not physical asset identity. Direct Room Item: Includes items recorded directly in rooms and legacy room records.</p></details>
+                <div class="deo-filters">
+                    <label>Search Item Name<input type="search" class="form-control" id="deoSearch" placeholder="Search items..."></label>
+                    <label>Building<select class="form-control" id="deoBuilding"></select></label>
+                    <label>Floor<select class="form-control" id="deoFloor"></select></label>
+                    <label>Room<select class="form-control" id="deoRoom"></select></label>
+                </div>
+                <section id="deoTableSection">
+                    <div class="deo-table-wrap" tabindex="0" role="region" aria-label="Recorded deployment table, scroll to view all columns"><table class="deo-table"><caption>Separate recorded deployments and locations</caption><colgroup><col class="deo-col-item"><col class="deo-col-category"><col class="deo-col-quantity"><col class="deo-col-unit"><col class="deo-col-building"><col class="deo-col-floor"><col class="deo-col-room"><col class="deo-col-source"><col class="deo-col-action"></colgroup><thead><tr><th scope="col">Item Name</th><th scope="col">Category</th><th scope="col">Quantity</th><th scope="col">Unit</th><th scope="col">Building</th><th scope="col">Floor</th><th scope="col">Room</th><th scope="col">Deployment Source</th><th scope="col">View Locations</th></tr></thead><tbody id="deoRows"></tbody></table></div>
+                    <div class="deo-pagination"><span id="deoPageInfo" role="status" aria-live="polite"></span><button type="button" class="btn btn-secondary" id="deoPrevious">Previous</button><button type="button" class="btn btn-secondary" id="deoNext">Next</button></div>
+                </section>
+                <section id="deoLocations" hidden aria-labelledby="deoLocationsTitle"><button type="button" class="btn btn-secondary" id="deoBack">Back to Table</button><h3 id="deoLocationsTitle" tabindex="-1"></h3><p class="deo-help">All recorded locations for this item ID. Matching names alone do not identify the same physical asset.</p><ul id="deoLocationRows"></ul></section>
+            </div>
+        </div>
+    </section>
+</div>
+<?php endif; ?>
+
 <script>
 // TASK 35 — Buildings Overview RBAC (frontend UI only). The actual security
 // boundary is the existing EnsureRole:'super_admin' middleware already
@@ -517,6 +550,183 @@ let buildingItemCounts = {};  // { [buildingId]: totalDeployedItemQuantity }, fr
 let buildingsSearchTerm = '';
 let buildingsSortValue = 'name_asc';
 let buildingsViewMode = 'grid';
+
+// Separate modal state: never mutates the outer building/floor/room navigation.
+const deployedOverview = { items: [], status: 'idle', sequence: 0, open: false,
+    search: '', building: '', floor: '', room: '', page: 1, pageSize: 20, detail: null };
+const deoMissing = '__unspecified__';
+function deoId(value) { return value === null || value === undefined || value === '' || Number(value) === 0 ? deoMissing : String(value); }
+function deoText(value) { return value === null || value === undefined || value === '' ? 'Unspecified' : String(value); }
+function deoQuantity(row) { return Number(row.quantity) || 0; }
+function deoUnitLabel(value) { return String(value ?? '').trim() ? String(value) : 'Unit not recorded'; }
+function deoName(value) { return String(value ?? '').normalize('NFC').trim().replace(/\s+/g, ' ').toLowerCase(); }
+function deoUnit(value) {
+    const unit = deoName(value);
+    return ({ pc: 'pc', pcs: 'pc', piece: 'pc', pieces: 'pc', box: 'box', boxes: 'box', set: 'set', sets: 'set' })[unit] || unit || 'Unspecified';
+}
+function deoSource(row) { return row.source_type === 'dispatch' ? 'Dispatch' : (row.source_type === 'direct' ? 'Direct Room Item' : 'Unspecified'); }
+function deoKey(row) { return String(row.source_type) + ':' + String(row.source_record_id); }
+function deoFiltered(items = deployedOverview.items) {
+    const s = deployedOverview;
+    return items.filter(row => (!s.search || deoName(row.item_name).includes(deoName(s.search)))
+        && (!s.building || deoId(row.building_id) === s.building)
+        && (!s.floor || deoId(row.floor_id) === s.floor)
+        && (!s.room || deoId(row.room_id) === s.room));
+}
+function deoTopFive(items) {
+    const groups = new Map();
+    items.forEach(row => {
+        const unit = deoUnit(row.unit), key = JSON.stringify([deoName(row.item_name), unit]);
+        if (!groups.has(key)) groups.set(key, { key, name: deoText(row.item_name), unit, quantity: 0 });
+        groups.get(key).quantity += deoQuantity(row);
+    });
+    return [...groups.values()].sort((a, b) => b.quantity - a.quantity || (a.key < b.key ? -1 : a.key > b.key ? 1 : 0)).slice(0, 5);
+}
+function deoElement(tag, text, className) {
+    const node = document.createElement(tag);
+    if (text !== undefined) node.textContent = text;
+    if (className) node.className = className;
+    return node;
+}
+function deoFilterOptions(id, rows, field, label, selected) {
+    const select = document.getElementById(id), values = new Map();
+    rows.forEach(row => values.set(deoId(row[field + '_id']), deoText(row[field + '_name'])));
+    select.replaceChildren(deoElement('option', 'All ' + label));
+    select.firstChild.value = '';
+    [...values].sort((a, b) => a[1].localeCompare(b[1]) || a[0].localeCompare(b[0])).forEach(([value, text]) => {
+        const option = deoElement('option', text); option.value = value; select.appendChild(option);
+    });
+    select.value = values.has(selected) ? selected : '';
+    return select.value;
+}
+function deoUpdateFilters() {
+    const s = deployedOverview;
+    s.building = deoFilterOptions('deoBuilding', s.items, 'building', 'Buildings', s.building);
+    const buildingRows = s.items.filter(row => !s.building || deoId(row.building_id) === s.building);
+    s.floor = deoFilterOptions('deoFloor', buildingRows, 'floor', 'Floors', s.floor);
+    const floorRows = buildingRows.filter(row => !s.floor || deoId(row.floor_id) === s.floor);
+    s.room = deoFilterOptions('deoRoom', floorRows, 'room', 'Rooms', s.room);
+}
+function deoShowLocations(key) {
+    const row = deployedOverview.items.find(row => deoKey(row) === key);
+    if (!row) return;
+    deployedOverview.detail = key;
+    deployedOverviewRender();
+    document.getElementById('deoLocationsTitle').focus();
+}
+function deployedOverviewRender() {
+    const modal = document.getElementById('deployedOverviewModal');
+    if (!modal || !deployedOverview.open) return;
+    const s = deployedOverview, ready = s.status === 'ready';
+    const status = document.getElementById('deoStatus');
+    status.replaceChildren();
+    status.setAttribute('aria-busy', s.status === 'loading' ? 'true' : 'false');
+    if (!ready) {
+        if (s.status === 'loading') {
+            const spinner = deoElement('span', '', 'deo-spinner'); spinner.setAttribute('aria-hidden', 'true'); status.appendChild(spinner);
+        }
+        status.appendChild(deoElement('span', s.status === 'error' ? 'Unable to load recorded deployments. Please retry.' : 'Loading recorded deployments…'));
+    }
+    document.getElementById('deoRetry').hidden = s.status !== 'error';
+    document.getElementById('deoContent').hidden = !ready;
+    if (!ready) return;
+    deoUpdateFilters();
+    const filtered = deoFiltered(), rankings = deoTopFive(filtered);
+    document.getElementById('deoTotal').textContent = String(s.items.reduce((sum, row) => sum + deoQuantity(row), 0));
+    document.getElementById('deoFilteredTotal').textContent = String(filtered.reduce((sum, row) => sum + deoQuantity(row), 0));
+    const chart = document.getElementById('deoRanking'); chart.replaceChildren();
+    const max = Math.max(0, ...rankings.map(group => group.quantity));
+    if (!rankings.length) chart.appendChild(deoElement('p', 'No matching items found.', 'deo-help'));
+    rankings.forEach(group => {
+        const entry = deoElement('div', undefined, 'deo-rank');
+        const label = deoElement('div', undefined, 'deo-rank-label');
+        label.appendChild(deoElement('span', group.name, 'deo-rank-name'));
+        const amount = deoElement('span', undefined, 'deo-rank-amount');
+        amount.appendChild(deoElement('strong', String(group.quantity)));
+        amount.appendChild(deoElement('span', group.unit === 'Unspecified' ? 'Unit not recorded' : group.unit, 'deo-rank-unit'));
+        label.appendChild(amount); entry.appendChild(label);
+        const track = deoElement('div', undefined, 'deo-bar-track'), bar = deoElement('div', undefined, 'deo-bar');
+        bar.style.width = (max > 0 ? Math.max(0, group.quantity) / max * 100 : 0) + '%';
+        track.setAttribute('aria-hidden', 'true'); track.appendChild(bar); entry.appendChild(track); chart.appendChild(entry);
+    });
+    const pages = Math.max(1, Math.ceil(filtered.length / s.pageSize)); s.page = Math.max(1, Math.min(s.page, pages));
+    const body = document.getElementById('deoRows'); body.replaceChildren();
+    if (!filtered.length) {
+        const tr = deoElement('tr'), td = deoElement('td', 'No recorded deployments match these filters.'); td.colSpan = 9; tr.appendChild(td); body.appendChild(tr);
+    }
+    filtered.slice((s.page - 1) * s.pageSize, s.page * s.pageSize).forEach(row => {
+        const tr = deoElement('tr'), nameCell = deoElement('td'), nameButton = deoElement('button', deoText(row.item_name), 'deo-item-link');
+        nameButton.type = 'button'; nameButton.addEventListener('click', () => deoShowLocations(deoKey(row))); nameCell.appendChild(nameButton); tr.appendChild(nameCell);
+        [deoText(row.category), deoQuantity(row), deoUnitLabel(row.unit), deoText(row.building_name), deoText(row.floor_name), deoText(row.room_name), deoSource(row)].forEach(text => tr.appendChild(deoElement('td', text)));
+        const action = deoElement('td'), button = deoElement('button', 'View Locations', 'btn btn-secondary btn-sm'); button.type = 'button';
+        button.addEventListener('click', () => deoShowLocations(deoKey(row))); action.appendChild(button); tr.appendChild(action); body.appendChild(tr);
+    });
+    document.getElementById('deoPageInfo').textContent = filtered.length + ' records · Page ' + s.page + ' of ' + pages;
+    document.getElementById('deoPrevious').disabled = s.page === 1; document.getElementById('deoNext').disabled = s.page === pages;
+    const selected = s.items.find(row => deoKey(row) === s.detail);
+    document.getElementById('deoTableSection').hidden = Boolean(selected);
+    document.getElementById('deoLocations').hidden = !selected;
+    if (selected) {
+        document.getElementById('deoLocationsTitle').textContent = 'Locations: ' + deoText(selected.item_name) + ' (item #' + deoText(selected.item_id) + ')';
+        const list = document.getElementById('deoLocationRows'); list.replaceChildren();
+        s.items.filter(row => selected.item_id != null ? String(row.item_id) === String(selected.item_id) : deoKey(row) === deoKey(selected)).forEach(row => {
+            list.appendChild(deoElement('li', [deoText(row.building_name), deoText(row.floor_name), deoText(row.room_name)].join(' / ')
+                + ' — ' + deoQuantity(row) + ' ' + deoUnitLabel(row.unit) + ' · ' + deoSource(row)));
+        });
+    }
+}
+function openDeployedOverview() {
+    if (!canModifyBuildings) return;
+    const modal = document.getElementById('deployedOverviewModal'); if (!modal) return;
+    if (!deployedOverview.open) deployedOverview.bodyOverflow = document.body.style.overflow;
+    deployedOverview.open = true; modal.hidden = false;
+    document.body.style.overflow = 'hidden';
+    document.getElementById('deployedOverviewCard').setAttribute('aria-expanded', 'true');
+    document.getElementById('deoClose').focus();
+    deployedOverviewRender();
+    if (deployedOverview.status === 'idle') loadDeployedItemsSummary();
+}
+function closeDeployedOverview() {
+    deployedOverview.open = false;
+    document.getElementById('deployedOverviewModal').hidden = true;
+    document.body.style.overflow = deployedOverview.bodyOverflow || '';
+    document.getElementById('deployedOverviewCard').setAttribute('aria-expanded', 'false');
+    document.getElementById('deployedOverviewCard').focus();
+}
+function initDeployedOverview() {
+    if (!canModifyBuildings) return;
+    const card = document.getElementById('deployedOverviewCard'), modal = document.getElementById('deployedOverviewModal');
+    if (!card || !modal) return;
+    card.setAttribute('aria-expanded', 'false');
+    card.addEventListener('click', openDeployedOverview);
+    card.addEventListener('keydown', event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); openDeployedOverview(); } });
+    document.getElementById('deoClose').addEventListener('click', closeDeployedOverview);
+    modal.addEventListener('click', event => { if (event.target === modal) closeDeployedOverview(); });
+    modal.addEventListener('keydown', event => {
+        if (event.key === 'Escape') { event.preventDefault(); closeDeployedOverview(); }
+        if (event.key === 'Tab') {
+            const focusable = [...modal.querySelectorAll('button:not([disabled]), input, select, summary, [tabindex="0"]')].filter(node => !node.closest('[hidden]'));
+            const first = focusable[0], last = focusable[focusable.length - 1];
+            if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
+            else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
+        }
+    });
+    document.getElementById('deoRetry').addEventListener('click', () => loadDeployedItemsSummary());
+    document.getElementById('deoSearch').addEventListener('input', event => { deployedOverview.search = event.target.value; deployedOverview.page = 1; deployedOverviewRender(); });
+    ['building', 'floor', 'room'].forEach(field => document.getElementById('deo' + field[0].toUpperCase() + field.slice(1)).addEventListener('change', event => {
+        deployedOverview[field] = event.target.value;
+        if (field === 'building') { deployedOverview.floor = ''; deployedOverview.room = ''; }
+        if (field === 'floor') deployedOverview.room = '';
+        deployedOverview.page = 1; deployedOverview.detail = null; deployedOverviewRender();
+    }));
+    document.getElementById('deoPrevious').addEventListener('click', () => { deployedOverview.page--; deployedOverviewRender(); });
+    document.getElementById('deoNext').addEventListener('click', () => { deployedOverview.page++; deployedOverviewRender(); });
+    document.getElementById('deoBack').addEventListener('click', () => {
+        deployedOverview.detail = null; deployedOverviewRender();
+        (document.getElementById('deoRows').querySelector('button') || document.getElementById('deoSearch')).focus();
+    });
+}
+window.addEventListener('DOMContentLoaded', initDeployedOverview);
 
 // Drill-down floor cache: filled by loadFloors() from
 // /api/buildings/{currentBuildingId}/floors.
@@ -656,12 +866,16 @@ function setBuildingChromeVisibility(isVisible) {
 // system-wide deployed-items total plus a per-building breakdown, without
 // adding any new backend endpoint or touching deployment logic.
 async function loadDeployedItemsSummary() {
+    const sequence = ++deployedOverview.sequence;
+    deployedOverview.status = 'loading';
+    deployedOverviewRender();
     try {
         const res = await fetch(window.SFMS_PUBLIC_URL('/api/buildings/deployed-items'), {
             credentials: 'include'
         });
         const data = await res.json();
-        if (!data.success) return { total: 0, byBuilding: {} };
+        if (!res.ok || !data.success || !Array.isArray(data.data?.items)) throw new Error('Deployment data is unavailable.');
+        if (sequence !== deployedOverview.sequence) return { stale: true };
 
         const items = extractList(data, 'items');
         let total = 0;
@@ -674,10 +888,19 @@ async function loadDeployedItemsSummary() {
                 byBuilding[buildingId] = (byBuilding[buildingId] || 0) + qty;
             }
         });
+        deployedOverview.items = items;
+        deployedOverview.status = 'ready';
+        buildingItemCounts = byBuilding;
+        document.getElementById('statDeployedItems').textContent = String(total);
+        deployedOverviewRender();
         return { total, byBuilding };
     } catch (err) {
+        if (sequence !== deployedOverview.sequence) return { stale: true };
         console.error('Error loading deployed items summary', err);
-        return { total: 0, byBuilding: {} };
+        deployedOverview.status = 'error';
+        document.getElementById('statDeployedItems').textContent = 'Unavailable';
+        deployedOverviewRender();
+        return { total: null, byBuilding: {} };
     }
 }
 
@@ -694,7 +917,7 @@ function renderBuildingStats(buildings, deployedTotal) {
     setStat('statTotalBuildings', String(totalBuildings));
     setStat('statTotalFloors', String(totalFloors));
     setStat('statTotalRooms', String(totalRooms));
-    setStat('statDeployedItems', String(deployedTotal || 0));
+    setStat('statDeployedItems', deployedTotal === null ? 'Unavailable' : String(deployedTotal || 0));
 }
 
 function getSortedFilteredBuildings() {
@@ -1593,6 +1816,7 @@ async function loadBuildings() {
 
             // Reuse the deployed-items summary for the building cards and totals.
             const deployedSummary = await loadDeployedItemsSummary();
+            if (deployedSummary.stale) return;
             buildingItemCounts = deployedSummary.byBuilding;
 
             renderBuildingStats(buildings, deployedSummary.total);
