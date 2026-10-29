@@ -446,7 +446,8 @@ class PurchaseReceiptController extends Controller
                 $error = $this->validateLineShape($line) ?? $this->validateLineReferences($line);
 
                 if ($error !== null) {
-                    $errors[] = ['index' => $index, 'message' => 'Row ' . ($index + 1) . ': ' . $error];
+                    $errors[] = ['index' => $index, 'message' => 'Row ' . ($index + 1) . ': ' . $error,
+                        'field' => $line['item_name'] === '' || $error === $this->itemNameError($line['item_name']) ? 'item_name' : null];
                     continue;
                 }
 
@@ -488,7 +489,8 @@ class PurchaseReceiptController extends Controller
         $rawCatId = $input['category_id'] ?? null;
 
         return [
-            'item_name' => trim((string) ($input['item_name'] ?? '')),
+            'item_name' => is_string($input['item_name'] ?? null)
+                ? $this->normalizeItemName($input['item_name']) : '',
             'item_id' => ($rawItemId !== null && $rawItemId !== '') ? (int) $rawItemId : null,
             'category_id' => ($rawCatId !== null && $rawCatId !== '') ? (int) $rawCatId : null,
             'quantity_received' => (int) ($input['quantity_received'] ?? 0),
@@ -513,10 +515,33 @@ class PurchaseReceiptController extends Controller
      */
     private function validateLineReferences(array $line): ?string
     {
-        if ($line['item_id'] !== null && !DB::table('items')->where('id', $line['item_id'])->exists()) {
-            return 'Item not found';
+        if ($line['item_id'] !== null) {
+            $item = DB::table('items')->select('name')->where('id', $line['item_id'])->first();
+            if (!$item) return 'Item not found';
+            // Picking/reordering an unchanged existing item must not rename it
+            // or make historical names unusable under the new entry policy.
+            if ($this->normalizeItemName($item->name) === $line['item_name']) return null;
         }
 
+        return $this->itemNameError($line['item_name']);
+    }
+
+    private function normalizeItemName(string $name): string
+    {
+        return trim(preg_replace('/[\s\p{Z}\x{FEFF}]+/u', ' ', $name) ?? $name, ' ');
+    }
+
+    private function itemNameError(string $name): ?string
+    {
+        if (mb_strlen($name) < 2 || mb_strlen($name) > 100) {
+            return 'Item name must be between 2 and 100 characters.';
+        }
+        if (!preg_match('/\p{L}/u', $name)) {
+            return 'Item name must contain at least one letter.';
+        }
+        if (!preg_match('~\A[\p{L}\p{M}\p{Nd} .,/()\-]+\z~u', $name)) {
+            return 'Item name may contain only letters, numbers, spaces, hyphens, periods, slashes, commas, and parentheses.';
+        }
         return null;
     }
 

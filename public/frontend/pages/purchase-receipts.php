@@ -523,6 +523,7 @@ include __DIR__ . '/../includes/header.php';
     width: min(96vw, 840px);
     max-width: 840px;
     max-height: 92vh;
+    max-height: 92dvh;
     padding: 0;
     display: flex;
     flex-direction: column;
@@ -552,6 +553,7 @@ include __DIR__ . '/../includes/header.php';
     flex-direction: column;
     min-height: 0;
     flex: 1;
+    overflow: hidden;
 }
 
 /* Column template is declared once and reused by the caption strip and by
@@ -578,6 +580,9 @@ include __DIR__ . '/../includes/header.php';
 .pr-bulk-rows {
     padding: 0 22px 4px;
     overflow-y: auto;
+    max-height: 52vh;
+    max-height: 52dvh;
+    overscroll-behavior: contain;
     min-height: 0;
     flex: 1;
     display: flex;
@@ -586,6 +591,7 @@ include __DIR__ . '/../includes/header.php';
 }
 
 .pr-bulk-row {
+    flex-shrink: 0;
     padding: 10px;
     border: 1px solid var(--purple-border-light, var(--border));
     border-radius: 10px;
@@ -615,6 +621,16 @@ include __DIR__ . '/../includes/header.php';
     width: 100%;
     min-width: 0;
 }
+
+.pr-item-name-error {
+    margin: 5px 0 0;
+    color: #b91c1c;
+    font-size: 12px;
+    line-height: 1.4;
+    overflow-wrap: anywhere;
+}
+.pr-item-name-error:empty { display: none; }
+.pr-item-input[aria-invalid="true"] { border-color: #ef4444; }
 
 .pr-row-remove {
     width: 32px;
@@ -2145,7 +2161,9 @@ function prAddRow(prefill, focusIt) {
             <input type="text" class="form-control pr-item-input" autocomplete="off"
                    placeholder="Search or type an item name"
                    aria-label="Item name"
+                   aria-describedby="pr-item-name-error-${rowId}" aria-invalid="false"
                    value="${prEscapeHtml(data.item_name || '')}">
+            <p class="pr-item-name-error" id="pr-item-name-error-${rowId}" role="alert"></p>
         </div>
         <div class="pr-bulk-field pr-bulk-field--category">
             <span class="pr-field-label">Category</span>
@@ -2167,7 +2185,10 @@ function prAddRow(prefill, focusIt) {
     // The selected inventory item id lives on the input, not in the markup, so
     // retyping the name automatically drops the stale association.
     const itemInput = row.querySelector('.pr-item-input');
-    if (data.item_id) itemInput.dataset.itemId = String(data.item_id);
+    if (data.item_id) {
+        itemInput.dataset.itemId = String(data.item_id);
+        itemInput.dataset.selectedItemName = prNormalizeItemName(data.item_name || '');
+    }
 
     container.appendChild(row);
     prRefreshRowState();
@@ -2188,13 +2209,33 @@ function prRemoveRow(row) {
     prRefreshRowState();
 }
 
+function prNormalizeItemName(name) {
+    return String(name).replace(/[\s\p{Z}]+/gu, ' ').trim();
+}
+
+function prItemNameError(name) {
+    const length = Array.from(name).length;
+    if (!name) return 'Item name is required.';
+    if (length < 2 || length > 100) return 'Item name must be between 2 and 100 characters.';
+    if (!/\p{L}/u.test(name)) return 'Item name must contain at least one letter.';
+    if (!/^[\p{L}\p{M}\p{Nd} .,/()\-]+$/u.test(name)) {
+        return 'Item name may contain only letters, numbers, spaces, hyphens, periods, slashes, commas, and parentheses.';
+    }
+    return null;
+}
+
+function prSetItemNameError(row, message) {
+    row.querySelector('.pr-item-name-error').textContent = message || '';
+    row.querySelector('.pr-item-input').setAttribute('aria-invalid', message ? 'true' : 'false');
+}
+
 function prReadRow(row) {
     const itemInput = row.querySelector('.pr-item-input');
     const rawItemId = itemInput.dataset.itemId;
     const qtyRaw = row.querySelector('.pr-qty-input').value.trim();
 
     return {
-        item_name: itemInput.value.trim(),
+        item_name: prNormalizeItemName(itemInput.value),
         item_id: rawItemId ? parseInt(rawItemId, 10) : null,
         category_id: row.querySelector('.pr-category-select').value || null,
         quantity_received: qtyRaw === '' ? NaN : Number(qtyRaw),
@@ -2233,9 +2274,12 @@ function prEvaluateRows(showBlanks) {
         const blank = data.item_name === '' && !row.dataset.touched;
         let message = null;
         let kind = 'error';
+        const input = row.querySelector('.pr-item-input');
+        const unchangedSelection = data.item_id && input.dataset.selectedItemName === data.item_name;
+        const nameError = unchangedSelection ? null : prItemNameError(data.item_name);
 
-        if (data.item_name === '') {
-            if (showBlanks || row.dataset.touched) message = 'Item name is required.';
+        if (nameError) {
+            if (!blank || showBlanks) message = nameError;
         } else if (!Number.isFinite(data.quantity_received) || !Number.isInteger(data.quantity_received) || data.quantity_received < 1) {
             message = 'Quantity must be a whole number of at least 1.';
         } else if (!PR_UNITS.includes(data.unit)) {
@@ -2260,7 +2304,8 @@ function prEvaluateRows(showBlanks) {
             }
         }
 
-        prSetRowNote(row, message, kind);
+        prSetRowNote(row, nameError ? null : message, kind);
+        prSetItemNameError(row, nameError && message ? message : null);
         entry.blank = blank;
         entry.error = kind === 'error' ? message : null;
         if (entry.error) errors.push({ index, message: entry.error });
@@ -2443,6 +2488,7 @@ function prApplySuggestion(input, item) {
     const row = input.closest('.pr-bulk-row');
     input.value = item.name;
     input.dataset.itemId = String(item.id);
+    input.dataset.selectedItemName = prNormalizeItemName(item.name);
     row.dataset.touched = '1';
 
     // Carry the item's own category/unit across so the row describes the real
@@ -2558,6 +2604,7 @@ function initDetailView() {
             e.target.closest('.pr-bulk-row').dataset.touched = '1';
             // Typing invalidates any previously picked inventory item.
             delete e.target.dataset.itemId;
+            delete e.target.dataset.selectedItemName;
 
             clearTimeout(prSuggestTimer);
             const input = e.target;
@@ -2613,6 +2660,7 @@ function initDetailView() {
         e.preventDefault();
 
         const submitBtn = document.getElementById('submitAddItemsBtn');
+        if (submitBtn.dataset.submitting === '1') return;
         prSetBulkError('');
         prHideSuggest();
 
@@ -2625,7 +2673,11 @@ function initDetailView() {
                 ? `Row ${errors[0].index + 1}: ${errors[0].message}`
                 : `${errors.length} rows need attention before these items can be added.`);
             const firstBad = prRowElements()[errors[0].index];
-            if (firstBad) firstBad.scrollIntoView({ block: 'nearest' });
+            if (firstBad) {
+                firstBad.scrollIntoView({ block: 'nearest' });
+                firstBad.querySelector(firstBad.querySelector('.pr-item-input').getAttribute('aria-invalid') === 'true'
+                    ? '.pr-item-input' : '.pr-qty-input').focus();
+            }
             return;
         }
 
@@ -2635,6 +2687,8 @@ function initDetailView() {
         }
 
         const originalLabel = submitBtn.textContent;
+        let hasServerRowErrors = false;
+        submitBtn.dataset.submitting = '1';
         submitBtn.disabled = true;
         submitBtn.textContent = 'Adding...';
 
@@ -2663,10 +2717,21 @@ function initDetailView() {
                 // still in place, and point at the offending rows.
                 // The server indexes its errors against the array we sent, so
                 // ready[i] maps straight back to the row the user typed.
-                (payload.data?.errors || []).forEach((rowErr) => {
+                const rowErrors = payload.data?.errors || [];
+                hasServerRowErrors = rowErrors.length > 0;
+                rowErrors.forEach((rowErr) => {
                     const entry = ready[rowErr.index];
-                    if (entry && entry.row) prSetRowNote(entry.row, rowErr.message, 'error');
+                    if (entry && entry.row) {
+                        if (rowErr.field === 'item_name') prSetItemNameError(entry.row, rowErr.message);
+                        else prSetRowNote(entry.row, rowErr.message, 'error');
+                    }
                 });
+                const firstBad = ready[rowErrors[0]?.index]?.row;
+                if (firstBad) {
+                    firstBad.scrollIntoView({ block: 'nearest' });
+                    firstBad.querySelector(rowErrors[0].field === 'item_name' ? '.pr-item-input' : '.pr-qty-input').focus();
+                    return;
+                }
                 throw new Error(payload.message || 'Failed to add items');
             }
 
@@ -2687,9 +2752,10 @@ function initDetailView() {
         } catch (err) {
             prSetBulkError(err.message || 'An error occurred. Nothing was saved — your rows are still here.');
         } finally {
+            delete submitBtn.dataset.submitting;
             submitBtn.disabled = false;
             submitBtn.textContent = originalLabel;
-            prRefreshRowState();
+            if (!hasServerRowErrors) prRefreshRowState();
         }
     });
 
